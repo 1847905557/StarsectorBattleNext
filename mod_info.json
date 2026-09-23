@@ -6,7 +6,7 @@
 	"gameVersion":"0.98a-RC6",
     "description": "A clean AI fleets battle Tournaments",
 	"modPlugin":"data.scripts.AIBattleModPlugin",
-	"jars":["jars/AI.jar"],
+	"jars":["jars/AI_Battles_Next.jar"],
 	"dependencies": [
 		{
 			"id": "lw_lazylib",
