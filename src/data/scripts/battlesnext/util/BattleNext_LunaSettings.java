@@ -1,12 +1,12 @@
-package data.scripts.kratogen.util;
+package data.scripts.battlesnext.util;
 
 import com.fs.starfarer.api.Global;
 import lunalib.lunaSettings.LunaSettings;
 
-public class Kratogen_LunaSettings {
+public class BattleNext_LunaSettings {
 
-	public static final String MOD_ID = "Kratogen_TA";
-	public static final String FULL_GRAPHIC = "Kratogen_fullGraphicEffect";
+	public static final String MOD_ID = "ai_battles_next";
+	public static final String FULL_GRAPHIC = "BattleNext_fullGraphicEffect";
 
 	public static boolean isFullGraphic() {
 		if (Global.getSettings().getModManager().isModEnabled("lunalib")) {

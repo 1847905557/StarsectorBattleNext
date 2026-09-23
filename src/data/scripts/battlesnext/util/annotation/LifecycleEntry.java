@@ -1,4 +1,4 @@
-package data.scripts.kratogen.util.annotation;
+package data.scripts.battlesnext.util.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

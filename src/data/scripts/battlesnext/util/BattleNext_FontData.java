@@ -1,4 +1,4 @@
-package data.scripts.kratogen.util;
+package data.scripts.battlesnext.util;
 
 import org.boxutil.base.BaseShaderData;
 import org.boxutil.define.BoxEnum;
@@ -14,7 +14,7 @@ import org.lwjgl.util.vector.Vector2f;
 import java.awt.Color;
 import java.util.List;
 
-public final class Kratogen_FontData {
+public final class BattleNext_FontData {
 
 	private static final float TEXT_FIELD_SIZE = 8192f;
 	private static final Vector2f COMPATIBLE_ORIGIN = new Vector2f();
@@ -46,7 +46,7 @@ public final class Kratogen_FontData {
 		return font;
 	}
 
-	private Kratogen_FontData() {}
+	private BattleNext_FontData() {}
 
 	public static final class TextObject {
 
