@@ -1,0 +1,8 @@
+jars/*.jar
+.gradle/
+.gradle-user/
+build/
+dist/
+.zcode/
+/*.md
+!/README.md
