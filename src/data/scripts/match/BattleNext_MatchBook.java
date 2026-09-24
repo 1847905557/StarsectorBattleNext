@@ -11,6 +11,7 @@ public class BattleNext_MatchBook {
 
 	private static final String PATH = "AI_Battles_Next/quick_battle.csv";
 	private final List<BattleNext_Match> matches = new ArrayList<>();
+	private final List<String> comments = new ArrayList<>();
 
 	public void load() throws IOException {
 		loadText(Global.getSettings().readTextFileFromCommon(PATH));
@@ -22,9 +23,14 @@ public class BattleNext_MatchBook {
 
 	private void loadText(String text) {
 		matches.clear();
+		comments.clear();
 		for (String line : text.split("\\R")) {
 			String trimmed = line.trim();
-			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("player,enemy,map,size")) continue;
+			if (trimmed.isEmpty() || trimmed.equals("player,enemy,map,size")) continue;
+			if (trimmed.startsWith("#")) {
+				comments.add(trimmed);
+				continue;
+			}
 			List<String> fields = parse(line);
 			if (fields.size() != 4) continue;
 			try {
@@ -39,7 +45,11 @@ public class BattleNext_MatchBook {
 	}
 
 	public void save() throws IOException {
-		StringBuilder text = new StringBuilder("player,enemy,map,size\n");
+		StringBuilder text = new StringBuilder();
+		for (String comment : comments) {
+			text.append(comment).append('\n');
+		}
+		text.append("player,enemy,map,size\n");
 		for (BattleNext_Match match : matches) {
 			text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
 		}
@@ -53,6 +63,17 @@ public class BattleNext_MatchBook {
 	public void add(BattleNext_Match match) {
 		if (match != null) {
 			matches.add(match);
+		}
+	}
+
+	public void replaceAll(List<BattleNext_Match> values) {
+		matches.clear();
+		if (values != null) {
+			for (BattleNext_Match value : values) {
+				if (value != null) {
+					matches.add(value);
+				}
+			}
 		}
 	}
 

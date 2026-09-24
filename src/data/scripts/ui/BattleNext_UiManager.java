@@ -18,7 +18,7 @@ import java.util.List;
 public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 
 	private enum Page {
-		MAIN("BattleNext_ui_page_main"), FLEETS("BattleNext_ui_page_fleets"),
+		MAIN("BattleNext_ui_page_main"), QUICK("BattleNext_ui_page_quick"), FLEETS("BattleNext_ui_page_fleets"),
 		TOURNAMENTS("BattleNext_ui_page_tournaments"), RULES("BattleNext_ui_page_rules"),
 		SETTINGS("BattleNext_ui_page_settings");
 
@@ -38,6 +38,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	private int selectedAction;
 	private int activeTournamentSlot = -1;
 	private boolean pendingResult;
+	private BattleNext_QuickBattleEditor quickEditor;
 
 	public BattleNext_UiManager(Runnable closeAction) {
 		this.closeAction = closeAction;
@@ -59,10 +60,16 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 
 	@Override
 	public void advance(float amount) {
+		if (currentPage == Page.QUICK && quickEditor != null) {
+			quickEditor.advance();
+		}
 	}
 
 	@Override
 	public void processInput(List<InputEventAPI> events) {
+		if (currentPage == Page.QUICK && quickEditor != null) {
+			quickEditor.processInput(events);
+		}
 		for (InputEventAPI event : events) {
 			if (!event.isKeyboardEvent() || !event.isKeyDownEvent()) {
 				continue;
@@ -82,7 +89,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 
 	@Override
 	public void buttonPressed(Object buttonId) {
-		if (buttonId instanceof Page) {
+		if (currentPage == Page.QUICK && quickEditor != null && !(buttonId instanceof Page)) {
+			quickEditor.buttonPressed(buttonId);
+		} else if (buttonId instanceof Page) {
 			pageStack.push(currentPage);
 			currentPage = (Page) buttonId;
 			selectedAction = 0;
@@ -140,10 +149,17 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		content.addPara(statusText(), 12f, BattleNext_UiTheme.MUTED);
 		actions.clear();
 		if (currentPage == Page.MAIN) {
+			addPageButton(Page.QUICK);
 			addPageButton(Page.FLEETS);
 			addPageButton(Page.TOURNAMENTS);
 			addPageButton(Page.RULES);
 			addPageButton(Page.SETTINGS);
+		} else if (currentPage == Page.QUICK) {
+			if (quickEditor == null) {
+				quickEditor = new BattleNext_QuickBattleEditor(this::goBack);
+			}
+			quickEditor.attach(panel);
+			return;
 		} else {
 			content.addPara(text("BattleNext_ui_page_placeholder"), 12f, BattleNext_UiTheme.TEXT);
 			addActionButton(text("BattleNext_ui_back"), "back");
