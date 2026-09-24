@@ -5,6 +5,7 @@
 	"BattleNext_title_close": "Close",
 	"BattleNext_ui_page_main": "Main",
 	"BattleNext_ui_page_quick": "Free matches",
+	"BattleNext_ui_page_reports": "Battle reports",
 	"BattleNext_ui_page_fleets": "Fleets",
 	"BattleNext_ui_page_tournaments": "Tournaments",
 	"BattleNext_ui_page_rules": "Rules",
@@ -52,5 +53,8 @@
 	"BattleNext_ui_member_tags": "Member tags",
 	"BattleNext_ui_invalid_fleet_id": "Fleet ID is invalid",
 	"BattleNext_ui_invalid_rules_slot": "Rules slot is invalid",
-	"BattleNext_ui_invalid_variant": "Variant is missing or unavailable"
+	"BattleNext_ui_invalid_variant": "Variant is missing or unavailable",
+	"BattleNext_ui_no_reports": "No battle reports",
+	"BattleNext_ui_damage_dealt": "Damage Dealt",
+	"BattleNext_ui_damage_taken": "Damage Taken"
 }
