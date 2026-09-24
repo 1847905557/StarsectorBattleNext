@@ -19,6 +19,8 @@ import data.scripts.combat.BattleNext_FleetBehavior;
 import data.scripts.combat.BattleNext_PresentationPlugin;
 import data.scripts.combat.BattleNext_PostReport;
 import data.scripts.combat.BattleNext_Scorekeeper;
+import data.scripts.match.BattleNext_Match;
+import data.scripts.match.BattleNext_MatchRecorder;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.lwjgl.input.Keyboard;
@@ -73,6 +75,8 @@ public class BattleNext_PvpMigrationPrototype {
 			api.addPlugin(new BattleNext_MissionPlugin());
 			BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(match.player, playerAssembly, match.enemy, enemyAssembly);
 			api.addPlugin(scorekeeper);
+			api.addPlugin(new BattleNext_MatchRecorder(scorekeeper,
+					new BattleNext_Match("legacy-" + match.lineNumber, match.player, match.enemy, MAP_NUMBER, match.size), null));
 			api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(playerAssembly.getDefinition().getTags()),
 					BattleNext_FleetBehavior.fromTags(enemyAssembly.getDefinition().getTags()), playerAssembly.getDefinition(),
 					enemyAssembly.getDefinition()));

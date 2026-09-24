@@ -15,6 +15,7 @@ public class BattleNext_MatchListProvider {
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_TournamentStore tournamentStore;
 	private final List<String> warnings = new ArrayList<>();
+	private BattleNext_Tournament activeTournament;
 
 	public BattleNext_MatchListProvider() {
 		fleetStore = new BattleNext_FleetStore();
@@ -23,6 +24,7 @@ public class BattleNext_MatchListProvider {
 
 	public List<BattleNext_Match> load() {
 		warnings.clear();
+		activeTournament = null;
 		fleetStore.reload();
 		try {
 			tournamentStore.reload();
@@ -37,6 +39,7 @@ public class BattleNext_MatchListProvider {
 				warnings.add("Active tournament slot is missing: " + activeSlot);
 				return List.of();
 			}
+			activeTournament = tournament;
 			return validate(tournament.getMatches(), "tournament slot " + activeSlot);
 		}
 
@@ -62,6 +65,14 @@ public class BattleNext_MatchListProvider {
 
 	public BattleNext_FleetStore getFleetStore() {
 		return fleetStore;
+	}
+
+	public BattleNext_Tournament getActiveTournament() {
+		return activeTournament;
+	}
+
+	public BattleNext_TournamentStore getTournamentStore() {
+		return tournamentStore;
 	}
 
 	public boolean hasLegacyMatches() {

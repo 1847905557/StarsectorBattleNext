@@ -10,6 +10,7 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.match.BattleNext_Match;
 import data.scripts.match.BattleNext_MatchListProvider;
+import data.scripts.match.BattleNext_MatchRecorder;
 import data.scripts.combat.BattleNext_BattleMap;
 import data.scripts.combat.BattleNext_Deployment;
 import data.scripts.combat.BattleNext_MissionPlugin;
@@ -64,6 +65,7 @@ class NativeMission {
 		api.addPlugin(new BattleNext_MissionPlugin());
 		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(match.getPlayer(), player, match.getEnemy(), enemy);
 		api.addPlugin(scorekeeper);
+		api.addPlugin(new BattleNext_MatchRecorder(scorekeeper, match, provider));
 		api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(player.getDefinition().getTags()),
 				BattleNext_FleetBehavior.fromTags(enemy.getDefinition().getTags()), player.getDefinition(), enemy.getDefinition()));
 		api.addPlugin(new BattleNext_PresentationPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
