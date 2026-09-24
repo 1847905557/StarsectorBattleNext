@@ -3,7 +3,13 @@ package data.scripts;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.orders.BattleNext_OrderRegistry;
+import data.scripts.util.BattleNext_FontData;
+import data.scripts.util.BattleNext_I18nSection;
+import org.json.JSONException;
+
+import java.io.IOException;
+import java.util.List;
 
 public class BattleNextModPlugin extends BaseModPlugin {
 
@@ -17,6 +23,20 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
 			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 Ai Battles Next");
 		}
+		try {
+			BattleNext_FontData.init();
+		} catch (RuntimeException ignored) {
+		}
+		String orders;
+		try {
+			orders = Global.getSettings().loadText("tournament/orders.csv", "AI_Battles_Next");
+		} catch (IOException | JSONException exception) {
+			throw new IllegalArgumentException("Unable to read tournament/orders.csv", exception);
+		}
+		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
+		List<String> errors = registry.loadCsv(orders);
+		errors.addAll(registry.validate());
+		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid tournament/orders.csv: " + String.join("; ", errors));
 
 	}
 
