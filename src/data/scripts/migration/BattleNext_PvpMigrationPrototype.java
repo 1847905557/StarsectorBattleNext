@@ -155,6 +155,9 @@ public class BattleNext_PvpMigrationPrototype {
 		api.setFleetTagline(side, definition.getName());
 		for (FleetMemberAPI member : assembly.getMembers()) {
 			api.addFleetMember(side, member);
+			member.getRepairTracker().setMothballed(false);
+			member.getRepairTracker().setCrashMothballed(false);
+			member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
 		}
 	}
 
