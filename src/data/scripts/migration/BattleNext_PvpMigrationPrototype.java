@@ -106,14 +106,31 @@ public class BattleNext_PvpMigrationPrototype {
 
 	private Map<String, BattleNext_FleetModel> loadFleets() {
 		Map<String, BattleNext_FleetModel> fleets = new HashMap<>();
-		try {
-			for (BattleNext_FleetModel fleet : legacyLoader.loadResourceDirectory("tournament", MOD_ID)) {
-				fleets.put(fleet.getId(), fleet);
-			}
-		} catch (IOException | JSONException exception) {
-			LOGGER.warn("Unable to read legacy fleets from tournament/", exception);
-		}
+		loadReferencedFleets(fleets);
 		return fleets;
+	}
+
+	private void loadReferencedFleets(Map<String, BattleNext_FleetModel> fleets) {
+		String text;
+		try {
+			text = Global.getSettings().loadText(MATCH_PATH, MOD_ID);
+		} catch (IOException | JSONException exception) {
+			return;
+		}
+		for (String line : text.split("\\R", -1)) {
+			List<String> fields = parse(line);
+			if (fields.size() < 2 || fields.get(0).equalsIgnoreCase("player") || fields.get(0).startsWith("#")) continue;
+			for (int index = 0; index < 2; index++) {
+				String number = fields.get(index);
+				if (!number.matches("\\d+") || fleets.containsKey("ab_player" + number)) continue;
+				try {
+					BattleNext_FleetModel fleet = legacyLoader.loadResourceFleet(number, "tournament", MOD_ID);
+					fleets.put(fleet.getId(), fleet);
+				} catch (IOException | JSONException | RuntimeException exception) {
+					LOGGER.warn("Unable to read legacy fleet ab_player" + number + " from tournament/", exception);
+				}
+			}
+		}
 	}
 
 	private BattleNext_FleetAssembly assemble(Map<String, BattleNext_FleetModel> fleets,

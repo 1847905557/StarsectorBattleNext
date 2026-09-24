@@ -53,6 +53,14 @@ public class BattleNext_LegacyLoader {
 		return result;
 	}
 
+	public BattleNext_FleetModel loadResourceFleet(String number, String root, String modId) throws IOException, JSONException {
+		String dataPath = root + "/player" + number + "_data.csv";
+		String fleetPath = root + "/player" + number + "_fleet.csv";
+		return loadFleet(number,
+				rows(Global.getSettings().loadText(dataPath, modId), dataPath),
+				rows(Global.getSettings().loadText(fleetPath, modId), fleetPath), dataPath);
+	}
+
 	private BattleNext_FleetModel loadFleet(String number, List<String[]> dataRows, List<String[]> fleetRows, String sourcePath) throws IOException {
 		if (dataRows.isEmpty()) throw new IOException("Missing legacy fleet metadata: " + sourcePath);
 		String[] data = dataRows.get(0);
