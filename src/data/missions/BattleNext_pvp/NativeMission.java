@@ -13,6 +13,7 @@ import data.scripts.match.BattleNext_MatchListProvider;
 import data.scripts.combat.BattleNext_BattleMap;
 import data.scripts.combat.BattleNext_Deployment;
 import data.scripts.combat.BattleNext_MissionPlugin;
+import data.scripts.combat.BattleNext_FleetBehavior;
 import data.scripts.combat.BattleNext_PresentationPlugin;
 import org.lwjgl.input.Keyboard;
 
@@ -58,6 +59,8 @@ final class NativeMission {
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), currentIndex), match.getSize());
 		api.addPlugin(new BattleNext_Deployment());
 		api.addPlugin(new BattleNext_MissionPlugin());
+		api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(player.getDefinition().getTags()),
+				BattleNext_FleetBehavior.fromTags(enemy.getDefinition().getTags()), player.getDefinition(), enemy.getDefinition()));
 		api.addPlugin(new BattleNext_PresentationPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
 	}
 
