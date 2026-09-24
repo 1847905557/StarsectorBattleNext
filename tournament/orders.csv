@@ -1,0 +1,27 @@
+id,type,script,desc
+starter_attack,starter,data.scripts.orders.BattleNext_NoOpOrder,Attack starter
+starter_defend,starter,data.scripts.orders.BattleNext_NoOpOrder,Defend starter
+starter_retreat,starter,data.scripts.orders.BattleNext_NoOpOrder,Retreat starter
+starter_capture,starter,data.scripts.orders.BattleNext_NoOpOrder,Capture starter
+starter_support,starter,data.scripts.orders.BattleNext_NoOpOrder,Support starter
+starter_harass,starter,data.scripts.orders.BattleNext_NoOpOrder,Harass starter
+starter_recon,starter,data.scripts.orders.BattleNext_NoOpOrder,Recon starter
+starter_assist,starter,data.scripts.orders.BattleNext_NoOpOrder,Assist starter
+starter_intercept,starter,data.scripts.orders.BattleNext_NoOpOrder,Intercept starter
+starter_screen,starter,data.scripts.orders.BattleNext_NoOpOrder,Screen starter
+starter_anchor,starter,data.scripts.orders.BattleNext_NoOpOrder,Anchor starter
+starter_charge,starter,data.scripts.orders.BattleNext_NoOpOrder,Charge starter
+filter_nearest,filter,data.scripts.orders.BattleNext_NoOpOrder,Nearest target filter
+filter_farthest,filter,data.scripts.orders.BattleNext_NoOpOrder,Farthest target filter
+filter_carrier,filter,data.scripts.orders.BattleNext_NoOpOrder,Carrier filter
+filter_damaged,filter,data.scripts.orders.BattleNext_NoOpOrder,Damaged target filter
+filter_largest,filter,data.scripts.orders.BattleNext_NoOpOrder,Largest target filter
+filter_smallest,filter,data.scripts.orders.BattleNext_NoOpOrder,Smallest target filter
+filter_weapon,filter,data.scripts.orders.BattleNext_NoOpOrder,Weapon target filter
+filter_objective,filter,data.scripts.orders.BattleNext_NoOpOrder,Objective target filter
+picker_first,picker,data.scripts.orders.BattleNext_NoOpOrder,First target picker
+picker_random,picker,data.scripts.orders.BattleNext_NoOpOrder,Random target picker
+picker_priority,picker,data.scripts.orders.BattleNext_NoOpOrder,Priority target picker
+picker_lowest,picker,data.scripts.orders.BattleNext_NoOpOrder,Lowest target picker
+suffix_duration,suffix,data.scripts.orders.BattleNext_NoOpOrder,Duration suffix
+suffix_priority,suffix,data.scripts.orders.BattleNext_NoOpOrder,Priority suffix
