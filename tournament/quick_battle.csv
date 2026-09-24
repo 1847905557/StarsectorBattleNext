@@ -1,0 +1,4 @@
+# Built-in example free battle pairs
+player,enemy,map,timeLimit
+alpha_wolf,bravo_lasher,-1,-1
+charlie_hammerhead,delta_enforcer,-1,-1

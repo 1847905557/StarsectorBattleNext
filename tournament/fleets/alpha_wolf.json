@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "id": "alpha_wolf",
+  "name": "Alpha Wolf",
+  "player": "player",
+  "skills": [],
+  "tags": ["example"],
+  "members": [{"formatVersion": 1, "variant_id": "wolf_Standard", "name": "Alpha Wolf", "personality": "steady", "skills": [], "portrait": "", "orders": "", "tags": []}],
+  "rulesSlot": -1
+}

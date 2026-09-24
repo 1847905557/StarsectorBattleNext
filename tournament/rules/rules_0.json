@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "slot": 0,
+  "id": "rules_0",
+  "name": "Example rules",
+  "enabled": false,
+  "value": 0,
+  "children": []
+}

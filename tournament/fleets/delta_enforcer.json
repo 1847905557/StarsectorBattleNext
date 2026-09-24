@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "id": "delta_enforcer",
+  "name": "Delta Enforcer",
+  "player": "enemy",
+  "skills": [],
+  "tags": ["example"],
+  "members": [{"formatVersion": 1, "variant_id": "enforcer_Assault", "name": "Delta Enforcer", "personality": "steady", "skills": [], "portrait": "", "orders": "", "tags": []}],
+  "rulesSlot": -1
+}

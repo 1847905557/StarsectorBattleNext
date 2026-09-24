@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "id": "charlie_hammerhead",
+  "name": "Charlie Hammerhead",
+  "player": "player",
+  "skills": [],
+  "tags": ["example"],
+  "members": [{"formatVersion": 1, "variant_id": "hammerhead_Balanced", "name": "Charlie Hammerhead", "personality": "steady", "skills": [], "portrait": "", "orders": "", "tags": []}],
+  "rulesSlot": -1
+}
