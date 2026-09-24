@@ -10,7 +10,7 @@ import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
 import org.lwjgl.input.Keyboard;

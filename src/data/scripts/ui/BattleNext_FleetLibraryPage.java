@@ -6,7 +6,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.member.BattleNext_MemberModel;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.ArrayList;

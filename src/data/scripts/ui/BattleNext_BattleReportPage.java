@@ -9,7 +9,7 @@ import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 import java.util.ArrayList;
 import java.util.Comparator;

@@ -13,7 +13,7 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;

@@ -4,8 +4,8 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
 import data.scripts.orders.BattleNext_OrderRegistry;
-import data.scripts.util.BattleNext_FontData;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_FontData;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.json.JSONException;
 
 import java.io.IOException;

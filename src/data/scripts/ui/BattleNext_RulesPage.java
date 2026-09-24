@@ -2,7 +2,7 @@ package data.scripts.ui;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 public class BattleNext_RulesPage {
 

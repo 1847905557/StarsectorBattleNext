@@ -9,7 +9,7 @@ import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.List;

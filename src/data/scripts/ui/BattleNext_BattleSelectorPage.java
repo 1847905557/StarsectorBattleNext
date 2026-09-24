@@ -13,7 +13,7 @@ import data.scripts.battle.BattleNext_Round;
 import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
