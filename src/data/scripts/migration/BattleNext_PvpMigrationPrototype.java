@@ -15,6 +15,7 @@ import data.scripts.fleet.BattleNext_LegacyLoader;
 import data.scripts.combat.BattleNext_BattleMap;
 import data.scripts.combat.BattleNext_Deployment;
 import data.scripts.combat.BattleNext_MissionPlugin;
+import data.scripts.combat.BattleNext_PresentationPlugin;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.lwjgl.input.Keyboard;
@@ -59,6 +60,7 @@ public class BattleNext_PvpMigrationPrototype {
 			BattleNext_BattleMap.apply(api, MAP_NUMBER, match.size);
 			api.addPlugin(new BattleNext_Deployment());
 			api.addPlugin(new BattleNext_MissionPlugin());
+			api.addPlugin(new BattleNext_PresentationPlugin(playerAssembly.getDefinition().getName(), enemyAssembly.getDefinition().getName()));
 			return;
 		}
 		defineEmptyMission(api);
