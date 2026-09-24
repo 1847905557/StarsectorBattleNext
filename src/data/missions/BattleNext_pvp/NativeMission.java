@@ -10,6 +10,8 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.match.BattleNext_Match;
 import data.scripts.match.BattleNext_MatchListProvider;
+import data.scripts.combat.BattleNext_BattleMap;
+import data.scripts.combat.BattleNext_Deployment;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
@@ -29,7 +31,7 @@ final class NativeMission {
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
 			api.addBriefingItem("No valid player/enemy match is available.");
-			api.initMap(-5500f, 5500f, -5500f, 5500f);
+			BattleNext_BattleMap.apply(api, 0, 1f);
 			return;
 		}
 
@@ -43,7 +45,7 @@ final class NativeMission {
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
 			api.addBriefingItem("Selected match has an invalid fleet assembly.");
-			api.initMap(-5500f, 5500f, -5500f, 5500f);
+			BattleNext_BattleMap.apply(api, 0, 1f);
 			return;
 		}
 		configureFleet(api, FleetSide.PLAYER, player);
@@ -51,9 +53,8 @@ final class NativeMission {
 		api.addBriefingItem("Player: " + player.getDefinition().getName());
 		api.addBriefingItem("Enemy: " + enemy.getDefinition().getName());
 		api.addBriefingItem("Map " + match.getMap() + ", size " + match.getSize());
-		float halfWidth = 5500f * Math.max(0.1f, match.getSize());
-		float halfHeight = 5500f * Math.max(0.1f, match.getSize());
-		api.initMap(-halfWidth, halfWidth, -halfHeight, halfHeight);
+		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), currentIndex), match.getSize());
+		api.addPlugin(new BattleNext_Deployment());
 	}
 
 	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly) {

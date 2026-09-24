@@ -12,6 +12,8 @@ import data.scripts.fleet.BattleNext_FleetAssembler;
 import data.scripts.fleet.BattleNext_FleetAssembly;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_LegacyLoader;
+import data.scripts.combat.BattleNext_BattleMap;
+import data.scripts.combat.BattleNext_Deployment;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.lwjgl.input.Keyboard;
@@ -53,8 +55,8 @@ public class BattleNext_PvpMigrationPrototype {
 			configureFleet(api, FleetSide.PLAYER, playerAssembly);
 			configureFleet(api, FleetSide.ENEMY, enemyAssembly);
 			configureBriefing(api, playerAssembly, enemyAssembly, match.size);
-			configureMap(api, match.size);
-			api.addPlugin(new ForcedDeploymentPlugin());
+			BattleNext_BattleMap.apply(api, MAP_NUMBER, match.size);
+			api.addPlugin(new BattleNext_Deployment());
 			return;
 		}
 		defineEmptyMission(api);
@@ -191,7 +193,7 @@ public class BattleNext_PvpMigrationPrototype {
 		api.setFleetTagline(FleetSide.PLAYER, "No valid legacy PvP match");
 		api.setFleetTagline(FleetSide.ENEMY, "No valid legacy PvP match");
 		api.addBriefingItem("No valid legacy PvP matches found in tournament/PvP_matches.csv.");
-		configureMap(api, 1f);
+		BattleNext_BattleMap.apply(api, MAP_NUMBER, 1f);
 	}
 
 	private int selectMatchIndex(int size) {
