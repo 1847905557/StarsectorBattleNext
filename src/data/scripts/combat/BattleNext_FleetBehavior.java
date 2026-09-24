@@ -61,7 +61,7 @@ public final class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
 		try {
-			String csv = com.fs.starfarer.api.Global.getSettings().loadText("tournament/orders.csv", "AI_Battles_Next");
+			String csv = com.fs.starfarer.api.Global.getSettings().loadText("data/automation/orders.csv", "AI_Battles_Next");
 			registry.loadCsv(csv);
 		} catch (IOException | JSONException ignored) {
 		}

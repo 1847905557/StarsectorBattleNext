@@ -1,0 +1,27 @@
+id,type,script,desc
+assault,starter,data.scripts.orders.starter.AssaultStarter,Assault starter
+avoid,starter,data.scripts.orders.starter.AvoidStarter,Avoid starter
+capture,starter,data.scripts.orders.starter.CaptureStarter,Capture starter
+clean,starter,data.scripts.orders.starter.CleanStarter,Clean starter
+control,starter,data.scripts.orders.starter.ControlStarter,Control starter
+defend,starter,data.scripts.orders.starter.DefendStarter,Defend starter
+eliminate,starter,data.scripts.orders.starter.EliminateStarter,Eliminate starter
+engage,starter,data.scripts.orders.starter.EngageStarter,Engage starter
+escort,starter,data.scripts.orders.starter.EscortStarter,Escort starter
+fighter_strike,starter,data.scripts.orders.starter.FighterStrikeStarter,Fighter strike starter
+harass,starter,data.scripts.orders.starter.HarassStarter,Harass starter
+retreat,starter,data.scripts.orders.starter.RetreatStarter,Retreat starter
+distance,filter,data.scripts.orders.filter.DistanceFilter,Distance filter
+hull_size,filter,data.scripts.orders.filter.HullSizeFilter,Hull size filter
+hull_type,filter,data.scripts.orders.filter.HullTypeFilter,Hull type filter
+self_flux,filter,data.scripts.orders.filter.SelfFluxFilter,Self flux filter
+self_hp,filter,data.scripts.orders.filter.SelfHpFilter,Self hp filter
+target_flux,filter,data.scripts.orders.filter.TargetFluxFilter,Target flux filter
+target_hp,filter,data.scripts.orders.filter.TargetHpFilter,Target hp filter
+target_speed,filter,data.scripts.orders.filter.TargetSpeedFilter,Target speed filter
+concentrate,picker,data.scripts.orders.picker.ConcentratePicker,Concentrate picker
+nearest,picker,data.scripts.orders.picker.NearestPicker,Nearest picker
+random,picker,data.scripts.orders.picker.RandomPicker,Random picker
+spread,picker,data.scripts.orders.picker.SpreadPicker,Spread picker
+persist,suffix,data.scripts.orders.suffix.PersistSuffix,Persist suffix
+priority,suffix,data.scripts.orders.suffix.PrioritySuffix,Priority suffix

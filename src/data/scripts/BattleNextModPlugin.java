@@ -29,14 +29,14 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		}
 		String orders;
 		try {
-			orders = Global.getSettings().loadText("tournament/orders.csv", "AI_Battles_Next");
+			orders = Global.getSettings().loadText("data/automation/orders.csv", "AI_Battles_Next");
 		} catch (IOException | JSONException exception) {
-			throw new IllegalArgumentException("Unable to read tournament/orders.csv", exception);
+			throw new IllegalArgumentException("Unable to read data/automation/orders.csv", exception);
 		}
 		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		List<String> errors = registry.loadCsv(orders);
 		errors.addAll(registry.validate());
-		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid tournament/orders.csv: " + String.join("; ", errors));
+		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid data/automation/orders.csv: " + String.join("; ", errors));
 
 	}
 
