@@ -5,7 +5,7 @@ import lunalib.lunaSettings.LunaSettings;
 
 public class BattleNext_LunaSettings {
 
-	public static final String MOD_ID = "ai_battles_next";
+	public static final String MOD_ID = "AI_Battles_Next";
 	public static final String FULL_GRAPHIC = "BattleNext_fullGraphicEffect";
 
 	public static boolean isFullGraphic() {
