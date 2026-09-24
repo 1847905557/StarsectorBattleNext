@@ -22,10 +22,13 @@ public class BattleNext_FleetDraftEditor {
 	private final Runnable backAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
 	private final List<MemberFields> memberFields = new ArrayList<>();
 	private CustomPanelAPI panel;
-	private TooltipMakerAPI content;
+	private TooltipMakerAPI heading;
+	private TooltipMakerAPI metaContent;
+	private TooltipMakerAPI memberContent;
+	private TooltipMakerAPI footer;
 	private LabelAPI status;
 	private String statusText = "";
 	private TextFieldAPI id;
@@ -46,7 +49,12 @@ public class BattleNext_FleetDraftEditor {
 	}
 
 	public void attach(CustomPanelAPI panel, BattleNext_FleetModel source, boolean clone) {
-		if (this.panel != panel) content = null;
+		if (this.panel != panel) {
+			heading = null;
+			metaContent = null;
+			memberContent = null;
+			footer = null;
+		}
 		this.panel = panel;
 		this.draft = source == null ? new BattleNext_FleetModel() : copy(source, clone);
 		rebuild();
@@ -82,47 +90,56 @@ public class BattleNext_FleetDraftEditor {
 	}
 
 	private void rebuild() {
-		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
-				panel.getPosition().getHeight() - 8f, true);
-		BattleNext_UiTheme.configure(content);
-		content.addTitle(text("BattleNext_ui_fleet_editor"));
-		status = content.addPara(text("BattleNext_ui_ready"), 6f, BattleNext_UiTheme.MUTED);
-		id = field(text("BattleNext_ui_fleet_id"), draft.getId());
-		name = field(text("BattleNext_ui_fleet_name"), draft.getName());
-		player = field(text("BattleNext_ui_fleet_player"), draft.getPlayer());
-		author = field(text("BattleNext_ui_fleet_author"), draft.getAuthor());
-		description = field(text("BattleNext_ui_fleet_description"), draft.getDescription());
-		behavior = field(text("BattleNext_ui_fleet_behavior"), draft.getBehavior());
-		skills = field(text("BattleNext_ui_fleet_skills"), String.join(",", draft.getSkills()));
-		tags = field(text("BattleNext_ui_fleet_tags"), String.join(",", draft.getTags()));
-		rulesSlot = field(text("BattleNext_ui_fleet_rules"), Integer.toString(draft.getRulesSlot()));
+		if (heading != null) panel.removeComponent(heading);
+		if (metaContent != null) panel.removeComponent(metaContent);
+		if (memberContent != null) panel.removeComponent(memberContent);
+		if (footer != null) panel.removeComponent(footer);
+
+		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_fleet_editor"));
+		float metaWidth = BattleNext_PageLayout.listWidth(panel);
+		metaContent = BattleNext_PageLayout.column(panel, 0f, metaWidth);
+		memberContent = BattleNext_PageLayout.column(panel, metaWidth + 10f,
+				panel.getPosition().getWidth() - metaWidth - 10f);
+		footer = BattleNext_PageLayout.footer(panel);
+		metaContent.addTitle(text("BattleNext_ui_fleet_section_details"));
+		status = metaContent.addPara(text("BattleNext_ui_ready"), 6f, BattleNext_UiTheme.MUTED);
+		id = field(metaContent, text("BattleNext_ui_fleet_id"), draft.getId());
+		name = field(metaContent, text("BattleNext_ui_fleet_name"), draft.getName());
+		player = field(metaContent, text("BattleNext_ui_fleet_player"), draft.getPlayer());
+		author = field(metaContent, text("BattleNext_ui_fleet_author"), draft.getAuthor());
+		description = field(metaContent, text("BattleNext_ui_fleet_description"), draft.getDescription());
+		behavior = field(metaContent, text("BattleNext_ui_fleet_behavior"), draft.getBehavior());
+		skills = field(metaContent, text("BattleNext_ui_fleet_skills"), String.join(",", draft.getSkills()));
+		tags = field(metaContent, text("BattleNext_ui_fleet_tags"), String.join(",", draft.getTags()));
+		rulesSlot = field(metaContent, text("BattleNext_ui_fleet_rules"), Integer.toString(draft.getRulesSlot()));
+		memberContent.addTitle(text("BattleNext_ui_fleet_section_members"));
 		memberFields.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			addMember(index, draft.getMembers().get(index));
 		}
-		content.addButton(text("BattleNext_ui_add_member"), "add_member", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
-		content.addButton(text("BattleNext_ui_save"), "save", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
-		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
-		panel.addUIElement(content).inTL(10f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_add_member"), "add_member", 180f).getPosition().inBL(0f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_save"), "save", 180f).getPosition().inBL(190f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 180f).getPosition().inBL(380f, 0f);
 	}
 
 	private void addMember(int index, BattleNext_MemberModel member) {
-		content.addPara(text("BattleNext_ui_member") + " " + index, 6f, BattleNext_UiTheme.TEXT);
+		memberContent.addSectionHeading(text("BattleNext_ui_member") + " " + (index + 1),
+				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
+				com.fs.starfarer.api.ui.Alignment.MID, 8f);
 		MemberFields fields = new MemberFields();
-		fields.variant = field(text("BattleNext_ui_variant"), member.getVariantId());
-		fields.name = field(text("BattleNext_ui_member_name"), member.getName());
-		fields.personality = field(text("BattleNext_ui_personality"), member.getPersonality());
-		fields.skills = field(text("BattleNext_ui_member_skills"), String.join(",", member.getSkills()));
-		fields.portrait = field(text("BattleNext_ui_portrait"), member.getPortrait());
-		fields.orders = field(text("BattleNext_ui_orders"), member.getOrders());
-		fields.tags = field(text("BattleNext_ui_member_tags"), String.join(",", member.getTags()));
+		fields.variant = field(memberContent, text("BattleNext_ui_variant"), member.getVariantId());
+		fields.name = field(memberContent, text("BattleNext_ui_member_name"), member.getName());
+		fields.personality = field(memberContent, text("BattleNext_ui_personality"), member.getPersonality());
+		fields.skills = field(memberContent, text("BattleNext_ui_member_skills"), String.join(",", member.getSkills()));
+		fields.portrait = field(memberContent, text("BattleNext_ui_portrait"), member.getPortrait());
+		fields.orders = field(memberContent, text("BattleNext_ui_orders"), member.getOrders());
+		fields.tags = field(memberContent, text("BattleNext_ui_member_tags"), String.join(",", member.getTags()));
 		memberFields.add(fields);
 	}
 
-	private TextFieldAPI field(String label, String value) {
-		content.addPara(label, 4f, BattleNext_UiTheme.MUTED);
-		TextFieldAPI field = content.addTextField(300f, 24f);
+	private TextFieldAPI field(TooltipMakerAPI host, String label, String value) {
+		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
+		TextFieldAPI field = host.addTextField(Math.min(300f, host.getPosition().getWidth() - 20f), 2f);
 		field.setText(value == null ? "" : value);
 		field.setMaxChars(240);
 		return field;

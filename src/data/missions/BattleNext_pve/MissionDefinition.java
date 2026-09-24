@@ -10,7 +10,7 @@ import data.scripts.fleet.BattleNext_FleetAssembler;
 import data.scripts.fleet.BattleNext_FleetAssembly;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.match.BattleNext_Match;
-import data.scripts.match.BattleNext_MatchRecorder;
+import data.scripts.match.BattleNext_BattleResultRecorder;
 import data.scripts.member.BattleNext_MemberModel;
 import org.lwjgl.input.Keyboard;
 
@@ -39,7 +39,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		configureFleet(api, FleetSide.ENEMY, enemy, false);
 		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper("pve-player", player.getMembers(), "pve-enemy", enemy.getMembers());
 		api.addPlugin(scorekeeper);
-		api.addPlugin(new BattleNext_MatchRecorder(scorekeeper,
+		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
 				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null));
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);
 		api.addBriefingItem("Use left/right to rotate faction selection.");

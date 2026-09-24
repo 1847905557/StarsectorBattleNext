@@ -1,6 +1,5 @@
 package data.scripts.match;
 
-import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.tournament.BattleNext_Tournament;
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_MatchListProvider {
+public class BattleNext_BattleSourceProvider {
 
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_TournamentStore tournamentStore;
@@ -19,7 +18,7 @@ public class BattleNext_MatchListProvider {
 	private final List<String> warnings = new ArrayList<>();
 	private BattleNext_Tournament activeTournament;
 
-	public BattleNext_MatchListProvider() {
+	public BattleNext_BattleSourceProvider() {
 		fleetStore = new BattleNext_FleetStore();
 		tournamentStore = new BattleNext_TournamentStore();
 		tournamentEngine = new BattleNext_TournamentEngine();
@@ -33,6 +32,7 @@ public class BattleNext_MatchListProvider {
 			tournamentStore.reload();
 		} catch (Exception exception) {
 			warnings.add("Unable to load tournament state: " + exception.getMessage());
+			return List.of();
 		}
 
 		int activeSlot = tournamentStore.getActiveSlot();
@@ -50,19 +50,19 @@ public class BattleNext_MatchListProvider {
 			return next == null ? List.of() : validate(List.of(next), "tournament slot " + activeSlot);
 		}
 
-		BattleNext_MatchBook book = new BattleNext_MatchBook();
-		boolean userFile = book.hasUserFile();
+		BattleNext_QuickBattleStore quickBattleStore = new BattleNext_QuickBattleStore();
+		boolean userFile = quickBattleStore.hasUserFile();
 		try {
 			if (userFile) {
-				book.load();
+				quickBattleStore.load();
 			} else {
-				book.loadBuiltIn();
+				quickBattleStore.loadBuiltIn();
 			}
 		} catch (Exception exception) {
 			warnings.add("Unable to load " + (userFile ? "user" : "built-in")
 					+ " quick battle list: " + exception.getMessage());
 		}
-		return validate(book.getMatches(), "quick battle");
+		return validate(quickBattleStore.getMatches(), "quick battle");
 	}
 
 	public List<String> getWarnings() {
@@ -85,22 +85,14 @@ public class BattleNext_MatchListProvider {
 		return tournamentEngine;
 	}
 
-	public boolean hasLegacyMatches() {
-		try {
-			Global.getSettings().loadText("tournament/PvP_matches.csv", "AI_Battles_Next");
-			return true;
-		} catch (Exception exception) {
-			return false;
-		}
-	}
-
 	private List<BattleNext_Match> validate(List<BattleNext_Match> source, String sourceName) {
 		List<BattleNext_Match> result = new ArrayList<>();
 		for (BattleNext_Match match : source) {
 			BattleNext_FleetModel player = fleetStore.get(match.getPlayer());
 			BattleNext_FleetModel enemy = fleetStore.get(match.getEnemy());
 			if (player == null || enemy == null) {
-				warnings.add("Skipping " + sourceName + " match " + match.getId() + ": missing player/enemy fleet reference");
+				warnings.add("Skipping " + sourceName + " " + (activeTournament == null ? "battle" : "match")
+						+ " " + match.getId() + ": missing player/enemy fleet reference");
 				continue;
 			}
 			result.add(match);

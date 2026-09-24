@@ -10,15 +10,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-public class BattleNext_MatchRecorder extends com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin {
+public class BattleNext_BattleResultRecorder extends com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin {
 
 	private final BattleNext_Scorekeeper scorekeeper;
 	private final BattleNext_Match match;
-	private final BattleNext_MatchListProvider provider;
+	private final BattleNext_BattleSourceProvider provider;
 	private boolean recorded;
 
-	public BattleNext_MatchRecorder(BattleNext_Scorekeeper scorekeeper, BattleNext_Match match,
-			BattleNext_MatchListProvider provider) {
+	public BattleNext_BattleResultRecorder(BattleNext_Scorekeeper scorekeeper, BattleNext_Match match,
+			BattleNext_BattleSourceProvider provider) {
 		this.scorekeeper = scorekeeper;
 		this.match = match;
 		this.provider = provider;
@@ -31,7 +31,7 @@ public class BattleNext_MatchRecorder extends com.fs.starfarer.api.combat.BaseEv
 		try {
 			record(scorekeeper.getFrozenReport());
 		} catch (IOException | org.json.JSONException exception) {
-			com.fs.starfarer.api.Global.getLogger(BattleNext_MatchRecorder.class).error("Unable to save battle report", exception);
+			com.fs.starfarer.api.Global.getLogger(BattleNext_BattleResultRecorder.class).error("Unable to save battle report", exception);
 		}
 	}
 
@@ -51,9 +51,6 @@ public class BattleNext_MatchRecorder extends com.fs.starfarer.api.combat.BaseEv
 			engine.recordRound(tournament, match.getId(), resolveWinner(match, report.getWinner()), report);
 			BattleNext_TournamentStore store = provider.getTournamentStore();
 			store.save(tournament);
-			if (tournament.isCompleted() && store.getActiveSlot() == tournament.getSlot()) {
-				store.setActiveSlot(-1);
-			}
 		}
 		System.setProperty("AI_Battles_Next.pendingResult", "1");
 	}

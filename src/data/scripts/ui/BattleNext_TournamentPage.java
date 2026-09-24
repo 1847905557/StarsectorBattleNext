@@ -21,9 +21,12 @@ public class BattleNext_TournamentPage {
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
 	private CustomPanelAPI panel;
-	private TooltipMakerAPI content;
+	private TooltipMakerAPI heading;
+	private TooltipMakerAPI listContent;
+	private TooltipMakerAPI detailContent;
+	private TooltipMakerAPI footer;
 	private BattleNext_Tournament selected;
 	private String status = "";
 
@@ -32,7 +35,12 @@ public class BattleNext_TournamentPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
-		if (this.panel != panel) content = null;
+		if (this.panel != panel) {
+			heading = null;
+			listContent = null;
+			detailContent = null;
+			footer = null;
+		}
 		this.panel = panel;
 		selected = null;
 		fleetStore.reload();
@@ -90,7 +98,8 @@ public class BattleNext_TournamentPage {
 		if (slot < 0) {
 			throw new IllegalStateException(text("BattleNext_ui_tournament_no_slot"));
 		}
-		BattleNext_Tournament tournament = new BattleNext_Tournament(slot, "Tournament " + slot, "single_elim", "BO1", 2);
+		BattleNext_Tournament tournament = new BattleNext_Tournament(slot,
+				text("BattleNext_ui_tournament_context") + " " + slot, "single_elim", "BO1", 2);
 		int added = 0;
 		for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
 			tournament.addTeam(fleet.getId());
@@ -130,65 +139,70 @@ public class BattleNext_TournamentPage {
 	}
 
 	private void rebuild() {
-		if (content != null) {
-			panel.removeComponent(content);
-		}
-		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
-				panel.getPosition().getHeight() - 8f, true);
-		BattleNext_UiTheme.configure(content);
-		content.addTitle(text("BattleNext_ui_page_tournaments"));
-		if (!status.isEmpty()) {
-			content.addPara(status, 8f, BattleNext_UiTheme.MUTED);
-		}
-		if (selected == null) {
-			addList();
-		} else {
-			addDetails();
-		}
-		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT,
-				BattleNext_UiTheme.PANEL, 160f, 30f, 8f);
-		panel.addUIElement(content).inTL(10f, 0f);
+		if (heading != null) panel.removeComponent(heading);
+		if (listContent != null) panel.removeComponent(listContent);
+		if (detailContent != null) panel.removeComponent(detailContent);
+		if (footer != null) panel.removeComponent(footer);
+
+		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_tournaments"));
+		float listWidth = BattleNext_PageLayout.listWidth(panel);
+		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
+		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
+				panel.getPosition().getWidth() - listWidth - 10f);
+		footer = BattleNext_PageLayout.footer(panel);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+				.getPosition().inBL(0f, 0f);
+		addList();
+		addDetails();
 	}
 
 	private void addList() {
-		content.addButton(text("BattleNext_ui_tournament_create"), "tournament:create",
-				BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 220f, 30f, 6f);
+		listContent.addTitle(text("BattleNext_ui_page_tournaments"));
+		BattleNext_PageLayout.button(listContent, text("BattleNext_ui_tournament_create"),
+				"tournament:create", 220f);
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 			String label = tournament.getName() + " [" + tournament.getBracketType() + ", "
 					+ tournament.getMatchFormat() + "]";
-			content.addButton(label, "tournament:select:" + tournament.getSlot(), BattleNext_UiTheme.ACCENT,
-					BattleNext_UiTheme.PANEL, 460f, 30f, 6f);
+			BattleNext_PageLayout.button(listContent, label, "tournament:select:" + tournament.getSlot(),
+					listContent.getPosition().getWidth() - 20f);
 		}
 	}
 
 	private void addDetails() {
-		content.addPara(selected.getName(), 10f, BattleNext_UiTheme.TEXT);
-		content.addPara(selected.getBracketType() + " / " + selected.getMatchFormat() + " / "
-				+ selected.getTeams().size() + " teams", 8f, BattleNext_UiTheme.MUTED);
-		content.addPara(selected.isStarted() ? text("BattleNext_ui_tournament_locked")
+		if (!status.isEmpty()) detailContent.addPara(status, 0f, BattleNext_UiTheme.MUTED);
+		if (selected == null) {
+			detailContent.addTitle(text("BattleNext_ui_select_tournament"));
+			return;
+		}
+		detailContent.addTitle(selected.getName());
+		detailContent.addPara(selected.getBracketType() + " / " + selected.getMatchFormat() + " / "
+				+ selected.getTeams().size() + " " + text("BattleNext_ui_teams"), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(selected.isStarted() ? text("BattleNext_ui_tournament_locked")
 				: text("BattleNext_ui_tournament_editable"), 8f, BattleNext_UiTheme.MUTED);
-		content.addPara(text("BattleNext_ui_tournament_rules") + ": "
+		detailContent.addPara(text("BattleNext_ui_tournament_rules") + ": "
 				+ (rulesStore.get(selected.getRulesSlot()) == null
 				? text("BattleNext_ui_tournament_rules_unavailable") : text("BattleNext_ui_tournament_rules_ready")),
 				8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("BattleNext_ui_teams"), 10f, BattleNext_UiTheme.ACCENT);
 		for (String team : selected.getTeams()) {
-			content.addPara(team, 6f, BattleNext_UiTheme.TEXT);
+			detailContent.addPara(team, 6f, BattleNext_UiTheme.TEXT);
 		}
+		detailContent.addPara(text("BattleNext_ui_matches"), 10f, BattleNext_UiTheme.ACCENT);
 		for (data.scripts.match.BattleNext_Match match : selected.getMatches()) {
-			content.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
+			detailContent.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
 					+ " [" + match.getStatus() + "]", 6f, BattleNext_UiTheme.TEXT);
 		}
 		if (selected.getSlot() == tournamentStore.getActiveSlot()) {
-			content.addPara(text("BattleNext_ui_tournament_active"), 8f, BattleNext_UiTheme.ACCENT);
-			content.addButton(text("BattleNext_ui_tournament_deactivate"), "tournament:deactivate",
-					BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 220f, 30f, 6f);
+			detailContent.addPara(text("BattleNext_ui_tournament_active"), 8f, BattleNext_UiTheme.ACCENT);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_deactivate"),
+					"tournament:deactivate", 220f);
 		} else {
-			content.addButton(text("BattleNext_ui_tournament_activate"), "tournament:activate",
-					BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 220f, 30f, 6f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_activate"),
+					"tournament:activate", 220f);
 		}
 		if (!selected.isStarted()) {
-			content.addButton(text("BattleNext_ui_tournament_start"), "tournament:start",
-					BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 220f, 30f, 6f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_start"),
+					"tournament:start", 220f);
 		}
 	}
 

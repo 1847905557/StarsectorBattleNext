@@ -10,6 +10,7 @@ public final class BattleNext_UiTheme {
 
 	public static final Color ACCENT = Misc.getButtonTextColor();
 	public static final Color PANEL = Global.getSettings().getColor("buttonBgDark");
+	public static final Color HEADER = Misc.getDarkPlayerColor();
 	public static final Color TEXT = Misc.getTextColor();
 	public static final Color MUTED = Global.getSettings().getColor("standardUIIconColor");
 

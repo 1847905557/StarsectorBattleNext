@@ -15,15 +15,15 @@ import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
 import org.lwjgl.input.Keyboard;
 
-import data.scripts.match.BattleNext_MatchListProvider;
 import data.scripts.fleet.BattleNext_FleetModel;
+import data.scripts.tournament.BattleNext_TournamentStore;
 
 import java.util.List;
 
 public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 
 	private enum Page {
-		QUICK("page_quick"), FLEETS("page_fleets"), REPORTS("page_reports"),
+		BATTLE_SELECTOR("page_battle_selector"), FLEETS("page_fleets"), REPORTS("page_reports"),
 		TOURNAMENTS("page_tournaments"), RULES("page_rules"), SETTINGS("page_settings"),
 		DRAFT("fleet_editor");
 
@@ -35,24 +35,28 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	}
 
 	private final Runnable closeAction;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
 	private CustomPanelAPI body;
 	private CustomPanelAPI confirmation;
 	private LabelAPI statusLabel;
 	private LabelAPI confirmationStatus;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
-	private Page currentPage = Page.QUICK;
+	private Page currentPage = Page.BATTLE_SELECTOR;
 	private Page pendingPage;
+	private Integer pendingSourceSlot;
 	private boolean pendingClose;
 	private int activeTournamentSlot = -1;
 	private boolean pendingResult;
-	private BattleNext_QuickBattleEditor quickEditor;
+	private String sourceStatus = "";
+	private BattleNext_BattleSelectorPage battleSelectorPage;
 	private BattleNext_FleetLibraryPage fleetPage;
 	private BattleNext_FleetDraftEditor draftEditor;
 	private BattleNext_FleetLibraryPage.DraftRequest pendingDraft;
 	private BattleNext_BattleReportPage reportPage;
 	private BattleNext_TournamentPage tournamentPage;
+	private BattleNext_RulesPage rulesPage;
+	private BattleNext_SettingsPage settingsPage;
 
 	public BattleNext_UiManager(Runnable closeAction) {
 		this.closeAction = closeAction;
@@ -64,12 +68,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	}
 
 	public void open() {
-		currentPage = Page.QUICK;
+		currentPage = Page.BATTLE_SELECTOR;
 		pendingDraft = null;
 		refreshState();
-		if (quickEditor != null) {
-			quickEditor.reload();
-		}
 		showPage();
 	}
 
@@ -97,13 +98,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		}
 		if (buttonId instanceof Page) {
 			requestPage((Page) buttonId);
+		} else if (buttonId instanceof BattleNext_BattleSelectorPage.SourceRequest) {
+			requestSource(((BattleNext_BattleSelectorPage.SourceRequest) buttonId).getSlot());
 		} else if ("close".equals(buttonId)) {
 			requestClose();
 		} else if (buttonId instanceof BattleNext_FleetLibraryPage.DraftRequest) {
 			pendingDraft = (BattleNext_FleetLibraryPage.DraftRequest)buttonId;
 			requestPage(Page.DRAFT);
-		} else if (currentPage == Page.QUICK && quickEditor != null) {
-			quickEditor.buttonPressed(buttonId);
+		} else if (currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null) {
+			battleSelectorPage.buttonPressed(buttonId);
 		} else if (currentPage == Page.FLEETS && fleetPage != null) {
 			fleetPage.buttonPressed(buttonId);
 		} else if (currentPage == Page.DRAFT && draftEditor != null) {
@@ -117,6 +120,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		if (confirmation == null && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
+				&& battleSelectorPage.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				if (confirmation != null) {
@@ -147,46 +152,49 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		return pendingResult;
 	}
 
-	private void returnToQuick() {
-		if (currentPage == Page.QUICK) {
+	private void returnToBattleSelector() {
+		if (currentPage == Page.BATTLE_SELECTOR) {
 			requestClose();
 			return;
 		}
-		requestPage(Page.QUICK);
+		requestPage(Page.BATTLE_SELECTOR);
 	}
 
 	private void buildShell() {
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		TooltipMakerAPI heading = panel.createUIElement(width, 32f, false);
-		heading.addSectionHeading(text("page_main"), BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
-		panel.addUIElement(heading).inTMid(0f);
+		TooltipMakerAPI heading = panel.createUIElement(width - 16f, 30f, false);
+		LabelAPI title = heading.addSectionHeading(text("panel_heading"), BattleNext_UiTheme.TEXT,
+				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
+		title.getPosition().inTL(0f, 0f);
+		panel.addUIElement(heading).inTL(8f, 8f);
 
-		TooltipMakerAPI tabs = panel.createUIElement(width - 16f, 28f, false);
+		TooltipMakerAPI tabs = panel.createUIElement(width - 16f, 30f, false);
 		tabs.setButtonFontOrbitron20();
 		float tabWidth = (width - 16f - 25f) / 6f;
 		for (int index = 0; index < 6; index++) {
 			Page page = Page.values()[index];
 			ButtonAPI button = tabs.addButton(text(page.titleKey), page, BattleNext_UiTheme.TEXT,
-					BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.TOP, tabWidth, 26f, 0f);
+					BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.TOP, tabWidth, 30f, 0f);
 			button.getPosition().inBL(index * (tabWidth + 5f), 0f);
 			button.setMouseOverSound("BUtil_button_in");
 			button.setButtonPressedSound("BUtil_button_down");
 			tabButtons[index] = button;
 		}
-		panel.addUIElement(tabs).inTL(8f, 40f);
+		// addButton accumulates row heights even after the buttons are positioned side by side.
+		tabs.setHeightSoFar(30f);
+		panel.addUIElement(tabs).inTL(8f, 46f);
 
-		TooltipMakerAPI footer = panel.createUIElement(width, 32f, false);
+		TooltipMakerAPI footer = panel.createUIElement(width - 16f, 30f, false);
 		footer.setButtonFontOrbitron20();
 		statusLabel = footer.addPara(statusText(), 0f, BattleNext_UiTheme.MUTED);
-		statusLabel.getPosition().inBL(12f, 6f);
+		statusLabel.getPosition().inBL(0f, 6f);
 		ButtonAPI close = footer.addButton(text("close"), "close", BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.BOTTOM, 180f, 30f, 0f);
-		close.getPosition().inBMid(0f);
+		close.getPosition().inBR(0f, 0f);
 		close.setMouseOverSound("BUtil_button_in");
 		close.setButtonPressedSound("BUtil_button_down");
-		panel.addUIElement(footer).inBMid(8f);
+		panel.addUIElement(footer).inBL(8f, 8f);
 	}
 
 	private void showPage() {
@@ -197,13 +205,13 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		if (body != null) panel.removeComponent(body);
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		body = Global.getSettings().createCustom(width, height - 128f, this);
-		panel.addComponent(body).inBL(0f, 46f);
-		if (currentPage == Page.QUICK) {
-			if (quickEditor == null) quickEditor = new BattleNext_QuickBattleEditor(this::returnToQuick);
-			quickEditor.attach(body);
+		body = Global.getSettings().createCustom(width - 16f, height - 134f, this);
+		panel.addComponent(body).inTL(8f, 86f);
+		if (currentPage == Page.BATTLE_SELECTOR) {
+			if (battleSelectorPage == null) battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this);
+			battleSelectorPage.attach(body);
 		} else if (currentPage == Page.FLEETS) {
-			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToQuick, this::buttonPressed);
+			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToBattleSelector, this::buttonPressed);
 			fleetPage.attach(body);
 		} else if (currentPage == Page.DRAFT) {
 			if (draftEditor == null) draftEditor = new BattleNext_FleetDraftEditor(() -> requestPage(Page.FLEETS));
@@ -212,17 +220,17 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 			draftEditor.attach(body, source, clone);
 			pendingDraft = null;
 		} else if (currentPage == Page.REPORTS) {
-			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToQuick);
+			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector);
 			reportPage.attach(body);
 		} else if (currentPage == Page.TOURNAMENTS) {
-			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToQuick);
+			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector);
 			tournamentPage.attach(body);
-		} else {
-			TooltipMakerAPI placeholder = body.createUIElement(width - 20f, height - 138f, true);
-			BattleNext_UiTheme.configure(placeholder);
-			placeholder.addTitle(text(currentPage.titleKey));
-			placeholder.addPara(text("page_placeholder"), 12f, BattleNext_UiTheme.TEXT);
-			body.addUIElement(placeholder).inTL(10f, 0f);
+		} else if (currentPage == Page.RULES) {
+			if (rulesPage == null) rulesPage = new BattleNext_RulesPage();
+			rulesPage.attach(body);
+		} else if (currentPage == Page.SETTINGS) {
+			if (settingsPage == null) settingsPage = new BattleNext_SettingsPage();
+			settingsPage.attach(body);
 		}
 	}
 
@@ -230,6 +238,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		if (page == currentPage) return;
 		if (hasUnsavedChanges()) {
 			pendingPage = page;
+			pendingSourceSlot = null;
 			pendingClose = false;
 			showConfirmation();
 			return;
@@ -242,6 +251,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	private void requestClose() {
 		if (hasUnsavedChanges()) {
 			pendingPage = null;
+			pendingSourceSlot = null;
 			pendingClose = true;
 			showConfirmation();
 			return;
@@ -250,8 +260,41 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	}
 
 	private boolean hasUnsavedChanges() {
-		if (currentPage == Page.QUICK && quickEditor != null) return quickEditor.hasUnsavedChanges();
+		if (currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null) return battleSelectorPage.hasUnsavedChanges();
 		return currentPage == Page.DRAFT && draftEditor != null && draftEditor.hasUnsavedChanges();
+	}
+
+	private void requestSource(int slot) {
+
+		battleSelectorPage.closeDropdown();
+		if (slot == activeTournamentSlot) return;
+		if (hasUnsavedChanges()) {
+			pendingSourceSlot = slot;
+			pendingPage = null;
+			pendingClose = false;
+			showConfirmation();
+			return;
+		}
+		if (applySource(slot)) showPage();
+	}
+
+	private boolean applySource(int slot) {
+
+		try {
+			BattleNext_TournamentStore store = new BattleNext_TournamentStore();
+			store.reload();
+			if (slot >= 0 && store.get(slot) == null) {
+				throw new IllegalArgumentException(text("tournament_missing"));
+			}
+			store.setActiveSlot(slot);
+			sourceStatus = "";
+			refreshState();
+			return true;
+		} catch (Exception exception) {
+			sourceStatus = text("source_save_failed") + ": " + exception.getMessage();
+			if (statusLabel != null) statusLabel.setText(sourceStatus);
+			return false;
+		}
 	}
 
 	private void showConfirmation() {
@@ -280,13 +323,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 			panel.removeComponent(confirmation);
 			confirmation = null;
 			pendingPage = null;
+			pendingSourceSlot = null;
 			pendingClose = false;
 			return;
 		}
 		if (!"confirm_save".equals(action) && !"confirm_discard".equals(action)) return;
 		if ("confirm_save".equals(action)) {
-			if (currentPage == Page.QUICK && !quickEditor.save()) {
-				confirmationStatus.setText(quickEditor.getStatusText());
+			if (currentPage == Page.BATTLE_SELECTOR && !battleSelectorPage.save()) {
+				confirmationStatus.setText(battleSelectorPage.getStatusText());
 				return;
 			}
 			if (currentPage == Page.DRAFT && !draftEditor.save()) {
@@ -294,8 +338,20 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 				return;
 			}
 		}
+		if (pendingSourceSlot != null && !applySource(pendingSourceSlot)) {
+			confirmationStatus.setText(sourceStatus);
+			return;
+		}
+		if ("confirm_discard".equals(action) && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null) {
+			battleSelectorPage.discard();
+		}
 		panel.removeComponent(confirmation);
 		confirmation = null;
+		if (pendingSourceSlot != null) {
+			pendingSourceSlot = null;
+			showPage();
+			return;
+		}
 		if (pendingClose) {
 			pendingClose = false;
 			closeAction.run();
@@ -308,20 +364,24 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	}
 
 	private void refreshState() {
+		sourceStatus = "";
 		pendingResult = System.getProperty("AI_Battles_Next.pendingResult") != null;
 		if (pendingResult) {
 			System.clearProperty("AI_Battles_Next.pendingResult");
 		}
-		BattleNext_MatchListProvider provider = new BattleNext_MatchListProvider();
-		provider.load();
-		activeTournamentSlot = -1;
-		if (provider.getActiveTournament() != null) {
-			activeTournamentSlot = provider.getTournamentStore().getActiveSlot();
+		try {
+			BattleNext_TournamentStore store = new BattleNext_TournamentStore();
+			store.reload();
+			activeTournamentSlot = store.getActiveSlot();
+		} catch (Exception exception) {
+			activeTournamentSlot = -1;
+			sourceStatus = text("load_failed") + ": " + exception.getMessage();
 		}
 		if (statusLabel != null) statusLabel.setText(statusText());
 	}
 
 	private String statusText() {
+		if (!sourceStatus.isEmpty()) return sourceStatus;
 		if (activeTournamentSlot >= 0) {
 			return text("tournament_active") + ": " + activeTournamentSlot;
 		}

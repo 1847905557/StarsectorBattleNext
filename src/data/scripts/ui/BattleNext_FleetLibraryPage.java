@@ -18,10 +18,14 @@ public class BattleNext_FleetLibraryPage {
 	private final Runnable backAction;
 	private final Consumer<Object> editorAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
 	private CustomPanelAPI panel;
-	private TooltipMakerAPI content;
+	private TooltipMakerAPI heading;
+	private TooltipMakerAPI listContent;
+	private TooltipMakerAPI detailContent;
+	private TooltipMakerAPI footer;
 	private BattleNext_FleetModel selected;
+	private String status = "";
 
 	public BattleNext_FleetLibraryPage(Runnable backAction, Consumer<Object> editorAction) {
 		this.backAction = backAction;
@@ -29,7 +33,12 @@ public class BattleNext_FleetLibraryPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
-		if (this.panel != panel) content = null;
+		if (this.panel != panel) {
+			heading = null;
+			listContent = null;
+			detailContent = null;
+			footer = null;
+		}
 		this.panel = panel;
 		store.reload();
 		selected = null;
@@ -54,7 +63,8 @@ public class BattleNext_FleetLibraryPage {
 				selected = null;
 				rebuild();
 			} catch (IOException exception) {
-				content.addPara(text("BattleNext_ui_save_failed"), 8f, BattleNext_UiTheme.MUTED);
+				status = text("BattleNext_ui_save_failed") + ": " + exception.getMessage();
+				rebuild();
 			}
 		} else if ("back".equals(buttonId)) {
 			if (selected != null) {
@@ -67,46 +77,56 @@ public class BattleNext_FleetLibraryPage {
 	}
 
 	private void rebuild() {
-		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
-				panel.getPosition().getHeight() - 8f, true);
-		BattleNext_UiTheme.configure(content);
-		content.addTitle(text("BattleNext_ui_page_fleets"));
-		if (selected == null) {
-			addList();
-		} else {
-			addDetails();
-		}
-		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 8f);
-		panel.addUIElement(content).inTL(10f, 0f);
+		if (heading != null) panel.removeComponent(heading);
+		if (listContent != null) panel.removeComponent(listContent);
+		if (detailContent != null) panel.removeComponent(detailContent);
+		if (footer != null) panel.removeComponent(footer);
+
+		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_fleets"));
+		float listWidth = BattleNext_PageLayout.listWidth(panel);
+		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
+		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
+				panel.getPosition().getWidth() - listWidth - 10f);
+		footer = BattleNext_PageLayout.footer(panel);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+				.getPosition().inBL(0f, 0f);
+		addList();
+		addDetails();
 	}
 
 	private void addList() {
-		content.addButton(text("BattleNext_ui_new_fleet"), "new", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
+		listContent.addTitle(text("BattleNext_ui_page_fleets"));
+		BattleNext_PageLayout.button(listContent, text("BattleNext_ui_new_fleet"), "new", 180f);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			String source = "built_in".equals(fleet.getSource()) ? text("BattleNext_ui_read_only") : text("BattleNext_ui_user");
-			content.addButton(fleet.getName() + " [" + source + "]", "fleet:" + fleet.getId(), BattleNext_UiTheme.ACCENT,
-					BattleNext_UiTheme.PANEL, 420f, 32f, 6f);
+			BattleNext_PageLayout.button(listContent, fleet.getName() + " [" + source + "]",
+					"fleet:" + fleet.getId(), listContent.getPosition().getWidth() - 20f);
 		}
 	}
 
 	private void addDetails() {
-		content.addPara(selected.getName(), 8f, BattleNext_UiTheme.TEXT);
-		content.addPara(selected.getDescription(), 8f, BattleNext_UiTheme.MUTED);
-		content.addPara(text("BattleNext_ui_variant_count") + ": " + selected.getVariants().size(), 8f, BattleNext_UiTheme.MUTED);
+		if (!status.isEmpty()) detailContent.addPara(status, 0f, BattleNext_UiTheme.MUTED);
+		if (selected == null) {
+			detailContent.addTitle(text("BattleNext_ui_select_fleet"));
+			return;
+		}
+		detailContent.addTitle(selected.getName());
+		detailContent.addPara(selected.getDescription(), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("BattleNext_ui_variant_count") + ": " + selected.getVariants().size(), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("BattleNext_ui_fleet_section_members"), 10f, BattleNext_UiTheme.ACCENT);
 		for (String error : selected.getLoadErrors()) {
-			content.addPara(error, 6f, BattleNext_UiTheme.MUTED);
+			detailContent.addPara(error, 6f, BattleNext_UiTheme.MUTED);
 		}
 		for (BattleNext_MemberModel member : selected.getMembers()) {
-			content.addPara(member.getVariantId() + " / " + member.getName() + " / " + member.getPersonality(), 6f,
+			detailContent.addPara(member.getVariantId() + " / " + member.getName() + " / " + member.getPersonality(), 6f,
 					BattleNext_UiTheme.TEXT);
 		}
 		if ("user".equals(selected.getSource())) {
-			content.addButton(text("BattleNext_ui_edit_fleet"), "edit", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
-			content.addButton(text("BattleNext_ui_clone_fleet"), "clone", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
-			content.addButton(text("BattleNext_ui_delete"), "delete", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_edit_fleet"), "edit", 160f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_clone_fleet"), "clone", 160f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_delete"), "delete", 160f);
 		} else {
-			content.addButton(text("BattleNext_ui_clone_fleet"), "clone", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
+			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_clone_fleet"), "clone", 160f);
 		}
 	}
 

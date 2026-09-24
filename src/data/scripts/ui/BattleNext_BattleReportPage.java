@@ -21,10 +21,13 @@ public class BattleNext_BattleReportPage {
 	private final Runnable backAction;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
 	private final List<Entry> entries = new ArrayList<>();
 	private CustomPanelAPI panel;
-	private TooltipMakerAPI content;
+	private TooltipMakerAPI heading;
+	private TooltipMakerAPI listContent;
+	private TooltipMakerAPI detailContent;
+	private TooltipMakerAPI footer;
 	private Entry selected;
 
 	public BattleNext_BattleReportPage(Runnable backAction) {
@@ -32,7 +35,12 @@ public class BattleNext_BattleReportPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
-		if (this.panel != panel) content = null;
+		if (this.panel != panel) {
+			heading = null;
+			listContent = null;
+			detailContent = null;
+			footer = null;
+		}
 		this.panel = panel;
 		load();
 		selected = null;
@@ -72,7 +80,12 @@ public class BattleNext_BattleReportPage {
 			tournamentStore.reload();
 			for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 				for (BattleNext_MatchWithRound match : rounds(tournament)) {
-					entries.add(new Entry(match.round.getReport(), "Tournament " + tournament.getSlot() + " Match " + match.matchId + " Round " + match.round.getNumber() + " attempt " + match.round.getAttempt()));
+					if (match.round.getReport() != null) {
+						entries.add(new Entry(match.round.getReport(), text("BattleNext_ui_tournament_context") + " "
+								+ tournament.getSlot() + " / " + text("BattleNext_ui_match") + " " + match.matchId
+								+ " / " + text("BattleNext_ui_round") + " " + match.round.getNumber()
+								+ " / " + text("BattleNext_ui_attempt") + " " + match.round.getAttempt()));
+					}
 				}
 			}
 		} catch (Exception ignored) {
@@ -88,45 +101,66 @@ public class BattleNext_BattleReportPage {
 	}
 
 	private void rebuild() {
-		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
-				panel.getPosition().getHeight() - 8f, true);
-		BattleNext_UiTheme.configure(content);
-		content.addTitle(text("BattleNext_ui_page_reports"));
-		if (selected == null) addList();
-		else addDetails();
-		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
-		panel.addUIElement(content).inTL(10f, 0f);
+		if (heading != null) panel.removeComponent(heading);
+		if (listContent != null) panel.removeComponent(listContent);
+		if (detailContent != null) panel.removeComponent(detailContent);
+		if (footer != null) panel.removeComponent(footer);
+
+		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_reports"));
+		float listWidth = BattleNext_PageLayout.listWidth(panel);
+		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
+		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
+				panel.getPosition().getWidth() - listWidth - 10f);
+		footer = BattleNext_PageLayout.footer(panel);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+				.getPosition().inBL(0f, 0f);
+		addList();
+		addDetails();
 	}
 
 	private void addList() {
+		listContent.addTitle(text("BattleNext_ui_page_reports"));
 		for (int index = 0; index < entries.size(); index++) {
 			Entry entry = entries.get(index);
-			content.addButton(entry.report.getId() + " / " + entry.report.getWinner() + " / " + entry.report.getMembers().size(),
-					"report:" + index, BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 500f, 30f, 5f);
+			BattleNext_PageLayout.button(listContent, entry.report.getId() + " / " + entry.report.getWinner()
+					+ " / " + entry.report.getMembers().size(), "report:" + index,
+					listContent.getPosition().getWidth() - 20f);
 		}
-		if (entries.isEmpty()) content.addPara(text("BattleNext_ui_no_reports"), 8f, BattleNext_UiTheme.MUTED);
+		if (entries.isEmpty()) listContent.addPara(text("BattleNext_ui_no_reports"), 8f, BattleNext_UiTheme.MUTED);
 	}
 
 	private void addDetails() {
+		if (selected == null) {
+			detailContent.addTitle(text("BattleNext_ui_select_report"));
+			return;
+		}
 		BattleNext_BattleReport report = selected.report;
-		content.addPara(report.getId() + " / " + report.getWinner() + " / " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
-		if (!selected.context.isEmpty()) content.addPara(selected.context, 6f, BattleNext_UiTheme.MUTED);
-		content.addPara(text("BattleNext_ui_damage_dealt"), 6f, BattleNext_UiTheme.ACCENT);
+		detailContent.addTitle(report.getId());
+		detailContent.addPara(text("BattleNext_ui_winner") + ": " + report.getWinner() + " / "
+				+ text("BattleNext_ui_duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
+		if (!selected.context.isEmpty()) detailContent.addPara(selected.context, 6f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("BattleNext_ui_damage_dealt"), 10f, BattleNext_UiTheme.ACCENT);
 		appendMembers(sorted(report, true));
-		content.addPara(text("BattleNext_ui_damage_taken"), 6f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("BattleNext_ui_damage_taken"), 10f, BattleNext_UiTheme.ACCENT);
 		appendMembers(sorted(report, false));
 	}
 
 	private void appendMembers(List<BattleNext_MemberReport> members) {
 		for (BattleNext_MemberReport member : members) {
-			content.addPara(member.getFleetId() + "[" + member.getMemberIndex() + "] " + member.getVariantId() + " " + member.getName()
-					+ " dealt=" + member.getDamageDealt() + " taken=" + member.getDamageTaken()
-					+ " hull=" + member.getHullDamageDealt() + "/" + member.getHullDamageTaken()
-					+ " shield=" + member.getShieldDamageDealt() + "/" + member.getShieldDamageTaken()
-					+ " EMP=" + member.getEmpDamageDealt() + "/" + member.getEmpDamageTaken()
-					+ " hull%=" + member.getFinalHullFraction() + " CR=" + member.getFinalCr() + " " + member.getStatus(), 4f,
-					BattleNext_UiTheme.TEXT);
+			detailContent.addPara(member.getFleetId() + "[" + member.getMemberIndex() + "] "
+					+ member.getVariantId() + " " + member.getName(), 5f, BattleNext_UiTheme.TEXT);
+			detailContent.addPara(text("BattleNext_ui_damage_dealt") + ": " + member.getDamageDealt()
+					+ " / " + text("BattleNext_ui_damage_taken") + ": " + member.getDamageTaken()
+					+ " / " + text("BattleNext_ui_status") + ": " + member.getStatus(), 2f,
+					BattleNext_UiTheme.MUTED);
+			detailContent.addPara(text("BattleNext_ui_hull") + ": " + member.getHullDamageDealt()
+					+ " / " + member.getHullDamageTaken() + "   " + text("BattleNext_ui_shield")
+					+ ": " + member.getShieldDamageDealt() + " / " + member.getShieldDamageTaken(),
+					2f, BattleNext_UiTheme.MUTED);
+			detailContent.addPara(text("BattleNext_ui_emp") + ": " + member.getEmpDamageDealt()
+					+ " / " + member.getEmpDamageTaken() + "   " + text("BattleNext_ui_final_hull")
+					+ ": " + member.getFinalHullFraction() + "   " + text("BattleNext_ui_final_cr")
+					+ ": " + member.getFinalCr(), 2f, BattleNext_UiTheme.MUTED);
 		}
 	}
 

@@ -1,5 +1,7 @@
 package data.scripts.ui;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -7,7 +9,7 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.match.BattleNext_Match;
-import data.scripts.match.BattleNext_MatchBook;
+import data.scripts.match.BattleNext_QuickBattleStore;
 import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;
@@ -17,24 +19,32 @@ import java.util.List;
 public class BattleNext_QuickBattleEditor {
 
 	private final Runnable backAction;
-	private final BattleNext_MatchBook book = new BattleNext_MatchBook();
+	private final CustomUIPanelPlugin inputOwner;
+	private final BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
 	private final List<Row> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
+	private TooltipMakerAPI heading;
 	private TooltipMakerAPI content;
+	private TooltipMakerAPI footer;
 	private LabelAPI status;
 	private String statusText = "";
 	private String savedFields = "";
 	private String loadError = "";
 	private boolean loaded;
 
-	public BattleNext_QuickBattleEditor(Runnable backAction) {
+	public BattleNext_QuickBattleEditor(Runnable backAction, CustomUIPanelPlugin inputOwner) {
 		this.backAction = backAction;
+		this.inputOwner = inputOwner;
 	}
 
 	public void attach(CustomPanelAPI panel) {
-		if (this.panel != panel) content = null;
+		if (this.panel != panel) {
+			heading = null;
+			content = null;
+			footer = null;
+		}
 		this.panel = panel;
 		if (!loaded) {
 			load();
@@ -61,7 +71,7 @@ public class BattleNext_QuickBattleEditor {
 	public boolean save() {
 		if (!captureFields()) return false;
 		try {
-			book.save();
+			store.save();
 			savedFields = serializeFields();
 			setStatus(text("BattleNext_ui_saved"));
 			return true;
@@ -77,7 +87,7 @@ public class BattleNext_QuickBattleEditor {
 	public void buttonPressed(Object buttonId) {
 		if ("add".equals(buttonId)) {
 			if (!captureFields()) return;
-			book.add(new BattleNext_Match("quick-" + book.getMatches().size(), "", "", -1, 1f));
+			store.add(new BattleNext_Match("quick-" + store.getMatches().size(), "", "", -1, 1f));
 			rebuild();
 		} else if ("save".equals(buttonId)) {
 			save();
@@ -92,13 +102,13 @@ public class BattleNext_QuickBattleEditor {
 
 	private void load() {
 		fleetStore.reload();
-		book.replaceAll(List.of());
+		store.replaceAll(List.of());
 		loadError = "";
 		try {
-			if (book.hasUserFile()) {
-				book.load();
+			if (store.hasUserFile()) {
+				store.load();
 			} else {
-				book.loadBuiltIn();
+				store.loadBuiltIn();
 			}
 		} catch (Exception exception) {
 			loadError = text("BattleNext_ui_load_failed") + ": " + exception.getMessage();
@@ -107,36 +117,46 @@ public class BattleNext_QuickBattleEditor {
 	}
 
 	private void rebuild() {
-		if (panel == null) {
-			return;
-		}
-		if (content != null) {
-			panel.removeComponent(content);
-		}
-		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
-				panel.getPosition().getHeight() - 8f, true);
-		BattleNext_UiTheme.configure(content);
-		content.addTitle(text("BattleNext_ui_page_quick"));
+		if (panel == null) return;
+		if (heading != null) panel.removeComponent(heading);
+		if (content != null) panel.removeComponent(content);
+		if (footer != null) panel.removeComponent(footer);
+
+		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_quick_battle"));
+		content = BattleNext_PageLayout.column(panel, 0f, panel.getPosition().getWidth());
+		footer = BattleNext_PageLayout.footer(panel);
+		content.addTitle(text("BattleNext_ui_quick_battle"));
 		status = content.addPara(loadError.isEmpty() ? text("BattleNext_ui_ready") : loadError,
 				8f, BattleNext_UiTheme.MUTED);
 		rows.clear();
-		List<BattleNext_Match> matches = book.getMatches();
+		List<BattleNext_Match> matches = store.getMatches();
 		for (int index = 0; index < matches.size(); index++) {
 			addRow(index, matches.get(index));
 		}
-		content.addButton(text("BattleNext_ui_add"), "add", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 150f, 30f, 8f);
-		content.addButton(text("BattleNext_ui_save"), "save", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 150f, 30f, 8f);
-		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 150f, 30f, 8f);
-		panel.addUIElement(content).inTL(10f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_add"), "add", 150f).getPosition().inBL(0f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_save"), "save", 150f).getPosition().inBL(160f, 0f);
+		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 150f).getPosition().inBL(320f, 0f);
 	}
 
 	private void addRow(int index, BattleNext_Match match) {
-		content.addPara(text("BattleNext_ui_match_row") + " " + index, 8f, BattleNext_UiTheme.TEXT);
+		float width = panel.getPosition().getWidth() - 20f;
+		CustomPanelAPI card = Global.getSettings().createCustom(width, 112f, inputOwner);
+		TooltipMakerAPI title = card.createUIElement(width, 30f, false);
+		title.addSectionHeading(text("BattleNext_ui_battle_row") + " " + (index + 1),
+				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
+				com.fs.starfarer.api.ui.Alignment.MID, 0f).getPosition().inTL(0f, 0f);
+		card.addUIElement(title).inTL(0f, 0f);
+		float fieldWidth = (width - 180f) * 0.25f;
 		Row row = new Row(index);
-		row.player = addField(match.getPlayer());
-		row.enemy = addField(match.getEnemy());
-		row.map = addField(Integer.toString(match.getMap()));
-		row.size = addField(Float.toString(match.getSize()));
+		row.player = addField(card, 0f, fieldWidth, text("BattleNext_ui_battle_player"), match.getPlayer());
+		row.enemy = addField(card, fieldWidth, fieldWidth, text("BattleNext_ui_battle_enemy"), match.getEnemy());
+		row.map = addField(card, fieldWidth * 2f, fieldWidth, text("BattleNext_ui_battle_map"), Integer.toString(match.getMap()));
+		row.size = addField(card, fieldWidth * 3f, fieldWidth, text("BattleNext_ui_battle_size"), Float.toString(match.getSize()));
+		TooltipMakerAPI actions = card.createUIElement(160f, 70f, false);
+		BattleNext_PageLayout.button(actions, text("BattleNext_ui_duplicate"), "duplicate:" + index, 150f);
+		BattleNext_PageLayout.button(actions, text("BattleNext_ui_delete"), "delete:" + index, 150f);
+		card.addUIElement(actions).inTR(0f, 34f);
+		content.addCustom(card, 8f);
 		boolean invalidPlayer = fleetStore.get(match.getPlayer()) == null;
 		boolean invalidEnemy = fleetStore.get(match.getEnemy()) == null;
 		if (invalidPlayer) {
@@ -146,17 +166,18 @@ public class BattleNext_QuickBattleEditor {
 			content.addPara(text("BattleNext_ui_invalid_enemy"), 4f, BattleNext_UiTheme.MUTED);
 		}
 		if (invalidPlayer || invalidEnemy) {
-			content.addPara(text("BattleNext_ui_skipped_match"), 4f, BattleNext_UiTheme.MUTED);
+			content.addPara(text("BattleNext_ui_skipped_battle"), 4f, BattleNext_UiTheme.MUTED);
 		}
-		content.addButton(text("BattleNext_ui_duplicate"), "duplicate:" + index, BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 130f, 28f, 4f);
-		content.addButton(text("BattleNext_ui_delete"), "delete:" + index, BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 130f, 28f, 4f);
 		rows.add(row);
 	}
 
-	private TextFieldAPI addField(String value) {
-		TextFieldAPI field = content.addTextField(155f, 26f);
+	private TextFieldAPI addField(CustomPanelAPI card, float x, float width, String label, String value) {
+		TooltipMakerAPI maker = card.createUIElement(width - 5f, 70f, false);
+		maker.addPara(label, 0f, BattleNext_UiTheme.MUTED);
+		TextFieldAPI field = maker.addTextField(width - 15f, 2f);
 		field.setText(value);
 		field.setMaxChars(120);
+		card.addUIElement(maker).inTL(x, 36f);
 		return field;
 	}
 
@@ -167,11 +188,11 @@ public class BattleNext_QuickBattleEditor {
 
 	private void duplicateRow(int index) {
 		if (!captureFields()) return;
-		List<BattleNext_Match> values = new ArrayList<>(book.getMatches());
+		List<BattleNext_Match> values = new ArrayList<>(store.getMatches());
 		if (index >= 0 && index < values.size()) {
 			BattleNext_Match source = values.get(index);
 			values.add(new BattleNext_Match("quick-" + values.size(), source.getPlayer(), source.getEnemy(), source.getMap(), source.getSize()));
-			book.replaceAll(values);
+			store.replaceAll(values);
 			rebuild();
 		}
 	}
@@ -198,7 +219,7 @@ public class BattleNext_QuickBattleEditor {
 				return false;
 			}
 		}
-		book.replaceAll(values);
+		store.replaceAll(values);
 		return true;
 	}
 

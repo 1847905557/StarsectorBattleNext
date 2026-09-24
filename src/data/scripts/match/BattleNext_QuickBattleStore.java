@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_MatchBook {
+public class BattleNext_QuickBattleStore {
 
 	private static final String PATH = "AI_Battles_Next/quick_battle.csv";
 	private final List<BattleNext_Match> matches = new ArrayList<>();

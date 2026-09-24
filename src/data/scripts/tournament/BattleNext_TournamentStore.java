@@ -29,8 +29,9 @@ public class BattleNext_TournamentStore {
 				tournaments.put(slot, BattleNext_Tournament.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
 			}
 		}
-		JSONObject meta = Global.getSettings().readJSONFromCommon("AI_Battles_Next/meta.json", false);
-		activeSlot = meta.optInt("activeTournamentSlot", -1);
+		String metaPath = "AI_Battles_Next/meta.json";
+		activeSlot = Global.getSettings().fileExistsInCommon(metaPath)
+				? Global.getSettings().readJSONFromCommon(metaPath, false).optInt("activeTournamentSlot", -1) : -1;
 	}
 
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
@@ -45,11 +46,11 @@ public class BattleNext_TournamentStore {
 		if (slot < -1 || slot > 31) {
 			throw new IllegalArgumentException("Active tournament slot must be between -1 and 31");
 		}
-		activeSlot = slot;
 		JSONObject meta = new JSONObject();
 		meta.put("formatVersion", 1);
-		meta.put("activeTournamentSlot", activeSlot);
+		meta.put("activeTournamentSlot", slot);
 		Global.getSettings().writeJSONToCommon("AI_Battles_Next/meta.json", meta, false);
+		activeSlot = slot;
 	}
 
 	public BattleNext_Tournament get(int slot) {
