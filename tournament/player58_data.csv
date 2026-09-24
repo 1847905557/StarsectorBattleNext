@@ -1,0 +1,9 @@
+name,author,skills,tags
+
+#格式为  舰队名称，参赛者名称，舰队技能，特殊标签
+#舰队名称会显示在任务栏里
+#参赛者名暂时不会显示，请期待日后更新
+#舰队技能是生涯里的舰队技能，可以留空
+#特殊标签目前只有 default_ai 和 full_assault，分别是默认 TAB AI 和开幕右上角全面进攻
+
+b_test,b_test,"tactical_drills,coordinated_maneuvers,derelict_contingent",full_assault

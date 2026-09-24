@@ -38,8 +38,14 @@ public class BattleNext_MemberBuilder {
 		if (!definition.getPortrait().isEmpty()) {
 			captain.setPortraitSprite(definition.getPortrait());
 		}
+
 		applySkills(captain, definition);
 		member.setCaptain(captain);
+
+		member.getRepairTracker().setMothballed(false);
+		member.getRepairTracker().setCrashMothballed(false);
+		member.getCrewComposition().setCrew(member.getMaxCrew());
+		member.updateStats();
 		member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
 	}
 
