@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
 
 import java.util.ArrayList;
@@ -14,12 +15,14 @@ public class BattleNext_MatchListProvider {
 
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_TournamentStore tournamentStore;
+	private final BattleNext_TournamentEngine tournamentEngine;
 	private final List<String> warnings = new ArrayList<>();
 	private BattleNext_Tournament activeTournament;
 
 	public BattleNext_MatchListProvider() {
 		fleetStore = new BattleNext_FleetStore();
 		tournamentStore = new BattleNext_TournamentStore();
+		tournamentEngine = new BattleNext_TournamentEngine();
 	}
 
 	public List<BattleNext_Match> load() {
@@ -40,7 +43,11 @@ public class BattleNext_MatchListProvider {
 				return List.of();
 			}
 			activeTournament = tournament;
-			return validate(tournament.getMatches(), "tournament slot " + activeSlot);
+			if (!tournament.isStarted() || tournament.isCompleted()) {
+				return List.of();
+			}
+			BattleNext_Match next = tournamentEngine.getNextMatch(tournament);
+			return next == null ? List.of() : validate(List.of(next), "tournament slot " + activeSlot);
 		}
 
 		BattleNext_MatchBook book = new BattleNext_MatchBook();
@@ -73,6 +80,10 @@ public class BattleNext_MatchListProvider {
 
 	public BattleNext_TournamentStore getTournamentStore() {
 		return tournamentStore;
+	}
+
+	public BattleNext_TournamentEngine getTournamentEngine() {
+		return tournamentEngine;
 	}
 
 	public boolean hasLegacyMatches() {
