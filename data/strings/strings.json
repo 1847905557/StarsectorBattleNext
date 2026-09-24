@@ -25,4 +25,7 @@
 	"BattleNext_ui_invalid_player": "Invalid player fleet reference",
 	"BattleNext_ui_invalid_enemy": "Invalid enemy fleet reference",
 	"BattleNext_ui_invalid_map_size": "Map must be -1..11 and size must be a positive number"
+	,"BattleNext_ui_read_only": "Built-in",
+	"BattleNext_ui_user": "User",
+	"BattleNext_ui_variant_count": "Variants"
 }

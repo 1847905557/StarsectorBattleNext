@@ -39,6 +39,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	private int activeTournamentSlot = -1;
 	private boolean pendingResult;
 	private BattleNext_QuickBattleEditor quickEditor;
+	private BattleNext_FleetLibraryPage fleetPage;
 
 	public BattleNext_UiManager(Runnable closeAction) {
 		this.closeAction = closeAction;
@@ -63,12 +64,18 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		if (currentPage == Page.QUICK && quickEditor != null) {
 			quickEditor.advance();
 		}
+		if (currentPage == Page.FLEETS && fleetPage != null) {
+			fleetPage.advance();
+		}
 	}
 
 	@Override
 	public void processInput(List<InputEventAPI> events) {
 		if (currentPage == Page.QUICK && quickEditor != null) {
 			quickEditor.processInput(events);
+		}
+		if (currentPage == Page.FLEETS && fleetPage != null) {
+			fleetPage.processInput(events);
 		}
 		for (InputEventAPI event : events) {
 			if (!event.isKeyboardEvent() || !event.isKeyDownEvent()) {
@@ -91,6 +98,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	public void buttonPressed(Object buttonId) {
 		if (currentPage == Page.QUICK && quickEditor != null && !(buttonId instanceof Page)) {
 			quickEditor.buttonPressed(buttonId);
+		} else if (currentPage == Page.FLEETS && fleetPage != null && !(buttonId instanceof Page)) {
+			fleetPage.buttonPressed(buttonId);
 		} else if (buttonId instanceof Page) {
 			pageStack.push(currentPage);
 			currentPage = (Page) buttonId;
@@ -159,6 +168,12 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 				quickEditor = new BattleNext_QuickBattleEditor(this::goBack);
 			}
 			quickEditor.attach(panel);
+			return;
+		} else if (currentPage == Page.FLEETS) {
+			if (fleetPage == null) {
+				fleetPage = new BattleNext_FleetLibraryPage(this::goBack);
+			}
+			fleetPage.attach(panel);
 			return;
 		} else {
 			content.addPara(text("BattleNext_ui_page_placeholder"), 12f, BattleNext_UiTheme.TEXT);

@@ -40,15 +40,30 @@ public class BattleNext_FleetStore {
 
 	public void save(BattleNext_FleetModel fleet) throws IOException, JSONException {
 		if (fleet == null || fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet id is required");
-		String path = "AI_Battles_Next/fleets/" + fleet.getId() + ".json";
+		String directory = "AI_Battles_Next/" + fleet.getId() + "/";
+		String path = directory + "fleet_data.json";
 		if (Global.getSettings().fileExistsInCommon(path)) {
 			JSONObject previous = Global.getSettings().readJSONFromCommon(path, false);
-			Global.getSettings().writeJSONToCommon(path + ".bak", previous, false);
+			Global.getSettings().writeJSONToCommon(directory + "fleet_data.json.bak", previous, false);
 		}
 		Global.getSettings().writeJSONToCommon(path, fleet.toJson(), false);
+		for (BattleNext_VariantModel variant : fleet.getVariants()) {
+			Global.getSettings().writeTextFileToCommon(directory + variant.getId() + ".variant", variant.toJson().toString(2));
+		}
 		fleet.setSource("user");
 		fleet.setSourcePath(path);
 		fleets.put(fleet.getId(), fleet);
+	}
+
+	public void delete(BattleNext_FleetModel fleet) throws IOException {
+		if (fleet == null || !"user".equals(fleet.getSource())) return;
+		String directory = "AI_Battles_Next/" + fleet.getId() + "/";
+		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json");
+		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json.bak");
+		for (BattleNext_VariantModel variant : fleet.getVariants()) {
+			Global.getSettings().deleteTextFileFromCommon(directory + variant.getId() + ".variant");
+		}
+		fleets.remove(fleet.getId());
 	}
 
 	private void putIfAbsent(List<BattleNext_FleetModel> values) {

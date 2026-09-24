@@ -7,7 +7,9 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class BattleNext_FleetModel {
 
@@ -27,6 +29,8 @@ public class BattleNext_FleetModel {
 	private int rulesSlot;
 	private String source;
 	private String sourcePath;
+	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
+	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
 		this("", "", "", List.of(), List.of(), List.of());
@@ -207,6 +211,30 @@ public class BattleNext_FleetModel {
 
 	public void setSourcePath(String sourcePath) {
 		this.sourcePath = normalize(sourcePath);
+	}
+
+	public void putVariant(BattleNext_VariantModel variant) {
+		if (variant != null && !variant.getId().isEmpty()) variants.put(variant.getId(), variant);
+	}
+
+	public BattleNext_VariantModel getVariant(String variantId) {
+		return variants.get(variantId);
+	}
+
+	public List<BattleNext_VariantModel> getVariants() {
+		return List.copyOf(variants.values());
+	}
+
+	public boolean hasLocalVariants() {
+		return !variants.isEmpty();
+	}
+
+	public void addLoadError(String error) {
+		if (error != null && !error.isEmpty()) loadErrors.add(error);
+	}
+
+	public List<String> getLoadErrors() {
+		return Collections.unmodifiableList(loadErrors);
 	}
 
 	private static List<String> readStrings(JSONArray values) {

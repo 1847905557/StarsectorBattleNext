@@ -1,7 +1,6 @@
 package data.scripts.fleet;
 
 import com.fs.starfarer.api.Global;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -16,14 +15,16 @@ import java.util.Map;
 public class BattleNext_FleetLoader {
 
 	public static final String MOD_ID = "AI_Battles_Next";
-	private static final String COMMON_ROOT = "saves/common/AI_Battles_Next";
 
 	public List<BattleNext_FleetModel> loadBuiltIn() {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		for (String path : listBuiltInPaths()) {
+		List<String> dataPaths = invokeResourceList("tournament", "json");
+		List<String> variantPaths = invokeResourceList("tournament", "variant");
+		for (String path : dataPaths) {
+			if (!path.endsWith("/fleet_data.json")) continue;
 			try {
-				JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
-				if (isFleet(json)) result.add(read(json, path, "built_in"));
+				JSONObject json = new JSONObject(Global.getSettings().loadText(path, MOD_ID));
+				result.add(read(json, path, "built_in", variantPaths));
 			} catch (IOException | JSONException exception) {
 				throw new IllegalStateException("Unable to load built-in fleet: " + path, exception);
 			}
@@ -32,13 +33,19 @@ public class BattleNext_FleetLoader {
 	}
 
 	public List<BattleNext_FleetModel> loadUser() {
-		List<String> paths = listUserPaths();
-		if (paths.isEmpty()) paths = readIndexPaths();
+		String savesPath = invokeSavesPath();
+		if (savesPath.isEmpty()) return List.of();
+		String commonPath = new File(savesPath, "common").getAbsolutePath();
+		String root = new File(commonPath, "AI_Battles_Next").getAbsolutePath();
+		List<String> dataPaths = invokeAbsoluteResourceList(root, commonPath, "json");
+		List<String> variantPaths = invokeAbsoluteResourceList(root, commonPath, "variant");
+		if (dataPaths.isEmpty()) dataPaths = listAbsoluteFiles(root, commonPath, "fleet_data.json");
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		for (String path : paths) {
+		for (String path : dataPaths) {
+			if (!path.endsWith("/fleet_data.json")) continue;
 			try {
 				JSONObject json = Global.getSettings().readJSONFromCommon(stripDataSuffix(path), false);
-				if (isFleet(json)) result.add(read(json, path, "user"));
+				result.add(read(json, path, "user", variantPaths));
 			} catch (IOException | JSONException exception) {
 				throw new IllegalStateException("Unable to load user fleet: " + path, exception);
 			}
@@ -46,105 +53,87 @@ public class BattleNext_FleetLoader {
 		return result;
 	}
 
-	private BattleNext_FleetModel read(JSONObject json, String path, String source) {
-		String fallbackId = new File(path).getName().replaceFirst("\\.json(?:\\.data)?$", "");
-		BattleNext_FleetModel fleet = BattleNext_FleetModel.fromJson(json, fallbackId);
+	private BattleNext_FleetModel read(JSONObject json, String path, String source, List<String> variantPaths) {
+		String normalizedPath = path.replace("\\", "/");
+		String folderId = normalizedPath.substring(0, normalizedPath.lastIndexOf("/fleet_data.json"));
+		folderId = folderId.substring(folderId.lastIndexOf('/') + 1);
+		BattleNext_FleetModel fleet = BattleNext_FleetModel.fromJson(json, folderId);
+		fleet.setId(folderId);
 		fleet.setSource(source);
 		fleet.setSourcePath(path);
+		String folderPrefix = normalizedPath.substring(0, normalizedPath.lastIndexOf('/') + 1);
+		for (String variantPath : variantPaths) {
+			String normalizedVariant = variantPath.replace("\\", "/");
+			if (!normalizedVariant.startsWith(folderPrefix) || !normalizedVariant.endsWith(".variant")) continue;
+			String variantId = normalizedVariant.substring(folderPrefix.length(), normalizedVariant.length() - ".variant".length());
+			try {
+				String text = source.equals("user")
+						? Global.getSettings().readTextFileFromCommon(stripDataSuffix(variantPath))
+						: Global.getSettings().loadText(variantPath, MOD_ID);
+				fleet.putVariant(BattleNext_VariantModel.fromJson(new JSONObject(text), variantId));
+			} catch (IOException | JSONException exception) {
+				fleet.addLoadError("Unable to load variant " + variantId + ": " + exception.getMessage());
+			}
+		}
+		for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
+			if (fleet.getVariant(variantId) == null) fleet.addLoadError("Missing variant: " + variantId);
+		}
 		return fleet;
 	}
 
-	private List<String> listBuiltInPaths() {
-		List<String> result = new ArrayList<>();
-		for (String root : List.of("tournament", "tournament/fleets")) {
-			result.addAll(invokeResourceList(root));
-		}
-		result.sort(String::compareTo);
-		return unique(result);
-	}
-
-	private List<String> listUserPaths() {
-		String savesPath = invokeSavesPath();
-		if (savesPath.isEmpty()) return List.of();
-		List<String> result = new ArrayList<>();
-		String commonPath = new File(savesPath, "common").getAbsolutePath();
-		for (String folder : List.of(commonPath + "/AI_Battles_Next", commonPath + "/AI_Battles_Next/fleets")) {
-			List<String> reflected = invokeAbsoluteResourceList(folder, commonPath);
-			result.addAll(reflected.isEmpty() ? listAbsoluteJson(folder, commonPath) : reflected);
-		}
-		result.sort(String::compareTo);
-		return unique(result);
-	}
-
-	private List<String> readIndexPaths() {
-		try {
-			JSONObject index = Global.getSettings().readJSONFromCommon("fleet_index", false);
-			List<String> result = new ArrayList<>();
-			JSONArray paths = index.optJSONArray("paths");
-			if (paths == null) return List.of();
-			for (int indexValue = 0; indexValue < paths.length(); indexValue++) {
-				result.add(paths.optString(indexValue, ""));
-			}
-			return unique(result);
-		} catch (Exception exception) {
-			return List.of();
-		}
-	}
-
-	private List<String> invokeResourceList(String root) {
+	private List<String> invokeResourceList(String root, String extension) {
 		try {
 			Class<?> type = Class.forName("com.fs.starfarer.loading.LoadingUtils");
 			Method method = type.getMethod("listFilesOfType", String.class, String.class);
-			Object value = method.invoke(null, root, "json");
-			if (value instanceof List<?> paths) {
-				List<String> result = new ArrayList<>();
-				for (Object path : paths) {
-					result.add(String.valueOf(path));
-				}
-				return result;
-			}
+			Object value = method.invoke(null, root, extension);
+			return normalizePaths(value);
 		} catch (Exception ignored) {
 			return List.of();
 		}
-		return List.of();
 	}
 
-	private List<String> invokeAbsoluteResourceList(String folder, String commonPath) {
+	private List<String> invokeAbsoluteResourceList(String folder, String commonPath, String extension) {
 		try {
 			Class<?> type = Class.forName("com.fs.starfarer.loading.LoadingUtils");
 			Method method = type.getMethod("listFilesOfTypeAbsolute", String.class, String.class);
-			Object value = method.invoke(null, folder, "json");
-			if (value instanceof List<?> paths) {
-				List<String> result = new ArrayList<>();
-				for (Object path : paths) {
-					String absolute = String.valueOf(path);
-					String relative = absolute.substring(commonPath.length()).replace("\\", "/");
-					if (relative.startsWith("/")) relative = relative.substring(1);
-					if (relative.endsWith(".json") || relative.endsWith(".json.data")) {
-						result.add(relative);
-					}
-				}
-				return result;
-			}
-		} catch (Exception ignored) {
-			return List.of();
-		}
-		return List.of();
-	}
-
-	private List<String> listAbsoluteJson(String folder, String commonPath) {
-		List<String> result = new ArrayList<>();
-		File directory = new File(folder);
-		File[] files = directory.listFiles();
-		if (files == null) return result;
-		for (File file : files) {
-			if (file.isFile() && (file.getName().endsWith(".json.data") || file.getName().endsWith(".json"))) {
-				String absolute = file.getAbsolutePath();
+			Object value = method.invoke(null, folder, extension);
+			List<String> result = new ArrayList<>();
+			for (String absolute : normalizePaths(value)) {
 				String relative = absolute.substring(commonPath.length()).replace("\\", "/");
 				if (relative.startsWith("/")) relative = relative.substring(1);
 				result.add(relative);
 			}
+			return result;
+		} catch (Exception ignored) {
+			return List.of();
 		}
+	}
+
+	private List<String> listAbsoluteFiles(String root, String commonPath, String fileName) {
+		List<String> result = new ArrayList<>();
+		File directory = new File(root);
+		File[] files = directory.listFiles();
+		if (files == null) return result;
+		for (File file : files) {
+			if (file.isDirectory()) result.addAll(listAbsoluteFiles(file.getAbsolutePath(), commonPath, fileName));
+			if (file.isFile() && file.getName().equals(fileName)) {
+				String relative = file.getAbsolutePath().substring(commonPath.length()).replace("\\", "/");
+				if (relative.startsWith("/")) relative = relative.substring(1);
+				result.add(relative);
+			}
+		}
+		return result;
+	}
+
+	private List<String> normalizePaths(Object value) {
+		if (!(value instanceof List<?> paths)) return List.of();
+		Map<String, String> unique = new LinkedHashMap<>();
+		for (Object path : paths) {
+			String normalized = String.valueOf(path).replace("\\", "/");
+			unique.put(normalized, normalized);
+		}
+		List<String> result = new ArrayList<>(unique.values());
+		result.sort(String::compareTo);
 		return result;
 	}
 
@@ -157,18 +146,7 @@ public class BattleNext_FleetLoader {
 		}
 	}
 
-	private boolean isFleet(JSONObject json) {
-		return json != null && json.optJSONArray("members") != null;
-	}
-
 	private String stripDataSuffix(String path) {
 		return path.replace("\\", "/").replaceFirst("\\.data$", "");
-	}
-	private List<String> unique(List<String> values) {
-		Map<String, String> ordered = new LinkedHashMap<>();
-		for (String value : values) {
-			ordered.put(value.replace("\\", "/"), value);
-		}
-		return new ArrayList<>(ordered.values());
 	}
 }

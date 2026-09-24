@@ -5,6 +5,7 @@ import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,6 +19,15 @@ public class BattleNext_MemberBuilder {
 			throw new IllegalArgumentException("Unknown variant: " + definition.getVariantId());
 		}
 
+		FleetMemberAPI member = Global.getSettings().createFleetMember(FleetMemberType.SHIP, variant);
+		applyMemberData(member, definition);
+		return member;
+	}
+
+	public FleetMemberAPI build(BattleNext_MemberModel definition, ShipVariantAPI variant) {
+		if (definition == null || variant == null) {
+			throw new IllegalArgumentException("Member definition and variant are required");
+		}
 		FleetMemberAPI member = Global.getSettings().createFleetMember(FleetMemberType.SHIP, variant);
 		applyMemberData(member, definition);
 		return member;
