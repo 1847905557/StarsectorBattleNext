@@ -1,6 +1,5 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -10,6 +9,7 @@ import data.scripts.match.BattleNext_MemberReport;
 import data.scripts.match.BattleNext_Round;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
+import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,6 +21,7 @@ public class BattleNext_BattleReportPage {
 	private final Runnable backAction;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
 	private final List<Entry> entries = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI content;
@@ -31,8 +32,10 @@ public class BattleNext_BattleReportPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
+		if (this.panel != panel) content = null;
 		this.panel = panel;
 		load();
+		selected = null;
 		rebuild();
 	}
 
@@ -86,13 +89,14 @@ public class BattleNext_BattleReportPage {
 
 	private void rebuild() {
 		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(720f, 480f, false);
+		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
+				panel.getPosition().getHeight() - 8f, true);
 		BattleNext_UiTheme.configure(content);
 		content.addTitle(text("BattleNext_ui_page_reports"));
 		if (selected == null) addList();
 		else addDetails();
 		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
-		panel.addUIElement(content).inMid();
+		panel.addUIElement(content).inTL(10f, 0f);
 	}
 
 	private void addList() {
@@ -134,11 +138,7 @@ public class BattleNext_BattleReportPage {
 	}
 
 	private String text(String key) {
-		try {
-			return Global.getSettings().getString("AI_Battles_Next", key);
-		} catch (RuntimeException exception) {
-			return key;
-		}
+		return strings.get(key);
 	}
 
 	private static final class Entry {

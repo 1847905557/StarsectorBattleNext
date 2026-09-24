@@ -1,6 +1,5 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -11,6 +10,7 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,10 +22,12 @@ public class BattleNext_FleetDraftEditor {
 	private final Runnable backAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
 	private final List<MemberFields> memberFields = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI content;
 	private LabelAPI status;
+	private String statusText = "";
 	private TextFieldAPI id;
 	private TextFieldAPI name;
 	private TextFieldAPI player;
@@ -36,6 +38,7 @@ public class BattleNext_FleetDraftEditor {
 	private TextFieldAPI tags;
 	private TextFieldAPI rulesSlot;
 	private BattleNext_FleetModel draft;
+	private String savedSnapshot = "";
 
 	public BattleNext_FleetDraftEditor(Runnable backAction) {
 		this.backAction = backAction;
@@ -43,9 +46,19 @@ public class BattleNext_FleetDraftEditor {
 	}
 
 	public void attach(CustomPanelAPI panel, BattleNext_FleetModel source, boolean clone) {
+		if (this.panel != panel) content = null;
 		this.panel = panel;
 		this.draft = source == null ? new BattleNext_FleetModel() : copy(source, clone);
 		rebuild();
+		savedSnapshot = serializeFields();
+	}
+
+	public boolean hasUnsavedChanges() {
+		return !serializeFields().equals(savedSnapshot);
+	}
+
+	public String getStatusText() {
+		return statusText;
 	}
 
 	public void advance() {
@@ -58,7 +71,7 @@ public class BattleNext_FleetDraftEditor {
 		if ("save".equals(buttonId)) {
 			save();
 		} else if ("add_member".equals(buttonId)) {
-			draft.getMembers();
+			if (!captureDraft(false)) return;
 			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
 			members.add(new BattleNext_MemberModel());
 			draft.setMembers(members);
@@ -70,7 +83,8 @@ public class BattleNext_FleetDraftEditor {
 
 	private void rebuild() {
 		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(720f, 480f, false);
+		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
+				panel.getPosition().getHeight() - 8f, true);
 		BattleNext_UiTheme.configure(content);
 		content.addTitle(text("BattleNext_ui_fleet_editor"));
 		status = content.addPara(text("BattleNext_ui_ready"), 6f, BattleNext_UiTheme.MUTED);
@@ -90,7 +104,7 @@ public class BattleNext_FleetDraftEditor {
 		content.addButton(text("BattleNext_ui_add_member"), "add_member", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
 		content.addButton(text("BattleNext_ui_save"), "save", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
 		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
-		panel.addUIElement(content).inMid();
+		panel.addUIElement(content).inTL(10f, 0f);
 	}
 
 	private void addMember(int index, BattleNext_MemberModel member) {
@@ -114,11 +128,24 @@ public class BattleNext_FleetDraftEditor {
 		return field;
 	}
 
-	private void save() {
+	public boolean save() {
+		if (!captureDraft(true)) return false;
+		try {
+			store.save(draft);
+			savedSnapshot = serializeFields();
+			setStatus(text("BattleNext_ui_saved"));
+			return true;
+		} catch (Exception exception) {
+			setStatus(text("BattleNext_ui_save_failed"));
+			return false;
+		}
+	}
+
+	private boolean captureDraft(boolean validate) {
 		String fleetId = id.getText().trim();
-		if (fleetId.isEmpty() || fleetId.contains("/") || fleetId.contains("\\")) {
+		if ((validate && fleetId.isEmpty()) || fleetId.contains("/") || fleetId.contains("\\")) {
 			setStatus(text("BattleNext_ui_invalid_fleet_id"));
-			return;
+			return false;
 		}
 		draft.setId(fleetId);
 		draft.setName(name.getText());
@@ -132,31 +159,45 @@ public class BattleNext_FleetDraftEditor {
 			draft.setRulesSlot(Integer.parseInt(rulesSlot.getText().trim()));
 		} catch (NumberFormatException exception) {
 			setStatus(text("BattleNext_ui_invalid_rules_slot"));
-			return;
+			return false;
 		}
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		for (MemberFields fields : memberFields) {
 			String variantId = fields.variant.getText().trim();
-			if (variantId.isEmpty()) {
+			if (validate && variantId.isEmpty()) {
 				setStatus(text("BattleNext_ui_invalid_variant"));
-				return;
+				return false;
 			}
-			try {
-				if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantModel.fromRegistered(variantId));
-			} catch (Exception exception) {
-				setStatus(text("BattleNext_ui_invalid_variant"));
-				return;
+			if (!variantId.isEmpty()) {
+				try {
+					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantModel.fromRegistered(variantId));
+				} catch (Exception exception) {
+					if (validate) {
+						setStatus(text("BattleNext_ui_invalid_variant"));
+						return false;
+					}
+				}
 			}
 			members.add(new BattleNext_MemberModel(variantId, fields.name.getText(), fields.personality.getText(),
 					split(fields.skills.getText()), fields.portrait.getText(), fields.orders.getText(), split(fields.tags.getText())));
 		}
 		draft.setMembers(members);
-		try {
-			store.save(draft);
-			setStatus(text("BattleNext_ui_saved"));
-		} catch (Exception exception) {
-			setStatus(text("BattleNext_ui_save_failed"));
+		return true;
+	}
+
+	private String serializeFields() {
+		if (id == null) return "";
+		StringBuilder value = new StringBuilder();
+		for (TextFieldAPI field : new TextFieldAPI[]{id, name, player, author, description, behavior, skills, tags, rulesSlot}) {
+			value.append(field.getText().length()).append(':').append(field.getText());
 		}
+		for (MemberFields member : memberFields) {
+			for (TextFieldAPI field : new TextFieldAPI[]{member.variant, member.name, member.personality,
+					member.skills, member.portrait, member.orders, member.tags}) {
+				value.append(field.getText().length()).append(':').append(field.getText());
+			}
+		}
+		return value.toString();
 	}
 
 	private BattleNext_FleetModel copy(BattleNext_FleetModel source, boolean clone) {
@@ -179,15 +220,12 @@ public class BattleNext_FleetDraftEditor {
 	}
 
 	private void setStatus(String value) {
+		statusText = value;
 		status.setText(value);
 	}
 
 	private String text(String key) {
-		try {
-			return Global.getSettings().getString("AI_Battles_Next", key);
-		} catch (RuntimeException exception) {
-			return key;
-		}
+		return strings.get(key);
 	}
 
 	private static final class MemberFields {

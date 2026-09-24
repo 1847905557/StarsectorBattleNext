@@ -13,6 +13,10 @@ public class BattleNext_MatchBook {
 	private final List<BattleNext_Match> matches = new ArrayList<>();
 	private final List<String> comments = new ArrayList<>();
 
+	public boolean hasUserFile() {
+		return Global.getSettings().fileExistsInCommon(PATH);
+	}
+
 	public void load() throws IOException {
 		loadText(Global.getSettings().readTextFileFromCommon(PATH));
 	}

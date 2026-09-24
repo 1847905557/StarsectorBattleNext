@@ -1,6 +1,5 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -10,6 +9,7 @@ import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
+import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,6 +21,7 @@ public class BattleNext_TournamentPage {
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI content;
 	private BattleNext_Tournament selected;
@@ -31,7 +32,9 @@ public class BattleNext_TournamentPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
+		if (this.panel != panel) content = null;
 		this.panel = panel;
+		selected = null;
 		fleetStore.reload();
 		try {
 			tournamentStore.reload();
@@ -130,7 +133,8 @@ public class BattleNext_TournamentPage {
 		if (content != null) {
 			panel.removeComponent(content);
 		}
-		content = panel.createUIElement(720f, 480f, false);
+		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
+				panel.getPosition().getHeight() - 8f, true);
 		BattleNext_UiTheme.configure(content);
 		content.addTitle(text("BattleNext_ui_page_tournaments"));
 		if (!status.isEmpty()) {
@@ -143,7 +147,7 @@ public class BattleNext_TournamentPage {
 		}
 		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT,
 				BattleNext_UiTheme.PANEL, 160f, 30f, 8f);
-		panel.addUIElement(content).inMid();
+		panel.addUIElement(content).inTL(10f, 0f);
 	}
 
 	private void addList() {
@@ -189,10 +193,6 @@ public class BattleNext_TournamentPage {
 	}
 
 	private String text(String key) {
-		try {
-			return Global.getSettings().getString("AI_Battles_Next", key);
-		} catch (RuntimeException exception) {
-			return key;
-		}
+		return strings.get(key);
 	}
 }

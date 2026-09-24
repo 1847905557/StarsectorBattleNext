@@ -51,17 +51,16 @@ public class BattleNext_MatchListProvider {
 		}
 
 		BattleNext_MatchBook book = new BattleNext_MatchBook();
+		boolean userFile = book.hasUserFile();
 		try {
-			book.load();
-		} catch (Exception exception) {
-			warnings.add("Unable to load user quick battle list: " + exception.getMessage());
-		}
-		if (book.getMatches().isEmpty()) {
-			try {
+			if (userFile) {
+				book.load();
+			} else {
 				book.loadBuiltIn();
-			} catch (Exception exception) {
-				warnings.add("Unable to load built-in quick battle list: " + exception.getMessage());
 			}
+		} catch (Exception exception) {
+			warnings.add("Unable to load " + (userFile ? "user" : "built-in")
+					+ " quick battle list: " + exception.getMessage());
 		}
 		return validate(book.getMatches(), "quick battle");
 	}

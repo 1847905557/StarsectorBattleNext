@@ -2,203 +2,279 @@ package data.scripts.ui;
 
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.util.Pair;
+import com.fs.state.AppDriver;
+import org.boxutil.BoxUtilModPlugin;
+import org.boxutil.backends.reflect.BUtil_RefMethod;
+import org.boxutil.config.BoxConfigGUI;
+import org.boxutil.manager.ShaderCore;
+import org.boxutil.util.CommonUtil;
+import org.boxutil.units.standard.misc.UIBorderObject;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
-	private static final float ENTRY_WIDTH = 180f;
-	private static final float ENTRY_HEIGHT = 48f;
-	private static final float PANEL_WIDTH = 760f;
-	private static final float PANEL_HEIGHT = 520f;
+	private static final float SIMPLE_PADDING = 5f;
+	private static final float BORDER_WIDTH = 8f;
+	private static final float ENTRY_WIDTH = 48f;
+	private static final float ENTRY_HEIGHT = 24f;
+	private static final float ENTRY_BOTTOM = 133f;
+	private static final float EXPANDED_SIZE = 112f;
+	private static final float PANEL_SCALE = 0.8f;
+	private static final float PANEL_MARGIN = 0.1f;
 	private CombatEngineAPI engine;
+	private CustomPanelAPI mainPanel;
+	private BattleNext_BoxPanel mainPlugin;
 	private UIPanelAPI screenPanel;
-	private CustomPanelAPI entryPanel;
-	private CustomPanelAPI managementPanel;
-	private BattleNext_UiManager uiManager;
-	private boolean managementVisible;
+	private final int[] iconTextures = new int[2];
+	private int backdropTexture;
+	private UIBorderObject entryBorder;
+	private float panelCooldown;
+	private boolean panelVisible;
+	private boolean hovered;
+	private boolean mouseHeld;
+	private boolean renderChecked;
 
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
-		if (!isTitleState() || engine.isSimulation()) {
+		if (Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
 			engine.removePlugin(this);
 			return;
 		}
-		mountPanels();
+		BoxUtilModPlugin.initLater();
+		loadIcons();
+		loadBackdrop();
+		entryBorder = new UIBorderObject(false, true);
+		entryBorder.setSize(ENTRY_WIDTH + BORDER_WIDTH * 2f, ENTRY_HEIGHT + BORDER_WIDTH * 2f);
+		createMainPanel();
 	}
 
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
-		if (engine == null || !isTitleState() || engine.isSimulation()) {
+		if (engine == null || Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
+			closePanel();
+			releaseIcons();
 			if (engine != null) {
 				engine.removePlugin(this);
 			}
 			return;
 		}
-		if (isDialogOpen()) {
-			return;
-		}
-		if (managementVisible && managementPanel == null) {
-			mountPanels();
-		}
+		panelCooldown = Math.min(0.5f, panelCooldown + amount);
 	}
 
 	@Override
 	public void renderInUICoords(ViewportAPI viewport) {
-		if (isDialogOpen()) {
+		boolean panelEmpty = isTitlePanelEmpty();
+		if (!renderChecked) {
+			Global.getLogger(BattleNext_TitlePanel.class).info("Title UI render: state="
+					+ Global.getCurrentState() + ", dialogEmpty=" + panelEmpty + ", icon=" + iconTextures[0]);
+			renderChecked = true;
+		}
+		if (Global.getCurrentState() != GameState.TITLE || !panelEmpty) {
 			return;
 		}
+		if (panelVisible) {
+			captureBackdrop();
+			return;
+		}
+		updateEntryInput();
+		renderEntry();
 	}
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
-		if (isDialogOpen()) {
+		if (Global.getCurrentState() != GameState.TITLE || !isTitlePanelEmpty()) {
 			return;
 		}
-		if (managementVisible && uiManager != null && uiManager.handleGlobalInput(events)) {
+		if (panelVisible && mainPlugin != null && mainPlugin.handleGlobalInput(events)) {
+			return;
+		}
+		if (!panelVisible) {
 			return;
 		}
 		for (InputEventAPI event : events) {
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
-				managementVisible = false;
-				removeManagementPanel();
+				closePanel();
 				event.consume();
 				return;
 			}
 		}
 	}
 
-	private void mountPanels() {
-		if (screenPanel == null) {
-			screenPanel = findScreenPanel();
+	private void loadIcons() {
+		if (iconTextures[0] != 0) {
+			return;
 		}
+		String[] paths = {"graphics/ui/BattleNext_FeaturesIcon.png", "graphics/ui/BattleNext_ConfigButton.png"};
+		for (int index = 0; index < paths.length; index++) {
+			int texture = GL11.glGenTextures();
+			if (texture == 0) continue;
+			Pair<int[], ByteBuffer> data = CommonUtil.getRawPixels(paths[index], 4);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
+					data.one[0], data.one[1], 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, data.two);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+			iconTextures[index] = texture;
+		}
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+	}
+
+	private void releaseIcons() {
+		for (int index = 0; index < iconTextures.length; index++) {
+			if (iconTextures[index] == 0) continue;
+			GL11.glDeleteTextures(iconTextures[index]);
+			iconTextures[index] = 0;
+		}
+		if (backdropTexture != 0) {
+			GL11.glDeleteTextures(backdropTexture);
+			backdropTexture = 0;
+		}
+	}
+
+	private void loadBackdrop() {
+		if (backdropTexture != 0) return;
+		backdropTexture = GL11.glGenTextures();
+		if (backdropTexture == 0) return;
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, backdropTexture);
+		GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, ShaderCore.getScreenFixWidth(),
+				ShaderCore.getScreenFixHeight(), 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+	}
+
+	private void captureBackdrop() {
+		if (backdropTexture == 0) return;
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, backdropTexture);
+		GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, 0, 0,
+				ShaderCore.getScreenScaleWidth(), ShaderCore.getScreenScaleHeight());
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+	}
+
+	private void createMainPanel() {
+		if (mainPanel != null) {
+			return;
+		}
+		screenPanel = getScreenPanel();
 		if (screenPanel == null) {
 			return;
 		}
-		if (entryPanel == null) {
-			entryPanel = createPanel(ENTRY_WIDTH, ENTRY_HEIGHT, new EntryPlugin());
-			if (entryPanel != null) {
-				addEntryContent();
-				screenPanel.addComponent(entryPanel).inBR(24f, 24f);
-			}
-		}
-		if (managementVisible && managementPanel == null) {
-			uiManager = new BattleNext_UiManager(this::closeManagementPanel);
-			managementPanel = createPanel(PANEL_WIDTH, PANEL_HEIGHT, uiManager);
-			if (managementPanel != null) {
-				uiManager.attach(managementPanel);
-				screenPanel.addComponent(managementPanel).inMid();
-			}
-		}
+		float width = ShaderCore.getScreenWidth() * PANEL_SCALE;
+		float height = ShaderCore.getScreenHeight() * PANEL_SCALE;
+		mainPlugin = new BattleNext_BoxPanel(this::closePanel);
+		mainPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
+		mainPanel = Global.getSettings().createCustom(width, height, mainPlugin);
+		mainPanel.getPosition().inBL(ShaderCore.getScreenWidth() * PANEL_MARGIN, ShaderCore.getScreenHeight() * PANEL_MARGIN);
+		mainPlugin.init(mainPanel, width, height);
 	}
 
-	private void addEntryContent() {
-		TooltipMakerAPI content = entryPanel.createUIElement(ENTRY_WIDTH, ENTRY_HEIGHT, false);
-		content.setButtonFontOrbitron20();
-		content.addButton(text("BattleNext_title_open"), "open", ENTRY_WIDTH - 16f, 32f, 0f);
-		entryPanel.addUIElement(content).inMid();
+	private void openPanel() {
+		if (mainPanel == null) {
+			createMainPanel();
+		}
+		if (mainPanel == null || screenPanel == null) {
+			return;
+		}
+		mainPlugin.open();
+		screenPanel.addComponent(mainPanel);
+		panelVisible = true;
+		panelCooldown = 0f;
 	}
 
-	private CustomPanelAPI createPanel(float width, float height, CustomUIPanelPlugin plugin) {
+	private void closePanel() {
+		if (screenPanel != null && mainPanel != null) {
+			screenPanel.removeComponent(mainPanel);
+		}
+		panelVisible = false;
+		panelCooldown = 0f;
+		mouseHeld = Mouse.isButtonDown(0);
+	}
+
+	private void renderEntry() {
+		entryBorder.render(SIMPLE_PADDING, ENTRY_BOTTOM);
+		float x = hovered ? SIMPLE_PADDING + 12f : SIMPLE_PADDING + BORDER_WIDTH;
+		float y = hovered ? ENTRY_BOTTOM + 12f : ENTRY_BOTTOM + BORDER_WIDTH;
+		float width = hovered ? 88f : ENTRY_WIDTH;
+		float height = hovered ? 88f : ENTRY_HEIGHT;
+		GL11.glColor4f(1f, 1f, 1f, 1f);
+		GL11.glEnable(GL11.GL_TEXTURE_2D);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, iconTextures[hovered ? 1 : 0]);
+		GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
+		GL11.glTexCoord2f(0f, 0f);
+		GL11.glVertex2f(x, y);
+		GL11.glTexCoord2f(1f, 0f);
+		GL11.glVertex2f(x + width, y);
+		GL11.glTexCoord2f(0f, 1f);
+		GL11.glVertex2f(x, y + height);
+		GL11.glTexCoord2f(1f, 1f);
+		GL11.glVertex2f(x + width, y + height);
+		GL11.glEnd();
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+	}
+
+	private void updateEntryInput() {
+		float scale = Global.getSettings().getScreenScaleMult();
+		float mouseX = Mouse.getX() / scale;
+		float mouseY = Mouse.getY() / scale;
+		float x = SIMPLE_PADDING;
+		float y = ENTRY_BOTTOM;
+		float sizeX = hovered ? EXPANDED_SIZE : ENTRY_WIDTH + BORDER_WIDTH * 2f;
+		float sizeY = hovered ? EXPANDED_SIZE : ENTRY_HEIGHT + BORDER_WIDTH * 2f;
+		boolean inside = mouseX >= x && mouseX <= x + sizeX && mouseY >= y && mouseY <= y + sizeY;
+		if (inside != hovered) {
+			hovered = inside;
+			entryBorder.setSize(hovered ? EXPANDED_SIZE : ENTRY_WIDTH + BORDER_WIDTH * 2f,
+					hovered ? EXPANDED_SIZE : ENTRY_HEIGHT + BORDER_WIDTH * 2f);
+			if (hovered) Global.getSoundPlayer().playUISound("BUtil_button_in", 1f, 1f);
+		}
+		boolean down = Mouse.isButtonDown(0);
+		if (inside && down && !mouseHeld && panelCooldown > 0.1f) {
+			Global.getSoundPlayer().playUISound("BUtil_button_down", 1f, 1f);
+			openPanel();
+		}
+		mouseHeld = down;
+	}
+
+	private boolean isTitlePanelEmpty() {
+		return BoxConfigGUI.isTitlePanelEmpty();
+	}
+
+	private UIPanelAPI getScreenPanel() {
 		try {
-			return Global.getSettings().createCustom(width, height, plugin);
-		} catch (RuntimeException exception) {
+			if (!BUtil_RefMethod.VALID) {
+				Global.getLogger(BattleNext_TitlePanel.class).warn("Title screen panel reflection is unavailable");
+				return null;
+			}
+			Object state = AppDriver.getInstance().getCurrentState();
+			for (Object method : state.getClass().getMethods()) {
+				if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals("getScreenPanel")) continue;
+
+				Object result = BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, state);
+				return result instanceof UIPanelAPI ? (UIPanelAPI) result : null;
+			}
+			Global.getLogger(BattleNext_TitlePanel.class).warn("Title screen panel getter is unavailable");
 			return null;
-		}
-	}
-
-	private void removeManagementPanel() {
-		if (screenPanel != null && managementPanel != null) {
-			screenPanel.removeComponent(managementPanel);
-		}
-		managementPanel = null;
-		uiManager = null;
-	}
-
-	private void closeManagementPanel() {
-		managementVisible = false;
-		removeManagementPanel();
-	}
-
-	private boolean isTitleState() {
-		return Global.getCurrentState() == GameState.TITLE;
-	}
-
-	private boolean isDialogOpen() {
-		try {
-			Object state = Global.getCurrentState();
-			Field field = state.getClass().getDeclaredField("dialogType");
-			field.setAccessible(true);
-			return field.get(state) != null;
-		} catch (ReflectiveOperationException | SecurityException exception) {
-			return false;
-		}
-	}
-
-	private UIPanelAPI findScreenPanel() {
-		try {
-			Method method = Global.getCurrentState().getClass().getDeclaredMethod("getScreenPanel");
-			MethodHandle handle = MethodHandles.lookup().unreflect(method).bindTo(Global.getCurrentState());
-			Object result = handle.invokeWithArguments();
-			return result instanceof UIPanelAPI ? (UIPanelAPI) result : null;
 		} catch (Throwable exception) {
+			CommonUtil.printThrowable(BattleNext_TitlePanel.class, "Title screen panel lookup failed: ", exception);
 			return null;
 		}
 	}
-
-	private String text(String key) {
-		try {
-			return Global.getSettings().getString("AI_Battles_Next", key);
-		} catch (RuntimeException exception) {
-			return key;
-		}
-	}
-
-	private final class EntryPlugin extends BaseCustomUIPanelPlugin {
-
-		@Override
-		public void positionChanged(PositionAPI position) {
-		}
-
-		@Override
-		public void render(float alphaMult) {
-		}
-
-		@Override
-		public void advance(float amount) {
-		}
-
-		@Override
-		public void processInput(List<InputEventAPI> events) {
-		}
-
-		@Override
-		public void buttonPressed(Object buttonId) {
-			if ("open".equals(buttonId)) {
-				managementVisible = true;
-				mountPanels();
-			}
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-		}
-	}
-
 }

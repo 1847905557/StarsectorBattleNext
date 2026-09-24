@@ -1,12 +1,12 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +18,7 @@ public class BattleNext_FleetLibraryPage {
 	private final Runnable backAction;
 	private final Consumer<Object> editorAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("AI_Battles_Next", "");
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI content;
 	private BattleNext_FleetModel selected;
@@ -28,8 +29,10 @@ public class BattleNext_FleetLibraryPage {
 	}
 
 	public void attach(CustomPanelAPI panel) {
+		if (this.panel != panel) content = null;
 		this.panel = panel;
 		store.reload();
+		selected = null;
 		rebuild();
 	}
 
@@ -65,7 +68,8 @@ public class BattleNext_FleetLibraryPage {
 
 	private void rebuild() {
 		if (content != null) panel.removeComponent(content);
-		content = panel.createUIElement(720f, 480f, false);
+		content = panel.createUIElement(panel.getPosition().getWidth() - 20f,
+				panel.getPosition().getHeight() - 8f, true);
 		BattleNext_UiTheme.configure(content);
 		content.addTitle(text("BattleNext_ui_page_fleets"));
 		if (selected == null) {
@@ -74,7 +78,7 @@ public class BattleNext_FleetLibraryPage {
 			addDetails();
 		}
 		content.addButton(text("BattleNext_ui_back"), "back", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 8f);
-		panel.addUIElement(content).inMid();
+		panel.addUIElement(content).inTL(10f, 0f);
 	}
 
 	private void addList() {
@@ -107,11 +111,7 @@ public class BattleNext_FleetLibraryPage {
 	}
 
 	private String text(String key) {
-		try {
-			return Global.getSettings().getString("AI_Battles_Next", key);
-		} catch (RuntimeException exception) {
-			return key;
-		}
+		return strings.get(key);
 	}
 
 	public static final class DraftRequest {
