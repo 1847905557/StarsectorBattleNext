@@ -1,23 +1,32 @@
 package data.scripts.match;
 
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class BattleNext_BattleReport {
 
 	private String id = "";
 	private String winner = "draw";
 	private long durationMillis = 0L;
-	private int playerShips = 0;
-	private int enemyShips = 0;
+	private List<BattleNext_MemberReport> members = new ArrayList<>();
 
 	public static BattleNext_BattleReport fromJson(JSONObject json) {
 		BattleNext_BattleReport report = new BattleNext_BattleReport();
 		report.id = json.optString("id", "");
 		report.winner = json.optString("winner", "draw");
 		report.durationMillis = json.optLong("durationMillis", 0L);
-		report.playerShips = json.optInt("playerShips", 0);
-		report.enemyShips = json.optInt("enemyShips", 0);
+		JSONArray members = json.optJSONArray("members");
+		if (members != null) {
+			for (int index = 0; index < members.length(); index++) {
+				JSONObject member = members.optJSONObject(index);
+				if (member != null) report.members.add(BattleNext_MemberReport.fromJson(member));
+			}
+		}
 		return report;
 	}
 
@@ -26,8 +35,9 @@ public class BattleNext_BattleReport {
 		json.put("id", id);
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
-		json.put("playerShips", playerShips);
-		json.put("enemyShips", enemyShips);
+		JSONArray members = new JSONArray();
+		for (BattleNext_MemberReport member : this.members) members.put(member.toJson());
+		json.put("members", members);
 		return json;
 	}
 
@@ -55,19 +65,11 @@ public class BattleNext_BattleReport {
 		this.durationMillis = Math.max(0L, durationMillis);
 	}
 
-	public int getPlayerShips() {
-		return playerShips;
+	public List<BattleNext_MemberReport> getMembers() {
+		return Collections.unmodifiableList(members);
 	}
 
-	public void setPlayerShips(int playerShips) {
-		this.playerShips = Math.max(0, playerShips);
-	}
-
-	public int getEnemyShips() {
-		return enemyShips;
-	}
-
-	public void setEnemyShips(int enemyShips) {
-		this.enemyShips = Math.max(0, enemyShips);
+	public void addMember(BattleNext_MemberReport member) {
+		if (member != null) members.add(member);
 	}
 }
