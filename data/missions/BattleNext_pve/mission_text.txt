@@ -1,0 +1,3 @@
+BattleNext PvE
+
+Use the arrow keys to adjust the expected enemy fleet and faction selection.

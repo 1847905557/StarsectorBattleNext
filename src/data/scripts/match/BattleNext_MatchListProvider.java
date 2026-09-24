@@ -1,5 +1,6 @@
 package data.scripts.match;
 
+import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.tournament.BattleNext_Tournament;
@@ -61,6 +62,15 @@ public class BattleNext_MatchListProvider {
 
 	public BattleNext_FleetStore getFleetStore() {
 		return fleetStore;
+	}
+
+	public boolean hasLegacyMatches() {
+		try {
+			Global.getSettings().loadText("tournament/PvP_matches.csv", "AI_Battles_Next");
+			return true;
+		} catch (Exception exception) {
+			return false;
+		}
 	}
 
 	private List<BattleNext_Match> validate(List<BattleNext_Match> source, String sourceName) {
