@@ -4,5 +4,6 @@ jars/*.jar
 build/
 dist/
 .zcode/
+tournament/
 /*.md
 !/README.md
