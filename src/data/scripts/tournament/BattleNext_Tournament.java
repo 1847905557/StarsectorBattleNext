@@ -21,6 +21,10 @@ public class BattleNext_Tournament {
 	private int rulesSlot = -1;
 	private int mapId = -1;
 	private boolean started;
+	private boolean completed;
+	private String champion = "";
+	private String pendingMatchId = "";
+	private int kofNextIndex;
 
 	public BattleNext_Tournament(int slot, String name, String bracketType, String matchFormat, int size) {
 		if (slot < 0 || slot > 31) {
@@ -38,6 +42,10 @@ public class BattleNext_Tournament {
 		tournament.rulesSlot = json.optInt("rulesSlot", -1);
 		tournament.mapId = json.optInt("mapId", -1);
 		tournament.started = json.optBoolean("started", false);
+		tournament.completed = json.optBoolean("completed", false);
+		tournament.champion = json.optString("champion", "");
+		tournament.pendingMatchId = json.optString("pendingMatchId", "");
+		tournament.kofNextIndex = Math.max(0, json.optInt("kofNextIndex", 0));
 		JSONArray teams = json.optJSONArray("teams");
 		if (teams != null) {
 			for (int index = 0; index < teams.length(); index++) {
@@ -72,6 +80,10 @@ public class BattleNext_Tournament {
 		json.put("rulesSlot", rulesSlot);
 		json.put("mapId", mapId);
 		json.put("started", started);
+		json.put("completed", completed);
+		json.put("champion", champion);
+		json.put("pendingMatchId", pendingMatchId);
+		json.put("kofNextIndex", kofNextIndex);
 		return json;
 	}
 
@@ -111,6 +123,38 @@ public class BattleNext_Tournament {
 		this.started = started;
 	}
 
+	public boolean isCompleted() {
+		return completed;
+	}
+
+	public void setCompleted(boolean completed) {
+		this.completed = completed;
+	}
+
+	public String getChampion() {
+		return champion;
+	}
+
+	public void setChampion(String champion) {
+		this.champion = champion == null ? "" : champion.trim();
+	}
+
+	public String getPendingMatchId() {
+		return pendingMatchId;
+	}
+
+	public void setPendingMatchId(String pendingMatchId) {
+		this.pendingMatchId = pendingMatchId == null ? "" : pendingMatchId.trim();
+	}
+
+	public int getKofNextIndex() {
+		return kofNextIndex;
+	}
+
+	public void setKofNextIndex(int kofNextIndex) {
+		this.kofNextIndex = Math.max(0, kofNextIndex);
+	}
+
 	public List<String> getTeams() {
 		return Collections.unmodifiableList(teams);
 	}
@@ -126,8 +170,29 @@ public class BattleNext_Tournament {
 	}
 
 	public void addMatch(BattleNext_Match match) {
+		if (match != null && !started) {
+			matches.add(match);
+		}
+	}
+
+	public void addGeneratedMatch(BattleNext_Match match) {
 		if (match != null) {
 			matches.add(match);
+		}
+	}
+
+	public BattleNext_Match findMatch(String matchId) {
+		for (BattleNext_Match match : matches) {
+			if (match.getId().equals(matchId)) {
+				return match;
+			}
+		}
+		return null;
+	}
+
+	public void clearMatches() {
+		if (!started) {
+			matches.clear();
 		}
 	}
 }

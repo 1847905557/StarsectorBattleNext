@@ -15,6 +15,11 @@ public class BattleNext_Match {
 	private int map;
 	private float size;
 	private final List<BattleNext_Round> rounds = new ArrayList<>();
+	private int playerWins;
+	private int enemyWins;
+	private String status = "pending";
+	private String stage = "main";
+	private boolean replay;
 
 	public BattleNext_Match(String id, String player, String enemy, int map, float size) {
 		this.id = id == null ? "" : id.trim();
@@ -34,6 +39,11 @@ public class BattleNext_Match {
 				}
 			}
 		}
+		match.playerWins = Math.max(0, json.optInt("playerWins", 0));
+		match.enemyWins = Math.max(0, json.optInt("enemyWins", 0));
+		match.status = json.optString("status", "pending");
+		match.stage = json.optString("stage", "main");
+		match.replay = json.optBoolean("replay", false);
 		return match;
 	}
 
@@ -49,6 +59,11 @@ public class BattleNext_Match {
 			values.put(round.toJson());
 		}
 		json.put("rounds", values);
+		json.put("playerWins", playerWins);
+		json.put("enemyWins", enemyWins);
+		json.put("status", status);
+		json.put("stage", stage);
+		json.put("replay", replay);
 		return json;
 	}
 
@@ -80,5 +95,63 @@ public class BattleNext_Match {
 
 	public List<BattleNext_Round> getRounds() {
 		return Collections.unmodifiableList(rounds);
+	}
+
+	public int getPlayerWins() {
+		return playerWins;
+	}
+
+	public int getEnemyWins() {
+		return enemyWins;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public String getStage() {
+		return stage;
+	}
+
+	public void addPlayerWin() {
+		playerWins++;
+	}
+
+	public void addEnemyWin() {
+		enemyWins++;
+	}
+
+	public void setStatus(String status) {
+		this.status = status == null || status.trim().isEmpty() ? "pending" : status.trim();
+	}
+
+	public void setStage(String stage) {
+		this.stage = stage == null || stage.trim().isEmpty() ? "main" : stage.trim();
+	}
+
+	public void setSides(String player, String enemy) {
+		this.player = player == null ? "" : player.trim();
+		this.enemy = enemy == null ? "" : enemy.trim();
+	}
+
+	public void clearRoundsAfter(int roundNumber) {
+		while (!rounds.isEmpty() && rounds.get(rounds.size() - 1).getNumber() >= roundNumber) {
+			rounds.remove(rounds.size() - 1);
+		}
+	}
+
+	public boolean isReplay() {
+		return replay;
+	}
+
+	public void setReplay(boolean replay) {
+		this.replay = replay;
+	}
+
+	public void resetProgressForReplay() {
+		playerWins = 0;
+		enemyWins = 0;
+		status = "pending";
+		replay = true;
 	}
 }
