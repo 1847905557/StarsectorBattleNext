@@ -1,0 +1,5 @@
+{
+	"plugins": {
+		"BattleNextTitlePanel": "data.scripts.ui.BattleNext_TitlePanel"
+	}
+}
