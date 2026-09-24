@@ -1,3 +1,30 @@
 package data.scripts.orders.filter;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.*; import java.util.*;
-public class SelfHpFilter<E> implements OrderFilter<E> { public void filterTargets(ShipAPI s,List<E> t,String[] p,CombatEngineAPI e){float min=-1,max=p.length==1?BattleNext_OrderUtils.factor(p[0]):BattleNext_OrderUtils.factor(p[1]);if(p.length>1)min=BattleNext_OrderUtils.factor(p[0]);if(max<=0||(BattleNext_OrderUtils.percent(max)?s.getHullLevel()>max:s.getHitpoints()>max)||(min>=0&&(BattleNext_OrderUtils.percent(min)?s.getHullLevel()<min:s.getHitpoints()<min)))t.clear();} }
+
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.BattleNext_OrderUtils;
+import data.scripts.orders.OrderFilter;
+import java.util.List;
+
+public class SelfHpFilter<E> implements OrderFilter<E> {
+
+	@Override
+	public void filterTargets(ShipAPI source, List<E> targets, String[] params, CombatEngineAPI engine) {
+		float minHp = -1f;
+		float maxHp = params.length == 1 ? BattleNext_OrderUtils.factor(params[0]) : BattleNext_OrderUtils.factor(params[1]);
+		if (params.length > 1) {
+			minHp = BattleNext_OrderUtils.factor(params[0]);
+		}
+		if (maxHp <= 0f) {
+			targets.clear();
+			return;
+		}
+		if (BattleNext_OrderUtils.percent(maxHp) ? source.getHullLevel() > maxHp : source.getHitpoints() > maxHp) {
+			targets.clear();
+			return;
+		}
+		if (minHp >= 0f && (BattleNext_OrderUtils.percent(minHp) ? source.getHullLevel() < minHp : source.getHitpoints() < minHp)) {
+			targets.clear();
+		}
+	}
+}

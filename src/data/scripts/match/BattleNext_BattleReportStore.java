@@ -13,9 +13,16 @@ public class BattleNext_BattleReportStore {
 	public void add(BattleNext_BattleReport report) {
 		if (report == null) return;
 		reports.addLast(report);
-		while (reports.size() > MAX_REPORTS) reports.removeFirst();
+		while (reports.size() > MAX_REPORTS) {
+			reports.removeFirst();
+		}
 	}
 
-	public List<BattleNext_BattleReport> getRecent() { return List.copyOf(new ArrayList<>(reports)); }
-	public int size() { return reports.size(); }
+	public List<BattleNext_BattleReport> getRecent() {
+		return List.copyOf(new ArrayList<>(reports));
+	}
+
+	public int size() {
+		return reports.size();
+	}
 }

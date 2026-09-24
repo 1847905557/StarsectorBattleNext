@@ -40,23 +40,41 @@ public class BattleNext_MatchBook {
 
 	public void save() throws IOException {
 		StringBuilder text = new StringBuilder("player,enemy,map,size\n");
-		for (BattleNext_Match match : matches) text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
+		for (BattleNext_Match match : matches) {
+			text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
+		}
 		Global.getSettings().writeTextFileToCommon(PATH, text.toString());
 	}
 
-	public List<BattleNext_Match> getMatches() { return List.copyOf(matches); }
-	public void add(BattleNext_Match match) { if (match != null) matches.add(match); }
+	public List<BattleNext_Match> getMatches() {
+		return List.copyOf(matches);
+	}
 
-	private String csv(String value) { String normalized = value == null ? "" : value; return normalized.contains(",") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized; }
+	public void add(BattleNext_Match match) {
+		if (match != null) {
+			matches.add(match);
+		}
+	}
+
+	private String csv(String value) {
+		String normalized = value == null ? "" : value;
+		return normalized.contains(",") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized;
+	}
+
 	private List<String> parse(String line) {
 		List<String> result = new ArrayList<>();
 		StringBuilder field = new StringBuilder();
 		boolean quoted = false;
 		for (int index = 0; index < line.length(); index++) {
 			char value = line.charAt(index);
-			if (value == '\"') quoted = !quoted;
-			else if (value == ',' && !quoted) { result.add(field.toString().trim()); field.setLength(0); }
-			else field.append(value);
+			if (value == '\"') {
+				quoted = !quoted;
+			} else if (value == ',' && !quoted) {
+				result.add(field.toString().trim());
+				field.setLength(0);
+			} else {
+				field.append(value);
+			}
 		}
 		result.add(field.toString().trim());
 		return result;

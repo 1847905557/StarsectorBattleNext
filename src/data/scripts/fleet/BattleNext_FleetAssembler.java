@@ -17,7 +17,9 @@ public class BattleNext_FleetAssembler {
 	}
 
 	public BattleNext_FleetAssembly assemble(BattleNext_FleetModel definition) {
-		if (definition == null) throw new IllegalArgumentException("Fleet definition is required");
+		if (definition == null) {
+			throw new IllegalArgumentException("Fleet definition is required");
+		}
 		PersonAPI commander = createCommander(definition);
 		List<FleetMemberAPI> members = new ArrayList<>();
 		List<String> errors = new ArrayList<>();
@@ -37,7 +39,9 @@ public class BattleNext_FleetAssembler {
 
 	private PersonAPI createCommander(BattleNext_FleetModel definition) {
 		PersonAPI commander = Global.getSettings().createPerson();
-		for (String skill : definition.getSkills()) commander.getStats().setSkillLevel(skill, 1f);
+		for (String skill : definition.getSkills()) {
+			commander.getStats().setSkillLevel(skill, 1f);
+		}
 		return commander;
 	}
 }

@@ -227,8 +227,9 @@ public class BattleNext_PvpMigrationPrototype {
 		boolean quoted = false;
 		for (int index = 0; index < line.length(); index++) {
 			char value = line.charAt(index);
-			if (value == '"') quoted = !quoted;
-			else if (value == ',' && !quoted) {
+			if (value == '"') {
+				quoted = !quoted;
+			} else if (value == ',' && !quoted) {
 				result.add(field.toString().trim());
 				field.setLength(0);
 			} else {
@@ -240,6 +241,7 @@ public class BattleNext_PvpMigrationPrototype {
 	}
 
 	private static class LegacyMatch {
+
 		private final String player;
 		private final String enemy;
 		private final float size;
@@ -253,7 +255,8 @@ public class BattleNext_PvpMigrationPrototype {
 		}
 	}
 
-	private final class ForcedDeploymentPlugin extends BaseEveryFrameCombatPlugin {
+	private class ForcedDeploymentPlugin extends BaseEveryFrameCombatPlugin {
+
 		private CombatEngineAPI engine;
 		private boolean deployed;
 

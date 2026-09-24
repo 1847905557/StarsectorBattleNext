@@ -24,7 +24,9 @@ public class BattleNext_Round {
 		round.winner = json.optString("winner", "draw");
 		round.attempt = Math.max(0, json.optInt("attempt", 0));
 		JSONObject report = json.optJSONObject("report");
-		if (report != null) round.report = BattleNext_BattleReport.fromJson(report);
+		if (report != null) {
+			round.report = BattleNext_BattleReport.fromJson(report);
+		}
 		return round;
 	}
 
@@ -39,13 +41,39 @@ public class BattleNext_Round {
 		return json;
 	}
 
-	public int getNumber() { return number; }
-	public String getPlayer() { return player; }
-	public String getEnemy() { return enemy; }
-	public String getWinner() { return winner; }
-	public void setWinner(String winner) { this.winner = winner == null || winner.trim().isEmpty() ? "draw" : winner.trim(); }
-	public int getAttempt() { return attempt; }
-	public void setAttempt(int attempt) { this.attempt = Math.max(0, attempt); }
-	public BattleNext_BattleReport getReport() { return report; }
-	public void setReport(BattleNext_BattleReport report) { this.report = report == null ? new BattleNext_BattleReport() : report; }
+	public int getNumber() {
+		return number;
+	}
+
+	public String getPlayer() {
+		return player;
+	}
+
+	public String getEnemy() {
+		return enemy;
+	}
+
+	public String getWinner() {
+		return winner;
+	}
+
+	public void setWinner(String winner) {
+		this.winner = winner == null || winner.trim().isEmpty() ? "draw" : winner.trim();
+	}
+
+	public int getAttempt() {
+		return attempt;
+	}
+
+	public void setAttempt(int attempt) {
+		this.attempt = Math.max(0, attempt);
+	}
+
+	public BattleNext_BattleReport getReport() {
+		return report;
+	}
+
+	public void setReport(BattleNext_BattleReport report) {
+		this.report = report == null ? new BattleNext_BattleReport() : report;
+	}
 }

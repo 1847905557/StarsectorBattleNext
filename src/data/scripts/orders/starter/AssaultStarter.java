@@ -1,5 +1,22 @@
 package data.scripts.orders.starter;
-import com.fs.starfarer.api.combat.*;
-import data.scripts.orders.*;
+
+import com.fs.starfarer.api.combat.BattleObjectiveAPI;
+import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.BattleNext_OrderUtils;
+import data.scripts.orders.OrderStarter;
 import java.util.List;
-public class AssaultStarter implements OrderStarter<BattleObjectiveAPI> { public List<BattleObjectiveAPI> getInitialTargets(ShipAPI s, CombatEngineAPI e){return BattleNext_OrderUtils.enemyObjectives(s);} public CombatAssignmentType getCombatAssignmentType(){return CombatAssignmentType.ASSAULT;} }
+
+public class AssaultStarter implements OrderStarter<BattleObjectiveAPI> {
+
+	@Override
+	public List<BattleObjectiveAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine) {
+		return BattleNext_OrderUtils.enemyObjectives(source);
+	}
+
+	@Override
+	public CombatAssignmentType getCombatAssignmentType() {
+		return CombatAssignmentType.ASSAULT;
+	}
+}

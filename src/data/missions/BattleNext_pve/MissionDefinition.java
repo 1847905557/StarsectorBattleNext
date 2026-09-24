@@ -8,6 +8,7 @@ import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import org.lwjgl.input.Keyboard;
 
 public class MissionDefinition implements MissionDefinitionPlugin {
+
 	private static final int MIN_EXPECTED_DP = 10;
 	private static final int MAX_EXPECTED_DP = 2000;
 	private static final int EXPECTED_DP_STEP = 10;

@@ -1,3 +1,36 @@
 package data.scripts.orders.picker;
-import com.fs.starfarer.api.combat.*; import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo; import data.scripts.orders.*; import org.lazywizard.lazylib.CollectionUtils; import java.util.*;
-public class ConcentratePicker extends NearestPicker { public AssignmentTargetAPI pick(ShipAPI s,List<CombatEntityAPI> t,CombatAssignmentType type,CombatEngineAPI e){t.sort(new CollectionUtils.SortEntitiesByDistance(s.getLocation()));CombatTaskManagerAPI tasks=e.getFleetManager(s.getOwner()).getTaskManager(s.isAlly());AssignmentInfo current=tasks.getAssignmentFor(s);if(current!=null)for(CombatEntityAPI x:t){AssignmentTargetAPI a=x instanceof ShipAPI?e.getFleetManager(x.getOwner()).getDeployedFleetMember((ShipAPI)x):(AssignmentTargetAPI)x;if(a!=current.getTarget()&&BattleNext_OrderUtils.assignmentCount(a,tasks)>0)return a;if(a==current.getTarget()&&current.getType()==type)return a;}return super.pick(s,t,type,e);} }
+
+import com.fs.starfarer.api.combat.AssignmentTargetAPI;
+import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
+import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.BattleNext_OrderUtils;
+import org.lazywizard.lazylib.CollectionUtils;
+import java.util.List;
+
+public class ConcentratePicker extends NearestPicker {
+
+	@Override
+	public AssignmentTargetAPI pick(ShipAPI source, List<CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
+		targets.sort(new CollectionUtils.SortEntitiesByDistance(source.getLocation()));
+		CombatTaskManagerAPI tasks = engine.getFleetManager(source.getOwner()).getTaskManager(source.isAlly());
+		AssignmentInfo current = tasks.getAssignmentFor(source);
+		if (current != null) {
+			for (CombatEntityAPI target : targets) {
+				AssignmentTargetAPI assignmentTarget = target instanceof ShipAPI
+						? engine.getFleetManager(target.getOwner()).getDeployedFleetMember((ShipAPI)target)
+						: (AssignmentTargetAPI)target;
+				if (assignmentTarget != current.getTarget() && BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) > 0) {
+					return assignmentTarget;
+				}
+				if (assignmentTarget == current.getTarget() && current.getType() == type) {
+					return assignmentTarget;
+				}
+			}
+		}
+		return super.pick(source, targets, type, engine);
+	}
+}

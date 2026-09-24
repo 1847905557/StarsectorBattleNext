@@ -22,8 +22,14 @@ import java.util.List;
 import java.util.Map;
 import org.json.JSONException;
 
-public final class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
-	public enum Mode { ORDERS, AUTO_COMMAND, FULL_ASSAULT }
+public class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
+
+	public enum Mode {
+		ORDERS,
+		AUTO_COMMAND,
+		FULL_ASSAULT
+	}
+
 	public static final float ORDERS_INTERVAL = 0.15f;
 	public static final float FULL_ASSAULT_INTERVAL = 1f;
 	private final Mode playerMode;
@@ -98,7 +104,9 @@ public final class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 		for (ShipAPI ship : engine.getShips()) {
 			if (!ship.isAlive() || ship.isFighter() || ship.isStation() || ship.getOwner() != side.ordinal()) continue;
 			field.registerShip(ship);
-			if (field.getInfoFor(ship) == null) applyScript(field, ship);
+			if (field.getInfoFor(ship) == null) {
+				applyScript(field, ship);
+			}
 		}
 		field.pruneAssignments();
 	}

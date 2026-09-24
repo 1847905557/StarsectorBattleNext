@@ -98,7 +98,9 @@ public class BattleNext_FleetLoader {
 			Object value = method.invoke(null, root, "json");
 			if (value instanceof List<?> paths) {
 				List<String> result = new ArrayList<>();
-				for (Object path : paths) result.add(String.valueOf(path));
+				for (Object path : paths) {
+					result.add(String.valueOf(path));
+				}
 				return result;
 			}
 		} catch (Exception ignored) {
@@ -118,7 +120,9 @@ public class BattleNext_FleetLoader {
 					String absolute = String.valueOf(path);
 					String relative = absolute.substring(commonPath.length()).replace("\\", "/");
 					if (relative.startsWith("/")) relative = relative.substring(1);
-					if (relative.endsWith(".json") || relative.endsWith(".json.data")) result.add(relative);
+					if (relative.endsWith(".json") || relative.endsWith(".json.data")) {
+						result.add(relative);
+					}
 				}
 				return result;
 			}
@@ -153,11 +157,18 @@ public class BattleNext_FleetLoader {
 		}
 	}
 
-	private boolean isFleet(JSONObject json) { return json != null && json.optJSONArray("members") != null; }
-	private String stripDataSuffix(String path) { return path.replace("\\", "/").replaceFirst("\\.data$", ""); }
+	private boolean isFleet(JSONObject json) {
+		return json != null && json.optJSONArray("members") != null;
+	}
+
+	private String stripDataSuffix(String path) {
+		return path.replace("\\", "/").replaceFirst("\\.data$", "");
+	}
 	private List<String> unique(List<String> values) {
 		Map<String, String> ordered = new LinkedHashMap<>();
-		for (String value : values) ordered.put(value.replace("\\", "/"), value);
+		for (String value : values) {
+			ordered.put(value.replace("\\", "/"), value);
+		}
 		return new ArrayList<>(ordered.values());
 	}
 }

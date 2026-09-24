@@ -18,7 +18,9 @@ public class BattleNext_RulesModel {
 	private double value;
 
 	public BattleNext_RulesModel(int slot, String id, String name) {
-		if (slot < 0 || slot > 31) throw new IllegalArgumentException("Rules slot must be between 0 and 31");
+		if (slot < 0 || slot > 31) {
+			throw new IllegalArgumentException("Rules slot must be between 0 and 31");
+		}
 		this.slot = slot;
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
@@ -29,7 +31,13 @@ public class BattleNext_RulesModel {
 		model.enabled = json.optBoolean("enabled", false);
 		model.value = json.optDouble("value", 0d);
 		JSONArray children = json.optJSONArray("children");
-		if (children != null) for (int index = 0; index < children.length(); index++) if (children.optJSONObject(index) != null) model.children.add(fromJson(children.optJSONObject(index)));
+		if (children != null) {
+			for (int index = 0; index < children.length(); index++) {
+				if (children.optJSONObject(index) != null) {
+					model.children.add(fromJson(children.optJSONObject(index)));
+				}
+			}
+		}
 		return model;
 	}
 
@@ -42,18 +50,48 @@ public class BattleNext_RulesModel {
 		json.put("enabled", enabled);
 		json.put("value", value);
 		JSONArray values = new JSONArray();
-		for (BattleNext_RulesModel child : children) values.put(child.toJson());
+		for (BattleNext_RulesModel child : children) {
+			values.put(child.toJson());
+		}
 		json.put("children", values);
 		return json;
 	}
 
-	public int getSlot() { return slot; }
-	public String getId() { return id; }
-	public String getName() { return name; }
-	public boolean isEnabled() { return enabled; }
-	public void setEnabled(boolean enabled) { this.enabled = enabled; }
-	public double getValue() { return value; }
-	public void setValue(double value) { this.value = value; }
-	public List<BattleNext_RulesModel> getChildren() { return Collections.unmodifiableList(children); }
-	public void addChild(BattleNext_RulesModel child) { if (child != null) children.add(child); }
+	public int getSlot() {
+		return slot;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public double getValue() {
+		return value;
+	}
+
+	public void setValue(double value) {
+		this.value = value;
+	}
+
+	public List<BattleNext_RulesModel> getChildren() {
+		return Collections.unmodifiableList(children);
+	}
+
+	public void addChild(BattleNext_RulesModel child) {
+		if (child != null) {
+			children.add(child);
+		}
+	}
 }

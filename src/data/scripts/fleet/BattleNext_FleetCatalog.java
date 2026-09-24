@@ -29,7 +29,11 @@ public class BattleNext_FleetCatalog {
 	public List<String> filter(Collection<String> allowedSources, int minimumLevel, int maximumLevel) {
 		Set<String> sources = new LinkedHashSet<>();
 		if (allowedSources != null) {
-			for (String source : allowedSources) if (source != null) sources.add(source.toLowerCase(Locale.ROOT));
+			for (String source : allowedSources) {
+				if (source != null) {
+					sources.add(source.toLowerCase(Locale.ROOT));
+				}
+			}
 		}
 		List<String> result = new ArrayList<>();
 		for (String variantId : variantIds) {
@@ -48,15 +52,21 @@ public class BattleNext_FleetCatalog {
 
 	private int levelOf(String variantId) {
 		String normalized = variantId.toLowerCase(Locale.ROOT);
-		if (normalized.contains("_elite") || normalized.contains("_high")) return 3;
-		if (normalized.contains("_mid") || normalized.contains("_medium")) return 2;
+		if (normalized.contains("_elite") || normalized.contains("_high")) {
+			return 3;
+		}
+		if (normalized.contains("_mid") || normalized.contains("_medium")) {
+			return 2;
+		}
 		return 1;
 	}
 
 	private boolean isPrerequisiteVariant(String variantId) {
 		String normalized = variantId.toLowerCase(Locale.ROOT);
 		for (String prefix : PREREQUISITE_PREFIXES) {
-			if (normalized.startsWith(prefix + ":") || normalized.startsWith(prefix + "_")) return true;
+			if (normalized.startsWith(prefix + ":") || normalized.startsWith(prefix + "_")) {
+				return true;
+			}
 		}
 		return false;
 	}

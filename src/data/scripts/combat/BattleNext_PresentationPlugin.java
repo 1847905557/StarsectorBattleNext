@@ -9,7 +9,7 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
 
-public final class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
+public class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final String ID = "BattleNext_PresentationPlugin";
 	private static final float DEFAULT_TIME_MULT = 1.5f;

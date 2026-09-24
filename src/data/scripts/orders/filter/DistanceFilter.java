@@ -1,3 +1,30 @@
 package data.scripts.orders.filter;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.OrderFilter; import org.lazywizard.lazylib.MathUtils; import java.util.*;
-public class DistanceFilter implements OrderFilter<CombatEntityAPI> { public void filterTargets(ShipAPI s,List<CombatEntityAPI> t,String[] p,CombatEngineAPI e){float min=-1,max=p.length==1?Float.parseFloat(p[0]):Float.parseFloat(p[1]);if(p.length>1)min=Float.parseFloat(p[0]);if(max<=0){t.clear();return;}final float lower=min,upper=max;t.removeIf(x->{float d=MathUtils.getDistance(s,x);return d>upper||d<lower;});} }
+
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.OrderFilter;
+import org.lazywizard.lazylib.MathUtils;
+import java.util.List;
+
+public class DistanceFilter implements OrderFilter<CombatEntityAPI> {
+
+	@Override
+	public void filterTargets(ShipAPI source, List<CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
+		float minRange = -1f;
+		float maxRange = params.length == 1 ? Float.parseFloat(params[0]) : Float.parseFloat(params[1]);
+		if (params.length > 1) {
+			minRange = Float.parseFloat(params[0]);
+		}
+		if (maxRange <= 0f) {
+			targets.clear();
+			return;
+		}
+		final float lowerBound = minRange;
+		final float upperBound = maxRange;
+		targets.removeIf(target -> {
+			float distance = MathUtils.getDistance(source, target);
+			return distance > upperBound || distance < lowerBound;
+		});
+	}
+}

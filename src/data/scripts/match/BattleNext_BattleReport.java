@@ -31,14 +31,43 @@ public class BattleNext_BattleReport {
 		return json;
 	}
 
-	public String getId() { return id; }
-	public void setId(String id) { this.id = id == null ? "" : id.trim(); }
-	public String getWinner() { return winner; }
-	public void setWinner(String winner) { this.winner = winner == null || winner.trim().isEmpty() ? "draw" : winner.trim(); }
-	public long getDurationMillis() { return durationMillis; }
-	public void setDurationMillis(long durationMillis) { this.durationMillis = Math.max(0L, durationMillis); }
-	public int getPlayerShips() { return playerShips; }
-	public void setPlayerShips(int playerShips) { this.playerShips = Math.max(0, playerShips); }
-	public int getEnemyShips() { return enemyShips; }
-	public void setEnemyShips(int enemyShips) { this.enemyShips = Math.max(0, enemyShips); }
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id == null ? "" : id.trim();
+	}
+
+	public String getWinner() {
+		return winner;
+	}
+
+	public void setWinner(String winner) {
+		this.winner = winner == null || winner.trim().isEmpty() ? "draw" : winner.trim();
+	}
+
+	public long getDurationMillis() {
+		return durationMillis;
+	}
+
+	public void setDurationMillis(long durationMillis) {
+		this.durationMillis = Math.max(0L, durationMillis);
+	}
+
+	public int getPlayerShips() {
+		return playerShips;
+	}
+
+	public void setPlayerShips(int playerShips) {
+		this.playerShips = Math.max(0, playerShips);
+	}
+
+	public int getEnemyShips() {
+		return enemyShips;
+	}
+
+	public void setEnemyShips(int enemyShips) {
+		this.enemyShips = Math.max(0, enemyShips);
+	}
 }

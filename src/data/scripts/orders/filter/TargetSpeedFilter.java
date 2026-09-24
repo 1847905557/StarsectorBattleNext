@@ -1,3 +1,26 @@
 package data.scripts.orders.filter;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.*; import java.util.*;
-public class TargetSpeedFilter implements OrderFilter<ShipAPI> { public void filterTargets(ShipAPI s,List<ShipAPI> t,String[] p,CombatEngineAPI e){float min=-1,max=p.length==1?BattleNext_OrderUtils.self(p[0],s.getMaxSpeed()):BattleNext_OrderUtils.self(p[1],s.getMaxSpeed());if(p.length>1)min=BattleNext_OrderUtils.self(p[0],s.getMaxSpeed());if(max<=0){t.clear();return;}final float lower=min,upper=max;t.removeIf(x->x.getMaxSpeed()>upper||x.getMaxSpeed()<lower);} }
+
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.BattleNext_OrderUtils;
+import data.scripts.orders.OrderFilter;
+import java.util.List;
+
+public class TargetSpeedFilter implements OrderFilter<ShipAPI> {
+
+	@Override
+	public void filterTargets(ShipAPI source, List<ShipAPI> targets, String[] params, CombatEngineAPI engine) {
+		float minSpeed = -1f;
+		float maxSpeed = params.length == 1 ? BattleNext_OrderUtils.self(params[0], source.getMaxSpeed()) : BattleNext_OrderUtils.self(params[1], source.getMaxSpeed());
+		if (params.length > 1) {
+			minSpeed = BattleNext_OrderUtils.self(params[0], source.getMaxSpeed());
+		}
+		if (maxSpeed <= 0f) {
+			targets.clear();
+			return;
+		}
+		final float lowerBound = minSpeed;
+		final float upperBound = maxSpeed;
+		targets.removeIf(target -> target.getMaxSpeed() > upperBound || target.getMaxSpeed() < lowerBound);
+	}
+}

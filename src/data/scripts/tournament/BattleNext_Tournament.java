@@ -23,7 +23,9 @@ public class BattleNext_Tournament {
 	private boolean started;
 
 	public BattleNext_Tournament(int slot, String name, String bracketType, String matchFormat, int size) {
-		if (slot < 0 || slot > 31) throw new IllegalArgumentException("Tournament slot must be between 0 and 31");
+		if (slot < 0 || slot > 31) {
+			throw new IllegalArgumentException("Tournament slot must be between 0 and 31");
+		}
 		this.slot = slot;
 		this.name = name == null ? "" : name.trim();
 		this.bracketType = bracketType == null ? "single_elim" : bracketType.trim();
@@ -37,9 +39,19 @@ public class BattleNext_Tournament {
 		tournament.mapId = json.optInt("mapId", -1);
 		tournament.started = json.optBoolean("started", false);
 		JSONArray teams = json.optJSONArray("teams");
-		if (teams != null) for (int index = 0; index < teams.length(); index++) tournament.teams.add(teams.optString(index, ""));
+		if (teams != null) {
+			for (int index = 0; index < teams.length(); index++) {
+				tournament.teams.add(teams.optString(index, ""));
+			}
+		}
 		JSONArray matches = json.optJSONArray("matches");
-		if (matches != null) for (int index = 0; index < matches.length(); index++) if (matches.optJSONObject(index) != null) tournament.matches.add(BattleNext_Match.fromJson(matches.optJSONObject(index)));
+		if (matches != null) {
+			for (int index = 0; index < matches.length(); index++) {
+				if (matches.optJSONObject(index) != null) {
+					tournament.matches.add(BattleNext_Match.fromJson(matches.optJSONObject(index)));
+				}
+			}
+		}
 		return tournament;
 	}
 
@@ -53,7 +65,9 @@ public class BattleNext_Tournament {
 		json.put("size", size);
 		json.put("teams", new JSONArray(teams));
 		JSONArray matchArray = new JSONArray();
-		for (BattleNext_Match match : matches) matchArray.put(match.toJson());
+		for (BattleNext_Match match : matches) {
+			matchArray.put(match.toJson());
+		}
 		json.put("matches", matchArray);
 		json.put("rulesSlot", rulesSlot);
 		json.put("mapId", mapId);
@@ -61,17 +75,59 @@ public class BattleNext_Tournament {
 		return json;
 	}
 
-	public int getSlot() { return slot; }
-	public String getName() { return name; }
-	public String getBracketType() { return bracketType; }
-	public String getMatchFormat() { return matchFormat; }
-	public int getSize() { return size; }
-	public int getRulesSlot() { return rulesSlot; }
-	public int getMapId() { return mapId; }
-	public boolean isStarted() { return started; }
-	public void setStarted(boolean started) { this.started = started; }
-	public List<String> getTeams() { return Collections.unmodifiableList(teams); }
-	public List<BattleNext_Match> getMatches() { return Collections.unmodifiableList(matches); }
-	public void addTeam(String team) { if (!started && teams.size() < 32) teams.add(team == null ? "" : team.trim()); }
-	public void addMatch(BattleNext_Match match) { if (match != null) matches.add(match); }
+	public int getSlot() {
+		return slot;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String getBracketType() {
+		return bracketType;
+	}
+
+	public String getMatchFormat() {
+		return matchFormat;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public int getRulesSlot() {
+		return rulesSlot;
+	}
+
+	public int getMapId() {
+		return mapId;
+	}
+
+	public boolean isStarted() {
+		return started;
+	}
+
+	public void setStarted(boolean started) {
+		this.started = started;
+	}
+
+	public List<String> getTeams() {
+		return Collections.unmodifiableList(teams);
+	}
+
+	public List<BattleNext_Match> getMatches() {
+		return Collections.unmodifiableList(matches);
+	}
+
+	public void addTeam(String team) {
+		if (!started && teams.size() < 32) {
+			teams.add(team == null ? "" : team.trim());
+		}
+	}
+
+	public void addMatch(BattleNext_Match match) {
+		if (match != null) {
+			matches.add(match);
+		}
+	}
 }

@@ -27,7 +27,13 @@ public class BattleNext_Match {
 	public static BattleNext_Match fromJson(JSONObject json) {
 		BattleNext_Match match = new BattleNext_Match(json.optString("id", ""), json.optString("player", ""), json.optString("enemy", ""), json.optInt("map", -1), (float)json.optDouble("size", 1f));
 		org.json.JSONArray values = json.optJSONArray("rounds");
-		if (values != null) for (int index = 0; index < values.length(); index++) if (values.optJSONObject(index) != null) match.rounds.add(BattleNext_Round.fromJson(values.optJSONObject(index)));
+		if (values != null) {
+			for (int index = 0; index < values.length(); index++) {
+				if (values.optJSONObject(index) != null) {
+					match.rounds.add(BattleNext_Round.fromJson(values.optJSONObject(index)));
+				}
+			}
+		}
 		return match;
 	}
 
@@ -39,16 +45,40 @@ public class BattleNext_Match {
 		json.put("map", map);
 		json.put("size", size);
 		org.json.JSONArray values = new org.json.JSONArray();
-		for (BattleNext_Round round : rounds) values.put(round.toJson());
+		for (BattleNext_Round round : rounds) {
+			values.put(round.toJson());
+		}
 		json.put("rounds", values);
 		return json;
 	}
 
-	public void addRound(BattleNext_Round round) { if (round != null) rounds.add(round); }
-	public String getId() { return id; }
-	public String getPlayer() { return player; }
-	public String getEnemy() { return enemy; }
-	public int getMap() { return map; }
-	public float getSize() { return size; }
-	public List<BattleNext_Round> getRounds() { return Collections.unmodifiableList(rounds); }
+	public void addRound(BattleNext_Round round) {
+		if (round != null) {
+			rounds.add(round);
+		}
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public String getPlayer() {
+		return player;
+	}
+
+	public String getEnemy() {
+		return enemy;
+	}
+
+	public int getMap() {
+		return map;
+	}
+
+	public float getSize() {
+		return size;
+	}
+
+	public List<BattleNext_Round> getRounds() {
+		return Collections.unmodifiableList(rounds);
+	}
 }

@@ -11,7 +11,7 @@ import com.fs.starfarer.api.mission.FleetSide;
 
 import java.util.List;
 
-public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
+public class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final float DEFAULT_TIME_LIMIT = 500f;
 	private static final int MAX_FLEET_POINTS = 999;
@@ -45,8 +45,12 @@ public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || engine.isCombatOver()) return;
 		int second = (int)engine.getTotalElapsedTime(false);
-		if (second != elapsedSecond) elapsedSecond = second;
-		if (timeLimit > 0f && !timeoutApplied && engine.getTotalElapsedTime(false) >= timeLimit) applyTimeout();
+		if (second != elapsedSecond) {
+			elapsedSecond = second;
+		}
+		if (timeLimit > 0f && !timeoutApplied && engine.getTotalElapsedTime(false) >= timeLimit) {
+			applyTimeout();
+		}
 	}
 
 	private void configureSide(FleetSide side) {
@@ -66,7 +70,9 @@ public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 		for (ShipAPI ship : engine.getShips()) {
 			if (!ship.isAlive()) continue;
 			PersonAPI captain = ship.getCaptain();
-			if (captain != null) captain.setPersonality(Personalities.RECKLESS);
+			if (captain != null) {
+				captain.setPersonality(Personalities.RECKLESS);
+			}
 		}
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(false).setFullAssault(true);
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(true).setFullAssault(true);

@@ -9,6 +9,7 @@ import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.util.Misc;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,7 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public final class BattleNext_OrderField {
+public class BattleNext_OrderField {
+
 	public static final String KEY_PREFIX = "BattleNext_OrderField_";
 	private final CombatFleetManagerAPI manager;
 	private final CombatTaskManagerAPI tasks;
@@ -46,15 +48,25 @@ public final class BattleNext_OrderField {
 		return generatedInfo == null || !sameAssignment(generatedInfo.assignment, current);
 	}
 
-	public AssignmentInfo getInfoFor(ShipAPI ship) { return tasks.getAssignmentFor(ship); }
+	public AssignmentInfo getInfoFor(ShipAPI ship) {
+		return tasks.getAssignmentFor(ship);
+	}
 
 	public CombatAssignmentType getAssignmentTypeOnTarget(AssignmentTargetAPI target) {
-		for (AssignmentInfo info : tasks.getAllAssignments()) if (info.getTarget() == target) return info.getType();
+		for (AssignmentInfo info : tasks.getAllAssignments()) {
+			if (info.getTarget() == target) {
+				return info.getType();
+			}
+		}
 		return null;
 	}
 
 	public OrderInfo getOneAutomationInfoOnTarget(AssignmentTargetAPI target) {
-		for (OrderInfo info : automation.values()) if (info.assignment.getTarget() == target) return info;
+		for (OrderInfo info : automation.values()) {
+			if (info.assignment.getTarget() == target) {
+				return info;
+			}
+		}
 		return null;
 	}
 
@@ -103,7 +115,9 @@ public final class BattleNext_OrderField {
 		}
 		AssignmentInfo current = getInfoFor(ship);
 		if (existingAutomation.assignment.getType() == type && current != existingAutomation.assignment) {
-			if (type != CombatAssignmentType.RETREAT) assignToAutomationInfo(ship, existingAutomation);
+			if (type != CombatAssignmentType.RETREAT) {
+				assignToAutomationInfo(ship, existingAutomation);
+			}
 			return true;
 		}
 		if (priority <= existingAutomation.priority) return false;
@@ -123,16 +137,25 @@ public final class BattleNext_OrderField {
 		}
 	}
 
-	public void registerShip(ShipAPI ship) { visited.add(ship); }
+	public void registerShip(ShipAPI ship) {
+		visited.add(ship);
+	}
 
 	public void pruneAssignments() {
 		List<AssignmentInfo> remove = new ArrayList<>();
 		for (AssignmentInfo info : tasks.getAllAssignments()) {
 			boolean assignedToVisited = false;
-			for (ShipAPI ship : visited) if (sameAssignment(tasks.getAssignmentFor(ship), info)) { assignedToVisited = true; break; }
+			for (ShipAPI ship : visited) {
+				if (sameAssignment(tasks.getAssignmentFor(ship), info)) {
+					assignedToVisited = true;
+					break;
+				}
+			}
 			if (!assignedToVisited && generated.contains(info)) remove.add(info);
 		}
-		for (AssignmentInfo info : remove) tasks.removeAssignment(info);
+		for (AssignmentInfo info : remove) {
+			tasks.removeAssignment(info);
+		}
 		generated.removeAll(remove);
 		visited.clear();
 	}
@@ -143,19 +166,42 @@ public final class BattleNext_OrderField {
 		return first.getType() == second.getType() && first.getTarget() == second.getTarget();
 	}
 
-	public static final class OrderInfo {
+	public static class OrderInfo {
+
 		private final AssignmentInfo assignment;
 		private final float priority;
-		public OrderInfo(AssignmentInfo assignment, float priority) { this.assignment = assignment; this.priority = priority; }
-		public AssignmentInfo getAssignment() { return assignment; }
-		public float getPriority() { return priority; }
+
+		public OrderInfo(AssignmentInfo assignment, float priority) {
+			this.assignment = assignment;
+			this.priority = priority;
+		}
+
+		public AssignmentInfo getAssignment() {
+			return assignment;
+		}
+
+		public float getPriority() {
+			return priority;
+		}
 	}
 
-	private static final class RetreatAssignmentInfo implements AssignmentInfo {
+	private static class RetreatAssignmentInfo implements AssignmentInfo {
+
 		private final DeployedFleetMemberAPI member;
-		private RetreatAssignmentInfo(DeployedFleetMemberAPI member) { this.member = member; }
-		public CombatAssignmentType getType() { return CombatAssignmentType.RETREAT; }
-		public AssignmentTargetAPI getTarget() { return member; }
-		public List<DeployedFleetMemberAPI> getAssignedMembers() { return List.of(member); }
+		private RetreatAssignmentInfo(DeployedFleetMemberAPI member) {
+			this.member = member;
+		}
+
+		public CombatAssignmentType getType() {
+			return CombatAssignmentType.RETREAT;
+		}
+
+		public AssignmentTargetAPI getTarget() {
+			return member;
+		}
+
+		public List<DeployedFleetMemberAPI> getAssignedMembers() {
+			return List.of(member);
+		}
 	}
 }

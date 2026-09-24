@@ -2,12 +2,14 @@ package data.scripts.combat;
 
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 
-public final class BattleNext_BattleMap {
+public class BattleNext_BattleMap {
 
 	public static final int MAP_COUNT = 12;
 	private static final float MIN_MAP_SCALE = 0.1f;
 
-	private BattleNext_BattleMap() { }
+	private BattleNext_BattleMap() {
+
+	}
 
 	public static int resolve(int map, int seed) {
 		return map < 0 ? Math.floorMod(seed, MAP_COUNT) : Math.floorMod(map, MAP_COUNT);
@@ -168,7 +170,9 @@ public final class BattleNext_BattleMap {
 	}
 
 	private static void nebulaColumns(MissionDefinitionAPI api, float width, float height, float radius) {
-		for (int index = -1; index <= 1; index++) api.addNebula(index * 0.3f * width, 0.2f * height, radius);
+		for (int index = -1; index <= 1; index++) {
+			api.addNebula(index * 0.3f * width, 0.2f * height, radius);
+		}
 	}
 
 	private static void nebulaRows(MissionDefinitionAPI api, float width, float height, float radius) {

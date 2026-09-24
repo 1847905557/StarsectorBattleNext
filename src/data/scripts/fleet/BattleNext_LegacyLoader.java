@@ -68,7 +68,9 @@ public class BattleNext_LegacyLoader {
 		List<String> tags = splitValues(column(data, 3));
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		for (String[] row : fleetRows) {
-			if (row.length < 2) continue;
+			if (row.length < 2) {
+				continue;
+			}
 			members.add(new BattleNext_MemberModel(column(row, 1), column(row, 4), column(row, 2),
 					splitValues(column(row, 3)), column(row, 5), column(row, 6), splitValues(column(row, 7))));
 		}
@@ -107,7 +109,9 @@ public class BattleNext_LegacyLoader {
 			Object value = method.invoke(null, root, "csv");
 			if (value instanceof List<?> paths) {
 				List<String> result = new ArrayList<>();
-				for (Object path : paths) result.add(String.valueOf(path).replace("\\", "/"));
+				for (Object path : paths) {
+					result.add(String.valueOf(path).replace("\\", "/"));
+				}
 				result.sort(Comparator.naturalOrder());
 				return result;
 			}
@@ -122,15 +126,22 @@ public class BattleNext_LegacyLoader {
 		boolean quoted = false;
 		for (int index = 0; index < line.length(); index++) {
 			char current = line.charAt(index);
-			if (current == '"') quoted = !quoted;
-			else if (current == ',' && !quoted) { values.add(value.toString().trim()); value.setLength(0); }
-			else value.append(current);
+			if (current == '"') {
+				quoted = !quoted;
+			} else if (current == ',' && !quoted) {
+				values.add(value.toString().trim());
+				value.setLength(0);
+			} else {
+				value.append(current);
+			}
 		}
 		values.add(value.toString().trim());
 		return values.toArray(String[]::new);
 	}
 
-	private String column(String[] row, int index) { return index < row.length ? row[index].trim() : ""; }
+	private String column(String[] row, int index) {
+		return index < row.length ? row[index].trim() : "";
+	}
 
 	private List<String> splitValues(String value) {
 		if (value.isEmpty()) return List.of();

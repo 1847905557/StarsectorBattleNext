@@ -6,6 +6,7 @@ import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 
 public class MissionDefinition implements MissionDefinitionPlugin {
+
 	private static final float MAP_HALF_SIZE = 5500f;
 
 	@Override

@@ -9,7 +9,7 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
 
-public final class BattleNext_Deployment extends BaseEveryFrameCombatPlugin {
+public class BattleNext_Deployment extends BaseEveryFrameCombatPlugin {
 
 	private static final int FIXED_LAYOUT_SHIP_LIMIT = 30;
 	private static final int MIN_COLUMNS = 7;
@@ -26,7 +26,9 @@ public final class BattleNext_Deployment extends BaseEveryFrameCombatPlugin {
 	private boolean deployed;
 
 	@Override
-	public void init(CombatEngineAPI engine) { this.engine = engine; }
+	public void init(CombatEngineAPI engine) {
+		this.engine = engine;
+	}
 
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
@@ -40,7 +42,9 @@ public final class BattleNext_Deployment extends BaseEveryFrameCombatPlugin {
 		engine.getFleetManager(side).setSuppressDeploymentMessages(true);
 		List<FleetMemberAPI> reserves = engine.getFleetManager(side).getReservesCopy();
 		int ships = 0;
-		for (FleetMemberAPI member : reserves) if (!member.isFighterWing()) ships++;
+		for (FleetMemberAPI member : reserves) {
+			if (!member.isFighterWing()) ships++;
+		}
 		int columns = ships <= FIXED_LAYOUT_SHIP_LIMIT ? MIN_COLUMNS : Math.max(MIN_COLUMNS, (int)Math.ceil(Math.sqrt(ships)));
 		float spacing = ships <= FIXED_LAYOUT_SHIP_LIMIT ? FIXED_SHIP_SPACING : Math.max(LARGE_SHIP_MIN_SPACING, engine.getMapWidth() / (columns + 2f));
 		float rowSpacing = ships <= FIXED_LAYOUT_SHIP_LIMIT ? FIXED_ROW_SPACING : Math.max(LARGE_ROW_MIN_SPACING, spacing * LARGE_ROW_COMPRESSION);

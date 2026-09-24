@@ -1,3 +1,23 @@
 package data.scripts.orders.starter;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.*; import java.util.*;
-public class RetreatStarter implements OrderStarter<ShipAPI> { public List<ShipAPI> getInitialTargets(ShipAPI s, CombatEngineAPI e){return new ArrayList<>(List.of(s));} public CombatAssignmentType getCombatAssignmentType(){return CombatAssignmentType.RETREAT;} }
+
+import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.OrderStarter;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RetreatStarter implements OrderStarter<ShipAPI> {
+
+	@Override
+	public List<ShipAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine) {
+		List<ShipAPI> targets = new ArrayList<>();
+		targets.add(source);
+		return targets;
+	}
+
+	@Override
+	public CombatAssignmentType getCombatAssignmentType() {
+		return CombatAssignmentType.RETREAT;
+	}
+}

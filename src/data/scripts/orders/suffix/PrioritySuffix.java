@@ -1,3 +1,18 @@
 package data.scripts.orders.suffix;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.OrderSuffix;
-public class PrioritySuffix implements OrderSuffix { public float getFloatResultWithTarget(AssignmentTargetAPI t,String[] p,Object c,CombatEngineAPI e){return Float.parseFloat(p[0]);} public Object getCustomResultWithTarget(AssignmentTargetAPI t,String[] p,Object c,CombatEngineAPI e){return null;} }
+
+import com.fs.starfarer.api.combat.AssignmentTargetAPI;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import data.scripts.orders.OrderSuffix;
+
+public class PrioritySuffix implements OrderSuffix {
+
+	@Override
+	public float getFloatResultWithTarget(AssignmentTargetAPI target, String[] params, Object custom, CombatEngineAPI engine) {
+		return Float.parseFloat(params[0]);
+	}
+
+	@Override
+	public Object getCustomResultWithTarget(AssignmentTargetAPI target, String[] params, Object custom, CombatEngineAPI engine) {
+		return null;
+	}
+}

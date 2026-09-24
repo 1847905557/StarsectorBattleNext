@@ -21,9 +21,23 @@ public class BattleNext_FleetAssembly {
 		this.memberErrors = List.copyOf(memberErrors);
 	}
 
-	public BattleNext_FleetModel getDefinition() { return definition; }
-	public PersonAPI getCommander() { return commander; }
-	public List<FleetMemberAPI> getMembers() { return Collections.unmodifiableList(members); }
-	public List<String> getMemberErrors() { return Collections.unmodifiableList(memberErrors); }
-	public boolean isComplete() { return memberErrors.isEmpty() && members.size() == definition.getMembers().size(); }
+	public BattleNext_FleetModel getDefinition() {
+		return definition;
+	}
+
+	public PersonAPI getCommander() {
+		return commander;
+	}
+
+	public List<FleetMemberAPI> getMembers() {
+		return Collections.unmodifiableList(members);
+	}
+
+	public List<String> getMemberErrors() {
+		return Collections.unmodifiableList(memberErrors);
+	}
+
+	public boolean isComplete() {
+		return memberErrors.isEmpty() && members.size() == definition.getMembers().size();
+	}
 }

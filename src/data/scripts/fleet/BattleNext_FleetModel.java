@@ -97,34 +97,117 @@ public class BattleNext_FleetModel {
 		return json;
 	}
 
-	public String getId() { return id; }
-	public void setId(String id) { this.id = normalize(id); }
-	public String getName() { return name; }
-	public void setName(String name) { this.name = normalize(name); }
-	public String getPlayer() { return player; }
-	public void setPlayer(String player) { this.player = normalize(player); }
-	public List<String> getSkills() { return Collections.unmodifiableList(skills); }
-	public void setSkills(List<String> skills) { this.skills = copyStrings(skills); }
-	public List<String> getTags() { return Collections.unmodifiableList(tags); }
-	public void setTags(List<String> tags) { this.tags = copyStrings(tags); }
-	public List<BattleNext_MemberModel> getMembers() { return Collections.unmodifiableList(members); }
-	public void setMembers(List<BattleNext_MemberModel> members) { this.members = copyMembers(members); }
-	public String getAuthor() { return author; }
-	public void setAuthor(String author) { this.author = normalize(author); }
-	public String getDescription() { return description; }
-	public void setDescription(String description) { this.description = normalize(description); }
-	public String getBehavior() { return behavior; }
-	public void setBehavior(String behavior) { this.behavior = normalize(behavior); }
-	public String getColor() { return color; }
-	public void setColor(String color) { this.color = normalize(color); }
-	public String getVsImage() { return vsImage; }
-	public void setVsImage(String vsImage) { this.vsImage = normalize(vsImage); }
-	public int getRulesSlot() { return rulesSlot; }
-	public void setRulesSlot(int rulesSlot) { this.rulesSlot = rulesSlot; }
-	public String getSource() { return source; }
-	public void setSource(String source) { this.source = normalize(source); }
-	public String getSourcePath() { return sourcePath; }
-	public void setSourcePath(String sourcePath) { this.sourcePath = normalize(sourcePath); }
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = normalize(id);
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = normalize(name);
+	}
+
+	public String getPlayer() {
+		return player;
+	}
+
+	public void setPlayer(String player) {
+		this.player = normalize(player);
+	}
+
+	public List<String> getSkills() {
+		return Collections.unmodifiableList(skills);
+	}
+
+	public void setSkills(List<String> skills) {
+		this.skills = copyStrings(skills);
+	}
+
+	public List<String> getTags() {
+		return Collections.unmodifiableList(tags);
+	}
+
+	public void setTags(List<String> tags) {
+		this.tags = copyStrings(tags);
+	}
+
+	public List<BattleNext_MemberModel> getMembers() {
+		return Collections.unmodifiableList(members);
+	}
+
+	public void setMembers(List<BattleNext_MemberModel> members) {
+		this.members = copyMembers(members);
+	}
+
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = normalize(author);
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = normalize(description);
+	}
+
+	public String getBehavior() {
+		return behavior;
+	}
+
+	public void setBehavior(String behavior) {
+		this.behavior = normalize(behavior);
+	}
+
+	public String getColor() {
+		return color;
+	}
+
+	public void setColor(String color) {
+		this.color = normalize(color);
+	}
+
+	public String getVsImage() {
+		return vsImage;
+	}
+
+	public void setVsImage(String vsImage) {
+		this.vsImage = normalize(vsImage);
+	}
+
+	public int getRulesSlot() {
+		return rulesSlot;
+	}
+
+	public void setRulesSlot(int rulesSlot) {
+		this.rulesSlot = rulesSlot;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = normalize(source);
+	}
+
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
+	public void setSourcePath(String sourcePath) {
+		this.sourcePath = normalize(sourcePath);
+	}
 
 	private static List<String> readStrings(JSONArray values) {
 		List<String> result = new ArrayList<>();
@@ -148,10 +231,16 @@ public class BattleNext_FleetModel {
 	private static List<BattleNext_MemberModel> copyMembers(List<BattleNext_MemberModel> values) {
 		List<BattleNext_MemberModel> result = new ArrayList<>();
 		if (values != null) {
-			for (BattleNext_MemberModel value : values) if (value != null) result.add(value);
+			for (BattleNext_MemberModel value : values) {
+				if (value != null) {
+					result.add(value);
+				}
+			}
 		}
 		return result;
 	}
 
-	private static String normalize(String value) { return value == null ? "" : value.trim(); }
+	private static String normalize(String value) {
+		return value == null ? "" : value.trim();
+	}
 }

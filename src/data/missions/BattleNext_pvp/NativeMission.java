@@ -19,7 +19,8 @@ import org.lwjgl.input.Keyboard;
 
 import java.util.List;
 
-final class NativeMission {
+class NativeMission {
+
 	private final BattleNext_MatchListProvider provider;
 	private final BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
 	private int currentIndex;
@@ -68,6 +69,8 @@ final class NativeMission {
 		BattleNext_FleetModel definition = assembly.getDefinition();
 		api.initFleet(side, "", FleetGoal.ATTACK, definition.getTags().contains("default_ai"), 1);
 		api.setFleetTagline(side, definition.getName());
-		for (FleetMemberAPI member : assembly.getMembers()) api.addFleetMember(side, member);
+		for (FleetMemberAPI member : assembly.getMembers()) {
+			api.addFleetMember(side, member);
+		}
 	}
 }

@@ -1,3 +1,34 @@
 package data.scripts.orders.filter;
-import com.fs.starfarer.api.combat.*; import data.scripts.orders.*; import java.util.*;
-public class HullSizeFilter implements OrderFilter<ShipAPI> { public void filterTargets(ShipAPI s,List<ShipAPI> t,String[] p,CombatEngineAPI e){Set<ShipAPI.HullSize> keep=EnumSet.noneOf(ShipAPI.HullSize.class);for(String v:p){ShipAPI.HullSize h=BattleNext_OrderUtils.hullSize(v);if(h!=null)keep.add(h);}if(keep.isEmpty()){if(Arrays.asList(p).contains("largest")&&!t.isEmpty())keep.add(t.stream().map(ShipAPI::getHullSize).max(Comparator.comparingInt(Enum::ordinal)).get());if(Arrays.asList(p).contains("smallest")&&!t.isEmpty())keep.add(t.stream().map(ShipAPI::getHullSize).min(Comparator.comparingInt(Enum::ordinal)).get());}t.removeIf(x->!keep.contains(x.getHullSize()));} }
+
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.orders.BattleNext_OrderUtils;
+import data.scripts.orders.OrderFilter;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+
+public class HullSizeFilter implements OrderFilter<ShipAPI> {
+
+	@Override
+	public void filterTargets(ShipAPI source, List<ShipAPI> targets, String[] params, CombatEngineAPI engine) {
+		Set<ShipAPI.HullSize> sizes = EnumSet.noneOf(ShipAPI.HullSize.class);
+		for (String param : params) {
+			ShipAPI.HullSize hullSize = BattleNext_OrderUtils.hullSize(param);
+			if (hullSize != null) {
+				sizes.add(hullSize);
+			}
+		}
+		if (sizes.isEmpty() && !targets.isEmpty()) {
+			if (Arrays.asList(params).contains("largest")) {
+				sizes.add(targets.stream().map(ShipAPI::getHullSize).max(Comparator.comparingInt(Enum::ordinal)).get());
+			}
+			if (Arrays.asList(params).contains("smallest")) {
+				sizes.add(targets.stream().map(ShipAPI::getHullSize).min(Comparator.comparingInt(Enum::ordinal)).get());
+			}
+		}
+		targets.removeIf(target -> !sizes.contains(target.getHullSize()));
+	}
+}

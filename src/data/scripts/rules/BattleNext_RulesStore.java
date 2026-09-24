@@ -16,18 +16,30 @@ public class BattleNext_RulesStore {
 		rules.clear();
 		for (int slot = 0; slot < 32; slot++) {
 			String path = "rules/rules_" + slot + ".json";
-			try { rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().loadJSON(path, "AI_Battles_Next"))); } catch (Exception ignored) { }
+			try {
+				rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().loadJSON(path, "AI_Battles_Next")));
+			} catch (Exception ignored) {
+			}
 			String userPath = "AI_Battles_Next/rules/rules_" + slot + ".json";
-			if (Global.getSettings().fileExistsInCommon(userPath)) rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
+			if (Global.getSettings().fileExistsInCommon(userPath)) {
+				rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
+			}
 		}
 	}
 
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
-		if (model == null) throw new IllegalArgumentException("Rules model is required");
+		if (model == null) {
+			throw new IllegalArgumentException("Rules model is required");
+		}
 		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/rules_" + model.getSlot() + ".json", model.toJson(), false);
 		rules.put(model.getSlot(), model);
 	}
 
-	public BattleNext_RulesModel get(int slot) { return rules.get(slot); }
-	public List<BattleNext_RulesModel> getAll() { return List.copyOf(rules.values()); }
+	public BattleNext_RulesModel get(int slot) {
+		return rules.get(slot);
+	}
+
+	public List<BattleNext_RulesModel> getAll() {
+		return List.copyOf(rules.values());
+	}
 }
