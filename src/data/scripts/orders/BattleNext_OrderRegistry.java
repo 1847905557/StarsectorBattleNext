@@ -38,10 +38,22 @@ public class BattleNext_OrderRegistry {
 	public List<String> validate() {
 		List<String> errors = new ArrayList<>();
 		for (Map<String, BattleNext_OrderSpec> values : byType.values()) for (BattleNext_OrderSpec spec : values.values()) {
-			try { Global.getSettings().getScriptClassLoader().loadClass(spec.getScript()); }
+			try {
+				Class<?> scriptClass = Global.getSettings().getScriptClassLoader().loadClass(spec.getScript());
+				Class<?> contract = contractFor(spec.getType());
+				if (contract != null && !contract.isAssignableFrom(scriptClass)) errors.add(spec.getId() + ": script does not implement " + contract.getSimpleName());
+			}
 			catch (Exception exception) { errors.add(spec.getId() + ": cannot load " + spec.getScript()); }
 		}
 		return errors;
+	}
+
+	private Class<?> contractFor(String type) {
+		if ("starter".equals(type)) return OrderStarter.class;
+		if ("filter".equals(type)) return OrderFilter.class;
+		if ("picker".equals(type)) return OrderPicker.class;
+		if ("suffix".equals(type)) return OrderSuffix.class;
+		return null;
 	}
 
 	public Object create(String type, String id) {
@@ -52,7 +64,7 @@ public class BattleNext_OrderRegistry {
 		catch (Exception exception) { throw new IllegalStateException("Unable to instantiate order " + id, exception); }
 	}
 
-	public Map<String, BattleNext_OrderSpec> get(String type) { return Collections.unmodifiableMap(byType.getOrDefault(type, Map.of())); }
+	public Map<String, BattleNext_OrderSpec> get(String type) { return Collections.unmodifiableMap(byType.getOrDefault(type == null ? "" : type.toLowerCase(Locale.ROOT), Map.of())); }
 
 	private List<String> parse(String line) {
 		List<String> result = new ArrayList<>();

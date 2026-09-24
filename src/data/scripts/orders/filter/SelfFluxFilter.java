@@ -1,0 +1,3 @@
+package data.scripts.orders.filter;
+import com.fs.starfarer.api.combat.*; import data.scripts.orders.*; import java.util.*;
+public class SelfFluxFilter<E> implements OrderFilter<E> { public void filterTargets(ShipAPI s,List<E> t,String[] p,CombatEngineAPI e){float min=-1,max=p.length==1?BattleNext_OrderUtils.factor(p[0]):BattleNext_OrderUtils.factor(p[1]);if(p.length>1)min=BattleNext_OrderUtils.factor(p[0]);if(max<=0||(BattleNext_OrderUtils.percent(max)?s.getFluxLevel()>max:s.getCurrFlux()>max)||(min>=0&&(BattleNext_OrderUtils.percent(min)?s.getFluxLevel()<min:s.getCurrFlux()<min)))t.clear();} }
