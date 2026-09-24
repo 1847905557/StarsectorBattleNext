@@ -1,7 +1,7 @@
 package data.scripts.match;
 
-import com.fs.starfarer.api.Global;
-import org.json.JSONArray;
+import data.scripts.match.io.BattleNext_BattleReportLoader;
+import data.scripts.match.io.BattleNext_BattleReportSaver;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -13,14 +13,14 @@ import java.util.List;
 public class BattleNext_BattleReportStore {
 
 	private static final int MAX_REPORTS = 50;
-	private static final String PATH = "AI_Battles_Next/reports/reports.json";
+	private final BattleNext_BattleReportLoader loader = new BattleNext_BattleReportLoader();
+	private final BattleNext_BattleReportSaver saver = new BattleNext_BattleReportSaver();
 	private final Deque<BattleNext_BattleReport> reports = new ArrayDeque<>();
 
 	public void reload() throws IOException, JSONException {
 		reports.clear();
-		JSONArray values = new JSONArray(Global.getSettings().readTextFileFromCommon(PATH));
-		for (int index = 0; index < values.length(); index++) {
-			if (values.optJSONObject(index) != null) add(BattleNext_BattleReport.fromJson(values.optJSONObject(index)));
+		for (BattleNext_BattleReport report : loader.load()) {
+			add(report);
 		}
 	}
 
@@ -37,9 +37,7 @@ public class BattleNext_BattleReportStore {
 	}
 
 	public void save() throws IOException, JSONException {
-		JSONArray values = new JSONArray();
-		for (BattleNext_BattleReport report : reports) values.put(report.toJson());
-		Global.getSettings().writeTextFileToCommon(PATH, values.toString());
+		saver.save(List.copyOf(reports));
 	}
 
 	public int size() {

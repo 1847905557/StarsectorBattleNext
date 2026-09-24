@@ -1,7 +1,10 @@
-package data.scripts.match;
+package data.scripts.report;
 
+import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.combat.BattleNext_Scorekeeper;
+import data.scripts.match.BattleNext_BattleSourceProvider;
+import data.scripts.match.BattleNext_Match;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
@@ -10,7 +13,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-public class BattleNext_BattleResultRecorder extends com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin {
+public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin {
 
 	private final BattleNext_Scorekeeper scorekeeper;
 	private final BattleNext_Match match;

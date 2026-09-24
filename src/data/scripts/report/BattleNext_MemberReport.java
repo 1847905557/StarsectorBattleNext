@@ -1,4 +1,4 @@
-package data.scripts.match;
+package data.scripts.battle;
 
 import org.json.JSONException;
 import org.json.JSONObject;
