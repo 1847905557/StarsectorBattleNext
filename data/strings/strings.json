@@ -57,4 +57,17 @@
 	"BattleNext_ui_no_reports": "No battle reports",
 	"BattleNext_ui_damage_dealt": "Damage Dealt",
 	"BattleNext_ui_damage_taken": "Damage Taken"
+	,"BattleNext_ui_tournament_create": "Create tournament"
+	,"BattleNext_ui_tournament_activate": "Set active"
+	,"BattleNext_ui_tournament_deactivate": "Clear active"
+	,"BattleNext_ui_tournament_start": "Start tournament"
+	,"BattleNext_ui_tournament_created": "Tournament created"
+	,"BattleNext_ui_tournament_started": "Tournament started"
+	,"BattleNext_ui_tournament_locked": "Teams and format are locked"
+	,"BattleNext_ui_tournament_editable": "Tournament is editable"
+	,"BattleNext_ui_tournament_rules": "Rules"
+	,"BattleNext_ui_tournament_rules_ready": "Ready"
+	,"BattleNext_ui_tournament_rules_unavailable": "Rules are unavailable; start is disabled"
+	,"BattleNext_ui_tournament_no_slot": "No tournament slot is available"
+	,"BattleNext_ui_tournament_need_fleets": "At least two fleets are required"
 }
