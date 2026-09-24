@@ -30,6 +30,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private UIPanelAPI screenPanel;
 	private CustomPanelAPI entryPanel;
 	private CustomPanelAPI managementPanel;
+	private BattleNext_UiManager uiManager;
 	private boolean managementVisible;
 
 	@Override
@@ -70,6 +71,9 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		if (isDialogOpen()) {
 			return;
 		}
+		if (managementVisible && uiManager != null && uiManager.handleGlobalInput(events)) {
+			return;
+		}
 		for (InputEventAPI event : events) {
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				managementVisible = false;
@@ -95,9 +99,10 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			}
 		}
 		if (managementVisible && managementPanel == null) {
-			managementPanel = createPanel(PANEL_WIDTH, PANEL_HEIGHT, new ManagementPlugin());
+			uiManager = new BattleNext_UiManager(this::closeManagementPanel);
+			managementPanel = createPanel(PANEL_WIDTH, PANEL_HEIGHT, uiManager);
 			if (managementPanel != null) {
-				addManagementContent();
+				uiManager.attach(managementPanel);
 				screenPanel.addComponent(managementPanel).inMid();
 			}
 		}
@@ -108,15 +113,6 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		content.setButtonFontOrbitron20();
 		content.addButton(text("BattleNext_title_open"), "open", ENTRY_WIDTH - 16f, 32f, 0f);
 		entryPanel.addUIElement(content).inMid();
-	}
-
-	private void addManagementContent() {
-		TooltipMakerAPI content = managementPanel.createUIElement(PANEL_WIDTH, PANEL_HEIGHT, false);
-		content.setTitleOrbitronLarge();
-		content.addTitle(text("BattleNext_title_panel"));
-		content.addPara(text("BattleNext_title_panel_hint"), 12f);
-		content.addButton(text("BattleNext_title_close"), "close", 180f, 32f, 16f);
-		managementPanel.addUIElement(content).inMid();
 	}
 
 	private CustomPanelAPI createPanel(float width, float height, CustomUIPanelPlugin plugin) {
@@ -132,6 +128,12 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			screenPanel.removeComponent(managementPanel);
 		}
 		managementPanel = null;
+		uiManager = null;
+	}
+
+	private void closeManagementPanel() {
+		managementVisible = false;
+		removeManagementPanel();
 	}
 
 	private boolean isTitleState() {
@@ -199,34 +201,4 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		}
 	}
 
-	private final class ManagementPlugin extends BaseCustomUIPanelPlugin {
-
-		@Override
-		public void positionChanged(PositionAPI position) {
-		}
-
-		@Override
-		public void render(float alphaMult) {
-		}
-
-		@Override
-		public void advance(float amount) {
-		}
-
-		@Override
-		public void processInput(List<InputEventAPI> events) {
-		}
-
-		@Override
-		public void buttonPressed(Object buttonId) {
-			if ("close".equals(buttonId)) {
-				managementVisible = false;
-				removeManagementPanel();
-			}
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-		}
-	}
 }

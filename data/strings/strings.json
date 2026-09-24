@@ -2,5 +2,16 @@
 	"BattleNext_title_open": "AI Battles Next",
 	"BattleNext_title_panel": "AI Battles Next",
 	"BattleNext_title_panel_hint": "Management interface",
-	"BattleNext_title_close": "Close"
+	"BattleNext_title_close": "Close",
+	"BattleNext_ui_page_main": "Main",
+	"BattleNext_ui_page_fleets": "Fleets",
+	"BattleNext_ui_page_tournaments": "Tournaments",
+	"BattleNext_ui_page_rules": "Rules",
+	"BattleNext_ui_page_settings": "Settings",
+	"BattleNext_ui_page_placeholder": "This page is reserved for a later implementation.",
+	"BattleNext_ui_back": "Back",
+	"BattleNext_ui_close": "Close",
+	"BattleNext_ui_tournament_active": "Active tournament slot",
+	"BattleNext_ui_result_updated": "Battle report updated",
+	"BattleNext_ui_ready": "Ready"
 }
