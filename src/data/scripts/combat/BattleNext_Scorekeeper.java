@@ -34,6 +34,12 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		registerMembers(enemyFleetId, enemyAssembly);
 	}
 
+	public BattleNext_Scorekeeper(String playerFleetId, List<FleetMemberAPI> playerMembers,
+			String enemyFleetId, List<FleetMemberAPI> enemyMembers) {
+		registerMembers(playerFleetId, playerMembers);
+		registerMembers(enemyFleetId, enemyMembers);
+	}
+
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
@@ -86,6 +92,16 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 			TrackedMember tracked = new TrackedMember(fleetId, index, variantId, name, members.get(index));
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(members.get(index), tracked);
+		}
+	}
+
+	private void registerMembers(String fleetId, List<FleetMemberAPI> members) {
+		for (int index = 0; index < members.size(); index++) {
+			FleetMemberAPI member = members.get(index);
+			String variantId = member.getVariant().getHullVariantId();
+			TrackedMember tracked = new TrackedMember(fleetId, index, variantId, member.getShipName(), member);
+			trackedMembers.add(tracked);
+			membersByFleetMember.put(member, tracked);
 		}
 	}
 
