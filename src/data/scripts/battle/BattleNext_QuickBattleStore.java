@@ -1,7 +1,7 @@
-package data.scripts.match;
+package data.scripts.battle;
 
-import data.scripts.match.io.BattleNext_QuickBattleLoader;
-import data.scripts.match.io.BattleNext_QuickBattleSaver;
+import data.scripts.battle.io.BattleNext_QuickBattleLoader;
+import data.scripts.battle.io.BattleNext_QuickBattleSaver;
 import org.json.JSONException;
 
 import java.io.IOException;

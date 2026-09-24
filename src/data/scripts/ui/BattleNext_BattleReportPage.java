@@ -3,15 +3,14 @@ package data.scripts.ui;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.match.BattleNext_BattleReport;
-import data.scripts.match.BattleNext_BattleReportStore;
-import data.scripts.match.BattleNext_MemberReport;
-import data.scripts.match.BattleNext_Round;
+import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportStore;
+import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.battle.BattleNext_Round;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.util.BattleNext_I18nSection;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -94,7 +93,7 @@ public class BattleNext_BattleReportPage {
 
 	private List<BattleNext_MatchWithRound> rounds(BattleNext_Tournament tournament) {
 		List<BattleNext_MatchWithRound> result = new ArrayList<>();
-		for (data.scripts.match.BattleNext_Match match : tournament.getMatches()) {
+		for (data.scripts.battle.BattleNext_Match match : tournament.getMatches()) {
 			for (BattleNext_Round round : match.getRounds()) result.add(new BattleNext_MatchWithRound(match.getId(), round));
 		}
 		return result;

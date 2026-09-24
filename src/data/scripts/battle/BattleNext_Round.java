@@ -1,4 +1,4 @@
-package data.scripts.match;
+package data.scripts.battle;
 
 import data.scripts.report.BattleNext_BattleReport;
 import org.json.JSONException;

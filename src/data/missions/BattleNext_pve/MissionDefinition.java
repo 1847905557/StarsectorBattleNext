@@ -1,7 +1,6 @@
 package data.missions.BattleNext_pve;
 
 import com.fs.starfarer.api.fleet.FleetGoal;
-import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
@@ -9,8 +8,8 @@ import data.scripts.combat.BattleNext_Scorekeeper;
 import data.scripts.fleet.BattleNext_FleetAssembler;
 import data.scripts.fleet.BattleNext_FleetAssembly;
 import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.match.BattleNext_Match;
-import data.scripts.match.BattleNext_BattleResultRecorder;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.member.BattleNext_MemberModel;
 import org.lwjgl.input.Keyboard;
 

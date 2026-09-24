@@ -188,7 +188,7 @@ public class BattleNext_TournamentPage {
 			detailContent.addPara(team, 6f, BattleNext_UiTheme.TEXT);
 		}
 		detailContent.addPara(text("BattleNext_ui_matches"), 10f, BattleNext_UiTheme.ACCENT);
-		for (data.scripts.match.BattleNext_Match match : selected.getMatches()) {
+		for (data.scripts.battle.BattleNext_Match match : selected.getMatches()) {
 			detailContent.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
 					+ " [" + match.getStatus() + "]", 6f, BattleNext_UiTheme.TEXT);
 		}

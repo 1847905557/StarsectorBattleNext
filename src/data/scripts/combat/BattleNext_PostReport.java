@@ -3,8 +3,8 @@ package data.scripts.combat;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.match.BattleNext_BattleReport;
-import data.scripts.match.BattleNext_MemberReport;
+import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_MemberReport;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
 

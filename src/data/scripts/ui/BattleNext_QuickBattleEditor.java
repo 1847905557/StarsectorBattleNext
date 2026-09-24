@@ -8,8 +8,8 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.match.BattleNext_Match;
-import data.scripts.match.BattleNext_QuickBattleStore;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_QuickBattleStore;
 import data.scripts.util.BattleNext_I18nSection;
 
 import java.io.IOException;

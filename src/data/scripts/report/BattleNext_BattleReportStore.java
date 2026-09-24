@@ -1,7 +1,7 @@
-package data.scripts.match;
+package data.scripts.report;
 
-import data.scripts.match.io.BattleNext_BattleReportLoader;
-import data.scripts.match.io.BattleNext_BattleReportSaver;
+import data.scripts.report.io.BattleNext_BattleReportLoader;
+import data.scripts.report.io.BattleNext_BattleReportSaver;
 import org.json.JSONException;
 
 import java.io.IOException;

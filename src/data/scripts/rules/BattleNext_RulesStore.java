@@ -1,6 +1,7 @@
 package data.scripts.rules;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.rules.io.BattleNext_RulesLoader;
+import data.scripts.rules.io.BattleNext_RulesSaver;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -10,28 +11,21 @@ import java.util.Map;
 
 public class BattleNext_RulesStore {
 
+	private final BattleNext_RulesLoader loader = new BattleNext_RulesLoader();
+	private final BattleNext_RulesSaver saver = new BattleNext_RulesSaver();
 	private final Map<Integer, BattleNext_RulesModel> rules = new LinkedHashMap<>();
 
 	public void reload() throws IOException, JSONException {
 		rules.clear();
-		for (int slot = 0; slot < 32; slot++) {
-			String path = "rules/rules_" + slot + ".json";
-			try {
-				rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().loadJSON(path, "AI_Battles_Next")));
-			} catch (Exception ignored) {
-			}
-			String userPath = "AI_Battles_Next/rules/rules_" + slot + ".json";
-			if (Global.getSettings().fileExistsInCommon(userPath)) {
-				rules.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
-			}
-		}
+		rules.putAll(loader.loadBuiltIn());
+		rules.putAll(loader.loadUser());
 	}
 
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
 		if (model == null) {
 			throw new IllegalArgumentException("Rules model is required");
 		}
-		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/rules_" + model.getSlot() + ".json", model.toJson(), false);
+		saver.save(model);
 		rules.put(model.getSlot(), model);
 	}
 

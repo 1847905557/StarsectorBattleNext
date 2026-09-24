@@ -1,6 +1,8 @@
-package data.scripts.fleet;
+package data.scripts.fleet.io;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_VariantModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 

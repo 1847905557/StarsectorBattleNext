@@ -1,4 +1,4 @@
-package data.scripts.battle;
+package data.scripts.report;
 
 import org.json.JSONException;
 import org.json.JSONObject;

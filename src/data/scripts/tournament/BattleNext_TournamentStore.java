@@ -1,8 +1,8 @@
 package data.scripts.tournament;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.tournament.io.BattleNext_TournamentLoader;
+import data.scripts.tournament.io.BattleNext_TournamentSaver;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -11,34 +11,23 @@ import java.util.Map;
 
 public class BattleNext_TournamentStore {
 
-	private static final String COMMON_ROOT = "AI_Battles_Next/tournament/";
-
+	private final BattleNext_TournamentLoader loader = new BattleNext_TournamentLoader();
+	private final BattleNext_TournamentSaver saver = new BattleNext_TournamentSaver();
 	private final Map<Integer, BattleNext_Tournament> tournaments = new LinkedHashMap<>();
 	private int activeSlot = -1;
 
 	public void reload() throws IOException, JSONException {
 		tournaments.clear();
-		for (int slot = 0; slot < 32; slot++) {
-			String path = "tournament/tournament_" + slot + ".json";
-			try {
-				tournaments.put(slot, BattleNext_Tournament.fromJson(Global.getSettings().loadJSON(path, "AI_Battles_Next")));
-			} catch (Exception ignored) {
-			}
-			String userPath = COMMON_ROOT + "tournament_" + slot + ".json";
-			if (Global.getSettings().fileExistsInCommon(userPath)) {
-				tournaments.put(slot, BattleNext_Tournament.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
-			}
-		}
-		String metaPath = "AI_Battles_Next/meta.json";
-		activeSlot = Global.getSettings().fileExistsInCommon(metaPath)
-				? Global.getSettings().readJSONFromCommon(metaPath, false).optInt("activeTournamentSlot", -1) : -1;
+		tournaments.putAll(loader.loadBuiltIn());
+		tournaments.putAll(loader.loadUser());
+		activeSlot = loader.loadActiveSlot();
 	}
 
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
 		if (tournament == null) {
 			throw new IllegalArgumentException("Tournament is required");
 		}
-		Global.getSettings().writeJSONToCommon(COMMON_ROOT + "tournament_" + tournament.getSlot() + ".json", tournament.toJson(), false);
+		saver.save(tournament);
 		tournaments.put(tournament.getSlot(), tournament);
 	}
 
@@ -46,10 +35,7 @@ public class BattleNext_TournamentStore {
 		if (slot < -1 || slot > 31) {
 			throw new IllegalArgumentException("Active tournament slot must be between -1 and 31");
 		}
-		JSONObject meta = new JSONObject();
-		meta.put("formatVersion", 1);
-		meta.put("activeTournamentSlot", slot);
-		Global.getSettings().writeJSONToCommon("AI_Battles_Next/meta.json", meta, false);
+		saver.saveActiveSlot(slot);
 		activeSlot = slot;
 	}
 

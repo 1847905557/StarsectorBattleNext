@@ -1,6 +1,6 @@
 package data.scripts.tournament;
 
-import data.scripts.match.BattleNext_Match;
+import data.scripts.battle.BattleNext_Match;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

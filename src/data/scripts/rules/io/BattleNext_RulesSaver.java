@@ -1,0 +1,14 @@
+package data.scripts.rules.io;
+
+import com.fs.starfarer.api.Global;
+import data.scripts.rules.BattleNext_RulesModel;
+import org.json.JSONException;
+
+import java.io.IOException;
+
+public class BattleNext_RulesSaver {
+
+	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
+		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/rules_" + model.getSlot() + ".json", model.toJson(), false);
+	}
+}

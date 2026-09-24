@@ -1,8 +1,8 @@
 package data.scripts.fleet;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.fleet.io.BattleNext_FleetLoader;
+import data.scripts.fleet.io.BattleNext_FleetSaver;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -13,10 +13,12 @@ import java.util.Map;
 public class BattleNext_FleetStore {
 
 	private final BattleNext_FleetLoader loader;
+	private final BattleNext_FleetSaver saver;
 	private final Map<String, BattleNext_FleetModel> fleets = new LinkedHashMap<>();
 
 	public BattleNext_FleetStore() {
 		loader = new BattleNext_FleetLoader();
+		saver = new BattleNext_FleetSaver();
 	}
 
 	public void reload() {
@@ -40,16 +42,7 @@ public class BattleNext_FleetStore {
 
 	public void save(BattleNext_FleetModel fleet) throws IOException, JSONException {
 		if (fleet == null || fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet id is required");
-		String directory = "AI_Battles_Next/" + fleet.getId() + "/";
-		String path = directory + "fleet_data.json";
-		if (Global.getSettings().fileExistsInCommon(path)) {
-			JSONObject previous = Global.getSettings().readJSONFromCommon(path, false);
-			Global.getSettings().writeJSONToCommon(directory + "fleet_data.json.bak", previous, false);
-		}
-		Global.getSettings().writeJSONToCommon(path, fleet.toJson(), false);
-		for (BattleNext_VariantModel variant : fleet.getVariants()) {
-			Global.getSettings().writeTextFileToCommon(directory + variant.getId() + ".variant", variant.toJson().toString(2));
-		}
+		String path = saver.save(fleet);
 		fleet.setSource("user");
 		fleet.setSourcePath(path);
 		fleets.put(fleet.getId(), fleet);
@@ -57,12 +50,7 @@ public class BattleNext_FleetStore {
 
 	public void delete(BattleNext_FleetModel fleet) throws IOException {
 		if (fleet == null || !"user".equals(fleet.getSource())) return;
-		String directory = "AI_Battles_Next/" + fleet.getId() + "/";
-		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json");
-		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json.bak");
-		for (BattleNext_VariantModel variant : fleet.getVariants()) {
-			Global.getSettings().deleteTextFileFromCommon(directory + variant.getId() + ".variant");
-		}
+		saver.delete(fleet);
 		fleets.remove(fleet.getId());
 	}
 

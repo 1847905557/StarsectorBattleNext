@@ -1,4 +1,4 @@
-package data.scripts.match;
+package data.scripts.battle;
 
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;

@@ -1,10 +1,10 @@
-package data.scripts.report;
+package data.scripts.battle;
 
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.combat.BattleNext_Scorekeeper;
-import data.scripts.match.BattleNext_BattleSourceProvider;
-import data.scripts.match.BattleNext_Match;
+import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;

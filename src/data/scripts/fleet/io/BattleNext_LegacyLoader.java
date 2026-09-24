@@ -1,6 +1,7 @@
-package data.scripts.fleet;
+package data.scripts.fleet.io;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import org.json.JSONException;
 

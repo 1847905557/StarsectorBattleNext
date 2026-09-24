@@ -1,8 +1,8 @@
 package data.scripts.tournament;
 
-import data.scripts.match.BattleNext_BattleReport;
-import data.scripts.match.BattleNext_Match;
-import data.scripts.match.BattleNext_Round;
+import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_Round;
 
 import java.util.ArrayList;
 import java.util.HashSet;
