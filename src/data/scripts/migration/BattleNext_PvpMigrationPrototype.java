@@ -33,6 +33,14 @@ public class BattleNext_PvpMigrationPrototype {
 	private static final String MOD_ID = "AI_Battles_Next";
 	private static final String MATCH_PATH = "tournament/PvP_matches.csv";
 	private static final int MAP_NUMBER = 3;
+
+	private static final float DEFAULT_MATCH_SIZE = 1f;
+	private static final float MIGRATION_MAP_BASE_SIZE = 11000f;
+	private static final float MIN_MAP_SIZE = 0.1f;
+	private static final float DEPLOYMENT_SPACING = 800f;
+	private static final float DEPLOYMENT_ROW_SPACING = 650f;
+	private static final float DEPLOYMENT_SPAWN_DELAY = 3f;
+
 	private int currentMatchIndex;
 
 	private final BattleNext_LegacyLoader legacyLoader = new BattleNext_LegacyLoader();
@@ -90,7 +98,7 @@ public class BattleNext_PvpMigrationPrototype {
 				int player = Integer.parseInt(fields.get(0));
 				int enemy = Integer.parseInt(fields.get(1));
 				int map = fields.size() > 2 ? Integer.parseInt(fields.get(2)) : -1;
-				float size = fields.size() > 3 ? Float.parseFloat(fields.get(3)) : 1f;
+				float size = fields.size() > 3 ? Float.parseFloat(fields.get(3)) : DEFAULT_MATCH_SIZE;
 				if (map != MAP_NUMBER) {
 					LOGGER.warn("Skipping legacy PvP line " + lineNumber + ": unsupported map " + map);
 					continue;
@@ -180,8 +188,8 @@ public class BattleNext_PvpMigrationPrototype {
 	}
 
 	private void configureMap(MissionDefinitionAPI api, float size) {
-		float width = 11000f * Math.max(size, 0.1f);
-		float height = 11000f * Math.max(size, 0.1f);
+		float width = MIGRATION_MAP_BASE_SIZE * Math.max(size, MIN_MAP_SIZE);
+		float height = MIGRATION_MAP_BASE_SIZE * Math.max(size, MIN_MAP_SIZE);
 		api.initMap(-width / 2f, width / 2f, -height / 2f, height / 2f);
 		api.addObjective(-0.05f * width, 0.05f * height, "sensor_array");
 		api.addObjective(0.05f * width, 0.05f * height, "nav_buoy");
@@ -265,11 +273,11 @@ public class BattleNext_PvpMigrationPrototype {
 			float facing = side == FleetSide.PLAYER ? 90f : -90f;
 			for (FleetMemberAPI member : engine.getFleetManager(side).getReservesCopy()) {
 				if (member.isFighterWing()) continue;
-				engine.getFleetManager(side).spawnFleetMember(member, new Vector2f(spawnX, spawnY), facing, 3f);
-				spawnX = spawnX == 0f ? 800f : -spawnX;
+				engine.getFleetManager(side).spawnFleetMember(member, new Vector2f(spawnX, spawnY), facing, DEPLOYMENT_SPAWN_DELAY);
+				spawnX = spawnX == 0f ? DEPLOYMENT_SPACING : -spawnX;
 				if (Math.abs(spawnX) >= engine.getMapWidth() / 4f) {
 					spawnX = 0f;
-					spawnY += side == FleetSide.PLAYER ? -650f : 650f;
+					spawnY += side == FleetSide.PLAYER ? -DEPLOYMENT_ROW_SPACING : DEPLOYMENT_ROW_SPACING;
 				}
 			}
 			engine.getFleetManager(side).setSuppressDeploymentMessages(false);

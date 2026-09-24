@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public class BattleNext_RulesStore {
+
 	private final Map<Integer, BattleNext_RulesModel> rules = new LinkedHashMap<>();
 
 	public void reload() throws IOException, JSONException {

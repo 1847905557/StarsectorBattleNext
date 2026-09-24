@@ -12,7 +12,13 @@ import com.fs.starfarer.api.mission.FleetSide;
 import java.util.List;
 
 public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
+
 	private static final float DEFAULT_TIME_LIMIT = 500f;
+	private static final int MAX_FLEET_POINTS = 999;
+	private static final float COMMAND_POINTS = 999f;
+	private static final float FOG_REVEAL_RADIUS = 90000f;
+	private static final String COMMAND_POINT_MODIFIER = "BattleNext_MissionPlugin";
+
 	private final float timeLimit;
 	private CombatEngineAPI engine;
 	private boolean timeoutApplied;
@@ -29,8 +35,8 @@ public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
-		engine.setMaxFleetPoints(FleetSide.PLAYER, 9999);
-		engine.setMaxFleetPoints(FleetSide.ENEMY, 9999);
+		engine.setMaxFleetPoints(FleetSide.PLAYER, MAX_FLEET_POINTS);
+		engine.setMaxFleetPoints(FleetSide.ENEMY, MAX_FLEET_POINTS);
 		configureSide(FleetSide.PLAYER);
 		configureSide(FleetSide.ENEMY);
 	}
@@ -48,10 +54,10 @@ public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getContext().fightToTheLast = true;
 		engine.getFleetManager(side).setCanForceShipsToEngageWhenBattleClearlyLost(true);
 		engine.getFleetManager(side).getTaskManager(false).setPreventFullRetreat(true);
-		engine.getFleetManager(side).getTaskManager(false).getCommandPointsStat().modifyFlat("BattleNext_MissionPlugin", 9999f);
+		engine.getFleetManager(side).getTaskManager(false).getCommandPointsStat().modifyFlat(COMMAND_POINT_MODIFIER, COMMAND_POINTS);
 		if (side == FleetSide.PLAYER) {
 			engine.getFleetManager(side).getTaskManager(true).setPreventFullRetreat(true);
-			engine.getFleetManager(side).getTaskManager(true).getCommandPointsStat().modifyFlat("BattleNext_MissionPlugin", 9999f);
+			engine.getFleetManager(side).getTaskManager(true).getCommandPointsStat().modifyFlat(COMMAND_POINT_MODIFIER, COMMAND_POINTS);
 		}
 	}
 
@@ -65,8 +71,8 @@ public final class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(false).setFullAssault(true);
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(true).setFullAssault(true);
 		engine.getFleetManager(FleetSide.ENEMY).getTaskManager(false).setFullAssault(true);
-		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, 90000f);
-		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, 90000f);
+		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
+		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
 		Global.getLogger(BattleNext_MissionPlugin.class).info("BattleNext timeout applied at " + timeLimit + " seconds");
 	}
 }

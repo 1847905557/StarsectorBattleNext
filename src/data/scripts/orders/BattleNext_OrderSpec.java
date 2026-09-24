@@ -1,6 +1,7 @@
 package data.scripts.orders;
 
 public class BattleNext_OrderSpec {
+
 	private final String id;
 	private final String type;
 	private final String script;

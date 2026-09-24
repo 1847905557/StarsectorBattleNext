@@ -10,7 +10,9 @@ import java.util.Locale;
 import java.util.Map;
 
 public class BattleNext_OrderRegistry {
+
 	private static final List<String> TYPES = List.of("starter", "filter", "picker", "suffix");
+
 	private final Map<String, Map<String, BattleNext_OrderSpec>> byType = new LinkedHashMap<>();
 
 	public BattleNext_OrderRegistry() { for (String type : TYPES) byType.put(type, new LinkedHashMap<>()); }

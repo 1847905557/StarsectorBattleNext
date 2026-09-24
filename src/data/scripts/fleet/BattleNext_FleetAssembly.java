@@ -1,11 +1,8 @@
 package data.scripts.fleet;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import data.scripts.member.BattleNext_MemberBuilder;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 

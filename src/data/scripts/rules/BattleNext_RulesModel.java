@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class BattleNext_RulesModel {
+
 	private int slot;
 	private String id;
 	private String name;

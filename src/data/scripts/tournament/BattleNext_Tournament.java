@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class BattleNext_Tournament {
+
 	private int slot;
 	private String name;
 	private String bracketType;

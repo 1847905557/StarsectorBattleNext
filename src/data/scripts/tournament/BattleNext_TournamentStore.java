@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 
 public class BattleNext_TournamentStore {
+
 	private static final String COMMON_ROOT = "AI_Battles_Next/tournament/";
+
 	private final Map<Integer, BattleNext_Tournament> tournaments = new LinkedHashMap<>();
 	private int activeSlot = -1;
 
