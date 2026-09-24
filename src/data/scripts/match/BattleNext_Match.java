@@ -12,20 +12,20 @@ public class BattleNext_Match {
 	private String id;
 	private String player;
 	private String enemy;
-	private String map;
-	private int timeLimit = -1;
+	private int map;
+	private float size;
 	private final List<BattleNext_Round> rounds = new ArrayList<>();
 
-	public BattleNext_Match(String id, String player, String enemy, String map, int timeLimit) {
+	public BattleNext_Match(String id, String player, String enemy, int map, float size) {
 		this.id = id == null ? "" : id.trim();
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
-		this.map = map == null ? "" : map.trim();
-		this.timeLimit = timeLimit;
+		this.map = map;
+		this.size = size;
 	}
 
 	public static BattleNext_Match fromJson(JSONObject json) {
-		BattleNext_Match match = new BattleNext_Match(json.optString("id", ""), json.optString("player", ""), json.optString("enemy", ""), json.optString("map", ""), json.optInt("timeLimit", -1));
+		BattleNext_Match match = new BattleNext_Match(json.optString("id", ""), json.optString("player", ""), json.optString("enemy", ""), json.optInt("map", -1), (float)json.optDouble("size", 1f));
 		org.json.JSONArray values = json.optJSONArray("rounds");
 		if (values != null) for (int index = 0; index < values.length(); index++) if (values.optJSONObject(index) != null) match.rounds.add(BattleNext_Round.fromJson(values.optJSONObject(index)));
 		return match;
@@ -37,7 +37,7 @@ public class BattleNext_Match {
 		json.put("player", player);
 		json.put("enemy", enemy);
 		json.put("map", map);
-		json.put("timeLimit", timeLimit);
+		json.put("size", size);
 		org.json.JSONArray values = new org.json.JSONArray();
 		for (BattleNext_Round round : rounds) values.put(round.toJson());
 		json.put("rounds", values);
@@ -48,7 +48,7 @@ public class BattleNext_Match {
 	public String getId() { return id; }
 	public String getPlayer() { return player; }
 	public String getEnemy() { return enemy; }
-	public String getMap() { return map; }
-	public int getTimeLimit() { return timeLimit; }
+	public int getMap() { return map; }
+	public float getSize() { return size; }
 	public List<BattleNext_Round> getRounds() { return Collections.unmodifiableList(rounds); }
 }

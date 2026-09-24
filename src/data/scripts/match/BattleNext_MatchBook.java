@@ -16,25 +16,29 @@ public class BattleNext_MatchBook {
 		String text = Global.getSettings().readTextFileFromCommon(PATH);
 		for (String line : text.split("\\R")) {
 			String trimmed = line.trim();
-			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("player,enemy,map,timeLimit")) continue;
+			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("player,enemy,map,size")) continue;
 			List<String> fields = parse(line);
-			if (fields.size() < 2) continue;
-			String map = fields.size() > 2 ? fields.get(2) : "";
-			int timeLimit = fields.size() > 3 ? parseTimeLimit(fields.get(3)) : -1;
-			matches.add(new BattleNext_Match("quick-" + matches.size(), fields.get(0), fields.get(1), map, timeLimit));
+			if (fields.size() != 4) continue;
+			try {
+				int map = Integer.parseInt(fields.get(2));
+				float size = Float.parseFloat(fields.get(3));
+				if (!Float.isFinite(size) || size <= 0f) continue;
+				matches.add(new BattleNext_Match("quick-" + matches.size(), fields.get(0), fields.get(1), map, size));
+			} catch (NumberFormatException exception) {
+				continue;
+			}
 		}
 	}
 
 	public void save() throws IOException {
-		StringBuilder text = new StringBuilder("player,enemy,map,timeLimit\n");
-		for (BattleNext_Match match : matches) text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(csv(match.getMap())).append(',').append(match.getTimeLimit()).append('\n');
+		StringBuilder text = new StringBuilder("player,enemy,map,size\n");
+		for (BattleNext_Match match : matches) text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
 		Global.getSettings().writeTextFileToCommon(PATH, text.toString());
 	}
 
 	public List<BattleNext_Match> getMatches() { return List.copyOf(matches); }
 	public void add(BattleNext_Match match) { if (match != null) matches.add(match); }
 
-	private int parseTimeLimit(String value) { try { return Integer.parseInt(value.trim()); } catch (NumberFormatException exception) { return -1; } }
 	private String csv(String value) { String normalized = value == null ? "" : value; return normalized.contains(",") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized; }
 	private List<String> parse(String line) {
 		List<String> result = new ArrayList<>();

@@ -46,13 +46,13 @@ public class BattleNext_PvpMigrationPrototype {
 		for (int offset = 0; offset < matches.size(); offset++) {
 			int candidateIndex = Math.floorMod(requestedIndex + offset, matches.size());
 			LegacyMatch match = matches.get(candidateIndex);
-			BattleNext_FleetAssembly player = assemble(fleets, match.player, match.lineNumber, "player");
-			BattleNext_FleetAssembly enemy = assemble(fleets, match.enemy, match.lineNumber, "enemy");
-			if (player == null || enemy == null) continue;
+			BattleNext_FleetAssembly playerAssembly = assemble(fleets, match.player, match.lineNumber, "player");
+			BattleNext_FleetAssembly enemyAssembly = assemble(fleets, match.enemy, match.lineNumber, "enemy");
+			if (playerAssembly == null || enemyAssembly == null) continue;
 			currentMatchIndex = candidateIndex;
-			configureFleet(api, FleetSide.PLAYER, player);
-			configureFleet(api, FleetSide.ENEMY, enemy);
-			configureBriefing(api, player, enemy, match.size);
+			configureFleet(api, FleetSide.PLAYER, playerAssembly);
+			configureFleet(api, FleetSide.ENEMY, enemyAssembly);
+			configureBriefing(api, playerAssembly, enemyAssembly, match.size);
 			configureMap(api, match.size);
 			api.addPlugin(new ForcedDeploymentPlugin());
 			return;
@@ -141,10 +141,10 @@ public class BattleNext_PvpMigrationPrototype {
 		}
 	}
 
-	private void configureBriefing(MissionDefinitionAPI api, BattleNext_FleetAssembly player,
-			BattleNext_FleetAssembly enemy, float size) {
-		api.addBriefingItem("Player: " + player.getDefinition().getName() + " (" + deploymentCost(player) + " DP)");
-		api.addBriefingItem("Enemy: " + enemy.getDefinition().getName() + " (" + deploymentCost(enemy) + " DP)");
+	private void configureBriefing(MissionDefinitionAPI api, BattleNext_FleetAssembly playerAssembly,
+			BattleNext_FleetAssembly enemyAssembly, float size) {
+		api.addBriefingItem("Player: " + playerAssembly.getDefinition().getName() + " (" + deploymentCost(playerAssembly) + " DP)");
+		api.addBriefingItem("Enemy: " + enemyAssembly.getDefinition().getName() + " (" + deploymentCost(enemyAssembly) + " DP)");
 		api.addBriefingItem("Legacy migration map 3, size " + size);
 	}
 
