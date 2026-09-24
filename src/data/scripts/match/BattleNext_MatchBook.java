@@ -1,6 +1,7 @@
 package data.scripts.match;
 
 import com.fs.starfarer.api.Global;
+import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,8 +13,15 @@ public class BattleNext_MatchBook {
 	private final List<BattleNext_Match> matches = new ArrayList<>();
 
 	public void load() throws IOException {
+		loadText(Global.getSettings().readTextFileFromCommon(PATH));
+	}
+
+	public void loadBuiltIn() throws IOException, JSONException {
+		loadText(Global.getSettings().loadText("tournament/quick_battle.csv", "AI_Battles_Next"));
+	}
+
+	private void loadText(String text) {
 		matches.clear();
-		String text = Global.getSettings().readTextFileFromCommon(PATH);
 		for (String line : text.split("\\R")) {
 			String trimmed = line.trim();
 			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("player,enemy,map,size")) continue;
