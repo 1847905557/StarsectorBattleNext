@@ -12,6 +12,7 @@ import data.scripts.match.BattleNext_Match;
 import data.scripts.match.BattleNext_MatchListProvider;
 import data.scripts.combat.BattleNext_BattleMap;
 import data.scripts.combat.BattleNext_Deployment;
+import data.scripts.combat.BattleNext_MissionPlugin;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
@@ -55,6 +56,7 @@ final class NativeMission {
 		api.addBriefingItem("Map " + match.getMap() + ", size " + match.getSize());
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), currentIndex), match.getSize());
 		api.addPlugin(new BattleNext_Deployment());
+		api.addPlugin(new BattleNext_MissionPlugin());
 	}
 
 	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly) {
