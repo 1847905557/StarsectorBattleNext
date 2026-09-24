@@ -5,6 +5,8 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_LegacyLoader;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentStore;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -20,6 +22,7 @@ public class BattleNext_Importer {
 
 	private final BattleNext_LegacyLoader legacyLoader = new BattleNext_LegacyLoader();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
+	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 
 	public BattleNext_Importer() {
 		fleetStore.reload();
@@ -96,6 +99,64 @@ public class BattleNext_Importer {
 		return result;
 	}
 
+	public ImportResult importMatchesAsTournament(Path file, int requestedSlot, String name,
+			Map<String, String> idMapping) {
+		ImportResult result = new ImportResult();
+		try {
+			tournamentStore.reload();
+			int slot = resolveTournamentSlot(requestedSlot, result);
+			BattleNext_Tournament tournament = new BattleNext_Tournament(slot,
+					name == null ? "Imported tournament" : name, "round_robin", "BO1", 2);
+			List<String> teams = new ArrayList<>();
+			for (MatchPreview preview : previewMatches(file, idMapping)) {
+				if (!preview.isValid()) {
+					if (!preview.getWarning().isEmpty()) {
+						result.warnings.add("matches.csv line " + preview.getLineNumber() + ": " + preview.getWarning());
+					}
+					continue;
+				}
+				if (fleetStore.get(preview.getPlayer()) == null || fleetStore.get(preview.getEnemy()) == null) {
+					result.warnings.add("matches.csv line " + preview.getLineNumber() + ": missing fleet reference");
+					continue;
+				}
+				addTeam(teams, preview.getPlayer());
+				addTeam(teams, preview.getEnemy());
+			}
+			if (teams.size() < 2) {
+				result.warnings.add("No valid tournament matches found");
+				return result;
+			}
+			for (String team : teams) {
+				tournament.addTeam(team);
+			}
+			tournamentStore.save(tournament);
+			result.tournamentSlot = slot;
+		} catch (Exception exception) {
+			result.warnings.add("Unable to import tournament matches: " + exception.getMessage());
+		}
+		return result;
+	}
+
+	private int resolveTournamentSlot(int requestedSlot, ImportResult result) {
+		int first = Math.max(0, Math.min(31, requestedSlot));
+		if (tournamentStore.get(first) == null) {
+			return first;
+		}
+		for (int slot = 0; slot < 32; slot++) {
+			if (tournamentStore.get(slot) == null) {
+				result.warnings.add("Tournament slot " + first + " is occupied; using slot " + slot);
+				return slot;
+			}
+		}
+		throw new IllegalStateException("No tournament slot is available");
+	}
+
+	private void addTeam(List<String> teams, String team) {
+		if (!teams.contains(team) && teams.size() < 32) {
+			teams.add(team);
+		}
+	}
+
 	private void persist(BattleNext_FleetModel fleet, ImportResult result) throws IOException, JSONException {
 		String originalId = fleet.getId();
 		String resolvedId = resolveConflict(originalId);
@@ -132,6 +193,7 @@ public class BattleNext_Importer {
 		private final Map<String, String> idMapping = new LinkedHashMap<>();
 		private final List<String> importedIds = new ArrayList<>();
 		private final List<String> warnings = new ArrayList<>();
+		private int tournamentSlot = -1;
 
 		public Map<String, String> getIdMapping() {
 			return Map.copyOf(idMapping);
@@ -143,6 +205,10 @@ public class BattleNext_Importer {
 
 		public List<String> getWarnings() {
 			return List.copyOf(warnings);
+		}
+
+		public int getTournamentSlot() {
+			return tournamentSlot;
 		}
 
 		private void merge(ImportResult other) {
