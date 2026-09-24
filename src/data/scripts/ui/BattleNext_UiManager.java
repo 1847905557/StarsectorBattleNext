@@ -9,6 +9,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import org.lwjgl.input.Keyboard;
 
 import data.scripts.match.BattleNext_MatchListProvider;
+import data.scripts.fleet.BattleNext_FleetModel;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.List;
 public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 
 	private enum Page {
-		MAIN("BattleNext_ui_page_main"), QUICK("BattleNext_ui_page_quick"), FLEETS("BattleNext_ui_page_fleets"),
+		MAIN("BattleNext_ui_page_main"), QUICK("BattleNext_ui_page_quick"), FLEETS("BattleNext_ui_page_fleets"), DRAFT("BattleNext_ui_fleet_editor"),
 		TOURNAMENTS("BattleNext_ui_page_tournaments"), RULES("BattleNext_ui_page_rules"),
 		SETTINGS("BattleNext_ui_page_settings");
 
@@ -40,6 +41,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 	private boolean pendingResult;
 	private BattleNext_QuickBattleEditor quickEditor;
 	private BattleNext_FleetLibraryPage fleetPage;
+	private BattleNext_FleetDraftEditor draftEditor;
+	private BattleNext_FleetLibraryPage.DraftRequest pendingDraft;
 
 	public BattleNext_UiManager(Runnable closeAction) {
 		this.closeAction = closeAction;
@@ -67,6 +70,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		if (currentPage == Page.FLEETS && fleetPage != null) {
 			fleetPage.advance();
 		}
+		if (currentPage == Page.DRAFT && draftEditor != null) {
+			draftEditor.advance();
+		}
 	}
 
 	@Override
@@ -76,6 +82,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 		}
 		if (currentPage == Page.FLEETS && fleetPage != null) {
 			fleetPage.processInput(events);
+		}
+		if (currentPage == Page.DRAFT && draftEditor != null) {
+			draftEditor.processInput(events);
 		}
 		for (InputEventAPI event : events) {
 			if (!event.isKeyboardEvent() || !event.isKeyDownEvent()) {
@@ -100,6 +109,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 			quickEditor.buttonPressed(buttonId);
 		} else if (currentPage == Page.FLEETS && fleetPage != null && !(buttonId instanceof Page)) {
 			fleetPage.buttonPressed(buttonId);
+		} else if (currentPage == Page.DRAFT && draftEditor != null && !(buttonId instanceof Page)) {
+			draftEditor.buttonPressed(buttonId);
+		} else if (buttonId instanceof BattleNext_FleetLibraryPage.DraftRequest) {
+			pendingDraft = (BattleNext_FleetLibraryPage.DraftRequest)buttonId;
+			pageStack.push(currentPage);
+			currentPage = Page.DRAFT;
+			selectedAction = 0;
+			if (draftEditor == null) draftEditor = new BattleNext_FleetDraftEditor(this::goBack);
+			rebuild();
 		} else if (buttonId instanceof Page) {
 			pageStack.push(currentPage);
 			currentPage = (Page) buttonId;
@@ -171,9 +189,16 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin {
 			return;
 		} else if (currentPage == Page.FLEETS) {
 			if (fleetPage == null) {
-				fleetPage = new BattleNext_FleetLibraryPage(this::goBack);
+				fleetPage = new BattleNext_FleetLibraryPage(this::goBack, this::buttonPressed);
 			}
 			fleetPage.attach(panel);
+			return;
+		} else if (currentPage == Page.DRAFT) {
+			if (draftEditor == null) draftEditor = new BattleNext_FleetDraftEditor(this::goBack);
+			BattleNext_FleetModel source = pendingDraft == null ? null : pendingDraft.getFleet();
+			boolean clone = pendingDraft != null && "clone".equals(pendingDraft.getAction());
+			draftEditor.attach(panel, source, clone);
+			pendingDraft = null;
 			return;
 		} else {
 			content.addPara(text("BattleNext_ui_page_placeholder"), 12f, BattleNext_UiTheme.TEXT);

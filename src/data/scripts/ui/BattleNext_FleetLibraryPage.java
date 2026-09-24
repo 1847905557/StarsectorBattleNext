@@ -11,17 +11,20 @@ import data.scripts.member.BattleNext_MemberModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class BattleNext_FleetLibraryPage {
 
 	private final Runnable backAction;
+	private final Consumer<Object> editorAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI content;
 	private BattleNext_FleetModel selected;
 
-	public BattleNext_FleetLibraryPage(Runnable backAction) {
+	public BattleNext_FleetLibraryPage(Runnable backAction, Consumer<Object> editorAction) {
 		this.backAction = backAction;
+		this.editorAction = editorAction;
 	}
 
 	public void attach(CustomPanelAPI panel) {
@@ -40,6 +43,8 @@ public class BattleNext_FleetLibraryPage {
 		if (buttonId instanceof String && ((String) buttonId).startsWith("fleet:")) {
 			selected = store.get(((String) buttonId).substring("fleet:".length()));
 			rebuild();
+		} else if ("new".equals(buttonId) || "edit".equals(buttonId) || "clone".equals(buttonId)) {
+			editorAction.accept(new DraftRequest((String)buttonId, selected));
 		} else if ("delete".equals(buttonId) && selected != null) {
 			try {
 				store.delete(selected);
@@ -73,6 +78,7 @@ public class BattleNext_FleetLibraryPage {
 	}
 
 	private void addList() {
+		content.addButton(text("BattleNext_ui_new_fleet"), "new", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 180f, 30f, 6f);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			String source = "built_in".equals(fleet.getSource()) ? text("BattleNext_ui_read_only") : text("BattleNext_ui_user");
 			content.addButton(fleet.getName() + " [" + source + "]", "fleet:" + fleet.getId(), BattleNext_UiTheme.ACCENT,
@@ -92,7 +98,11 @@ public class BattleNext_FleetLibraryPage {
 					BattleNext_UiTheme.TEXT);
 		}
 		if ("user".equals(selected.getSource())) {
+			content.addButton(text("BattleNext_ui_edit_fleet"), "edit", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
+			content.addButton(text("BattleNext_ui_clone_fleet"), "clone", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
 			content.addButton(text("BattleNext_ui_delete"), "delete", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
+		} else {
+			content.addButton(text("BattleNext_ui_clone_fleet"), "clone", BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, 160f, 30f, 6f);
 		}
 	}
 
@@ -101,6 +111,25 @@ public class BattleNext_FleetLibraryPage {
 			return Global.getSettings().getString("AI_Battles_Next", key);
 		} catch (RuntimeException exception) {
 			return key;
+		}
+	}
+
+	public static final class DraftRequest {
+
+		private final String action;
+		private final BattleNext_FleetModel fleet;
+
+		public DraftRequest(String action, BattleNext_FleetModel fleet) {
+			this.action = action;
+			this.fleet = fleet;
+		}
+
+		public String getAction() {
+			return action;
+		}
+
+		public BattleNext_FleetModel getFleet() {
+			return fleet;
 		}
 	}
 }
