@@ -6,7 +6,7 @@ import com.fs.starfarer.api.util.Misc;
 
 import java.awt.Color;
 
-public final class BattleNext_UiTheme {
+public class BattleNext_UiTheme {
 
 	public static final Color ACCENT = Misc.getButtonTextColor();
 	public static final Color PANEL = Global.getSettings().getColor("buttonBgDark");

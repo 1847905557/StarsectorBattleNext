@@ -22,7 +22,7 @@ public class BattleNext_QuickBattleEditor {
 	private final CustomUIPanelPlugin inputOwner;
 	private final BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<Row> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI heading;
@@ -73,10 +73,10 @@ public class BattleNext_QuickBattleEditor {
 		try {
 			store.save();
 			savedFields = serializeFields();
-			setStatus(text("BattleNext_ui_saved"));
+			setStatus(text("saved"));
 			return true;
 		} catch (IOException exception) {
-			setStatus(text("BattleNext_ui_save_failed"));
+			setStatus(text("save_failed"));
 			return false;
 		}
 	}
@@ -111,7 +111,7 @@ public class BattleNext_QuickBattleEditor {
 				store.loadBuiltIn();
 			}
 		} catch (Exception exception) {
-			loadError = text("BattleNext_ui_load_failed") + ": " + exception.getMessage();
+			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
 		loaded = true;
 	}
@@ -122,51 +122,51 @@ public class BattleNext_QuickBattleEditor {
 		if (content != null) panel.removeComponent(content);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_quick_battle"));
+		heading = BattleNext_PageLayout.heading(panel, text("quick_battle"));
 		content = BattleNext_PageLayout.column(panel, 0f, panel.getPosition().getWidth());
 		footer = BattleNext_PageLayout.footer(panel);
-		content.addTitle(text("BattleNext_ui_quick_battle"));
-		status = content.addPara(loadError.isEmpty() ? text("BattleNext_ui_ready") : loadError,
+		content.addTitle(text("quick_battle"));
+		status = content.addPara(loadError.isEmpty() ? text("ready") : loadError,
 				8f, BattleNext_UiTheme.MUTED);
 		rows.clear();
 		List<BattleNext_Match> matches = store.getMatches();
 		for (int index = 0; index < matches.size(); index++) {
 			addRow(index, matches.get(index));
 		}
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_add"), "add", 150f).getPosition().inBL(0f, 0f);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_save"), "save", 150f).getPosition().inBL(160f, 0f);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 150f).getPosition().inBL(320f, 0f);
+		BattleNext_PageLayout.button(footer, text("add"), "add", 150f).getPosition().inBL(0f, 0f);
+		BattleNext_PageLayout.button(footer, text("save"), "save", 150f).getPosition().inBL(160f, 0f);
+		BattleNext_PageLayout.button(footer, text("back"), "back", 150f).getPosition().inBL(320f, 0f);
 	}
 
 	private void addRow(int index, BattleNext_Match match) {
 		float width = panel.getPosition().getWidth() - 20f;
 		CustomPanelAPI card = Global.getSettings().createCustom(width, 112f, inputOwner);
 		TooltipMakerAPI title = card.createUIElement(width, 30f, false);
-		title.addSectionHeading(text("BattleNext_ui_battle_row") + " " + (index + 1),
+		title.addSectionHeading(text("battle_row") + " " + (index + 1),
 				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
 				com.fs.starfarer.api.ui.Alignment.MID, 0f).getPosition().inTL(0f, 0f);
 		card.addUIElement(title).inTL(0f, 0f);
 		float fieldWidth = (width - 180f) * 0.25f;
 		Row row = new Row(index);
-		row.player = addField(card, 0f, fieldWidth, text("BattleNext_ui_battle_player"), match.getPlayer());
-		row.enemy = addField(card, fieldWidth, fieldWidth, text("BattleNext_ui_battle_enemy"), match.getEnemy());
-		row.map = addField(card, fieldWidth * 2f, fieldWidth, text("BattleNext_ui_battle_map"), Integer.toString(match.getMap()));
-		row.size = addField(card, fieldWidth * 3f, fieldWidth, text("BattleNext_ui_battle_size"), Float.toString(match.getSize()));
+		row.player = addField(card, 0f, fieldWidth, text("battle_player"), match.getPlayer());
+		row.enemy = addField(card, fieldWidth, fieldWidth, text("battle_enemy"), match.getEnemy());
+		row.map = addField(card, fieldWidth * 2f, fieldWidth, text("battle_map"), Integer.toString(match.getMap()));
+		row.size = addField(card, fieldWidth * 3f, fieldWidth, text("battle_size"), Float.toString(match.getSize()));
 		TooltipMakerAPI actions = card.createUIElement(160f, 70f, false);
-		BattleNext_PageLayout.button(actions, text("BattleNext_ui_duplicate"), "duplicate:" + index, 150f);
-		BattleNext_PageLayout.button(actions, text("BattleNext_ui_delete"), "delete:" + index, 150f);
+		BattleNext_PageLayout.button(actions, text("duplicate"), "duplicate:" + index, 150f);
+		BattleNext_PageLayout.button(actions, text("delete"), "delete:" + index, 150f);
 		card.addUIElement(actions).inTR(0f, 34f);
 		content.addCustom(card, 8f);
 		boolean invalidPlayer = fleetStore.get(match.getPlayer()) == null;
 		boolean invalidEnemy = fleetStore.get(match.getEnemy()) == null;
 		if (invalidPlayer) {
-			content.addPara(text("BattleNext_ui_invalid_player"), 4f, BattleNext_UiTheme.MUTED);
+			content.addPara(text("invalid_player"), 4f, BattleNext_UiTheme.MUTED);
 		}
 		if (invalidEnemy) {
-			content.addPara(text("BattleNext_ui_invalid_enemy"), 4f, BattleNext_UiTheme.MUTED);
+			content.addPara(text("invalid_enemy"), 4f, BattleNext_UiTheme.MUTED);
 		}
 		if (invalidPlayer || invalidEnemy) {
-			content.addPara(text("BattleNext_ui_skipped_battle"), 4f, BattleNext_UiTheme.MUTED);
+			content.addPara(text("skipped_battle"), 4f, BattleNext_UiTheme.MUTED);
 		}
 		rows.add(row);
 	}
@@ -210,12 +210,12 @@ public class BattleNext_QuickBattleEditor {
 				int map = Integer.parseInt(row.map.getText().trim());
 				float size = Float.parseFloat(row.size.getText().trim());
 				if (map < -1 || map > 11 || !Float.isFinite(size) || size <= 0f) {
-					setStatus(text("BattleNext_ui_invalid_map_size"));
+					setStatus(text("invalid_map_size"));
 					return false;
 				}
 				values.add(new BattleNext_Match("quick-" + values.size(), row.player.getText(), row.enemy.getText(), map, size));
 			} catch (NumberFormatException exception) {
-				setStatus(text("BattleNext_ui_invalid_map_size"));
+				setStatus(text("invalid_map_size"));
 				return false;
 			}
 		}

@@ -1,18 +1,19 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_FleetCatalog;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +23,7 @@ public class BattleNext_FleetDraftEditor {
 	private final Runnable backAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<MemberFields> memberFields = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI heading;
@@ -95,45 +96,45 @@ public class BattleNext_FleetDraftEditor {
 		if (memberContent != null) panel.removeComponent(memberContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_fleet_editor"));
+		heading = BattleNext_PageLayout.heading(panel, text("fleet_editor"));
 		float metaWidth = BattleNext_PageLayout.listWidth(panel);
 		metaContent = BattleNext_PageLayout.column(panel, 0f, metaWidth);
 		memberContent = BattleNext_PageLayout.column(panel, metaWidth + 10f,
 				panel.getPosition().getWidth() - metaWidth - 10f);
 		footer = BattleNext_PageLayout.footer(panel);
-		metaContent.addTitle(text("BattleNext_ui_fleet_section_details"));
-		status = metaContent.addPara(text("BattleNext_ui_ready"), 6f, BattleNext_UiTheme.MUTED);
-		id = field(metaContent, text("BattleNext_ui_fleet_id"), draft.getId());
-		name = field(metaContent, text("BattleNext_ui_fleet_name"), draft.getName());
-		player = field(metaContent, text("BattleNext_ui_fleet_player"), draft.getPlayer());
-		author = field(metaContent, text("BattleNext_ui_fleet_author"), draft.getAuthor());
-		description = field(metaContent, text("BattleNext_ui_fleet_description"), draft.getDescription());
-		behavior = field(metaContent, text("BattleNext_ui_fleet_behavior"), draft.getBehavior());
-		skills = field(metaContent, text("BattleNext_ui_fleet_skills"), String.join(",", draft.getSkills()));
-		tags = field(metaContent, text("BattleNext_ui_fleet_tags"), String.join(",", draft.getTags()));
-		rulesSlot = field(metaContent, text("BattleNext_ui_fleet_rules"), Integer.toString(draft.getRulesSlot()));
-		memberContent.addTitle(text("BattleNext_ui_fleet_section_members"));
+		metaContent.addTitle(text("fleet_section_details"));
+		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
+		id = field(metaContent, text("fleet_id"), draft.getId());
+		name = field(metaContent, text("fleet_name"), draft.getName());
+		player = field(metaContent, text("fleet_player"), draft.getPlayer());
+		author = field(metaContent, text("fleet_author"), draft.getAuthor());
+		description = field(metaContent, text("fleet_description"), draft.getDescription());
+		behavior = field(metaContent, text("fleet_behavior"), draft.getBehavior());
+		skills = field(metaContent, text("fleet_skills"), String.join(",", draft.getSkills()));
+		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()));
+		rulesSlot = field(metaContent, text("fleet_rules"), Integer.toString(draft.getRulesSlot()));
+		memberContent.addTitle(text("fleet_section_members"));
 		memberFields.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			addMember(index, draft.getMembers().get(index));
 		}
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_add_member"), "add_member", 180f).getPosition().inBL(0f, 0f);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_save"), "save", 180f).getPosition().inBL(190f, 0f);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 180f).getPosition().inBL(380f, 0f);
+		BattleNext_PageLayout.button(footer, text("add_member"), "add_member", 180f).getPosition().inBL(0f, 0f);
+		BattleNext_PageLayout.button(footer, text("save"), "save", 180f).getPosition().inBL(190f, 0f);
+		BattleNext_PageLayout.button(footer, text("back"), "back", 180f).getPosition().inBL(380f, 0f);
 	}
 
 	private void addMember(int index, BattleNext_MemberModel member) {
-		memberContent.addSectionHeading(text("BattleNext_ui_member") + " " + (index + 1),
+		memberContent.addSectionHeading(text("member") + " " + (index + 1),
 				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
 				com.fs.starfarer.api.ui.Alignment.MID, 8f);
 		MemberFields fields = new MemberFields();
-		fields.variant = field(memberContent, text("BattleNext_ui_variant"), member.getVariantId());
-		fields.name = field(memberContent, text("BattleNext_ui_member_name"), member.getName());
-		fields.personality = field(memberContent, text("BattleNext_ui_personality"), member.getPersonality());
-		fields.skills = field(memberContent, text("BattleNext_ui_member_skills"), String.join(",", member.getSkills()));
-		fields.portrait = field(memberContent, text("BattleNext_ui_portrait"), member.getPortrait());
-		fields.orders = field(memberContent, text("BattleNext_ui_orders"), member.getOrders());
-		fields.tags = field(memberContent, text("BattleNext_ui_member_tags"), String.join(",", member.getTags()));
+		fields.variant = field(memberContent, text("variant"), member.getVariantId());
+		fields.name = field(memberContent, text("member_name"), member.getName());
+		fields.personality = field(memberContent, text("personality"), member.getPersonality());
+		fields.skills = field(memberContent, text("member_skills"), String.join(",", member.getSkills()));
+		fields.portrait = field(memberContent, text("portrait"), member.getPortrait());
+		fields.orders = field(memberContent, text("orders"), member.getOrders());
+		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()));
 		memberFields.add(fields);
 	}
 
@@ -150,10 +151,10 @@ public class BattleNext_FleetDraftEditor {
 		try {
 			store.save(draft);
 			savedSnapshot = serializeFields();
-			setStatus(text("BattleNext_ui_saved"));
+			setStatus(text("saved"));
 			return true;
 		} catch (Exception exception) {
-			setStatus(text("BattleNext_ui_save_failed"));
+			setStatus(text("save_failed"));
 			return false;
 		}
 	}
@@ -161,7 +162,7 @@ public class BattleNext_FleetDraftEditor {
 	private boolean captureDraft(boolean validate) {
 		String fleetId = id.getText().trim();
 		if ((validate && fleetId.isEmpty()) || fleetId.contains("/") || fleetId.contains("\\")) {
-			setStatus(text("BattleNext_ui_invalid_fleet_id"));
+			setStatus(text("invalid_fleet_id"));
 			return false;
 		}
 		draft.setId(fleetId);
@@ -175,14 +176,14 @@ public class BattleNext_FleetDraftEditor {
 		try {
 			draft.setRulesSlot(Integer.parseInt(rulesSlot.getText().trim()));
 		} catch (NumberFormatException exception) {
-			setStatus(text("BattleNext_ui_invalid_rules_slot"));
+			setStatus(text("invalid_rules_slot"));
 			return false;
 		}
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		for (MemberFields fields : memberFields) {
 			String variantId = fields.variant.getText().trim();
 			if (validate && variantId.isEmpty()) {
-				setStatus(text("BattleNext_ui_invalid_variant"));
+				setStatus(text("invalid_variant"));
 				return false;
 			}
 			if (!variantId.isEmpty()) {
@@ -190,7 +191,7 @@ public class BattleNext_FleetDraftEditor {
 					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantModel.fromRegistered(variantId));
 				} catch (Exception exception) {
 					if (validate) {
-						setStatus(text("BattleNext_ui_invalid_variant"));
+						setStatus(text("invalid_variant"));
 						return false;
 					}
 				}

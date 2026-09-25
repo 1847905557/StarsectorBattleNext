@@ -1,19 +1,21 @@
-package data.scripts.ui;
+package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.ui.BattleNext_UiManager;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
 import org.lwjgl.opengl.GL11;
 
 import java.util.List;
 
-public class BattleNext_BoxPanel extends BaseCustomUIPanelPlugin {
+public class BattleNext_BoxPanelPlugin extends BaseCustomUIPanelPlugin {
 
 	private final BattleNext_UiManager uiManager;
 	private final UIBorderObject border = new UIBorderObject(false, true);
+
 	private CustomPanelAPI panel;
 	private float borderX;
 	private float borderY;
@@ -21,7 +23,7 @@ public class BattleNext_BoxPanel extends BaseCustomUIPanelPlugin {
 	private float backdropU;
 	private float backdropV;
 
-	public BattleNext_BoxPanel(Runnable closeAction) {
+	public BattleNext_BoxPanelPlugin(Runnable closeAction) {
 		uiManager = new BattleNext_UiManager(closeAction);
 	}
 
