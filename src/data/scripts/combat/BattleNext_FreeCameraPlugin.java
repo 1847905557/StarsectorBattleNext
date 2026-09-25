@@ -5,19 +5,24 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
 
-public class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
+public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
-	private static final String ID = "BattleNext_PresentationPlugin";
+	private static final String ID = "BattleNext_FreeCameraPlugin";
 	private static final float DEFAULT_TIME_MULT = 1.5f;
 	private static final float BOOST_TIME_MULT = 4f;
 	private static final float NORMAL_TIME_MULT = 1f;
 	private static final float VERSUS_DELAY = 0.5f;
-	private static final float CAMERA_MOUSE_SPEED = 1f;
-	private static final float CAMERA_ZOOM_STEP = 3f;
+	// Movement speed in visible viewport fractions per second; held keys accelerate toward the cap.
+	private static final float CAMERA_BASE_SPEED = 0.4f;
+	private static final float CAMERA_ACCEL_PER_SEC = 0.45f;
+	private static final float CAMERA_MAX_SPEED = 2.2f;
+	// Viewport fraction multiplier applied per mouse wheel notch.
+	private static final float CAMERA_ZOOM_STEP = 1.2f;
 	private static final float CAMERA_MIN_ZOOM = 0.5f;
 	private static final float CAMERA_MAX_ZOOM = 10f;
 
@@ -27,16 +32,13 @@ public class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
 	private boolean versusShown;
 	private boolean cameraToggle;
 	private boolean externalCamera;
-	private boolean zoomIn;
-	private boolean zoomOut;
+	private float moveHoldTime;
 	private float viewportWidth;
 	private float viewportHeight;
 	private float screenWidth;
 	private float screenHeight;
 
-	private final Vector2f target = new Vector2f();
-
-	public BattleNext_PresentationPlugin(String playerName, String enemyName) {
+	public BattleNext_FreeCameraPlugin(String playerName, String enemyName) {
 		this.playerName = playerName;
 		this.enemyName = enemyName;
 	}
@@ -52,49 +54,63 @@ public class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
+
 		if (engine == null || engine.isCombatOver()) return;
 		if (!versusShown && engine.getTotalElapsedTime(false) >= VERSUS_DELAY) {
 			versusShown = true;
 			engine.getCombatUI().addMessage(0, playerName + "  VS  " + enemyName);
 		}
+
 		if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) engine.getTimeMult().modifyMult(ID, BOOST_TIME_MULT);
 		else if (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL)) engine.getTimeMult().modifyMult(ID, NORMAL_TIME_MULT);
 		else engine.getTimeMult().modifyMult(ID, DEFAULT_TIME_MULT);
+
 		if (Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)) cameraToggle = true;
 		else if (cameraToggle) {
 			cameraToggle = false;
 			externalCamera = !externalCamera;
 			engine.getViewport().setExternalControl(externalCamera);
-			engine.getCombatUI().addMessage(0, externalCamera ? "Free camera enabled" : "Free camera disabled");
+			engine.getCombatUI().addMessage(0, externalCamera ? "Free camera: WASD move, wheel zoom, Alt exit" : "Free camera disabled");
 		}
+
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
-			if (event.isLMBDownEvent()) zoomIn = true;
-			if (event.isLMBUpEvent()) zoomIn = false;
-			if (event.isRMBDownEvent()) zoomOut = true;
-			if (event.isRMBUpEvent()) zoomOut = false;
-			if (event.isMouseMoveEvent() && externalCamera) {
-				target.set(event.getX() - Global.getSettings().getScreenWidth() / 2f,
-						event.getY() - Global.getSettings().getScreenHeight() / 2f);
-			}
-			if (event.isAltDown() && externalCamera) {
+			if (!externalCamera) continue;
+			if (event.isAltDown()) {
 				externalCamera = false;
 				engine.getViewport().setExternalControl(false);
 			}
 		}
+
 		if (externalCamera) {
+			int wheel = Mouse.getDWheel();
+			if (wheel > 0) {
+				viewportWidth = Math.max(screenWidth * CAMERA_MIN_ZOOM, viewportWidth / CAMERA_ZOOM_STEP);
+				viewportHeight = Math.max(screenHeight * CAMERA_MIN_ZOOM, viewportHeight / CAMERA_ZOOM_STEP);
+			} else if (wheel < 0) {
+				viewportWidth = Math.min(screenWidth * CAMERA_MAX_ZOOM, viewportWidth * CAMERA_ZOOM_STEP);
+				viewportHeight = Math.min(screenHeight * CAMERA_MAX_ZOOM, viewportHeight * CAMERA_ZOOM_STEP);
+			}
+
+			float dx = (Keyboard.isKeyDown(Keyboard.KEY_D) ? 1f : 0f) - (Keyboard.isKeyDown(Keyboard.KEY_A) ? 1f : 0f);
+			float dy = (Keyboard.isKeyDown(Keyboard.KEY_W) ? 1f : 0f) - (Keyboard.isKeyDown(Keyboard.KEY_S) ? 1f : 0f);
 			Vector2f center = new Vector2f(engine.getViewport().getCenter());
-			center.x += target.x * amount * CAMERA_MOUSE_SPEED;
-			center.y += target.y * amount * CAMERA_MOUSE_SPEED;
+
+			if (dx != 0f || dy != 0f) {
+				moveHoldTime += amount;
+				float speed = Math.min(CAMERA_BASE_SPEED + CAMERA_ACCEL_PER_SEC * moveHoldTime, CAMERA_MAX_SPEED);
+				if (dx != 0f && dy != 0f) {
+					// 1 / sqrt(2), keeps diagonal speed equal to axis speed.
+					dx *= 0.7071f;
+					dy *= 0.7071f;
+				}
+				center.x += dx * speed * viewportWidth * amount;
+				center.y += dy * speed * viewportHeight * amount;
+			} else {
+				moveHoldTime = 0f;
+			}
 			center.x = Math.max(-engine.getMapWidth() / 2f, Math.min(engine.getMapWidth() / 2f, center.x));
 			center.y = Math.max(-engine.getMapHeight() / 2f, Math.min(engine.getMapHeight() / 2f, center.y));
-			if (zoomIn) {
-				viewportWidth = Math.max(screenWidth * CAMERA_MIN_ZOOM, viewportWidth - screenWidth * amount * CAMERA_ZOOM_STEP);
-				viewportHeight = Math.max(screenHeight * CAMERA_MIN_ZOOM, viewportHeight - screenHeight * amount * CAMERA_ZOOM_STEP);
-			} else if (zoomOut) {
-				viewportWidth = Math.min(screenWidth * CAMERA_MAX_ZOOM, viewportWidth + screenWidth * amount * CAMERA_ZOOM_STEP);
-				viewportHeight = Math.min(screenHeight * CAMERA_MAX_ZOOM, viewportHeight + screenHeight * amount * CAMERA_ZOOM_STEP);
-			}
 			engine.getViewport().set(engine.getViewport().getLLX(), engine.getViewport().getLLY(), viewportWidth, viewportHeight);
 			engine.getViewport().setCenter(center);
 		}
