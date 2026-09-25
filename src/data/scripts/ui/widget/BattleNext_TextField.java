@@ -31,9 +31,10 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private static final Color DEFAULT_BACKGROUND = new Color(20, 48, 57, 210);
 	private static final Color DEFAULT_BORDER = new Color(35, 105, 123, 220);
 	private static final float CARET_WIDTH = 2f;
+	public static final int RECOMMENDED_MAX_CHARS = 360;
 	public static final float AUTO_SCROLL_START_SPEED = 40f;
 	public static final float AUTO_SCROLL_MAX_SPEED = 160f;
-	public static final float AUTO_SCROLL_ACCELERATION = 10f;
+	public static final float AUTO_SCROLL_ACCELERATION = 20f;
 
 	private final CustomPanelAPI panel;
 	private final TooltipMakerAPI textHost;
@@ -102,9 +103,20 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	public static void releaseFocusedField() {
+		clearDragOwner();
 		if (FOCUS.current != null) FOCUS.current.dragging = false;
-		DRAG.current = null;
 		FOCUS.current = null;
+	}
+
+	private static void clearDragOwner() {
+		if (DRAG.current != null) DRAG.current.dragging = false;
+		DRAG.current = null;
+	}
+
+	private static void takeDragOwnership(BattleNext_TextField field) {
+		if (DRAG.current != field) clearDragOwner();
+		DRAG.current = field;
+		field.dragging = true;
 	}
 
 	public static boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -119,8 +131,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 			}
 			if (event.isLMBUpEvent()) {
 				field.updateDragFromPointer(event.getX(), event.getY(), true);
-				field.dragging = false;
-				DRAG.current = null;
+				clearDragOwner();
 				event.consume();
 				return true;
 			}
@@ -350,15 +361,14 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		dragMouseY = event.getY();
 		if (FOCUS.current != this) grabFocus(true);
 		updateDragFromPointer(event.getX(), event.getY(), event.isShiftDown());
-		dragging = true;
-		DRAG.current = this;
+		takeDragOwnership(this);
 		event.consume();
 	}
 
 	private void releaseFocus() {
 		if (FOCUS.current == this) FOCUS.current = null;
-		dragging = false;
-		if (DRAG.current == this) DRAG.current = null;
+		if (DRAG.current == this) clearDragOwner();
+		else dragging = false;
 	}
 
 	private void drawRect(PositionAPI position, Color color, float alpha) {

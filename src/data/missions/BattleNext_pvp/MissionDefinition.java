@@ -13,8 +13,10 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.tournament.BattleNext_TournamentModel;
 
 import java.util.List;
 
@@ -31,42 +33,68 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		List<BattleNext_Match> matches = provider.load();
 		if (matches.isEmpty()) {
+			String message = provider.getActiveTournament() == null
+					? strings.get("no_valid_battle") : strings.get("no_pending_match");
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
-			api.addBriefingItem(provider.getActiveTournament() == null
-					? strings.get("no_valid_battle") : strings.get("no_pending_match"));
+			api.setFleetTagline(FleetSide.PLAYER, message);
+			api.setFleetTagline(FleetSide.ENEMY, message);
+			api.addBriefingItem(message);
 			BattleNext_BattleMap.apply(api, 0, 1f);
 			return;
 		}
 
 		currentIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(currentIndex, matches.size());
 		BattleNext_Match match = matches.get(currentIndex);
+		int totalRounds = roundTotal();
+		int currentRound = roundCurrent(match, totalRounds);
 		BattleNext_FleetStore fleets = provider.getFleetStore();
 		BattleNext_FleetAssembly player = assembler.assemble(fleets.get(match.getPlayer()));
 		BattleNext_FleetAssembly enemy = assembler.assemble(fleets.get(match.getEnemy()));
 		if (!player.isComplete() || !enemy.isComplete()) {
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
+			api.setFleetTagline(FleetSide.PLAYER, player.isComplete()
+					? player.getDefinition().getName() : strings.get("invalid_player"));
+			api.setFleetTagline(FleetSide.ENEMY, enemy.isComplete()
+					? enemy.getDefinition().getName() : strings.get("invalid_enemy"));
 			api.addBriefingItem(strings.get("invalid_battle_assembly"));
+			api.addBriefingItem("Round " + currentRound + " / " + totalRounds);
 			BattleNext_BattleMap.apply(api, 0, 1f);
 			return;
 		}
 
 		configureFleet(api, FleetSide.PLAYER, player);
 		configureFleet(api, FleetSide.ENEMY, enemy);
-		api.addBriefingItem("Player: " + player.getDefinition().getName());
-		api.addBriefingItem("Enemy: " + enemy.getDefinition().getName());
 		api.addBriefingItem("Map " + match.getMap() + ", size " + match.getSize());
+		api.addBriefingItem("Round " + currentRound + " / " + totalRounds);
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), currentIndex), match.getSize());
 		api.addPlugin(new BattleNext_Deployment());
 		api.addPlugin(new BattleNext_MissionPlugin());
-		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(match.getPlayer(), player, match.getEnemy(), enemy);
+		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(player, enemy);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
 		api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(player.getDefinition().getTags()),
 				BattleNext_FleetBehavior.fromTags(enemy.getDefinition().getTags()), player.getDefinition(), enemy.getDefinition()));
 		api.addPlugin(new BattleNext_FreeCameraPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
 		api.addPlugin(new BattleNext_PostReport(scorekeeper));
+	}
+
+	private int roundTotal() {
+		BattleNext_TournamentModel tournament = provider.getActiveTournament();
+		if (tournament == null) return 1;
+		String format = tournament.getMatchFormat();
+		if ("BO5".equalsIgnoreCase(format)) return 5;
+		if ("BO3".equalsIgnoreCase(format)) return 3;
+		return 1;
+	}
+
+	private int roundCurrent(BattleNext_Match match, int total) {
+		List<BattleNext_Round> rounds = match.getRounds();
+		if (rounds.isEmpty()) return 1;
+		BattleNext_Round last = rounds.get(rounds.size() - 1);
+		int current = "draw".equals(last.getWinner()) ? last.getNumber() : last.getNumber() + 1;
+		return Math.min(current, total);
 	}
 
 	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly) {

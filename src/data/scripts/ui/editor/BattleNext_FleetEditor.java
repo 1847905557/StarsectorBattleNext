@@ -16,13 +16,18 @@ import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.provider.BattleNext_SkillSourceProvider;
+import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
+
+	private static final float FIELD_HEIGHT = 28f;
+	private static final int MEMBER_SKILL_MAX_COUNT = 2;
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
@@ -31,20 +36,16 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private CustomPanelAPI panel;
 	private CustomPanelAPI overlayHost;
 	private BattleNext_OptionField skillsPicker;
+	private final List<BattleNext_OptionField> memberPickers = new ArrayList<>();
 	private UIRect contentRect;
 	private LabelAPI status;
 	private String statusText = "";
 	private TextFieldAPI id;
 	private TextFieldAPI name;
-	private TextFieldAPI player;
 	private TextFieldAPI author;
 	private TextFieldAPI description;
-	private TextFieldAPI behavior;
-	private TextFieldAPI color;
-	private TextFieldAPI vsImage;
 	private TextFieldAPI skills;
 	private TextFieldAPI tags;
-	private TextFieldAPI rulesId;
 	private BattleNext_FleetModel draft;
 	private BattleNext_FleetModel baseline;
 	private boolean baselineClone;
@@ -71,10 +72,17 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public void closePicker() {
 		if (skillsPicker != null) skillsPicker.close();
+		for (BattleNext_OptionField picker : memberPickers) {
+			picker.close();
+		}
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		return skillsPicker != null && skillsPicker.handleGlobalInput(events);
+		if (skillsPicker != null && skillsPicker.handleGlobalInput(events)) return true;
+		for (BattleNext_OptionField picker : memberPickers) {
+			if (picker.handleGlobalInput(events)) return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -143,24 +151,20 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
 		id = field(metaContent, text("fleet_id"), draft.getId(), width);
 		name = field(metaContent, text("fleet_name"), draft.getName(), width);
-		player = field(metaContent, text("fleet_player"), draft.getPlayer(), width);
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width);
-		behavior = field(metaContent, text("fleet_behavior"), draft.getBehavior(), width);
-		color = field(metaContent, text("fleet_color"), draft.getColor(), width);
-		vsImage = field(metaContent, text("fleet_vs_image"), draft.getVsImage(), width);
 		metaContent.addPara(text("fleet_skills"), 5f, BattleNext_UiTheme.MUTED);
-		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_SkillSourceProvider(), BattleNext_OptionField.Mode.MULTIPLE);
+		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.Mode.MULTIPLE);
 		skills = skillsPicker.addTo(metaContent, panel, Math.max(72f, width - 24f),
 				String.join(",", draft.getSkills()));
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width);
-		rulesId = field(metaContent, text("fleet_rules"), draft.getRulesId(), width);
 	}
 
 	private void fillMembers(TooltipMakerAPI memberContent, float width) {
 		memberContent.addTitle(text("fleet_section_members"));
 		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member", Math.min(150f, width - 20f));
 		memberFields.clear();
+		memberPickers.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			addMember(index, draft.getMembers().get(index), memberContent, width);
 		}
@@ -174,7 +178,12 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		fields.variant = field(memberContent, text("variant"), member.getVariantId(), width);
 		fields.name = field(memberContent, text("member_name"), member.getName(), width);
 		fields.personality = field(memberContent, text("personality"), member.getPersonality(), width);
-		fields.skills = field(memberContent, text("member_skills"), String.join(",", member.getSkills()), width);
+		memberContent.addPara(text("member_skills"), 5f, BattleNext_UiTheme.MUTED);
+		BattleNext_OptionField memberSkills = new BattleNext_OptionField(overlayHost,
+				new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.Mode.MULTIPLE);
+		fields.skills = memberSkills.addTo(memberContent, panel, Math.max(72f, width - 24f),
+				String.join(",", member.getSkills()));
+		memberPickers.add(memberSkills);
 		fields.portrait = field(memberContent, text("portrait"), member.getPortrait(), width);
 		fields.orders = field(memberContent, text("orders"), member.getOrders(), width);
 		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()), width);
@@ -184,10 +193,9 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, float sectionWidth) {
 		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
-		TextFieldAPI field = host.addTextField(Math.max(40f, sectionWidth - 24f), 2f);
-		field.setText(value == null ? "" : value);
+		TextFieldAPI field = BattleNext_TextField.addTo(host, panel, Math.max(40f, sectionWidth - 24f), FIELD_HEIGHT, value);
 		field.setVerticalCursor(true);
-		field.setMaxChars(240);
+		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		return field;
 	}
 
@@ -218,7 +226,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	public String serializeState() {
 		if (id == null) return "";
 		StringBuilder value = new StringBuilder();
-		for (TextFieldAPI field : new TextFieldAPI[]{id, name, player, author, description, behavior, color, vsImage, skills, tags, rulesId}) {
+		for (TextFieldAPI field : new TextFieldAPI[]{id, name, author, description, skills, tags}) {
 			value.append(field.getText().length()).append(':').append(field.getText());
 		}
 		for (MemberFields member : memberFields) {
@@ -238,15 +246,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		}
 		draft.setId(fleetId);
 		draft.setName(name.getText());
-		draft.setPlayer(player.getText());
 		draft.setAuthor(author.getText());
 		draft.setDescription(description.getText());
-		draft.setBehavior(behavior.getText());
-		draft.setColor(color.getText());
-		draft.setVsImage(vsImage.getText());
 		draft.setSkills(split(skills.getText()));
 		draft.setTags(split(tags.getText()));
-		draft.setRulesId(rulesId.getText());
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		for (MemberFields fields : memberFields) {
 			String variantId = fields.variant.getText().trim();
@@ -272,14 +275,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	}
 
 	private BattleNext_FleetModel copy(BattleNext_FleetModel source, boolean clone) {
-		BattleNext_FleetModel result = new BattleNext_FleetModel(source.getId(), source.getName(), source.getPlayer(),
+		BattleNext_FleetModel result = new BattleNext_FleetModel(source.getId(), source.getName(),
 				source.getSkills(), source.getTags(), source.getMembers());
 		result.setAuthor(source.getAuthor());
 		result.setDescription(source.getDescription());
-		result.setBehavior(source.getBehavior());
-		result.setColor(source.getColor());
-		result.setVsImage(source.getVsImage());
-		result.setRulesId(source.getRulesId());
 		for (BattleNext_VariantModel variant : source.getVariants()) {
 			result.putVariant(variant);
 		}

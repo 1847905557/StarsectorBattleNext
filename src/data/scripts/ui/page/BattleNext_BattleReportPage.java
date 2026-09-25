@@ -1,26 +1,37 @@
 package data.scripts.ui.page;
 
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_BattleReportStore;
 import data.scripts.report.BattleNext_MemberReport;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import org.json.JSONException;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private final Runnable backAction;
+	private final Consumer<Runnable> navigation;
+	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
@@ -28,39 +39,63 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private UIRect listRect;
 	private UIRect detailRect;
 	private final List<Entry> entries = new ArrayList<>();
-	private Entry selected;
+	private String selectedId = "";
+	private boolean detailOpen;
+	private LabelAPI statusLabel;
+	private String status = "";
 
-	public BattleNext_BattleReportPage(Runnable backAction) {
+	public BattleNext_BattleReportPage(Runnable backAction, Consumer<Runnable> navigation,
+			BiConsumer<String, Runnable> deletion) {
 		this.backAction = backAction;
+		this.navigation = navigation;
+		this.deletion = deletion;
 	}
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
 		this.panel = panel;
+		selectedId = "";
+		detailOpen = false;
+		status = "";
+		try {
+			reportStore.reload();
+		} catch (IOException | JSONException | RuntimeException exception) {
+			status = exception.getMessage();
+		}
+		try {
+			tournamentStore.reload();
+		} catch (Exception exception) {
+			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
+		}
 		load();
-		selected = null;
 		createContents();
 	}
 
 	@Override
 	public void createContents() {
-		// left list / right details / bottom back button
-		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
-		BattleNext_PageLayout.heading(header[0], panel, text("page_reports"));
-
-		float listWidth = BattleNext_PageLayout.listWidth(panel);
-		UIRect[] columns = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
-				.splitHorizontally(listWidth + 10f);
-		listRect = columns[0];
-		detailRect = columns[1];
-
-		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
-		BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(footerRect.getX(), footerRect.getY(), Math.min(160f, footerRect.getWidth()), 30f),
-				text("back"), "back", CutStyle.ALL, true);
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), 30f),
+				panel, text("page_reports"));
+		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
+		listRect = regions[0];
+		detailRect = regions[1];
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		UIRect footerRect = regions[2];
+		String[] actions = {"back"};
+		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / actions.length);
+		for (int index = 0; index < actions.length; index++) {
+			BattleNext_PageLayout.fixedButton(panel,
+					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+					text(actions[index]), actions[index], CutStyle.ALL, true);
+		}
+		float statusX = actions.length * buttonWidth + 30f;
+		if (footerRect.getWidth() - statusX >= 60f) {
+			TooltipMakerAPI footerStatus = panel.createUIElement(footerRect.getWidth() - statusX, 30f, false);
+			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
+			statusLabel.getPosition().inTL(0f, 5f);
+			footerStatus.setHeightSoFar(30f);
+			panel.addUIElement(footerStatus).inTL(footerRect.getX() + statusX, footerRect.getY());
+		}
 
 		refreshContent();
 	}
@@ -69,89 +104,91 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	public void refreshContent() {
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth(), listRect.getHeight(), true);
+		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
 		addList(listContent);
-		listPanel.addUIElement(listContent).inTL(0f, 0f);
+		listPanel.addUIElement(listContent).inTL(8f, 8f);
 
 		detailRect.removeLatestSubPanel();
-		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, null).getPanel();
-		TooltipMakerAPI detailContent = detailPanel.createUIElement(detailRect.getWidth(), detailRect.getHeight(), true);
+		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
+		if (!detailOpen) {
+			TooltipMakerAPI prompt = detailPanel.createUIElement(detailRect.getWidth() - 18f, detailRect.getHeight() - 16f, false);
+			prompt.addTitle(text("select_report"));
+			detailPanel.addUIElement(prompt).inTL(8f, 8f);
+			return;
+		}
+		TooltipMakerAPI detailContent = detailPanel.createUIElement(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f, true);
 		addDetails(detailContent);
-		detailPanel.addUIElement(detailContent).inTL(0f, 0f);
+		detailPanel.addUIElement(detailContent).inTL(8f, 8f);
+		Entry selected = entry(selectedId);
+		ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
+				new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+				text("delete"), "delete", CutStyle.ALL, true);
+		delete.setEnabled(selected != null && (selected.tournament == null
+				? reportStore.isLoaded() : tournamentStore.isLoaded()));
 	}
 
 	@Override
 	public void buttonPressed(Object buttonId) {
-		if (buttonId instanceof String && ((String)buttonId).startsWith("report:")) {
-			int index = Integer.parseInt(((String)buttonId).substring("report:".length()));
-			if (index >= 0 && index < entries.size()) {
-				selected = entries.get(index);
-				refreshContent();
-			}
+		if (buttonId instanceof String && ((String) buttonId).startsWith("report:")) {
+			String id = ((String) buttonId).substring("report:".length());
+			navigation.accept(() -> { selectedId = id; detailOpen = true; refreshContent(); });
+		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
+				&& entry(selectedId) != null) {
+			Entry selected = entry(selectedId);
+			deletion.accept(listLabel(selected), () -> {
+				try {
+					deleteReport(selected);
+					selectedId = "";
+					detailOpen = false;
+					status = text("deleted");
+					refreshContent();
+				} catch (Exception exception) {
+					setStatus(text("save_failed") + ": " + exception.getMessage());
+				}
+			});
 		} else if ("back".equals(buttonId)) {
-			if (selected == null) backAction.run();
-			else {
-				selected = null;
-				refreshContent();
-			}
+			if (detailOpen) navigation.accept(() -> { selectedId = ""; detailOpen = false; refreshContent(); });
+			else backAction.run();
 		}
 	}
 
 	private void load() {
 		entries.clear();
-		try {
-			reportStore.reload();
-		} catch (Exception ignored) {
+		for (BattleNext_BattleReportModel report : reportStore.getAll()) {
+			entries.add(new Entry(report, "", null, null));
 		}
-		for (BattleNext_BattleReport report : reportStore.getRecent()) {
-			entries.add(new Entry(report, ""));
-		}
-		try {
-			tournamentStore.reload();
-			for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
-				for (MatchWithRound match : rounds(tournament)) {
-					if (match.round.getReport() != null) {
-						entries.add(new Entry(match.round.getReport(), text("tournament_context") + " "
-								+ tournament.getId() + " / " + text("match") + " " + match.matchId
-								+ " / " + text("round") + " " + match.round.getNumber()
-								+ " / " + text("attempt") + " " + match.round.getAttempt()));
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
+			for (BattleNext_Match match : tournament.getMatches()) {
+				for (BattleNext_Round round : match.getRounds()) {
+					if (!round.getReport().getId().isEmpty()) {
+						entries.add(new Entry(round.getReport(),
+								context(tournament, match.getId(), round), tournament, round));
 					}
 				}
 			}
-		} catch (Exception ignored) {
 		}
-	}
-
-	private List<MatchWithRound> rounds(BattleNext_Tournament tournament) {
-		List<MatchWithRound> result = new ArrayList<>();
-		for (BattleNext_Match match : tournament.getMatches()) {
-			for (BattleNext_Round round : match.getRounds()) {
-				result.add(new MatchWithRound(match.getId(), round));
-			}
-		}
-		return result;
+		entries.sort(Comparator.comparingLong((Entry entry) -> entry.report.getCreatedAt()).reversed());
 	}
 
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_reports"));
-		for (int index = 0; index < entries.size(); index++) {
-			Entry entry = entries.get(index);
-			BattleNext_PageLayout.button(listContent, entry.report.getId() + " / " + entry.report.getWinner()
-					+ " / " + entry.report.getMembers().size(), "report:" + index,
-					listContent.getPosition().getWidth() - 20f);
+		if (!reportStore.isLoaded()) listContent.addPara(text("load_failed") + ": "
+				+ reportStore.getLoadError(), 8f, BattleNext_UiTheme.MUTED);
+		if (entries.isEmpty()) listContent.addPara(text("no_reports"), 10f, BattleNext_UiTheme.MUTED);
+		for (Entry entry : entries) {
+			BattleNext_PageLayout.buttonWithTooltip(listContent, listLabel(entry),
+					"report:" + entry.report.getId(), Math.max(80f, listRect.getWidth() - 30f));
 		}
-		if (entries.isEmpty()) listContent.addPara(text("no_reports"), 8f, BattleNext_UiTheme.MUTED);
 	}
 
 	private void addDetails(TooltipMakerAPI detailContent) {
-		if (selected == null) {
-			detailContent.addTitle(text("select_report"));
-			return;
-		}
-		BattleNext_BattleReport report = selected.report;
+		Entry selected = entry(selectedId);
+		if (selected == null) return;
+		BattleNext_BattleReportModel report = selected.report;
 		detailContent.addTitle(report.getId());
-		detailContent.addPara(text("winner") + ": " + report.getWinner() + " / "
-				+ text("duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
+		String time = timeText(report);
+		detailContent.addPara((time.isEmpty() ? "" : time + " / ") + text("winner") + ": " + report.getWinner()
+				+ " / " + text("duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
 		if (!selected.context.isEmpty()) detailContent.addPara(selected.context, 6f, BattleNext_UiTheme.MUTED);
 		detailContent.addPara(text("damage_dealt"), 10f, BattleNext_UiTheme.ACCENT);
 		appendMembers(detailContent, sorted(report, true));
@@ -161,8 +198,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private void appendMembers(TooltipMakerAPI detailContent, List<BattleNext_MemberReport> members) {
 		for (BattleNext_MemberReport member : members) {
-			detailContent.addPara(member.getFleetId() + "[" + member.getMemberIndex() + "] "
-					+ member.getVariantId() + " " + member.getName(), 5f, BattleNext_UiTheme.TEXT);
+			detailContent.addPara(member.getVariantId() + " " + member.getName(), 5f, BattleNext_UiTheme.TEXT);
 			detailContent.addPara(text("damage_dealt") + ": " + member.getDamageDealt()
 					+ " / " + text("damage_taken") + ": " + member.getDamageTaken()
 					+ " / " + text("status") + ": " + member.getStatus(), 2f,
@@ -178,10 +214,54 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		}
 	}
 
-	private List<BattleNext_MemberReport> sorted(BattleNext_BattleReport report, boolean dealt) {
-		List<BattleNext_MemberReport> result = new ArrayList<>(report.getMembers());
+	private List<BattleNext_MemberReport> sorted(BattleNext_BattleReportModel report, boolean dealt) {
+		List<BattleNext_MemberReport> result = new ArrayList<>(report.getPlayerMembers());
+		result.addAll(report.getEnemyMembers());
 		result.sort(BattleNext_MemberReport.damageOrder(dealt));
 		return result;
+	}
+
+	private String context(BattleNext_TournamentModel tournament, String matchId, BattleNext_Round round) {
+		return text("tournament_context") + " " + tournament.getId() + " / " + text("match") + " " + matchId
+				+ " / " + text("round") + " " + round.getNumber() + " / " + text("attempt") + " " + round.getAttempt();
+	}
+
+	private String listLabel(Entry entry) {
+		String time = timeText(entry.report);
+		return (time.isEmpty() ? "" : time + " / ") + entry.report.getWinner()
+				+ " / " + (entry.report.getPlayerMembers().size() + entry.report.getEnemyMembers().size())
+				+ " [" + entry.report.getId() + "]";
+	}
+
+	private String timeText(BattleNext_BattleReportModel report) {
+		if (report.getCreatedAt() <= 0L) return "";
+		return new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(report.getCreatedAt()));
+	}
+
+	private Entry entry(String id) {
+		for (Entry entry : entries) {
+			if (entry.report.getId().equals(id)) return entry;
+		}
+		return null;
+	}
+
+	private void deleteReport(Entry entry) throws IOException, JSONException {
+		if (entry.tournament == null) {
+			reportStore.delete(entry.report.getId());
+			return;
+		}
+		entry.round.setReport(new BattleNext_BattleReportModel());
+		tournamentStore.save(entry.tournament);
+	}
+
+	@Override
+	public String getStatusText() {
+		return status;
+	}
+
+	private void setStatus(String value) {
+		status = value;
+		if (statusLabel != null) statusLabel.setText(value);
 	}
 
 	private String text(String key) {
@@ -189,21 +269,16 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	}
 
 	private static final class Entry {
-		private final BattleNext_BattleReport report;
+		private final BattleNext_BattleReportModel report;
 		private final String context;
-
-		private Entry(BattleNext_BattleReport report, String context) {
-			this.report = report;
-			this.context = context;
-		}
-	}
-
-	private static final class MatchWithRound {
-		private final String matchId;
+		private final BattleNext_TournamentModel tournament;
 		private final BattleNext_Round round;
 
-		private MatchWithRound(String matchId, BattleNext_Round round) {
-			this.matchId = matchId;
+		private Entry(BattleNext_BattleReportModel report, String context,
+				BattleNext_TournamentModel tournament, BattleNext_Round round) {
+			this.report = report;
+			this.context = context;
+			this.tournament = tournament;
 			this.round = round;
 		}
 	}

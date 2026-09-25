@@ -5,7 +5,6 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
@@ -17,12 +16,14 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float BOOST_TIME_MULT = 4f;
 	private static final float NORMAL_TIME_MULT = 1f;
 	private static final float VERSUS_DELAY = 0.5f;
+
 	// Movement speed in visible viewport fractions per second; held keys accelerate toward the cap.
-	private static final float CAMERA_BASE_SPEED = 0.4f;
-	private static final float CAMERA_ACCEL_PER_SEC = 0.45f;
-	private static final float CAMERA_MAX_SPEED = 2.2f;
+	private static final float CAMERA_BASE_SPEED = 0.3f;
+	private static final float CAMERA_ACCEL_PER_SEC = 0.3f;
+	private static final float CAMERA_MAX_SPEED = 2f;
+
 	// Viewport fraction multiplier applied per mouse wheel notch.
-	private static final float CAMERA_ZOOM_STEP = 1.2f;
+	private static final float CAMERA_ZOOM_STEP = 1.1f;
 	private static final float CAMERA_MIN_ZOOM = 0.5f;
 	private static final float CAMERA_MAX_ZOOM = 10f;
 
@@ -48,8 +49,34 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		this.engine = engine;
 		screenWidth = Global.getSettings().getScreenWidth();
 		screenHeight = Global.getSettings().getScreenHeight();
-		viewportWidth = engine.getViewport().getVisibleWidth();
-		viewportHeight = engine.getViewport().getVisibleHeight();
+	}
+
+	@Override
+	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
+
+		// events here
+		for (InputEventAPI event : events) {
+			if (event.isConsumed()) continue;
+			if (!externalCamera) continue;
+			if (event.isMouseScrollEvent() && event.getEventValue() > 0) {
+				viewportWidth = Math.max(screenWidth * CAMERA_MIN_ZOOM, viewportWidth / CAMERA_ZOOM_STEP);
+				viewportHeight = Math.max(screenHeight * CAMERA_MIN_ZOOM, viewportHeight / CAMERA_ZOOM_STEP);
+				event.consume();
+				continue;
+			}
+			if (event.isMouseScrollEvent() && event.getEventValue() < 0) {
+				viewportWidth = Math.min(screenWidth * CAMERA_MAX_ZOOM, viewportWidth * CAMERA_ZOOM_STEP);
+				viewportHeight = Math.min(screenHeight * CAMERA_MAX_ZOOM, viewportHeight * CAMERA_ZOOM_STEP);
+				event.consume();
+				continue;
+			}
+			if (event.isAltDown()) {
+				externalCamera = false;
+				engine.getViewport().setExternalControl(false);
+				event.consume();
+				continue;
+			}
+		}
 	}
 
 	@Override
@@ -69,29 +96,15 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		else if (cameraToggle) {
 			cameraToggle = false;
 			externalCamera = !externalCamera;
+			if (externalCamera) {
+				viewportWidth = engine.getViewport().getVisibleWidth();
+				viewportHeight = engine.getViewport().getVisibleHeight();
+			}
 			engine.getViewport().setExternalControl(externalCamera);
 			engine.getCombatUI().addMessage(0, externalCamera ? "Free camera: WASD move, wheel zoom, Alt exit" : "Free camera disabled");
 		}
 
-		for (InputEventAPI event : events) {
-			if (event.isConsumed()) continue;
-			if (!externalCamera) continue;
-			if (event.isAltDown()) {
-				externalCamera = false;
-				engine.getViewport().setExternalControl(false);
-			}
-		}
-
 		if (externalCamera) {
-			int wheel = Mouse.getDWheel();
-			if (wheel > 0) {
-				viewportWidth = Math.max(screenWidth * CAMERA_MIN_ZOOM, viewportWidth / CAMERA_ZOOM_STEP);
-				viewportHeight = Math.max(screenHeight * CAMERA_MIN_ZOOM, viewportHeight / CAMERA_ZOOM_STEP);
-			} else if (wheel < 0) {
-				viewportWidth = Math.min(screenWidth * CAMERA_MAX_ZOOM, viewportWidth * CAMERA_ZOOM_STEP);
-				viewportHeight = Math.min(screenHeight * CAMERA_MAX_ZOOM, viewportHeight * CAMERA_ZOOM_STEP);
-			}
-
 			float dx = (Keyboard.isKeyDown(Keyboard.KEY_D) ? 1f : 0f) - (Keyboard.isKeyDown(Keyboard.KEY_A) ? 1f : 0f);
 			float dy = (Keyboard.isKeyDown(Keyboard.KEY_W) ? 1f : 0f) - (Keyboard.isKeyDown(Keyboard.KEY_S) ? 1f : 0f);
 			Vector2f center = new Vector2f(engine.getViewport().getCenter());

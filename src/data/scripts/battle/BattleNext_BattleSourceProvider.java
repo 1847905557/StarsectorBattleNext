@@ -2,7 +2,7 @@ package data.scripts.battle;
 
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
 
@@ -16,7 +16,7 @@ public class BattleNext_BattleSourceProvider {
 	private final BattleNext_TournamentStore tournamentStore;
 	private final BattleNext_TournamentEngine tournamentEngine;
 	private final List<String> warnings = new ArrayList<>();
-	private BattleNext_Tournament activeTournament;
+	private BattleNext_TournamentModel activeTournament;
 
 	public BattleNext_BattleSourceProvider() {
 		fleetStore = new BattleNext_FleetStore();
@@ -37,7 +37,7 @@ public class BattleNext_BattleSourceProvider {
 
 		String activeId = tournamentStore.getActiveId();
 		if (!activeId.isEmpty()) {
-			BattleNext_Tournament tournament = tournamentStore.get(activeId);
+			BattleNext_TournamentModel tournament = tournamentStore.get(activeId);
 			if (tournament == null) {
 				warnings.add("Active tournament is missing: " + activeId);
 				return List.of();
@@ -73,7 +73,7 @@ public class BattleNext_BattleSourceProvider {
 		return fleetStore;
 	}
 
-	public BattleNext_Tournament getActiveTournament() {
+	public BattleNext_TournamentModel getActiveTournament() {
 		return activeTournament;
 	}
 

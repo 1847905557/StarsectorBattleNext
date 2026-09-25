@@ -11,7 +11,7 @@ import java.util.List;
 
 public class BattleNext_RulesModel {
 
-	public static final int FORMAT_VERSION = 2;
+	public static final int FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;

@@ -18,7 +18,7 @@ public class BattleNext_FleetCommonLoader {
 
 	public List<BattleNext_FleetModel> load() {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_FileCatalog.common("AI_Battles_Next", true);
+		List<String> paths = BattleNext_FileCatalog.common(MOD_ID, true);
 		List<String> dataPaths = paths.stream().filter(path -> path.endsWith("/fleet_data.json.data"))
 				.map(this::stripDataSuffix).toList();
 		List<String> variantPaths = paths.stream().filter(path -> path.endsWith(".variant.data"))

@@ -9,29 +9,25 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_BattleReport {
+public class BattleNext_BattleReportModel {
 
 	private String id = "";
 	private String winner = "draw";
 	private long durationMillis = 0L;
 	private long createdAt = 0L;
-	private List<BattleNext_MemberReport> members = new ArrayList<>();
+	private List<BattleNext_MemberReport> playerMembers = new ArrayList<>();
+	private List<BattleNext_MemberReport> enemyMembers = new ArrayList<>();
 	private String sourceType = BattleNext_LoadSource.COMMON;
 	private String sourcePath = "";
 
-	public static BattleNext_BattleReport fromJson(JSONObject json) {
-		BattleNext_BattleReport report = new BattleNext_BattleReport();
+	public static BattleNext_BattleReportModel fromJson(JSONObject json) {
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.id = json.optString("id", "");
 		report.winner = json.optString("winner", "draw");
 		report.durationMillis = json.optLong("durationMillis", 0L);
 		report.createdAt = json.optLong("createdAt", 0L);
-		JSONArray members = json.optJSONArray("members");
-		if (members != null) {
-			for (int index = 0; index < members.length(); index++) {
-				JSONObject member = members.optJSONObject(index);
-				if (member != null) report.members.add(BattleNext_MemberReport.fromJson(member));
-			}
-		}
+		parseMembers(json.optJSONArray("playerMembers"), report.playerMembers);
+		parseMembers(json.optJSONArray("enemyMembers"), report.enemyMembers);
 		return report;
 	}
 
@@ -41,11 +37,8 @@ public class BattleNext_BattleReport {
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
 		json.put("createdAt", createdAt);
-		JSONArray members = new JSONArray();
-		for (BattleNext_MemberReport member : this.members) {
-			members.put(member.toJson());
-		}
-		json.put("members", members);
+		json.put("playerMembers", membersToJson(playerMembers));
+		json.put("enemyMembers", membersToJson(enemyMembers));
 		return json;
 	}
 
@@ -81,8 +74,12 @@ public class BattleNext_BattleReport {
 		this.createdAt = Math.max(0L, createdAt);
 	}
 
-	public List<BattleNext_MemberReport> getMembers() {
-		return Collections.unmodifiableList(members);
+	public List<BattleNext_MemberReport> getPlayerMembers() {
+		return Collections.unmodifiableList(playerMembers);
+	}
+
+	public List<BattleNext_MemberReport> getEnemyMembers() {
+		return Collections.unmodifiableList(enemyMembers);
 	}
 
 	public String getSourceType() {
@@ -101,7 +98,27 @@ public class BattleNext_BattleReport {
 		this.sourcePath = sourcePath;
 	}
 
-	public void addMember(BattleNext_MemberReport member) {
-		if (member != null) members.add(member);
+	public void addPlayerMember(BattleNext_MemberReport member) {
+		if (member != null) playerMembers.add(member);
+	}
+
+	public void addEnemyMember(BattleNext_MemberReport member) {
+		if (member != null) enemyMembers.add(member);
+	}
+
+	private static void parseMembers(JSONArray array, List<BattleNext_MemberReport> target) {
+		if (array == null) return;
+		for (int index = 0; index < array.length(); index++) {
+			JSONObject member = array.optJSONObject(index);
+			if (member != null) target.add(BattleNext_MemberReport.fromJson(member));
+		}
+	}
+
+	private JSONArray membersToJson(List<BattleNext_MemberReport> members) throws JSONException {
+		JSONArray array = new JSONArray();
+		for (BattleNext_MemberReport member : members) {
+			array.put(member.toJson());
+		}
+		return array;
 	}
 }

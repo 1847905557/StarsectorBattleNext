@@ -8,7 +8,9 @@ import java.io.IOException;
 
 public class BattleNext_RulesSaver {
 
+	private static final String COMMON_ROOT = "AI_Battles_Next/rules/";
+
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
-		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/" + model.getId() + ".json", model.toJson(), false);
+		Global.getSettings().writeJSONToCommon(COMMON_ROOT + model.getId() + ".json", model.toJson(), false);
 	}
 }

@@ -18,39 +18,29 @@ public class BattleNext_FleetModel {
 
 	private String id;
 	private String name;
-	private String player;
 	private List<String> skills;
 	private List<String> tags;
 	private List<BattleNext_MemberModel> members;
 	private String author;
 	private String description;
-	private String behavior;
-	private String color;
-	private String vsImage;
-	private String rulesId;
 	private String sourceType;
 	private String sourcePath;
 	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
 	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
-		this("", "", "", List.of(), List.of(), List.of());
+		this("", "", List.of(), List.of(), List.of());
 	}
 
-	public BattleNext_FleetModel(String id, String name, String player, List<String> skills, List<String> tags,
+	public BattleNext_FleetModel(String id, String name, List<String> skills, List<String> tags,
 			List<BattleNext_MemberModel> members) {
 		this.id = normalize(id);
 		this.name = normalize(name);
-		this.player = normalize(player);
 		this.skills = copyStrings(skills);
 		this.tags = copyStrings(tags);
 		this.members = copyMembers(members);
 		this.author = "";
 		this.description = "";
-		this.behavior = "";
-		this.color = "";
-		this.vsImage = "";
-		this.rulesId = "";
 		this.sourceType = BattleNext_LoadSource.NATIVE;
 		this.sourcePath = "";
 	}
@@ -71,14 +61,9 @@ public class BattleNext_FleetModel {
 
 		String id = json.optString("id", fallbackId);
 		BattleNext_FleetModel result = new BattleNext_FleetModel(id, json.optString("name", ""),
-				json.optString("player", ""), readStrings(json.optJSONArray("skills")),
-				readStrings(json.optJSONArray("tags")), members);
+				readStrings(json.optJSONArray("skills")), readStrings(json.optJSONArray("tags")), members);
 		result.author = json.optString("author", "");
 		result.description = json.optString("description", "");
-		result.behavior = json.optString("behavior", "");
-		result.color = json.optString("color", "");
-		result.vsImage = json.optString("vsImage", "");
-		result.rulesId = json.optString("rulesId", "");
 		return result;
 	}
 
@@ -87,7 +72,6 @@ public class BattleNext_FleetModel {
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
 		json.put("name", name);
-		json.put("player", player);
 		json.put("skills", new JSONArray(skills));
 		json.put("tags", new JSONArray(tags));
 		JSONArray memberArray = new JSONArray();
@@ -97,10 +81,6 @@ public class BattleNext_FleetModel {
 		json.put("members", memberArray);
 		json.put("author", author);
 		json.put("description", description);
-		json.put("behavior", behavior);
-		json.put("color", color);
-		json.put("vsImage", vsImage);
-		json.put("rulesId", rulesId);
 		return json;
 	}
 
@@ -118,14 +98,6 @@ public class BattleNext_FleetModel {
 
 	public void setName(String name) {
 		this.name = normalize(name);
-	}
-
-	public String getPlayer() {
-		return player;
-	}
-
-	public void setPlayer(String player) {
-		this.player = normalize(player);
 	}
 
 	public List<String> getSkills() {
@@ -166,38 +138,6 @@ public class BattleNext_FleetModel {
 
 	public void setDescription(String description) {
 		this.description = normalize(description);
-	}
-
-	public String getBehavior() {
-		return behavior;
-	}
-
-	public void setBehavior(String behavior) {
-		this.behavior = normalize(behavior);
-	}
-
-	public String getColor() {
-		return color;
-	}
-
-	public void setColor(String color) {
-		this.color = normalize(color);
-	}
-
-	public String getVsImage() {
-		return vsImage;
-	}
-
-	public void setVsImage(String vsImage) {
-		this.vsImage = normalize(vsImage);
-	}
-
-	public String getRulesId() {
-		return rulesId;
-	}
-
-	public void setRulesId(String rulesId) {
-		this.rulesId = normalize(rulesId);
 	}
 
 	public String getSourceType() {

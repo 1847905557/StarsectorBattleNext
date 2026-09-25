@@ -78,7 +78,8 @@ public class BattleNext_FleetLegacyLoader {
 			members.add(new BattleNext_MemberModel(column(row, 1), column(row, 4), column(row, 2),
 					splitValues(column(row, 3)), column(row, 5), column(row, 6), splitValues(column(row, 7))));
 		}
-		BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, column(data, 0), column(data, 1), skills, tags, members);
+		BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, column(data, 0), skills, tags, members);
+		result.setAuthor(column(data, 1));
 		result.setSourceType(BattleNext_LoadSource.LEGACY);
 		result.setSourcePath(sourcePath);
 		return result;

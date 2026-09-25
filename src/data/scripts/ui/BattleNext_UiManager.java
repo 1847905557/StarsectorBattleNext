@@ -207,7 +207,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return fleetPage;
 		}
 		if (page == Page.REPORTS) {
-			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector);
+			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector,
+					this::confirmNavigation, this::confirmDelete);
 			return reportPage;
 		}
 		if (page == Page.TOURNAMENTS) {

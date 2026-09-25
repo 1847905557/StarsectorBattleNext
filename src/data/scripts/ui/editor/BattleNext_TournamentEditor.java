@@ -9,10 +9,11 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TextField;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -21,6 +22,8 @@ import java.util.Set;
 
 public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
+	private static final float FIELD_HEIGHT = 28f;
+
 	private final BattleNext_TournamentStore store;
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_RulesStore rulesStore;
@@ -28,8 +31,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	private final Set<String> teams = new LinkedHashSet<>();
 	private CustomPanelAPI panel;
 	private UIRect contentRect;
-	private BattleNext_Tournament baseline;
-	private BattleNext_Tournament draft;
+	private BattleNext_TournamentModel baseline;
+	private BattleNext_TournamentModel draft;
 	private String savedSnapshot = "";
 	private String statusText = "";
 	private TextFieldAPI idField;
@@ -46,11 +49,11 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		this.rulesStore = rulesStore;
 	}
 
-	public boolean open(BattleNext_Tournament source) {
+	public boolean open(BattleNext_TournamentModel source) {
 		try {
-			BattleNext_Tournament next = source == null
-					? new BattleNext_Tournament("", "", "single_elim", "BO1", 0)
-					: BattleNext_Tournament.fromJson(source.toJson());
+			BattleNext_TournamentModel next = source == null
+					? new BattleNext_TournamentModel("", "", "single_elim", "BO1", 0)
+					: BattleNext_TournamentModel.fromJson(source.toJson());
 			baseline = source;
 			draft = next;
 			teams.clear();
@@ -142,9 +145,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			host.addPara(value == null ? "" : value, 2f, BattleNext_UiTheme.TEXT);
 			return null;
 		}
-		TextFieldAPI field = host.addTextField(Math.min(360f, contentRect.getWidth() - 18f), 2f);
-		field.setText(value == null ? "" : value);
-		field.setMaxChars(240);
+		TextFieldAPI field = BattleNext_TextField.addTo(host, panel, Math.min(360f, contentRect.getWidth() - 18f), FIELD_HEIGHT, value);
+		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		return field;
 	}
 
@@ -203,7 +205,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		draft.setMapId(map);
 		draft.setTeams(new ArrayList<>(teams));
 		try {
-			BattleNext_Tournament nextBaseline = BattleNext_Tournament.fromJson(draft.toJson());
+			BattleNext_TournamentModel nextBaseline = BattleNext_TournamentModel.fromJson(draft.toJson());
 			store.save(draft);
 			baseline = nextBaseline;
 			savedSnapshot = serializeState();

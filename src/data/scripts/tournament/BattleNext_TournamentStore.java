@@ -20,15 +20,15 @@ public class BattleNext_TournamentStore {
 	private final BattleNext_TournamentStandardLoader standardLoader = new BattleNext_TournamentStandardLoader();
 	private final BattleNext_TournamentCommonLoader commonLoader = new BattleNext_TournamentCommonLoader();
 	private final BattleNext_TournamentSaver saver = new BattleNext_TournamentSaver();
-	private final Map<String, BattleNext_Tournament> tournaments = new LinkedHashMap<>();
+	private final Map<String, BattleNext_TournamentModel> tournaments = new LinkedHashMap<>();
 	private final Set<String> managedIds = new HashSet<>();
 	private String activeId = "";
 	private String loadError = "Tournament catalog has not been loaded";
 
 	public void reload() throws IOException, JSONException {
 		try {
-			Map<String, BattleNext_Tournament> loaded = new LinkedHashMap<>(standardLoader.load());
-			Map<String, BattleNext_Tournament> users = commonLoader.load();
+			Map<String, BattleNext_TournamentModel> loaded = new LinkedHashMap<>(standardLoader.load());
+			Map<String, BattleNext_TournamentModel> users = commonLoader.load();
 			loaded.putAll(users);
 			String loadedActiveId = commonLoader.loadActiveId();
 			tournaments.clear();
@@ -53,14 +53,14 @@ public class BattleNext_TournamentStore {
 		if (!isLoaded()) throw new IllegalStateException(loadError);
 	}
 
-	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
+	public void save(BattleNext_TournamentModel tournament) throws IOException, JSONException {
 		requireLoaded();
 		if (tournament == null || !BattleNext_EntryId.isValid(tournament.getId())) {
 			throw new IllegalArgumentException("Tournament is required");
 		}
 		saver.save(tournament);
 		tournament.setSourceType(BattleNext_LoadSource.COMMON);
-		tournament.setSourcePath("AI_Battles_Next/tournament/" + tournament.getId() + ".json");
+		tournament.setSourcePath("AI_Battles_Next/tournaments/" + tournament.getId() + ".json");
 		for (BattleNext_Match match : tournament.getMatches()) {
 			match.setSourceType(BattleNext_LoadSource.COMMON);
 			match.setSourcePath(tournament.getSourcePath());
@@ -76,11 +76,11 @@ public class BattleNext_TournamentStore {
 		activeId = id;
 	}
 
-	public BattleNext_Tournament get(String id) {
+	public BattleNext_TournamentModel get(String id) {
 		return tournaments.get(id);
 	}
 
-	public List<BattleNext_Tournament> getAll() {
+	public List<BattleNext_TournamentModel> getAll() {
 		return List.copyOf(tournaments.values());
 	}
 

@@ -6,7 +6,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -114,7 +114,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 			detailPanel.addUIElement(prompt).inTL(8f, 8f);
 			return;
 		}
-		BattleNext_Tournament selected = selectedId.isEmpty() ? null : tournamentStore.get(selectedId);
+		BattleNext_TournamentModel selected = selectedId.isEmpty() ? null : tournamentStore.get(selectedId);
 		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f,
 				detailRect.getHeight() - 50f, detailPanel.getPlugin());
 		detailPanel.addComponent(editorPanel).inTL(8f, 8f);
@@ -160,7 +160,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
 				&& tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId)) {
-			BattleNext_Tournament selected = tournamentStore.get(selectedId);
+			BattleNext_TournamentModel selected = tournamentStore.get(selectedId);
 			deletion.accept(selected.getName() + " [" + selectedId + "]", () -> {
 				try {
 					tournamentStore.delete(selectedId);
@@ -185,7 +185,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		if (!tournamentStore.isLoaded()) listContent.addPara(text("load_failed") + ": "
 				+ tournamentStore.getLoadError(), 8f, BattleNext_UiTheme.MUTED);
 		if (tournamentStore.getAll().isEmpty()) listContent.addPara(text("no_tournaments"), 10f, BattleNext_UiTheme.MUTED);
-		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			String label = tournament.getName() + " [" + tournament.getId() + "]";
 			BattleNext_PageLayout.buttonWithTooltip(listContent, label, "tournament:select:" + tournament.getId(),
 					Math.max(80f, listRect.getWidth() - 30f));
@@ -210,7 +210,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 			setStatus(text("invalid_tournament_id"));
 			return false;
 		}
-		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, tournament.getId()) && !tournament.getId().equals(selectedId)) {
 				setStatus(text("duplicate_id")); return false;
 			}

@@ -1,25 +1,28 @@
 package data.scripts.report.io;
 
 import com.fs.starfarer.api.Global;
-import data.scripts.report.BattleNext_BattleReport;
-import org.json.JSONArray;
+import data.scripts.report.BattleNext_BattleReportModel;
+import data.scripts.tools.BattleNext_JsonCatalog;
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class BattleNext_BattleReportCommonLoader {
 
-	private static final String PATH = "AI_Battles_Next/reports/reports.json";
-
-	public List<BattleNext_BattleReport> load() throws IOException, JSONException {
-		List<BattleNext_BattleReport> result = new ArrayList<>();
-		JSONArray values = new JSONArray(Global.getSettings().readTextFileFromCommon(PATH));
-		for (int index = 0; index < values.length(); index++) {
-			if (values.optJSONObject(index) == null) continue;
-			result.add(BattleNext_BattleReport.fromJson(values.optJSONObject(index)));
+	public List<BattleNext_BattleReportModel> load() throws IOException, JSONException {
+		List<BattleNext_BattleReportModel> result = new ArrayList<>();
+		for (String path : BattleNext_JsonCatalog.commonFiles("AI_Battles_Next/reports")) {
+			BattleNext_BattleReportModel value = BattleNext_BattleReportModel.fromJson(Global.getSettings().readJSONFromCommon(path, false));
+			if (value.getId().isEmpty()) continue;
+			value.setSourceType(BattleNext_LoadSource.COMMON);
+			value.setSourcePath(path);
+			result.add(value);
 		}
+		result.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 		return result;
 	}
 }

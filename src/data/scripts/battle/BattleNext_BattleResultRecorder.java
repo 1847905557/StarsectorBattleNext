@@ -4,9 +4,9 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.combat.BattleNext_Scorekeeper;
 import data.scripts.tools.BattleNext_BattleSignals;
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_BattleReportStore;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
 
@@ -39,17 +39,13 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		}
 	}
 
-	private void record(BattleNext_BattleReport report) throws IOException, org.json.JSONException {
+	private void record(BattleNext_BattleReportModel report) throws IOException, org.json.JSONException {
 		if (report.getId().isEmpty()) report.setId(UUID.randomUUID().toString());
-		BattleNext_Tournament tournament = provider == null ? null : provider.getActiveTournament();
+		if (report.getCreatedAt() <= 0L) report.setCreatedAt(System.currentTimeMillis());
+		BattleNext_TournamentModel tournament = provider == null ? null : provider.getActiveTournament();
 		if (tournament == null) {
 			BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
-			try {
-				store.reload();
-			} catch (IOException | org.json.JSONException ignored) {
-			}
-			store.add(report);
-			store.save();
+			store.save(report);
 		} else {
 			BattleNext_TournamentEngine engine = provider.getTournamentEngine();
 			engine.recordRound(tournament, match.getId(), resolveWinner(match, report.getWinner()), report);

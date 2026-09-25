@@ -1,7 +1,9 @@
 package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.characters.SkillEffectType;
 import com.fs.starfarer.api.characters.SkillSpecAPI;
+import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -11,11 +13,25 @@ import data.scripts.ui.widget.BattleNext_OptionField.Option;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_OfficerSkillSourceProvider implements BattleNext_OptionField.Source {
+public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.Source {
 
 	@Override
 	public int getMaxCount(String id) {
-		return 2;
+		SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
+		if (spec == null) return 0;
+
+		List<SkillEffectSpecAPI> effects = spec.getEffectsAPI();
+		for (SkillEffectSpecAPI effect : effects) {
+			if (effect.getType() == SkillEffectType.ABILITY_UNLOCK) continue;
+			if (effect.getType() == SkillEffectType.HULLMOD_UNLOCK) continue;
+			if (effect.getType() == SkillEffectType.DESCRIPTION) continue;
+
+			if (effect.getRequiredSkillLevel() > 1f) {
+				return 2;
+			}
+		}
+
+		return 1;
 	}
 
 	@Override
@@ -30,11 +46,15 @@ public class BattleNext_OfficerSkillSourceProvider implements BattleNext_OptionF
 				continue;
 			}
 
-			if (spec.isAdminSkill()) continue;
+			if (isSkillBanned(spec)) continue;
 			if (spec.hasTag(Skills.TAG_DEPRECATED)) continue;
 			options.add(new Option(id, spec.getName()));
 		}
 		return options;
+	}
+
+	public boolean isSkillBanned(SkillSpecAPI spec) {
+		return true;
 	}
 
 	@Override

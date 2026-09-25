@@ -3,7 +3,7 @@ package data.scripts.combat;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
@@ -30,7 +30,7 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null) return;
-		BattleNext_BattleReport report = scorekeeper.getFrozenReport();
+		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		if (report == null) return;
 		engine.setDoNotEndCombat(true);
 		lockCamera();
@@ -44,14 +44,16 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 		}
 	}
 
-	private void showReport(BattleNext_BattleReport report) {
+	private void showReport(BattleNext_BattleReportModel report) {
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Battle report: " + report.getWinner());
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Duration: " + report.getDurationMillis() / 1000f + " seconds");
-		showLeaderboard("Damage Dealt", report.getMembers(), true);
-		showLeaderboard("Damage Taken", report.getMembers(), false);
-		for (BattleNext_MemberReport member : report.getMembers()) {
-			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getFleetId() + "[" + member.getMemberIndex()
-					+ "] " + member.getStatus() + " hull=" + member.getFinalHullFraction()
+		List<BattleNext_MemberReport> members = new ArrayList<>(report.getPlayerMembers());
+		members.addAll(report.getEnemyMembers());
+		showLeaderboard("Damage Dealt", members, true);
+		showLeaderboard("Damage Taken", members, false);
+		for (BattleNext_MemberReport member : members) {
+			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getVariantId() + " " + member.getStatus()
+					+ " hull=" + member.getFinalHullFraction()
 					+ " cr=" + member.getFinalCr());
 		}
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Press ESC to exit the battle report.");
@@ -66,8 +68,8 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 			double hull = dealt ? member.getHullDamageDealt() : member.getHullDamageTaken();
 			double shields = dealt ? member.getShieldDamageDealt() : member.getShieldDamageTaken();
 			double emp = dealt ? member.getEmpDamageDealt() : member.getEmpDamageTaken();
-			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getFleetId() + "[" + member.getMemberIndex()
-					+ "] " + value + " hull=" + hull + " shields=" + shields + " emp=" + emp);
+			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getVariantId() + " " + value
+					+ " hull=" + hull + " shields=" + shields + " emp=" + emp);
 		}
 	}
 

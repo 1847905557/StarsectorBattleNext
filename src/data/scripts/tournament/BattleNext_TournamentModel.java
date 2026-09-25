@@ -10,10 +10,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_Tournament {
+public class BattleNext_TournamentModel {
 
-	public static final int FORMAT_VERSION = 2;
-	public static final int META_FORMAT_VERSION = 2;
+	public static final int FORMAT_VERSION = 1;
+	public static final int META_FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;
@@ -32,7 +32,7 @@ public class BattleNext_Tournament {
 	private String sourceType = BattleNext_LoadSource.NATIVE;
 	private String sourcePath = "";
 
-	public BattleNext_Tournament(String id, String name, String bracketType, String matchFormat, int size) {
+	public BattleNext_TournamentModel(String id, String name, String bracketType, String matchFormat, int size) {
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
 		this.bracketType = bracketType == null ? "single_elim" : bracketType.trim();
@@ -40,10 +40,10 @@ public class BattleNext_Tournament {
 		this.size = size;
 	}
 
-	public static BattleNext_Tournament fromJson(JSONObject json) {
+	public static BattleNext_TournamentModel fromJson(JSONObject json) {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
-		BattleNext_Tournament tournament = new BattleNext_Tournament(json.optString("id", ""), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel(json.optString("id", ""), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
 		tournament.rulesId = json.optString("rulesId", "");
 		tournament.mapId = json.optInt("mapId", -1);
 		tournament.started = json.optBoolean("started", false);

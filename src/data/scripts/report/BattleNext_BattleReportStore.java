@@ -6,46 +6,56 @@ import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class BattleNext_BattleReportStore {
 
-	private static final int MAX_REPORTS = 50;
 	private final BattleNext_BattleReportCommonLoader commonLoader = new BattleNext_BattleReportCommonLoader();
 	private final BattleNext_BattleReportSaver saver = new BattleNext_BattleReportSaver();
-	private final Deque<BattleNext_BattleReport> reports = new ArrayDeque<>();
+	private final Map<String, BattleNext_BattleReportModel> reports = new LinkedHashMap<>();
+	private String loadError = "Report catalog has not been loaded";
 
 	public void reload() throws IOException, JSONException {
-		reports.clear();
-		for (BattleNext_BattleReport report : commonLoader.load()) {
-			add(report);
+		try {
+			List<BattleNext_BattleReportModel> loaded = commonLoader.load();
+			reports.clear();
+			for (BattleNext_BattleReportModel report : loaded) {
+				reports.put(report.getId(), report);
+			}
+			loadError = "";
+		} catch (IOException | JSONException | RuntimeException exception) {
+			loadError = exception.getMessage();
+			throw exception;
 		}
 	}
 
-	public void add(BattleNext_BattleReport report) {
-		if (report == null) return;
-		reports.addLast(report);
-		while (reports.size() > MAX_REPORTS) {
-			reports.removeFirst();
+	public String getLoadError() {
+		return loadError;
+	}
+	public boolean isLoaded() {
+		return loadError.isEmpty();
+	}
+
+	// Recording must persist even when unrelated report files failed to load, so no isLoaded guard here.
+	public void save(BattleNext_BattleReportModel report) throws IOException, JSONException {
+		if (report == null || report.getId().isEmpty()) {
+			throw new IllegalArgumentException("Report id is required");
 		}
+		saver.save(report);
+		report.setSourceType(BattleNext_LoadSource.COMMON);
+		report.setSourcePath("AI_Battles_Next/reports/" + report.getId() + ".json");
+		reports.put(report.getId(), report);
 	}
 
-	public List<BattleNext_BattleReport> getRecent() {
-		return List.copyOf(new ArrayList<>(reports));
+	public List<BattleNext_BattleReportModel> getAll() {
+		return List.copyOf(reports.values());
 	}
 
-	public void save() throws IOException, JSONException {
-		for (BattleNext_BattleReport report : reports) {
-			report.setSourceType(BattleNext_LoadSource.COMMON);
-			report.setSourcePath("AI_Battles_Next/reports/reports.json");
-		}
-		saver.save(List.copyOf(reports));
-	}
-
-	public int size() {
-		return reports.size();
+	public void delete(String id) throws IOException {
+		if (!reports.containsKey(id)) return;
+		saver.delete(id);
+		reports.remove(id);
 	}
 }

@@ -12,6 +12,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TextField;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -22,6 +23,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private static final float HEADER_HEIGHT = 34f;
 	private static final float ROW_HEIGHT = 48f;
+	private static final float FIELD_HEIGHT = 28f;
 	private static final float COLUMN_GAP = 8f;
 	private static final float SIDE_MARGIN = 12f;
 	private static final float SCROLLBAR_WIDTH = 16f;
@@ -205,13 +207,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
 		UIRect[] cells = columns(width, ROW_HEIGHT);
-		boolean compactFont = width < 800f;
 		Row row = new Row();
 		addLabel(card, cells[0], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
-		row.player = addField(cells[1], card, match.getPlayer(), compactFont);
-		row.enemy = addField(cells[2], card, match.getEnemy(), compactFont);
-		row.map = addField(cells[3], card, Integer.toString(match.getMap()), compactFont);
-		row.size = addField(cells[4], card, Float.toString(match.getSize()), compactFont);
+		row.player = addField(cells[1], card, match.getPlayer());
+		row.enemy = addField(cells[2], card, match.getEnemy());
+		row.map = addField(cells[3], card, Integer.toString(match.getMap()));
+		row.size = addField(cells[4], card, Float.toString(match.getSize()));
 
 		UIRect statusRect = cells[5];
 		TooltipMakerAPI state = card.createUIElement(statusRect.getWidth() - 4f, ROW_HEIGHT, false);
@@ -256,16 +257,13 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		rows.add(row);
 	}
 
-	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value, boolean compactFont) {
-		TooltipMakerAPI maker = card.createUIElement(rect.getWidth() - 4f, rect.getHeight(), false);
-		TextFieldAPI field = compactFont
-				? maker.addTextField(rect.getWidth() - 10f, "graphics/fonts/victor10.fnt", 0f)
-				: maker.addTextField(rect.getWidth() - 10f, 0f);
-		field.setText(value);
-		field.setMaxChars(120);
-		field.getPosition().inTL(3f, (rect.getHeight() - field.getPosition().getHeight()) * 0.5f);
-		maker.setHeightSoFar(rect.getHeight());
-		card.addUIElement(maker).inTL(rect.getX(), rect.getY());
+	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value) {
+		float width = rect.getWidth() - 10f;
+		TooltipMakerAPI maker = card.createUIElement(width, FIELD_HEIGHT, false);
+		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width, FIELD_HEIGHT, value);
+		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		maker.setHeightSoFar(FIELD_HEIGHT);
+		card.addUIElement(maker).inTL(rect.getX() + 3f, rect.getY() + (rect.getHeight() - FIELD_HEIGHT) * 0.5f);
 		return field;
 	}
 

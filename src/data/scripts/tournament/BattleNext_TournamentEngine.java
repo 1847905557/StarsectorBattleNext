@@ -1,6 +1,6 @@
 package data.scripts.tournament;
 
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 
@@ -11,7 +11,7 @@ import java.util.Set;
 
 public class BattleNext_TournamentEngine {
 
-	public void start(BattleNext_Tournament tournament) {
+	public void start(BattleNext_TournamentModel tournament) {
 		if (tournament.isStarted()) {
 			throw new IllegalStateException("Tournament has already started");
 		}
@@ -27,7 +27,7 @@ public class BattleNext_TournamentEngine {
 		selectPendingMatch(tournament);
 	}
 
-	public BattleNext_Match getNextMatch(BattleNext_Tournament tournament) {
+	public BattleNext_Match getNextMatch(BattleNext_TournamentModel tournament) {
 		String pendingMatchId = tournament.getPendingMatchId();
 		if (!pendingMatchId.isEmpty()) {
 			BattleNext_Match pending = tournament.findMatch(pendingMatchId);
@@ -39,8 +39,8 @@ public class BattleNext_TournamentEngine {
 		return tournament.getPendingMatchId().isEmpty() ? null : tournament.findMatch(tournament.getPendingMatchId());
 	}
 
-	public void recordRound(BattleNext_Tournament tournament, String matchId, String winner,
-			BattleNext_BattleReport report) {
+	public void recordRound(BattleNext_TournamentModel tournament, String matchId, String winner,
+			BattleNext_BattleReportModel report) {
 		BattleNext_Match match = tournament.findMatch(matchId);
 		if (!tournament.isStarted() || tournament.isCompleted() || match == null) {
 			throw new IllegalStateException("Tournament match is unavailable");
@@ -80,7 +80,7 @@ public class BattleNext_TournamentEngine {
 		match.setSides(match.getEnemy(), match.getPlayer());
 	}
 
-	public void rollback(BattleNext_Tournament tournament, String matchId) {
+	public void rollback(BattleNext_TournamentModel tournament, String matchId) {
 		BattleNext_Match target = tournament.findMatch(matchId);
 		if (target == null) {
 			throw new IllegalArgumentException("Unknown tournament match: " + matchId);
@@ -104,7 +104,7 @@ public class BattleNext_TournamentEngine {
 		tournament.setPendingMatchId(matchId);
 	}
 
-	private void validateTeams(BattleNext_Tournament tournament) {
+	private void validateTeams(BattleNext_TournamentModel tournament) {
 		if (tournament.getTeams().size() < 2 || tournament.getTeams().size() > 32) {
 			throw new IllegalArgumentException("Tournament requires between 2 and 32 teams");
 		}
@@ -116,7 +116,7 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	private void generateMatches(BattleNext_Tournament tournament) {
+	private void generateMatches(BattleNext_TournamentModel tournament) {
 		List<String> teams = tournament.getTeams();
 		String bracketType = tournament.getBracketType();
 		if ("round_robin".equals(bracketType)) {
@@ -140,7 +140,7 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	private void addMatch(BattleNext_Tournament tournament, String id, String player, String enemy, String stage) {
+	private void addMatch(BattleNext_TournamentModel tournament, String id, String player, String enemy, String stage) {
 		BattleNext_Match match = new BattleNext_Match(id, player, enemy, tournament.getMapId(), 1f);
 		match.setStage(stage);
 		if ("bye".equals(stage)) {
@@ -149,7 +149,7 @@ public class BattleNext_TournamentEngine {
 		tournament.addGeneratedMatch(match);
 	}
 
-	private void advance(BattleNext_Tournament tournament, BattleNext_Match completed, String winner) {
+	private void advance(BattleNext_TournamentModel tournament, BattleNext_Match completed, String winner) {
 		if ("kof".equals(tournament.getBracketType())) {
 			advanceKof(tournament, completed, winner);
 			return;
@@ -175,7 +175,7 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	private void advanceKof(BattleNext_Tournament tournament, BattleNext_Match completed, String winner) {
+	private void advanceKof(BattleNext_TournamentModel tournament, BattleNext_Match completed, String winner) {
 		int nextIndex = tournament.getKofNextIndex();
 		if (nextIndex >= tournament.getTeams().size()) {
 			tournament.setChampion(winner);
@@ -187,7 +187,7 @@ public class BattleNext_TournamentEngine {
 		addMatch(tournament, id, winner, tournament.getTeams().get(nextIndex), "kof");
 	}
 
-	private void selectPendingMatch(BattleNext_Tournament tournament) {
+	private void selectPendingMatch(BattleNext_TournamentModel tournament) {
 		for (BattleNext_Match match : tournament.getMatches()) {
 			if ("pending".equals(match.getStatus()) && !match.getEnemy().isEmpty()) {
 				tournament.setPendingMatchId(match.getId());
@@ -197,7 +197,7 @@ public class BattleNext_TournamentEngine {
 		tournament.setPendingMatchId("");
 	}
 
-	private boolean hasPendingMatch(BattleNext_Tournament tournament) {
+	private boolean hasPendingMatch(BattleNext_TournamentModel tournament) {
 		for (BattleNext_Match match : tournament.getMatches()) {
 			if ("pending".equals(match.getStatus()) && !match.getEnemy().isEmpty()) {
 				return true;
@@ -206,7 +206,7 @@ public class BattleNext_TournamentEngine {
 		return false;
 	}
 
-	private boolean allMatchesComplete(BattleNext_Tournament tournament) {
+	private boolean allMatchesComplete(BattleNext_TournamentModel tournament) {
 		for (BattleNext_Match match : tournament.getMatches()) {
 			if (!"complete".equals(match.getStatus())) {
 				return false;
@@ -215,7 +215,7 @@ public class BattleNext_TournamentEngine {
 		return true;
 	}
 
-	private List<String> completedWinners(BattleNext_Tournament tournament) {
+	private List<String> completedWinners(BattleNext_TournamentModel tournament) {
 		List<String> winners = new ArrayList<>();
 		for (BattleNext_Match match : tournament.getMatches()) {
 			if (!"complete".equals(match.getStatus()) || match.getRounds().isEmpty()) {
@@ -229,7 +229,7 @@ public class BattleNext_TournamentEngine {
 		return winners;
 	}
 
-	private String findRoundRobinChampion(BattleNext_Tournament tournament) {
+	private String findRoundRobinChampion(BattleNext_TournamentModel tournament) {
 		String champion = tournament.getTeams().get(0);
 		int bestWins = -1;
 		for (String team : tournament.getTeams()) {

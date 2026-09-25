@@ -34,7 +34,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_FleetAssembly enemy = assembler.assemble(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
 		configureFleet(api, FleetSide.PLAYER, player, true);
 		configureFleet(api, FleetSide.ENEMY, enemy, false);
-		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper("pve-player", player.getMembers(), "pve-enemy", enemy.getMembers());
+		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(player.getMembers(), enemy.getMembers());
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
 				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null));
@@ -45,7 +45,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	private BattleNext_FleetModel createFleet(String id, String name, String variantId) {
 		BattleNext_MemberModel member = new BattleNext_MemberModel(variantId, "", "", List.of(), "", "", List.of());
-		return new BattleNext_FleetModel(id, name, "", List.of(), List.of(), List.of(member));
+		return new BattleNext_FleetModel(id, name, List.of(), List.of(), List.of(member));
 	}
 
 	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly,

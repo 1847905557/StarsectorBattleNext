@@ -12,7 +12,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import data.scripts.fleet.BattleNext_FleetAssembly;
 import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
 
 import java.util.ArrayList;
@@ -25,19 +25,17 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	private final List<TrackedMember> trackedMembers = new ArrayList<>();
 	private final Map<FleetMemberAPI, TrackedMember> membersByFleetMember = new IdentityHashMap<>();
 	private CombatEngineAPI engine;
-	private BattleNext_BattleReport frozenReport;
+	private BattleNext_BattleReportModel frozenReport;
 	private boolean battleStarted;
 
-	public BattleNext_Scorekeeper(String playerFleetId, BattleNext_FleetAssembly playerAssembly,
-			String enemyFleetId, BattleNext_FleetAssembly enemyAssembly) {
-		registerMembers(playerFleetId, playerAssembly);
-		registerMembers(enemyFleetId, enemyAssembly);
+	public BattleNext_Scorekeeper(BattleNext_FleetAssembly playerAssembly, BattleNext_FleetAssembly enemyAssembly) {
+		registerMembers(playerAssembly, true);
+		registerMembers(enemyAssembly, false);
 	}
 
-	public BattleNext_Scorekeeper(String playerFleetId, List<FleetMemberAPI> playerMembers,
-			String enemyFleetId, List<FleetMemberAPI> enemyMembers) {
-		registerMembers(playerFleetId, playerMembers);
-		registerMembers(enemyFleetId, enemyMembers);
+	public BattleNext_Scorekeeper(List<FleetMemberAPI> playerMembers, List<FleetMemberAPI> enemyMembers) {
+		registerMembers(playerMembers, true);
+		registerMembers(enemyMembers, false);
 	}
 
 	@Override
@@ -71,7 +69,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		}
 	}
 
-	public BattleNext_BattleReport getFrozenReport() {
+	public BattleNext_BattleReportModel getFrozenReport() {
 		return frozenReport;
 	}
 
@@ -83,23 +81,23 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		return "BattleNext_Scorekeeper";
 	}
 
-	private void registerMembers(String fleetId, BattleNext_FleetAssembly assembly) {
+	private void registerMembers(BattleNext_FleetAssembly assembly, boolean playerSide) {
 		BattleNext_FleetModel definition = assembly.getDefinition();
 		List<FleetMemberAPI> members = assembly.getMembers();
 		for (int index = 0; index < members.size(); index++) {
 			String variantId = definition.getMembers().get(index).getVariantId();
 			String name = definition.getMembers().get(index).getName();
-			TrackedMember tracked = new TrackedMember(fleetId, index, variantId, name, members.get(index));
+			TrackedMember tracked = new TrackedMember(variantId, name, members.get(index), playerSide);
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(members.get(index), tracked);
 		}
 	}
 
-	private void registerMembers(String fleetId, List<FleetMemberAPI> members) {
+	private void registerMembers(List<FleetMemberAPI> members, boolean playerSide) {
 		for (int index = 0; index < members.size(); index++) {
 			FleetMemberAPI member = members.get(index);
 			String variantId = member.getVariant().getHullVariantId();
-			TrackedMember tracked = new TrackedMember(fleetId, index, variantId, member.getShipName(), member);
+			TrackedMember tracked = new TrackedMember(variantId, member.getShipName(), member, playerSide);
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(member, tracked);
 		}
@@ -143,12 +141,13 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 
 	private void freeze(String winner) {
 		if (frozenReport != null) return;
-		BattleNext_BattleReport report = new BattleNext_BattleReport();
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setWinner(winner);
 		report.setDurationMillis((long)(engine.getTotalElapsedTime(false) * 1000f));
 		for (TrackedMember tracked : trackedMembers) {
 			tracked.freeze();
-			report.addMember(tracked.report);
+			if (tracked.playerSide) report.addPlayerMember(tracked.report);
+			else report.addEnemyMember(tracked.report);
 		}
 		frozenReport = report;
 	}
@@ -167,12 +166,14 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	private class TrackedMember {
 		private final BattleNext_MemberReport report;
 		private final FleetMemberAPI member;
+		private final boolean playerSide;
 		private ShipAPI ship;
 		private boolean everDeployed;
 
-		private TrackedMember(String fleetId, int memberIndex, String variantId, String name, FleetMemberAPI member) {
-			report = new BattleNext_MemberReport(fleetId, memberIndex, variantId, name);
+		private TrackedMember(String variantId, String name, FleetMemberAPI member, boolean playerSide) {
+			report = new BattleNext_MemberReport(variantId, name);
 			this.member = member;
+			this.playerSide = playerSide;
 		}
 
 		private void freeze() {

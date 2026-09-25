@@ -15,9 +15,10 @@ import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class BattleNext_OptionField {
@@ -49,6 +50,8 @@ public class BattleNext_OptionField {
 
 		List<Option> getOptions();
 
+		int getMaxCount(String id);
+
 		String getIcon(String id);
 
 		void createTooltip(TooltipMakerAPI tooltip, Option option);
@@ -68,11 +71,13 @@ public class BattleNext_OptionField {
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final CustomPanelAPI overlayHost;
 	private final Source source;
 	private final Mode mode;
-	private final Set<String> selection = new LinkedHashSet<>();
+	private final Map<String, Integer> selection = new LinkedHashMap<>();
+
 	private List<Option> options = List.of();
 	private TooltipMakerAPI fieldHost;
 	private CustomPanelAPI row;
@@ -102,7 +107,7 @@ public class BattleNext_OptionField {
 		field.getPosition().inTL(0f, 0f);
 		field.setLimitByStringWidth(false);
 		field.setVerticalCursor(true);
-		field.setMaxChars(240);
+		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		row.addUIElement(input).inTL(0f, 0f);
 		toggle = BattleNext_PageLayout.fixedButton(row,
 				new UIRect(width - BUTTON_WIDTH, 0f, BUTTON_WIDTH, FIELD_HEIGHT),
@@ -160,8 +165,8 @@ public class BattleNext_OptionField {
 			known.add(option.id);
 		}
 		selection.clear();
-		for (String id : parse(field.getText())) {
-			if (known.contains(id)) selection.add(id);
+		for (Map.Entry<String, Integer> entry : parse(field.getText()).entrySet()) {
+			if (known.contains(entry.getKey())) selection.put(entry.getKey(), entry.getValue());
 		}
 
 		float hostWidth = overlayHost.getPosition().getWidth();
@@ -199,9 +204,11 @@ public class BattleNext_OptionField {
 		TooltipMakerAPI searchBar = popup.createUIElement(width - 2f * PADDING, SEARCH_HEIGHT, false);
 		searchBar.addPara(strings.get("picker_search"), 0f, BattleNext_UiTheme.MUTED)
 				.getPosition().inTL(0f, 6f);
-		search = searchBar.addTextField(width - 96f, 0f);
-		search.getPosition().inTL(80f, 0f);
-		search.setMaxChars(120);
+		TooltipMakerAPI fieldHost = popup.createUIElement(width - 96f, SEARCH_HEIGHT, false);
+		search = BattleNext_TextField.addTo(fieldHost, popup, width - 96f, FIELD_HEIGHT, "");
+		search.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		fieldHost.setHeightSoFar(FIELD_HEIGHT);
+		popup.addUIElement(fieldHost).inTL(PADDING + 80f, PADDING + (SEARCH_HEIGHT - FIELD_HEIGHT) * 0.5f);
 		searchBar.setHeightSoFar(SEARCH_HEIGHT);
 		return searchBar;
 	}
@@ -264,40 +271,66 @@ public class BattleNext_OptionField {
 
 	private void confirm() {
 
-		List<String> previous = parse(field.getText());
+		Map<String, Integer> previous = parse(field.getText());
 		Set<String> known = new HashSet<>();
 		for (Option option : options) {
 			known.add(option.id);
 		}
-		List<String> result = new ArrayList<>();
-		for (String id : previous) {
-			if ((!known.contains(id) || selection.contains(id)) && !result.contains(id)) result.add(id);
+		if (mode == Mode.SINGLE) {
+			if (!selection.isEmpty()) {
+				field.setText(selection.keySet().iterator().next());
+			} else if (!previous.isEmpty() && known.contains(previous.keySet().iterator().next())) {
+				field.setText("");
+			}
+			close();
+			return;
+		}
+		Map<String, Integer> result = new LinkedHashMap<>();
+		for (Map.Entry<String, Integer> entry : previous.entrySet()) {
+			if (!known.contains(entry.getKey())) {
+				result.put(entry.getKey(), entry.getValue());
+			} else if (selection.containsKey(entry.getKey())) {
+				result.put(entry.getKey(), selection.get(entry.getKey()));
+			}
 		}
 		for (Option option : options) {
-			if (selection.contains(option.id) && !result.contains(option.id)) result.add(option.id);
+			if (selection.containsKey(option.id) && !result.containsKey(option.id)) {
+				result.put(option.id, selection.get(option.id));
+			}
 		}
-		if (mode == Mode.SINGLE) {
-			if (!selection.isEmpty()) field.setText(selection.iterator().next());
-			else if (!previous.isEmpty() && known.contains(previous.get(0))) field.setText("");
-		} else {
-			field.setText(String.join(",", result));
-		}
+		field.setText(expand(result));
 		close();
 	}
 
-	private List<String> parse(String value) {
+	private String expand(Map<String, Integer> counts) {
+		StringBuilder value = new StringBuilder();
+		for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+			for (int index = 0; index < entry.getValue(); index++) {
+				if (value.length() > 0) value.append(',');
+				value.append(entry.getKey());
+			}
+		}
+		return value.toString();
+	}
 
-		List<String> ids = new ArrayList<>();
-		if (value == null || value.isBlank()) return ids;
+	private Map<String, Integer> parse(String value) {
+
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		if (value == null || value.isBlank()) return counts;
 		if (mode == Mode.SINGLE) {
-			ids.add(value.trim());
-			return ids;
+			counts.put(value.trim(), 1);
+			return counts;
 		}
 		for (String part : value.split(",")) {
 			String id = part.trim();
-			if (!id.isEmpty() && !ids.contains(id)) ids.add(id);
+			if (id.isEmpty()) continue;
+			counts.put(id, Math.min(counts.getOrDefault(id, 0) + 1, maxCount(id)));
 		}
-		return ids;
+		return counts;
+	}
+
+	private int maxCount(String id) {
+		return Math.max(1, source.getMaxCount(id));
 	}
 
 	private boolean contains(UIComponentAPI component, float x, float y) {
@@ -438,12 +471,13 @@ public class BattleNext_OptionField {
 
 		@Override
 		public void renderBelow(float alphaMult) {
-			drawRect(position, selection.contains(option.id) ? TILE_SELECTED : TILE_NORMAL, alphaMult);
+			drawRect(position, selection.getOrDefault(option.id, 0) > 0 ? TILE_SELECTED : TILE_NORMAL, alphaMult);
 		}
 
 		@Override
 		public void render(float alphaMult) {
-			if (!selection.contains(option.id)) return;
+			int count = selection.getOrDefault(option.id, 0);
+			if (count == 0) return;
 			GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_LINE_BIT);
 			GL11.glDisable(GL11.GL_TEXTURE_2D);
 			GL11.glColor4f(0.5f, 0.9f, 1f, alphaMult);
@@ -459,6 +493,18 @@ public class BattleNext_OptionField {
 			GL11.glVertex2f(position.getX() + 51f, position.getY() + 46f);
 			GL11.glVertex2f(position.getX() + 60f, position.getY() + 59f);
 			GL11.glEnd();
+			if (count > 1) {
+				GL11.glBegin(GL11.GL_QUADS);
+				for (int index = 0; index < count - 1; index++) {
+					float pipX = position.getX() + TILE_SIZE - 10f - index * 7f;
+					float pipY = position.getY() + 4f;
+					GL11.glVertex2f(pipX, pipY);
+					GL11.glVertex2f(pipX + 5f, pipY);
+					GL11.glVertex2f(pipX + 5f, pipY + 5f);
+					GL11.glVertex2f(pipX, pipY + 5f);
+				}
+				GL11.glEnd();
+			}
 			GL11.glPopAttrib();
 		}
 
@@ -467,10 +513,14 @@ public class BattleNext_OptionField {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
-				boolean selected = selection.contains(option.id);
 				if (mode == Mode.SINGLE) selection.clear();
-				if (!selected) selection.add(option.id);
-				else selection.remove(option.id);
+				int max = maxCount(option.id);
+				int next = selection.getOrDefault(option.id, 0) + 1;
+				if (next > max) {
+					next = 0;
+				}
+				if (next == 0) selection.remove(option.id);
+				else selection.put(option.id, next);
 				event.consume();
 			}
 		}

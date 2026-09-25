@@ -7,8 +7,6 @@ import java.util.Comparator;
 
 public class BattleNext_MemberReport {
 
-	private String fleetId;
-	private int memberIndex;
 	private String variantId;
 	private String name;
 	private double damageDealt;
@@ -23,17 +21,15 @@ public class BattleNext_MemberReport {
 	private float finalCr;
 	private String status;
 
-	public BattleNext_MemberReport(String fleetId, int memberIndex, String variantId, String name) {
-		this.fleetId = normalize(fleetId);
-		this.memberIndex = memberIndex;
+	public BattleNext_MemberReport(String variantId, String name) {
 		this.variantId = normalize(variantId);
 		this.name = normalize(name);
 		status = "alive";
 	}
 
 	public static BattleNext_MemberReport fromJson(JSONObject json) {
-		BattleNext_MemberReport report = new BattleNext_MemberReport(json.optString("fleetId", ""),
-				json.optInt("memberIndex", -1), json.optString("variantId", ""), json.optString("name", ""));
+		BattleNext_MemberReport report = new BattleNext_MemberReport(json.optString("variantId", ""),
+				json.optString("name", ""));
 		report.damageDealt = json.optDouble("damageDealt", 0d);
 		report.damageTaken = json.optDouble("damageTaken", 0d);
 		report.hullDamageDealt = json.optDouble("hullDamageDealt", 0d);
@@ -50,8 +46,6 @@ public class BattleNext_MemberReport {
 
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
-		json.put("fleetId", fleetId);
-		json.put("memberIndex", memberIndex);
 		json.put("variantId", variantId);
 		json.put("name", name);
 		json.put("damageDealt", damageDealt);
@@ -66,14 +60,6 @@ public class BattleNext_MemberReport {
 		json.put("finalCr", finalCr);
 		json.put("status", status);
 		return json;
-	}
-
-	public String getFleetId() {
-		return fleetId;
-	}
-
-	public int getMemberIndex() {
-		return memberIndex;
 	}
 
 	public String getVariantId() {
@@ -149,10 +135,8 @@ public class BattleNext_MemberReport {
 	}
 
 	public static Comparator<BattleNext_MemberReport> damageOrder(boolean dealt) {
-		Comparator<BattleNext_MemberReport> metric = Comparator.comparingDouble(
-				(BattleNext_MemberReport member) -> dealt ? member.damageDealt : member.damageTaken);
-		return metric.reversed().thenComparing(BattleNext_MemberReport::getFleetId)
-				.thenComparingInt(BattleNext_MemberReport::getMemberIndex);
+		return Comparator.comparingDouble(
+				(BattleNext_MemberReport member) -> dealt ? member.damageDealt : member.damageTaken).reversed();
 	}
 
 	private static String normalize(String value) {

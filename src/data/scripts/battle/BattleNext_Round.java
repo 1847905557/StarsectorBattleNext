@@ -1,6 +1,6 @@
 package data.scripts.battle;
 
-import data.scripts.report.BattleNext_BattleReport;
+import data.scripts.report.BattleNext_BattleReportModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -11,13 +11,13 @@ public class BattleNext_Round {
 	private String enemy;
 	private String winner = "draw";
 	private int attempt;
-	private BattleNext_BattleReport report;
+	private BattleNext_BattleReportModel report;
 
 	public BattleNext_Round(int number, String player, String enemy) {
 		this.number = number;
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
-		this.report = new BattleNext_BattleReport();
+		this.report = new BattleNext_BattleReportModel();
 	}
 
 	public static BattleNext_Round fromJson(JSONObject json) {
@@ -26,7 +26,7 @@ public class BattleNext_Round {
 		round.attempt = Math.max(0, json.optInt("attempt", 0));
 		JSONObject report = json.optJSONObject("report");
 		if (report != null) {
-			round.report = BattleNext_BattleReport.fromJson(report);
+			round.report = BattleNext_BattleReportModel.fromJson(report);
 		}
 		return round;
 	}
@@ -70,11 +70,11 @@ public class BattleNext_Round {
 		this.attempt = Math.max(0, attempt);
 	}
 
-	public BattleNext_BattleReport getReport() {
+	public BattleNext_BattleReportModel getReport() {
 		return report;
 	}
 
-	public void setReport(BattleNext_BattleReport report) {
-		this.report = report == null ? new BattleNext_BattleReport() : report;
+	public void setReport(BattleNext_BattleReportModel report) {
+		this.report = report == null ? new BattleNext_BattleReportModel() : report;
 	}
 }

@@ -9,7 +9,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
@@ -170,7 +170,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private String sourceLabel() {
 		if (selectedId.isEmpty()) return text("quick_battle");
-		BattleNext_Tournament tournament = tournamentStore.get(selectedId);
+		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null) return text("tournament_missing") + " [" + selectedId + "]";
 		return tournament.getName() + " [" + selectedId + "]";
 	}
@@ -178,7 +178,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private List<BattleNext_DropdownField.Option> sourceOptions() {
 		List<BattleNext_DropdownField.Option> options = new ArrayList<>();
 		options.add(new BattleNext_DropdownField.Option("", text("quick_battle")));
-		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			options.add(new BattleNext_DropdownField.Option(tournament.getId(),
 					tournament.getName() + " [" + tournament.getId() + "]"));
 		}
@@ -187,7 +187,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private void buildTournamentDetails(CustomPanelAPI detailPanel) {
 
-		BattleNext_Tournament tournament = tournamentStore.get(selectedId);
+		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null) {
 			UIRect messageRect = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight());
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
@@ -207,7 +207,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		scheduleSetup(columns[1], detailPanel, tournament);
 	}
 
-	private void listRectSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_Tournament tournament) {
+	private void listRectSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_TournamentModel tournament) {
 		rect.removeLatestSubPanel();
 		CustomPanelAPI summaryPanel = rect.createSubPanel(detailPanel, null).getPanel();
 		TooltipMakerAPI summary = summaryPanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
@@ -227,7 +227,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		summaryPanel.addUIElement(summary).inTL(0f, 0f);
 	}
 
-	private void scheduleSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_Tournament tournament) {
+	private void scheduleSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_TournamentModel tournament) {
 		rect.removeLatestSubPanel();
 		CustomPanelAPI schedulePanel = rect.createSubPanel(detailPanel, detailPanel.getPlugin()).getPanel();
 		TooltipMakerAPI schedule = schedulePanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
@@ -264,7 +264,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			refreshContent();
 			return;
 		}
-		BattleNext_Tournament source = tournamentStore.get(selectedId);
+		BattleNext_TournamentModel source = tournamentStore.get(selectedId);
 		if (source == null || source.isStarted()) return;
 		if (!List.of("single_elim", "double_elim", "round_robin", "kof").contains(source.getBracketType())
 				|| !List.of("BO1", "BO3", "BO5").contains(source.getMatchFormat())
@@ -278,9 +278,9 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			refreshContent();
 			return;
 		}
-		BattleNext_Tournament tournament;
+		BattleNext_TournamentModel tournament;
 		try {
-			tournament = BattleNext_Tournament.fromJson(source.toJson());
+			tournament = BattleNext_TournamentModel.fromJson(source.toJson());
 		} catch (Exception exception) {
 			loadError = exception.getMessage();
 			refreshContent();
@@ -309,7 +309,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		refreshContent();
 	}
 
-	private BattleNext_Match nextMatch(BattleNext_Tournament tournament) {
+	private BattleNext_Match nextMatch(BattleNext_TournamentModel tournament) {
 		if (!tournament.isStarted() || tournament.isCompleted()) return null;
 		BattleNext_Match pending = tournament.findMatch(tournament.getPendingMatchId());
 		if (pending != null && "pending".equals(pending.getStatus())) return pending;
@@ -319,7 +319,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		return null;
 	}
 
-	private String tournamentStatus(BattleNext_Tournament tournament) {
+	private String tournamentStatus(BattleNext_TournamentModel tournament) {
 		if (tournament.isCompleted()) return text("tournament_completed");
 		if (tournament.isStarted()) return text("tournament_in_progress");
 		return text("tournament_not_started");
