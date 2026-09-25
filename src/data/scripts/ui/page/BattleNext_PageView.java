@@ -6,6 +6,10 @@ public interface BattleNext_PageView {
 
 	void attach(CustomPanelAPI body);
 
+	void createContents();
+
+	void refreshContent();
+
 	default void buttonPressed(Object buttonId) {
 
 	}
@@ -18,11 +22,11 @@ public interface BattleNext_PageView {
 		return true;
 	}
 
-	default String getStatusText() {
-		return "";
-	}
-
 	default void discard() {
 
+	}
+
+	default String getStatusText() {
+		return "";
 	}
 }
