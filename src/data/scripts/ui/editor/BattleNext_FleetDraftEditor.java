@@ -5,7 +5,7 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetCatalog;
 import data.scripts.fleet.BattleNext_FleetModel;

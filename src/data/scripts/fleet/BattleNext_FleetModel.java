@@ -1,6 +1,7 @@
 package data.scripts.fleet;
 
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,7 +28,7 @@ public class BattleNext_FleetModel {
 	private String color;
 	private String vsImage;
 	private String rulesId;
-	private String source;
+	private String sourceType;
 	private String sourcePath;
 	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
 	private final List<String> loadErrors = new ArrayList<>();
@@ -50,7 +51,7 @@ public class BattleNext_FleetModel {
 		this.color = "";
 		this.vsImage = "";
 		this.rulesId = "";
-		this.source = "native";
+		this.sourceType = BattleNext_LoadSource.NATIVE;
 		this.sourcePath = "";
 	}
 
@@ -199,12 +200,12 @@ public class BattleNext_FleetModel {
 		this.rulesId = normalize(rulesId);
 	}
 
-	public String getSource() {
-		return source;
+	public String getSourceType() {
+		return sourceType;
 	}
 
-	public void setSource(String source) {
-		this.source = normalize(source);
+	public void setSourceType(String sourceType) {
+		this.sourceType = normalize(sourceType);
 	}
 
 	public String getSourcePath() {

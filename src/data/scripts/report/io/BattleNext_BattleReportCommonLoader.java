@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_BattleReportLoader {
+public class BattleNext_BattleReportCommonLoader {
 
 	private static final String PATH = "AI_Battles_Next/reports/reports.json";
 

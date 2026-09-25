@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -16,7 +17,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-public class BattleNext_LegacyLoader {
+public class BattleNext_FleetLegacyLoader {
 
 	public List<BattleNext_FleetModel> loadDirectory(Path directory) throws IOException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
@@ -49,7 +50,7 @@ public class BattleNext_LegacyLoader {
 				String fleetText = Global.getSettings().loadText(fleetPath, modId);
 				result.add(loadFleet(number, rows(dataText, dataPath), rows(fleetText, fleetPath), dataPath));
 			} catch (IOException | JSONException exception) {
-				Global.getLogger(BattleNext_LegacyLoader.class).warn("Skipping legacy fleet " + number + " from " + root, exception);
+				Global.getLogger(BattleNext_FleetLegacyLoader.class).warn("Skipping legacy fleet " + number + " from " + root, exception);
 			}
 		}
 		return result;
@@ -77,7 +78,7 @@ public class BattleNext_LegacyLoader {
 					splitValues(column(row, 3)), column(row, 5), column(row, 6), splitValues(column(row, 7))));
 		}
 		BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, column(data, 0), column(data, 1), skills, tags, members);
-		result.setSource("legacy");
+		result.setSourceType(BattleNext_LoadSource.LEGACY);
 		result.setSourcePath(sourcePath);
 		return result;
 	}

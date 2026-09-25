@@ -1,9 +1,11 @@
 package data.scripts.fleet;
 
 import com.fs.starfarer.api.Global;
-import data.scripts.fleet.io.BattleNext_FleetLoader;
+import data.scripts.fleet.io.BattleNext_FleetCommonLoader;
+import data.scripts.tools.BattleNext_LoadSource;
 import data.scripts.fleet.io.BattleNext_FleetSaver;
-import data.scripts.fleet.io.BattleNext_LegacyLoader;
+import data.scripts.fleet.io.BattleNext_FleetStandardLoader;
+import data.scripts.fleet.io.BattleNext_FleetLegacyLoader;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -17,14 +19,16 @@ public class BattleNext_FleetStore {
 	private static final String LEGACY_ROOT = "tournament";
 	private static final String MOD_ID = "AI_Battles_Next";
 
-	private final BattleNext_FleetLoader loader;
-	private final BattleNext_LegacyLoader legacyLoader;
+	private final BattleNext_FleetStandardLoader standardLoader;
+	private final BattleNext_FleetCommonLoader commonLoader;
+	private final BattleNext_FleetLegacyLoader legacyLoader;
 	private final BattleNext_FleetSaver saver;
 	private final Map<String, BattleNext_FleetModel> fleets = new LinkedHashMap<>();
 
 	public BattleNext_FleetStore() {
-		loader = new BattleNext_FleetLoader();
-		legacyLoader = new BattleNext_LegacyLoader();
+		standardLoader = new BattleNext_FleetStandardLoader();
+		commonLoader = new BattleNext_FleetCommonLoader();
+		legacyLoader = new BattleNext_FleetLegacyLoader();
 		saver = new BattleNext_FleetSaver();
 	}
 
@@ -44,8 +48,8 @@ public class BattleNext_FleetStore {
 	public void reload(List<BattleNext_FleetModel> legacy) {
 		fleets.clear();
 		putIfAbsent(legacy);
-		putIfAbsent(loader.loadBuiltIn());
-		putOverride(loader.loadUser());
+		putIfAbsent(standardLoader.load());
+		putOverride(commonLoader.load());
 	}
 
 	public Collection<BattleNext_FleetModel> getAll() {
@@ -59,13 +63,13 @@ public class BattleNext_FleetStore {
 	public void save(BattleNext_FleetModel fleet) throws IOException, JSONException {
 		if (fleet == null || fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet id is required");
 		String path = saver.save(fleet);
-		fleet.setSource("user");
+		fleet.setSourceType(BattleNext_LoadSource.COMMON);
 		fleet.setSourcePath(path);
 		fleets.put(fleet.getId(), fleet);
 	}
 
 	public void delete(BattleNext_FleetModel fleet) throws IOException {
-		if (fleet == null || !"user".equals(fleet.getSource())) return;
+		if (fleet == null || !BattleNext_LoadSource.COMMON.equals(fleet.getSourceType())) return;
 		saver.delete(fleet);
 		fleets.remove(fleet.getId());
 	}

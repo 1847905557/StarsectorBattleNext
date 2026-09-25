@@ -1,6 +1,7 @@
 package data.scripts.tournament;
 
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,6 +29,8 @@ public class BattleNext_Tournament {
 	private String champion = "";
 	private String pendingMatchId = "";
 	private int kofNextIndex;
+	private String sourceType = BattleNext_LoadSource.NATIVE;
+	private String sourcePath = "";
 
 	public BattleNext_Tournament(String id, String name, String bracketType, String matchFormat, int size) {
 		this.id = id == null ? "" : id.trim();
@@ -183,6 +186,22 @@ public class BattleNext_Tournament {
 
 	public void setKofNextIndex(int kofNextIndex) {
 		this.kofNextIndex = Math.max(0, kofNextIndex);
+	}
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
+	}
+
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
+	public void setSourcePath(String sourcePath) {
+		this.sourcePath = sourcePath;
 	}
 
 	public List<String> getTeams() {

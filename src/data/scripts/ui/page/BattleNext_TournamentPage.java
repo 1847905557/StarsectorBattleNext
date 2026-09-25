@@ -2,7 +2,7 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.battlesnext.util.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetModel;
@@ -76,8 +76,8 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.ACCENT, 1f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.ACCENT, 1f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
 		UIRect footerRect = regions[2];
 		String[] actions = {"add", "save", "back"};
 		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / 3f);

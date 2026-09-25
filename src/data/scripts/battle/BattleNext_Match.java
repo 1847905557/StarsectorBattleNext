@@ -1,5 +1,6 @@
 package data.scripts.battle;
 
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,6 +21,8 @@ public class BattleNext_Match {
 	private String status = "pending";
 	private String stage = "main";
 	private boolean replay;
+	private String sourceType = BattleNext_LoadSource.NATIVE;
+	private String sourcePath = "";
 
 	public BattleNext_Match(String id, String player, String enemy, int map, float size) {
 		this.id = id == null ? "" : id.trim();
@@ -142,6 +145,22 @@ public class BattleNext_Match {
 
 	public boolean isReplay() {
 		return replay;
+	}
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
+	}
+
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
+	public void setSourcePath(String sourcePath) {
+		this.sourcePath = sourcePath;
 	}
 
 	public void setReplay(boolean replay) {

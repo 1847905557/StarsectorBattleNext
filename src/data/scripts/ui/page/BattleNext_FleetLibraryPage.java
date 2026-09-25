@@ -6,7 +6,8 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_LoadSource;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
@@ -57,8 +58,8 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.ACCENT, 1f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.ACCENT, 1f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
 		UIRect footerRect = regions[2];
 		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / 3f);
 		for (int index = 0; index < 3; index++) {
@@ -104,7 +105,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
 					text("delete"), "delete", CutStyle.ALL, true);
-			boolean managed = "user".equals(selected.getSource());
+			boolean managed = BattleNext_LoadSource.COMMON.equals(selected.getSourceType());
 			delete.setEnabled(managed);
 			if (!managed) {
 				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
@@ -126,7 +127,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()) {
 			BattleNext_FleetModel selected = store.get(selectedId);
-			if (selected != null && "user".equals(selected.getSource())) {
+			if (selected != null && BattleNext_LoadSource.COMMON.equals(selected.getSourceType())) {
 				deletion.accept(selected.getName() + " [" + selected.getId() + "]", () -> {
 					try {
 						store.delete(selected);
@@ -169,7 +170,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 		BattleNext_FleetModel original = selectedId.isEmpty() ? null : store.get(selectedId);
 		if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
-				&& !"user".equals(original.getSource())) {
+				&& !BattleNext_LoadSource.COMMON.equals(original.getSourceType())) {
 			setStatus(text("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) { setStatus(editor.getStatusText()); return false; }

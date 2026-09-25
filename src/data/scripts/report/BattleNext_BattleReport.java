@@ -1,5 +1,6 @@
 package data.scripts.report;
 
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,6 +15,8 @@ public class BattleNext_BattleReport {
 	private String winner = "draw";
 	private long durationMillis = 0L;
 	private List<BattleNext_MemberReport> members = new ArrayList<>();
+	private String sourceType = BattleNext_LoadSource.COMMON;
+	private String sourcePath = "";
 
 	public static BattleNext_BattleReport fromJson(JSONObject json) {
 		BattleNext_BattleReport report = new BattleNext_BattleReport();
@@ -67,6 +70,22 @@ public class BattleNext_BattleReport {
 
 	public List<BattleNext_MemberReport> getMembers() {
 		return Collections.unmodifiableList(members);
+	}
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
+	}
+
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
+	public void setSourcePath(String sourcePath) {
+		this.sourcePath = sourcePath;
 	}
 
 	public void addMember(BattleNext_MemberReport member) {

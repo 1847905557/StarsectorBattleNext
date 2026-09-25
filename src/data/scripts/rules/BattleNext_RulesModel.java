@@ -1,5 +1,6 @@
 package data.scripts.rules;
 
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,6 +15,8 @@ public class BattleNext_RulesModel {
 
 	private String id;
 	private String name;
+	private String sourceType = BattleNext_LoadSource.NATIVE;
+	private String sourcePath = "";
 	private final List<BattleNext_RulesModel> children = new ArrayList<>();
 	private boolean enabled;
 	private double value;
@@ -77,6 +80,22 @@ public class BattleNext_RulesModel {
 
 	public void setValue(double value) {
 		this.value = value;
+	}
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
+	}
+
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
+	public void setSourcePath(String sourcePath) {
+		this.sourcePath = sourcePath;
 	}
 
 	public List<BattleNext_RulesModel> getChildren() {

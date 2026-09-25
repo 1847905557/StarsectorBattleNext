@@ -1,8 +1,11 @@
 package data.scripts.tournament;
 
-import data.scripts.tournament.io.BattleNext_TournamentLoader;
+import data.scripts.tournament.io.BattleNext_TournamentCommonLoader;
 import data.scripts.tournament.io.BattleNext_TournamentSaver;
-import data.scripts.battlesnext.util.BattleNext_EntryId;
+import data.scripts.tournament.io.BattleNext_TournamentStandardLoader;
+import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -14,7 +17,8 @@ import java.util.HashSet;
 
 public class BattleNext_TournamentStore {
 
-	private final BattleNext_TournamentLoader loader = new BattleNext_TournamentLoader();
+	private final BattleNext_TournamentStandardLoader standardLoader = new BattleNext_TournamentStandardLoader();
+	private final BattleNext_TournamentCommonLoader commonLoader = new BattleNext_TournamentCommonLoader();
 	private final BattleNext_TournamentSaver saver = new BattleNext_TournamentSaver();
 	private final Map<String, BattleNext_Tournament> tournaments = new LinkedHashMap<>();
 	private final Set<String> managedIds = new HashSet<>();
@@ -23,11 +27,11 @@ public class BattleNext_TournamentStore {
 	public void reload() throws IOException, JSONException {
 		tournaments.clear();
 		managedIds.clear();
-		tournaments.putAll(loader.loadBuiltIn());
-		Map<String, BattleNext_Tournament> users = loader.loadUser();
+		tournaments.putAll(standardLoader.load());
+		Map<String, BattleNext_Tournament> users = commonLoader.load();
 		tournaments.putAll(users);
 		managedIds.addAll(users.keySet());
-		activeId = loader.loadActiveId();
+		activeId = commonLoader.loadActiveId();
 	}
 
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
@@ -35,6 +39,12 @@ public class BattleNext_TournamentStore {
 			throw new IllegalArgumentException("Tournament is required");
 		}
 		saver.save(tournament);
+		tournament.setSourceType(BattleNext_LoadSource.COMMON);
+		tournament.setSourcePath("AI_Battles_Next/tournament/" + tournament.getId() + ".json");
+		for (BattleNext_Match match : tournament.getMatches()) {
+			match.setSourceType(BattleNext_LoadSource.COMMON);
+			match.setSourcePath(tournament.getSourcePath());
+		}
 		tournaments.put(tournament.getId(), tournament);
 		managedIds.add(tournament.getId());
 	}

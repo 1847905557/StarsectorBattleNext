@@ -1,4 +1,4 @@
-package data.scripts.battlesnext.util;
+package data.scripts.tools;
 
 import java.util.Locale;
 
