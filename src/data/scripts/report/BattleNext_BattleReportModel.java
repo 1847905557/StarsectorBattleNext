@@ -14,6 +14,7 @@ public class BattleNext_BattleReport {
 	private String id = "";
 	private String winner = "draw";
 	private long durationMillis = 0L;
+	private long createdAt = 0L;
 	private List<BattleNext_MemberReport> members = new ArrayList<>();
 	private String sourceType = BattleNext_LoadSource.COMMON;
 	private String sourcePath = "";
@@ -23,6 +24,7 @@ public class BattleNext_BattleReport {
 		report.id = json.optString("id", "");
 		report.winner = json.optString("winner", "draw");
 		report.durationMillis = json.optLong("durationMillis", 0L);
+		report.createdAt = json.optLong("createdAt", 0L);
 		JSONArray members = json.optJSONArray("members");
 		if (members != null) {
 			for (int index = 0; index < members.length(); index++) {
@@ -38,6 +40,7 @@ public class BattleNext_BattleReport {
 		json.put("id", id);
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
+		json.put("createdAt", createdAt);
 		JSONArray members = new JSONArray();
 		for (BattleNext_MemberReport member : this.members) {
 			members.put(member.toJson());
@@ -68,6 +71,14 @@ public class BattleNext_BattleReport {
 
 	public void setDurationMillis(long durationMillis) {
 		this.durationMillis = Math.max(0L, durationMillis);
+	}
+
+	public long getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(long createdAt) {
+		this.createdAt = Math.max(0L, createdAt);
 	}
 
 	public List<BattleNext_MemberReport> getMembers() {
