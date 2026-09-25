@@ -25,7 +25,7 @@ public class BattleNext_PageLayout {
 		TooltipMakerAPI maker = rect.beginTooltip(panel, false);
 		LabelAPI label = maker.addSectionHeading(title, BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
-		rect.syncPositionSize(label.getPosition());
+		label.getPosition().inTL(0f, 0f);
 		rect.addTooltip();
 		return maker;
 	}
