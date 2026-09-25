@@ -1,4 +1,4 @@
-package data.scripts.ui.widget;
+package data.scripts.ui;
 
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
@@ -10,6 +10,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Pair;
 import com.fs.state.AppDriver;
+import data.scripts.ui.widget.BattleNext_BasePanelPlugin;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.config.BoxConfigGUI;
@@ -37,7 +38,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	private CombatEngineAPI engine;
 	private CustomPanelAPI mainPanel;
-	private BattleNext_BoxPanelPlugin mainPlugin;
+	private BattleNext_BasePanelPlugin mainPlugin;
 	private UIPanelAPI screenPanel;
 	private final int[] iconTextures = new int[2];
 	private int backdropTexture;
@@ -180,7 +181,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		}
 		float width = ShaderCore.getScreenWidth() * PANEL_SCALE;
 		float height = ShaderCore.getScreenHeight() * PANEL_SCALE;
-		mainPlugin = new BattleNext_BoxPanelPlugin(this::closePanel);
+		mainPlugin = new BattleNext_BasePanelPlugin(this::closePanel);
 		mainPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
 		mainPanel = Global.getSettings().createCustom(width, height, mainPlugin);
 		mainPanel.getPosition().inBL(ShaderCore.getScreenWidth() * PANEL_MARGIN, ShaderCore.getScreenHeight() * PANEL_MARGIN);

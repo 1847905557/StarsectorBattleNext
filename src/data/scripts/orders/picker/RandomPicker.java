@@ -9,10 +9,10 @@ import data.scripts.orders.OrderPicker;
 import java.util.List;
 import java.util.Random;
 
-public class RandomPicker implements OrderPicker<CombatEntityAPI> {
+public class RandomPicker implements OrderPicker {
 
 	@Override
-	public AssignmentTargetAPI pick(ShipAPI source, List<CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
+	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
 		CombatEntityAPI picked = targets.get(new Random().nextInt(targets.size()));
 		if (picked instanceof ShipAPI) {
 			return engine.getFleetManager(picked.getOwner()).getDeployedFleetMember((ShipAPI)picked);

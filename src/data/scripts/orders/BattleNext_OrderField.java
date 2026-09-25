@@ -9,6 +9,7 @@ import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.util.Misc;
+import data.scripts.battlesnext.util.annotation.LifecycleEntry;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +33,8 @@ public class BattleNext_OrderField {
 		tasks = manager.getTaskManager(ally);
 	}
 
-	public static BattleNext_OrderField get(CombatEngineAPI engine, int owner, boolean ally) {
+	@LifecycleEntry
+	public static BattleNext_OrderField getInstance(CombatEngineAPI engine, int owner, boolean ally) {
 		String key = KEY_PREFIX + owner + (ally ? "_ally" : "");
 		Object value = engine.getCustomData().get(key);
 		if (value instanceof BattleNext_OrderField) return (BattleNext_OrderField)value;

@@ -9,7 +9,6 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
@@ -48,8 +47,8 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 	private void showReport(BattleNext_BattleReport report) {
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Battle report: " + report.getWinner());
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Duration: " + report.getDurationMillis() / 1000f + " seconds");
-		showLeaderboard("Damage Dealt", report.getMembers(), Comparator.comparingDouble(BattleNext_MemberReport::getDamageDealt).reversed(), true);
-		showLeaderboard("Damage Taken", report.getMembers(), Comparator.comparingDouble(BattleNext_MemberReport::getDamageTaken).reversed(), false);
+		showLeaderboard("Damage Dealt", report.getMembers(), true);
+		showLeaderboard("Damage Taken", report.getMembers(), false);
 		for (BattleNext_MemberReport member : report.getMembers()) {
 			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getFleetId() + "[" + member.getMemberIndex()
 					+ "] " + member.getStatus() + " hull=" + member.getFinalHullFraction()
@@ -58,11 +57,9 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Press ESC to exit the battle report.");
 	}
 
-	private void showLeaderboard(String title, List<BattleNext_MemberReport> source,
-			Comparator<BattleNext_MemberReport> metricComparator, boolean dealt) {
+	private void showLeaderboard(String title, List<BattleNext_MemberReport> source, boolean dealt) {
 		List<BattleNext_MemberReport> members = new ArrayList<>(source);
-		members.sort(metricComparator.thenComparing(BattleNext_MemberReport::getFleetId)
-				.thenComparingInt(BattleNext_MemberReport::getMemberIndex));
+		members.sort(BattleNext_MemberReport.damageOrder(dealt));
 		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, title + ":");
 		for (BattleNext_MemberReport member : members) {
 			double value = dealt ? member.getDamageDealt() : member.getDamageTaken();

@@ -36,6 +36,8 @@ public class BattleNext_MemberModel {
 	}
 
 	public static BattleNext_MemberModel fromJson(JSONObject json) {
+		int version = json.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported member formatVersion: " + version);
 		List<String> skills = readStrings(json.optJSONArray("skills"));
 		List<String> tags = readStrings(json.optJSONArray("tags"));
 		return new BattleNext_MemberModel(json.optString("variant_id", ""), json.optString("name", ""),

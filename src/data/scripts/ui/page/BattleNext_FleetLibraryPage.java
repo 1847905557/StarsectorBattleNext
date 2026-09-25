@@ -1,24 +1,26 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.member.BattleNext_MemberModel;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
+import data.scripts.ui.BattleNext_UiTheme;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class BattleNext_FleetLibraryPage {
+public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
 	private final Runnable backAction;
 	private final Consumer<Object> editorAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI heading;
 	private TooltipMakerAPI listContent;
@@ -63,7 +65,7 @@ public class BattleNext_FleetLibraryPage {
 				selected = null;
 				rebuild();
 			} catch (IOException exception) {
-				status = text("BattleNext_ui_save_failed") + ": " + exception.getMessage();
+				status = text("save_failed") + ": " + exception.getMessage();
 				rebuild();
 			}
 		} else if ("back".equals(buttonId)) {
@@ -82,23 +84,23 @@ public class BattleNext_FleetLibraryPage {
 		if (detailContent != null) panel.removeComponent(detailContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_fleets"));
+		heading = BattleNext_PageLayout.heading(panel, text("page_fleets"));
 		float listWidth = BattleNext_PageLayout.listWidth(panel);
 		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
 		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
 				panel.getPosition().getWidth() - listWidth - 10f);
 		footer = BattleNext_PageLayout.footer(panel);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+		BattleNext_PageLayout.button(footer, text("back"), "back", 160f)
 				.getPosition().inBL(0f, 0f);
 		addList();
 		addDetails();
 	}
 
 	private void addList() {
-		listContent.addTitle(text("BattleNext_ui_page_fleets"));
-		BattleNext_PageLayout.button(listContent, text("BattleNext_ui_new_fleet"), "new", 180f);
+		listContent.addTitle(text("page_fleets"));
+		BattleNext_PageLayout.button(listContent, text("new_fleet"), "new", 180f);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
-			String source = "built_in".equals(fleet.getSource()) ? text("BattleNext_ui_read_only") : text("BattleNext_ui_user");
+			String source = "built_in".equals(fleet.getSource()) ? text("read_only") : text("user");
 			BattleNext_PageLayout.button(listContent, fleet.getName() + " [" + source + "]",
 					"fleet:" + fleet.getId(), listContent.getPosition().getWidth() - 20f);
 		}
@@ -107,13 +109,13 @@ public class BattleNext_FleetLibraryPage {
 	private void addDetails() {
 		if (!status.isEmpty()) detailContent.addPara(status, 0f, BattleNext_UiTheme.MUTED);
 		if (selected == null) {
-			detailContent.addTitle(text("BattleNext_ui_select_fleet"));
+			detailContent.addTitle(text("select_fleet"));
 			return;
 		}
 		detailContent.addTitle(selected.getName());
 		detailContent.addPara(selected.getDescription(), 8f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("BattleNext_ui_variant_count") + ": " + selected.getVariants().size(), 8f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("BattleNext_ui_fleet_section_members"), 10f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("variant_count") + ": " + selected.getVariants().size(), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("fleet_section_members"), 10f, BattleNext_UiTheme.ACCENT);
 		for (String error : selected.getLoadErrors()) {
 			detailContent.addPara(error, 6f, BattleNext_UiTheme.MUTED);
 		}
@@ -122,11 +124,11 @@ public class BattleNext_FleetLibraryPage {
 					BattleNext_UiTheme.TEXT);
 		}
 		if ("user".equals(selected.getSource())) {
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_edit_fleet"), "edit", 160f);
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_clone_fleet"), "clone", 160f);
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_delete"), "delete", 160f);
+			BattleNext_PageLayout.button(detailContent, text("edit_fleet"), "edit", 160f);
+			BattleNext_PageLayout.button(detailContent, text("clone_fleet"), "clone", 160f);
+			BattleNext_PageLayout.button(detailContent, text("delete"), "delete", 160f);
 		} else {
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_clone_fleet"), "clone", 160f);
+			BattleNext_PageLayout.button(detailContent, text("clone_fleet"), "clone", 160f);
 		}
 	}
 

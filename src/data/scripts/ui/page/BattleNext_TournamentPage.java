@@ -1,27 +1,31 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
+import data.scripts.ui.BattleNext_UiTheme;
 
 import java.io.IOException;
 import java.util.List;
 
-public class BattleNext_TournamentPage {
+public class BattleNext_TournamentPage implements BattleNext_PageView {
 
 	private final Runnable backAction;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI heading;
 	private TooltipMakerAPI listContent;
@@ -96,10 +100,10 @@ public class BattleNext_TournamentPage {
 	private void createTournament() throws IOException, org.json.JSONException {
 		int slot = firstFreeSlot();
 		if (slot < 0) {
-			throw new IllegalStateException(text("BattleNext_ui_tournament_no_slot"));
+			throw new IllegalStateException(text("tournament_no_slot"));
 		}
 		BattleNext_Tournament tournament = new BattleNext_Tournament(slot,
-				text("BattleNext_ui_tournament_context") + " " + slot, "single_elim", "BO1", 2);
+				text("tournament_context") + " " + slot, "single_elim", "BO1", 2);
 		int added = 0;
 		for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
 			tournament.addTeam(fleet.getId());
@@ -109,11 +113,11 @@ public class BattleNext_TournamentPage {
 			}
 		}
 		if (added < 2) {
-			throw new IllegalStateException(text("BattleNext_ui_tournament_need_fleets"));
+			throw new IllegalStateException(text("tournament_need_fleets"));
 		}
 		tournamentStore.save(tournament);
 		selected = tournament;
-		status = text("BattleNext_ui_tournament_created");
+		status = text("tournament_created");
 	}
 
 	private void startTournament() throws IOException, org.json.JSONException {
@@ -121,12 +125,12 @@ public class BattleNext_TournamentPage {
 			return;
 		}
 		if (rulesStore.get(selected.getRulesSlot()) == null) {
-			status = text("BattleNext_ui_tournament_rules_unavailable");
+			status = text("tournament_rules_unavailable");
 			return;
 		}
 		engine.start(selected);
 		tournamentStore.save(selected);
-		status = text("BattleNext_ui_tournament_started");
+		status = text("tournament_started");
 	}
 
 	private int firstFreeSlot() {
@@ -144,21 +148,21 @@ public class BattleNext_TournamentPage {
 		if (detailContent != null) panel.removeComponent(detailContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_tournaments"));
+		heading = BattleNext_PageLayout.heading(panel, text("page_tournaments"));
 		float listWidth = BattleNext_PageLayout.listWidth(panel);
 		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
 		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
 				panel.getPosition().getWidth() - listWidth - 10f);
 		footer = BattleNext_PageLayout.footer(panel);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+		BattleNext_PageLayout.button(footer, text("back"), "back", 160f)
 				.getPosition().inBL(0f, 0f);
 		addList();
 		addDetails();
 	}
 
 	private void addList() {
-		listContent.addTitle(text("BattleNext_ui_page_tournaments"));
-		BattleNext_PageLayout.button(listContent, text("BattleNext_ui_tournament_create"),
+		listContent.addTitle(text("page_tournaments"));
+		BattleNext_PageLayout.button(listContent, text("tournament_create"),
 				"tournament:create", 220f);
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 			String label = tournament.getName() + " [" + tournament.getBracketType() + ", "
@@ -171,37 +175,37 @@ public class BattleNext_TournamentPage {
 	private void addDetails() {
 		if (!status.isEmpty()) detailContent.addPara(status, 0f, BattleNext_UiTheme.MUTED);
 		if (selected == null) {
-			detailContent.addTitle(text("BattleNext_ui_select_tournament"));
+			detailContent.addTitle(text("select_tournament"));
 			return;
 		}
 		detailContent.addTitle(selected.getName());
 		detailContent.addPara(selected.getBracketType() + " / " + selected.getMatchFormat() + " / "
-				+ selected.getTeams().size() + " " + text("BattleNext_ui_teams"), 8f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(selected.isStarted() ? text("BattleNext_ui_tournament_locked")
-				: text("BattleNext_ui_tournament_editable"), 8f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("BattleNext_ui_tournament_rules") + ": "
+				+ selected.getTeams().size() + " " + text("teams"), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(selected.isStarted() ? text("tournament_locked")
+				: text("tournament_editable"), 8f, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("tournament_rules") + ": "
 				+ (rulesStore.get(selected.getRulesSlot()) == null
-				? text("BattleNext_ui_tournament_rules_unavailable") : text("BattleNext_ui_tournament_rules_ready")),
+				? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
 				8f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("BattleNext_ui_teams"), 10f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("teams"), 10f, BattleNext_UiTheme.ACCENT);
 		for (String team : selected.getTeams()) {
 			detailContent.addPara(team, 6f, BattleNext_UiTheme.TEXT);
 		}
-		detailContent.addPara(text("BattleNext_ui_matches"), 10f, BattleNext_UiTheme.ACCENT);
-		for (data.scripts.battle.BattleNext_Match match : selected.getMatches()) {
+		detailContent.addPara(text("matches"), 10f, BattleNext_UiTheme.ACCENT);
+		for (BattleNext_Match match : selected.getMatches()) {
 			detailContent.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
 					+ " [" + match.getStatus() + "]", 6f, BattleNext_UiTheme.TEXT);
 		}
 		if (selected.getSlot() == tournamentStore.getActiveSlot()) {
-			detailContent.addPara(text("BattleNext_ui_tournament_active"), 8f, BattleNext_UiTheme.ACCENT);
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_deactivate"),
+			detailContent.addPara(text("tournament_active"), 8f, BattleNext_UiTheme.ACCENT);
+			BattleNext_PageLayout.button(detailContent, text("tournament_deactivate"),
 					"tournament:deactivate", 220f);
 		} else {
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_activate"),
+			BattleNext_PageLayout.button(detailContent, text("tournament_activate"),
 					"tournament:activate", 220f);
 		}
 		if (!selected.isStarted()) {
-			BattleNext_PageLayout.button(detailContent, text("BattleNext_ui_tournament_start"),
+			BattleNext_PageLayout.button(detailContent, text("tournament_start"),
 					"tournament:start", 220f);
 		}
 	}

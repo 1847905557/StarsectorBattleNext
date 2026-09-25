@@ -3,6 +3,7 @@ package data.scripts.tournament.io;
 import com.fs.starfarer.api.Global;
 import data.scripts.tournament.BattleNext_Tournament;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -39,6 +40,9 @@ public class BattleNext_TournamentLoader {
 
 	public int loadActiveSlot() throws IOException, JSONException {
 		if (!Global.getSettings().fileExistsInCommon(META_PATH)) return -1;
-		return Global.getSettings().readJSONFromCommon(META_PATH, false).optInt("activeTournamentSlot", -1);
+		JSONObject meta = Global.getSettings().readJSONFromCommon(META_PATH, false);
+		int version = meta.optInt("formatVersion", BattleNext_Tournament.META_FORMAT_VERSION);
+		if (version != BattleNext_Tournament.META_FORMAT_VERSION) throw new IllegalArgumentException("Unsupported meta formatVersion: " + version);
+		return meta.optInt("activeTournamentSlot", -1);
 	}
 }

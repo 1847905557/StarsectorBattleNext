@@ -3,6 +3,8 @@ package data.scripts.report;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Comparator;
+
 public class BattleNext_MemberReport {
 
 	private String fleetId;
@@ -144,6 +146,13 @@ public class BattleNext_MemberReport {
 		this.finalHullFraction = Math.max(0f, Math.min(1f, finalHullFraction));
 		this.finalCr = Math.max(0f, Math.min(1f, finalCr));
 		this.status = normalizeStatus(status);
+	}
+
+	public static Comparator<BattleNext_MemberReport> damageOrder(boolean dealt) {
+		Comparator<BattleNext_MemberReport> metric = Comparator.comparingDouble(
+				(BattleNext_MemberReport member) -> dealt ? member.damageDealt : member.damageTaken);
+		return metric.reversed().thenComparing(BattleNext_MemberReport::getFleetId)
+				.thenComparingInt(BattleNext_MemberReport::getMemberIndex);
 	}
 
 	private static String normalize(String value) {

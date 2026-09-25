@@ -7,10 +7,10 @@ import data.scripts.orders.OrderFilter;
 import org.lazywizard.lazylib.MathUtils;
 import java.util.List;
 
-public class DistanceFilter implements OrderFilter<CombatEntityAPI> {
+public class DistanceFilter implements OrderFilter {
 
 	@Override
-	public void filterTargets(ShipAPI source, List<CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
 		float minRange = -1f;
 		float maxRange = params.length == 1 ? Float.parseFloat(params[0]) : Float.parseFloat(params[1]);
 		if (params.length > 1) {

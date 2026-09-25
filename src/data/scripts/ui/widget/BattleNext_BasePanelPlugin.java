@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.List;
 
-public class BattleNext_BoxPanelPlugin extends BaseCustomUIPanelPlugin {
+public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 
 	private final BattleNext_UiManager uiManager;
 	private final UIBorderObject border = new UIBorderObject(false, true);
@@ -23,7 +23,7 @@ public class BattleNext_BoxPanelPlugin extends BaseCustomUIPanelPlugin {
 	private float backdropU;
 	private float backdropV;
 
-	public BattleNext_BoxPanelPlugin(Runnable closeAction) {
+	public BattleNext_BasePanelPlugin(Runnable closeAction) {
 		uiManager = new BattleNext_UiManager(closeAction);
 	}
 

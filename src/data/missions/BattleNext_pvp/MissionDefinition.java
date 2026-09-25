@@ -14,7 +14,7 @@ import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import org.lwjgl.input.Keyboard;
+import data.scripts.tools.BattleNext_KeyTuning;
 
 import java.util.List;
 
@@ -39,9 +39,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			return;
 		}
 
-		if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) currentIndex++;
-		if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) currentIndex--;
-		BattleNext_Match match = matches.get(Math.floorMod(currentIndex, matches.size()));
+		currentIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(currentIndex, matches.size());
+		BattleNext_Match match = matches.get(currentIndex);
 		BattleNext_FleetStore fleets = provider.getFleetStore();
 		BattleNext_FleetAssembly player = assembler.assemble(fleets.get(match.getPlayer()));
 		BattleNext_FleetAssembly enemy = assembler.assemble(fleets.get(match.getEnemy()));

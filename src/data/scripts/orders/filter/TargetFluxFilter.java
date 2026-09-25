@@ -1,15 +1,16 @@
 package data.scripts.orders.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.scripts.orders.BattleNext_OrderUtils;
 import data.scripts.orders.OrderFilter;
 import java.util.List;
 
-public class TargetFluxFilter implements OrderFilter<ShipAPI> {
+public class TargetFluxFilter implements OrderFilter {
 
 	@Override
-	public void filterTargets(ShipAPI source, List<ShipAPI> targets, String[] params, CombatEngineAPI engine) {
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
 		float minFlux = -1f;
 		float maxFlux = params.length == 1 ? BattleNext_OrderUtils.factor(params[0]) : BattleNext_OrderUtils.factor(params[1]);
 		if (params.length > 1) {
@@ -22,11 +23,12 @@ public class TargetFluxFilter implements OrderFilter<ShipAPI> {
 		final float lowerBound = minFlux;
 		final float upperBound = maxFlux;
 		targets.removeIf(target -> {
-			if (target.getFluxTracker().isOverloaded()) {
+			ShipAPI ship = (ShipAPI)target;
+			if (ship.getFluxTracker().isOverloaded()) {
 				return false;
 			}
-			float current = BattleNext_OrderUtils.percent(upperBound) ? target.getFluxLevel() : target.getCurrFlux();
-			float minimum = lowerBound < 0f ? Float.NEGATIVE_INFINITY : BattleNext_OrderUtils.percent(lowerBound) ? target.getFluxLevel() : target.getCurrFlux();
+			float current = BattleNext_OrderUtils.percent(upperBound) ? ship.getFluxLevel() : ship.getCurrFlux();
+			float minimum = lowerBound < 0f ? Float.NEGATIVE_INFINITY : BattleNext_OrderUtils.percent(lowerBound) ? ship.getFluxLevel() : ship.getCurrFlux();
 			return current > upperBound || minimum < lowerBound;
 		});
 	}

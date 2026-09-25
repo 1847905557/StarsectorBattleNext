@@ -10,6 +10,8 @@ import java.util.List;
 
 public class BattleNext_RulesModel {
 
+	public static final int FORMAT_VERSION = 1;
+
 	private int slot;
 	private String id;
 	private String name;
@@ -27,6 +29,8 @@ public class BattleNext_RulesModel {
 	}
 
 	public static BattleNext_RulesModel fromJson(JSONObject json) {
+		int version = json.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported rules formatVersion: " + version);
 		BattleNext_RulesModel model = new BattleNext_RulesModel(json.optInt("slot", 0), json.optString("id", ""), json.optString("name", ""));
 		model.enabled = json.optBoolean("enabled", false);
 		model.value = json.optDouble("value", 0d);
@@ -43,7 +47,7 @@ public class BattleNext_RulesModel {
 
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
-		json.put("formatVersion", 1);
+		json.put("formatVersion", FORMAT_VERSION);
 		json.put("slot", slot);
 		json.put("id", id);
 		json.put("name", name);

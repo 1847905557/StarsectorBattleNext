@@ -3,6 +3,7 @@ package data.scripts.fleet.io;
 import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.tools.BattleNext_CsvLine;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -98,7 +99,7 @@ public class BattleNext_LegacyLoader {
 				header = false;
 				continue;
 			}
-			result.add(parse(line));
+			result.add(BattleNext_CsvLine.parse(line).toArray(new String[0]));
 		}
 		return result;
 	}
@@ -119,25 +120,6 @@ public class BattleNext_LegacyLoader {
 		} catch (Exception ignored) {
 		}
 		return List.of();
-	}
-
-	private String[] parse(String line) {
-		List<String> values = new ArrayList<>();
-		StringBuilder value = new StringBuilder();
-		boolean quoted = false;
-		for (int index = 0; index < line.length(); index++) {
-			char current = line.charAt(index);
-			if (current == '"') {
-				quoted = !quoted;
-			} else if (current == ',' && !quoted) {
-				values.add(value.toString().trim());
-				value.setLength(0);
-			} else {
-				value.append(current);
-			}
-		}
-		values.add(value.toString().trim());
-		return values.toArray(String[]::new);
 	}
 
 	private String column(String[] row, int index) {

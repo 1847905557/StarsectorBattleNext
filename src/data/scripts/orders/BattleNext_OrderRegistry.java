@@ -1,7 +1,11 @@
 package data.scripts.orders;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.battlesnext.util.annotation.LifecycleEntry;
+import data.scripts.tools.BattleNext_CsvLine;
+import org.json.JSONException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -13,19 +17,42 @@ public class BattleNext_OrderRegistry {
 
 
 	private static final List<String> TYPES = List.of("starter", "filter", "picker", "suffix");
+	private static final String ORDERS_CSV_PATH = "data/automation/orders.csv";
+	private static final String MOD_ID = "AI_Battles_Next";
+	private static final BattleNext_OrderRegistry INSTANCE = new BattleNext_OrderRegistry();
 
 	private final Map<String, Map<String, BattleNext_OrderSpec>> byType = new LinkedHashMap<>();
 
-	public BattleNext_OrderRegistry() {
+	private BattleNext_OrderRegistry() {
 		for (String type : TYPES) {
 			byType.put(type, new LinkedHashMap<>());
 		}
+	}
+
+	@LifecycleEntry
+	public static void loadFromSettings() {
+		String orders;
+		try {
+			orders = Global.getSettings().loadText(ORDERS_CSV_PATH, MOD_ID);
+		} catch (IOException | JSONException exception) {
+			throw new IllegalArgumentException("Unable to read data/automation/orders.csv", exception);
+		}
+		List<String> errors = INSTANCE.loadCsv(orders);
+		errors.addAll(INSTANCE.validate());
+		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid data/automation/orders.csv: " + String.join("; ", errors));
+	}
+
+	public static BattleNext_OrderRegistry getInstance() {
+		return INSTANCE;
 	}
 
 	public List<String> loadCsv(String csv) {
 		List<String> errors = new ArrayList<>();
 		if (csv == null) {
 			return List.of("orders.csv is null");
+		}
+		for (String type : TYPES) {
+			byType.get(type).clear();
 		}
 		int lineNumber = 0;
 		for (String line : csv.split("\\R")) {
@@ -34,7 +61,7 @@ public class BattleNext_OrderRegistry {
 			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("id,type,script,desc")) {
 				continue;
 			}
-			List<String> fields = parse(line);
+			List<String> fields = BattleNext_CsvLine.parse(line);
 			if (fields.size() < 4) {
 				errors.add("line " + lineNumber + ": expected id,type,script,desc");
 				continue;
@@ -94,24 +121,5 @@ public class BattleNext_OrderRegistry {
 
 	public Map<String, BattleNext_OrderSpec> get(String type) {
 		return Collections.unmodifiableMap(byType.getOrDefault(type == null ? "" : type.toLowerCase(Locale.ROOT), Map.of()));
-	}
-
-	private List<String> parse(String line) {
-		List<String> result = new ArrayList<>();
-		StringBuilder field = new StringBuilder();
-		boolean quoted = false;
-		for (int index = 0; index < line.length(); index++) {
-			char value = line.charAt(index);
-			if (value == '\"') {
-				quoted = !quoted;
-			} else if (value == ',' && !quoted) {
-				result.add(field.toString().trim());
-				field.setLength(0);
-			} else {
-				field.append(value);
-			}
-		}
-		result.add(field.toString().trim());
-		return result;
 	}
 }

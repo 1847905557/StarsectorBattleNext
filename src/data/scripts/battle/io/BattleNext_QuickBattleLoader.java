@@ -2,6 +2,7 @@ package data.scripts.battle.io;
 
 import com.fs.starfarer.api.Global;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.tools.BattleNext_CsvLine;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class BattleNext_QuickBattleLoader {
 				comments.add(trimmed);
 				continue;
 			}
-			List<String> fields = parse(line);
+			List<String> fields = BattleNext_CsvLine.parse(line);
 			if (fields.size() != 4) continue;
 			try {
 				int map = Integer.parseInt(fields.get(2));
@@ -51,24 +52,5 @@ public class BattleNext_QuickBattleLoader {
 			}
 		}
 		return new Snapshot(List.copyOf(matches), List.copyOf(comments));
-	}
-
-	private List<String> parse(String line) {
-		List<String> result = new ArrayList<>();
-		StringBuilder field = new StringBuilder();
-		boolean quoted = false;
-		for (int index = 0; index < line.length(); index++) {
-			char value = line.charAt(index);
-			if (value == '\"') {
-				quoted = !quoted;
-			} else if (value == ',' && !quoted) {
-				result.add(field.toString().trim());
-				field.setLength(0);
-			} else {
-				field.append(value);
-			}
-		}
-		result.add(field.toString().trim());
-		return result;
 	}
 }

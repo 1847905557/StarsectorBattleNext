@@ -14,7 +14,7 @@ import java.util.List;
 public class SpreadPicker extends NearestPicker {
 
 	@Override
-	public AssignmentTargetAPI pick(ShipAPI source, List<CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
+	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
 		targets.sort(new CollectionUtils.SortEntitiesByDistance(source.getLocation()));
 		CombatTaskManagerAPI tasks = engine.getFleetManager(source.getOwner()).getTaskManager(source.isAlly());
 		for (CombatEntityAPI target : targets) {

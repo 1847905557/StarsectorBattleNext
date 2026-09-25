@@ -1,25 +1,25 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.Alignment;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.*;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
+import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 import java.util.List;
 
-public class BattleNext_BattleSelectorPage {
+public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	public static class SourceRequest {
 
@@ -48,8 +48,8 @@ public class BattleNext_BattleSelectorPage {
 	private TooltipMakerAPI sourceBar;
 	private ButtonAPI sourceButton;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
-	private BattleNext_TournamentStore tournamentStore;
-	private BattleNext_RulesStore rulesStore;
+	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
+	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
 	private int selectedSlot = -1;
 	private String loadError = "";
 
@@ -131,8 +131,6 @@ public class BattleNext_BattleSelectorPage {
 
 	private void load() {
 		loadError = "";
-		tournamentStore = new BattleNext_TournamentStore();
-		rulesStore = new BattleNext_RulesStore();
 		try {
 			tournamentStore.reload();
 			selectedSlot = tournamentStore.getActiveSlot();

@@ -1,10 +1,13 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
+import data.scripts.ui.BattleNext_UiTheme;
 
-public class BattleNext_SettingsPage {
+public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 

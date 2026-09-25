@@ -11,7 +11,7 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.member.BattleNext_MemberModel;
-import org.lwjgl.input.Keyboard;
+import data.scripts.tools.BattleNext_KeyTuning;
 
 import java.util.List;
 
@@ -27,13 +27,11 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
-		if (Keyboard.isKeyDown(Keyboard.KEY_UP)) expectedDp = Math.min(MAX_EXPECTED_DP, expectedDp + EXPECTED_DP_STEP);
-		if (Keyboard.isKeyDown(Keyboard.KEY_DOWN)) expectedDp = Math.max(MIN_EXPECTED_DP, expectedDp - EXPECTED_DP_STEP);
-		if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) factionIndex++;
-		if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) factionIndex--;
+		expectedDp = BattleNext_KeyTuning.adjustVerticalClamped(expectedDp, EXPECTED_DP_STEP, MIN_EXPECTED_DP, MAX_EXPECTED_DP);
+		factionIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(factionIndex, FACTION_COUNT);
 		BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
 		BattleNext_FleetAssembly player = assembler.assemble(createFleet("pve-player", "Player fleet", "wolf_CS"));
-		BattleNext_FleetAssembly enemy = assembler.assemble(createFleet("pve-enemy", "Faction fleet " + Math.floorMod(factionIndex, FACTION_COUNT), "lasher_Standard"));
+		BattleNext_FleetAssembly enemy = assembler.assemble(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
 		configureFleet(api, FleetSide.PLAYER, player, true);
 		configureFleet(api, FleetSide.ENEMY, enemy, false);
 		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper("pve-player", player.getMembers(), "pve-enemy", enemy.getMembers());

@@ -11,6 +11,9 @@ import java.util.List;
 
 public class BattleNext_Tournament {
 
+	public static final int FORMAT_VERSION = 1;
+	public static final int META_FORMAT_VERSION = 1;
+
 	private int slot;
 	private String name;
 	private String bracketType;
@@ -38,6 +41,8 @@ public class BattleNext_Tournament {
 	}
 
 	public static BattleNext_Tournament fromJson(JSONObject json) {
+		int version = json.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
 		BattleNext_Tournament tournament = new BattleNext_Tournament(json.optInt("slot", 0), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
 		tournament.rulesSlot = json.optInt("rulesSlot", -1);
 		tournament.mapId = json.optInt("mapId", -1);
@@ -65,7 +70,7 @@ public class BattleNext_Tournament {
 
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
-		json.put("formatVersion", 1);
+		json.put("formatVersion", FORMAT_VERSION);
 		json.put("slot", slot);
 		json.put("name", name);
 		json.put("bracketType", bracketType);

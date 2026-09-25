@@ -1,4 +1,4 @@
-package data.scripts.ui.page;
+package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -12,13 +12,14 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
 import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class BattleNext_FleetDraftEditor {
+public class BattleNext_FleetDraftEditor implements BattleNext_PageView {
 
 	private final Runnable backAction;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
@@ -49,7 +50,12 @@ public class BattleNext_FleetDraftEditor {
 		catalog.refresh();
 	}
 
-	public void attach(CustomPanelAPI panel, BattleNext_FleetModel source, boolean clone) {
+	public void open(BattleNext_FleetModel source, boolean clone) {
+		draft = source == null ? new BattleNext_FleetModel() : copy(source, clone);
+	}
+
+	@Override
+	public void attach(CustomPanelAPI panel) {
 		if (this.panel != panel) {
 			heading = null;
 			metaContent = null;
@@ -57,7 +63,6 @@ public class BattleNext_FleetDraftEditor {
 			footer = null;
 		}
 		this.panel = panel;
-		this.draft = source == null ? new BattleNext_FleetModel() : copy(source, clone);
 		rebuild();
 		savedSnapshot = serializeFields();
 	}

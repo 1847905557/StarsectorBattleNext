@@ -6,10 +6,6 @@ import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
 import data.scripts.orders.BattleNext_OrderRegistry;
 import data.scripts.battlesnext.util.BattleNext_FontData;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import org.json.JSONException;
-
-import java.io.IOException;
-import java.util.List;
 
 public class BattleNextModPlugin extends BaseModPlugin {
 
@@ -25,19 +21,9 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		}
 		try {
 			BattleNext_FontData.init();
+			BattleNext_OrderRegistry.loadFromSettings();
 		} catch (RuntimeException ignored) {
 		}
-		String orders;
-		try {
-			orders = Global.getSettings().loadText("data/automation/orders.csv", "AI_Battles_Next");
-		} catch (IOException | JSONException exception) {
-			throw new IllegalArgumentException("Unable to read data/automation/orders.csv", exception);
-		}
-		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
-		List<String> errors = registry.loadCsv(orders);
-		errors.addAll(registry.validate());
-		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid data/automation/orders.csv: " + String.join("; ", errors));
-
 	}
 
 	@Override

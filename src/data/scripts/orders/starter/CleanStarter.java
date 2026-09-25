@@ -2,15 +2,16 @@ package data.scripts.orders.starter;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.scripts.orders.OrderStarter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CleanStarter implements OrderStarter<ShipAPI> {
+public class CleanStarter implements OrderStarter {
 
 	@Override
-	public List<ShipAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine) {
+	public List<? extends CombatEntityAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine) {
 		List<ShipAPI> targets = new ArrayList<>();
 		targets.add(source);
 		return targets;

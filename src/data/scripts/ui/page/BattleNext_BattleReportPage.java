@@ -1,26 +1,28 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battle.BattleNext_Round;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.report.BattleNext_BattleReport;
 import data.scripts.report.BattleNext_BattleReportStore;
 import data.scripts.report.BattleNext_MemberReport;
-import data.scripts.battle.BattleNext_Round;
 import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_PageView;
+import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
-public class BattleNext_BattleReportPage {
+public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private final Runnable backAction;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<Entry> entries = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI heading;
@@ -80,10 +82,10 @@ public class BattleNext_BattleReportPage {
 			for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 				for (BattleNext_MatchWithRound match : rounds(tournament)) {
 					if (match.round.getReport() != null) {
-						entries.add(new Entry(match.round.getReport(), text("BattleNext_ui_tournament_context") + " "
-								+ tournament.getSlot() + " / " + text("BattleNext_ui_match") + " " + match.matchId
-								+ " / " + text("BattleNext_ui_round") + " " + match.round.getNumber()
-								+ " / " + text("BattleNext_ui_attempt") + " " + match.round.getAttempt()));
+						entries.add(new Entry(match.round.getReport(), text("tournament_context") + " "
+								+ tournament.getSlot() + " / " + text("match") + " " + match.matchId
+								+ " / " + text("round") + " " + match.round.getNumber()
+								+ " / " + text("attempt") + " " + match.round.getAttempt()));
 					}
 				}
 			}
@@ -105,42 +107,42 @@ public class BattleNext_BattleReportPage {
 		if (detailContent != null) panel.removeComponent(detailContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("BattleNext_ui_page_reports"));
+		heading = BattleNext_PageLayout.heading(panel, text("page_reports"));
 		float listWidth = BattleNext_PageLayout.listWidth(panel);
 		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
 		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
 				panel.getPosition().getWidth() - listWidth - 10f);
 		footer = BattleNext_PageLayout.footer(panel);
-		BattleNext_PageLayout.button(footer, text("BattleNext_ui_back"), "back", 160f)
+		BattleNext_PageLayout.button(footer, text("back"), "back", 160f)
 				.getPosition().inBL(0f, 0f);
 		addList();
 		addDetails();
 	}
 
 	private void addList() {
-		listContent.addTitle(text("BattleNext_ui_page_reports"));
+		listContent.addTitle(text("page_reports"));
 		for (int index = 0; index < entries.size(); index++) {
 			Entry entry = entries.get(index);
 			BattleNext_PageLayout.button(listContent, entry.report.getId() + " / " + entry.report.getWinner()
 					+ " / " + entry.report.getMembers().size(), "report:" + index,
 					listContent.getPosition().getWidth() - 20f);
 		}
-		if (entries.isEmpty()) listContent.addPara(text("BattleNext_ui_no_reports"), 8f, BattleNext_UiTheme.MUTED);
+		if (entries.isEmpty()) listContent.addPara(text("no_reports"), 8f, BattleNext_UiTheme.MUTED);
 	}
 
 	private void addDetails() {
 		if (selected == null) {
-			detailContent.addTitle(text("BattleNext_ui_select_report"));
+			detailContent.addTitle(text("select_report"));
 			return;
 		}
 		BattleNext_BattleReport report = selected.report;
 		detailContent.addTitle(report.getId());
-		detailContent.addPara(text("BattleNext_ui_winner") + ": " + report.getWinner() + " / "
-				+ text("BattleNext_ui_duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
+		detailContent.addPara(text("winner") + ": " + report.getWinner() + " / "
+				+ text("duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
 		if (!selected.context.isEmpty()) detailContent.addPara(selected.context, 6f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("BattleNext_ui_damage_dealt"), 10f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("damage_dealt"), 10f, BattleNext_UiTheme.ACCENT);
 		appendMembers(sorted(report, true));
-		detailContent.addPara(text("BattleNext_ui_damage_taken"), 10f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("damage_taken"), 10f, BattleNext_UiTheme.ACCENT);
 		appendMembers(sorted(report, false));
 	}
 
@@ -148,25 +150,24 @@ public class BattleNext_BattleReportPage {
 		for (BattleNext_MemberReport member : members) {
 			detailContent.addPara(member.getFleetId() + "[" + member.getMemberIndex() + "] "
 					+ member.getVariantId() + " " + member.getName(), 5f, BattleNext_UiTheme.TEXT);
-			detailContent.addPara(text("BattleNext_ui_damage_dealt") + ": " + member.getDamageDealt()
-					+ " / " + text("BattleNext_ui_damage_taken") + ": " + member.getDamageTaken()
-					+ " / " + text("BattleNext_ui_status") + ": " + member.getStatus(), 2f,
+			detailContent.addPara(text("damage_dealt") + ": " + member.getDamageDealt()
+					+ " / " + text("damage_taken") + ": " + member.getDamageTaken()
+					+ " / " + text("status") + ": " + member.getStatus(), 2f,
 					BattleNext_UiTheme.MUTED);
-			detailContent.addPara(text("BattleNext_ui_hull") + ": " + member.getHullDamageDealt()
-					+ " / " + member.getHullDamageTaken() + "   " + text("BattleNext_ui_shield")
+			detailContent.addPara(text("hull") + ": " + member.getHullDamageDealt()
+					+ " / " + member.getHullDamageTaken() + "   " + text("shield")
 					+ ": " + member.getShieldDamageDealt() + " / " + member.getShieldDamageTaken(),
 					2f, BattleNext_UiTheme.MUTED);
-			detailContent.addPara(text("BattleNext_ui_emp") + ": " + member.getEmpDamageDealt()
-					+ " / " + member.getEmpDamageTaken() + "   " + text("BattleNext_ui_final_hull")
-					+ ": " + member.getFinalHullFraction() + "   " + text("BattleNext_ui_final_cr")
+			detailContent.addPara(text("emp") + ": " + member.getEmpDamageDealt()
+					+ " / " + member.getEmpDamageTaken() + "   " + text("final_hull")
+					+ ": " + member.getFinalHullFraction() + "   " + text("final_cr")
 					+ ": " + member.getFinalCr(), 2f, BattleNext_UiTheme.MUTED);
 		}
 	}
 
 	private List<BattleNext_MemberReport> sorted(BattleNext_BattleReport report, boolean dealt) {
 		List<BattleNext_MemberReport> result = new ArrayList<>(report.getMembers());
-		result.sort(Comparator.comparingDouble((BattleNext_MemberReport member) -> dealt ? member.getDamageDealt() : member.getDamageTaken())
-				.reversed().thenComparing(BattleNext_MemberReport::getFleetId).thenComparingInt(BattleNext_MemberReport::getMemberIndex));
+		result.sort(BattleNext_MemberReport.damageOrder(dealt));
 		return result;
 	}
 

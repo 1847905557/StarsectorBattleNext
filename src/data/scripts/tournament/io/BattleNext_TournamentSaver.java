@@ -18,7 +18,7 @@ public class BattleNext_TournamentSaver {
 
 	public void saveActiveSlot(int slot) throws IOException, JSONException {
 		JSONObject meta = new JSONObject();
-		meta.put("formatVersion", 1);
+		meta.put("formatVersion", BattleNext_Tournament.META_FORMAT_VERSION);
 		meta.put("activeTournamentSlot", slot);
 		Global.getSettings().writeJSONToCommon(META_PATH, meta, false);
 	}

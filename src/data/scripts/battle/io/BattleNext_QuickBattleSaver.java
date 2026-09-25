@@ -2,6 +2,7 @@ package data.scripts.battle.io;
 
 import com.fs.starfarer.api.Global;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.tools.BattleNext_CsvLine;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,13 +18,8 @@ public class BattleNext_QuickBattleSaver {
 		}
 		text.append("player,enemy,map,size\n");
 		for (BattleNext_Match match : matches) {
-			text.append(csv(match.getPlayer())).append(',').append(csv(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
+			text.append(BattleNext_CsvLine.escape(match.getPlayer())).append(',').append(BattleNext_CsvLine.escape(match.getEnemy())).append(',').append(match.getMap()).append(',').append(match.getSize()).append('\n');
 		}
 		Global.getSettings().writeTextFileToCommon(PATH, text.toString());
-	}
-
-	private String csv(String value) {
-		String normalized = value == null ? "" : value;
-		return normalized.contains(",") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized;
 	}
 }

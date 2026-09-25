@@ -55,6 +55,8 @@ public class BattleNext_FleetModel {
 	}
 
 	public static BattleNext_FleetModel fromJson(JSONObject json, String fallbackId) {
+		int version = json.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported fleet formatVersion: " + version);
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		JSONArray memberArray = json.optJSONArray("members");
 		if (memberArray != null) {

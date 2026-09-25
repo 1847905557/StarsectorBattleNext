@@ -2,11 +2,12 @@ package data.scripts.orders;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import java.util.List;
 
-public interface OrderStarter<E> {
+public interface OrderStarter {
 
-	List<E> getInitialTargets(ShipAPI source, CombatEngineAPI engine);
+	List<? extends CombatEntityAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine);
 	CombatAssignmentType getCombatAssignmentType();
 }

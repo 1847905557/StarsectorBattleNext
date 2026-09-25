@@ -3,6 +3,7 @@ package data.scripts.battle;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.combat.BattleNext_Scorekeeper;
+import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.report.BattleNext_BattleReport;
 import data.scripts.report.BattleNext_BattleReportStore;
 import data.scripts.tournament.BattleNext_Tournament;
@@ -55,7 +56,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			BattleNext_TournamentStore store = provider.getTournamentStore();
 			store.save(tournament);
 		}
-		System.setProperty("AI_Battles_Next.pendingResult", "1");
+		BattleNext_BattleSignals.markPendingResult();
 	}
 
 	private String resolveWinner(BattleNext_Match match, String winner) {

@@ -1,15 +1,16 @@
 package data.scripts.orders.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.scripts.orders.BattleNext_OrderUtils;
 import data.scripts.orders.OrderFilter;
 import java.util.List;
 
-public class SelfFluxFilter<E> implements OrderFilter<E> {
+public class SelfFluxFilter implements OrderFilter {
 
 	@Override
-	public void filterTargets(ShipAPI source, List<E> targets, String[] params, CombatEngineAPI engine) {
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
 		float minFlux = -1f;
 		float maxFlux = params.length == 1 ? BattleNext_OrderUtils.factor(params[0]) : BattleNext_OrderUtils.factor(params[1]);
 		if (params.length > 1) {

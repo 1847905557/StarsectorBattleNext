@@ -1,6 +1,7 @@
 package data.scripts.orders.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.scripts.orders.BattleNext_OrderUtils;
 import data.scripts.orders.OrderFilter;
@@ -10,10 +11,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public class HullSizeFilter implements OrderFilter<ShipAPI> {
+public class HullSizeFilter implements OrderFilter {
 
 	@Override
-	public void filterTargets(ShipAPI source, List<ShipAPI> targets, String[] params, CombatEngineAPI engine) {
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
 		Set<ShipAPI.HullSize> sizes = EnumSet.noneOf(ShipAPI.HullSize.class);
 		for (String param : params) {
 			ShipAPI.HullSize hullSize = BattleNext_OrderUtils.hullSize(param);
@@ -23,12 +24,12 @@ public class HullSizeFilter implements OrderFilter<ShipAPI> {
 		}
 		if (sizes.isEmpty() && !targets.isEmpty()) {
 			if (Arrays.asList(params).contains("largest")) {
-				sizes.add(targets.stream().map(ShipAPI::getHullSize).max(Comparator.comparingInt(Enum::ordinal)).get());
+				sizes.add(targets.stream().map(target -> ((ShipAPI)target).getHullSize()).max(Comparator.comparingInt(Enum::ordinal)).get());
 			}
 			if (Arrays.asList(params).contains("smallest")) {
-				sizes.add(targets.stream().map(ShipAPI::getHullSize).min(Comparator.comparingInt(Enum::ordinal)).get());
+				sizes.add(targets.stream().map(target -> ((ShipAPI)target).getHullSize()).min(Comparator.comparingInt(Enum::ordinal)).get());
 			}
 		}
-		targets.removeIf(target -> !sizes.contains(target.getHullSize()));
+		targets.removeIf(target -> !sizes.contains(((ShipAPI)target).getHullSize()));
 	}
 }

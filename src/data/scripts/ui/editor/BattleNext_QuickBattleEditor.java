@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
@@ -11,6 +11,8 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 
 import java.io.IOException;
 import java.util.ArrayList;
