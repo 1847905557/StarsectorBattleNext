@@ -23,18 +23,32 @@ public class BattleNext_TournamentStore {
 	private final Map<String, BattleNext_Tournament> tournaments = new LinkedHashMap<>();
 	private final Set<String> managedIds = new HashSet<>();
 	private String activeId = "";
+	private String loadError = "Tournament catalog has not been loaded";
 
 	public void reload() throws IOException, JSONException {
-		tournaments.clear();
-		managedIds.clear();
-		tournaments.putAll(standardLoader.load());
-		Map<String, BattleNext_Tournament> users = commonLoader.load();
-		tournaments.putAll(users);
-		managedIds.addAll(users.keySet());
-		activeId = commonLoader.loadActiveId();
+		try {
+			Map<String, BattleNext_Tournament> loaded = new LinkedHashMap<>(standardLoader.load());
+			Map<String, BattleNext_Tournament> users = commonLoader.load();
+			loaded.putAll(users);
+			String loadedActiveId = commonLoader.loadActiveId();
+			tournaments.clear();
+			tournaments.putAll(loaded);
+			managedIds.clear();
+			managedIds.addAll(users.keySet());
+			activeId = loadedActiveId;
+			loadError = "";
+		} catch (IOException | JSONException | RuntimeException exception) {
+			loadError = exception.getMessage();
+			throw exception;
+		}
 	}
 
+	public String getLoadError() { return loadError; }
+	public boolean isLoaded() { return loadError.isEmpty(); }
+	private void requireLoaded() { if (!isLoaded()) throw new IllegalStateException(loadError); }
+
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
+		requireLoaded();
 		if (tournament == null || !BattleNext_EntryId.isValid(tournament.getId())) {
 			throw new IllegalArgumentException("Tournament is required");
 		}
@@ -50,6 +64,7 @@ public class BattleNext_TournamentStore {
 	}
 
 	public void setActiveId(String id) throws IOException, JSONException {
+		requireLoaded();
 		if (!id.isEmpty() && !tournaments.containsKey(id)) throw new IllegalArgumentException("Unknown tournament: " + id);
 		saver.saveActiveId(id);
 		activeId = id;
@@ -72,6 +87,7 @@ public class BattleNext_TournamentStore {
 	}
 
 	public void delete(String id) throws IOException, JSONException {
+		requireLoaded();
 		if (!managedIds.contains(id)) throw new IllegalStateException("Tournament source is unavailable");
 		saver.delete(id);
 		managedIds.remove(id);

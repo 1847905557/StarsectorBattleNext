@@ -90,6 +90,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		sourceButtonRect = new UIRect(groupX + labelWidth + 12f, 44f, buttonWidth, 30f);
 		sourceButton = BattleNext_PageLayout.fixedButton(panel, sourceButtonRect,
 				sourceLabel(), Action.TOGGLE_SOURCE, CutStyle.ALL, false);
+		sourceButton.setEnabled(tournamentStore.isLoaded());
 
 		refreshContent();
 	}
@@ -182,14 +183,17 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			tournamentStore.reload();
 			selectedId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			selectedId = "";
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
 		try {
 			rulesStore.reload();
+		} catch (Exception exception) {
+			loadError += (loadError.isEmpty() ? "" : " | ") + text("load_failed") + ": " + exception.getMessage();
+		}
+		try {
 			fleetStore.reload();
 		} catch (Exception exception) {
-			loadError = text("load_failed") + ": " + exception.getMessage();
+			loadError += (loadError.isEmpty() ? "" : " | ") + text("load_failed") + ": " + exception.getMessage();
 		}
 	}
 
@@ -202,7 +206,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private void openSourceList() {
 
-		if (panel == null || dropdownPanel != null) return;
+		if (panel == null || dropdownPanel != null || !tournamentStore.isLoaded()) return;
 		float width = sourceButton.getPosition().getWidth();
 		int optionCount = tournamentStore.getAll().size() + 1;
 		float dropdownY = sourceButtonRect.getY() + sourceButtonRect.getHeight() + 2f;
@@ -269,7 +273,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private void scheduleSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_Tournament tournament) {
 		rect.removeLatestSubPanel();
-		CustomPanelAPI schedulePanel = rect.createSubPanel(detailPanel, null).getPanel();
+		CustomPanelAPI schedulePanel = rect.createSubPanel(detailPanel, detailPanel.getPlugin()).getPanel();
 		TooltipMakerAPI schedule = schedulePanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
 		BattleNext_Match next = nextMatch(tournament);
 		schedule.addTitle(text("next_match"));
@@ -291,12 +295,19 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			}
 		}
 		if (!tournament.isStarted()) {
-			BattleNext_PageLayout.button(schedule, text("tournament_start"), "tournament:start", 220f);
+			ButtonAPI start = BattleNext_PageLayout.button(schedule, text("tournament_start"), "tournament:start", 220f);
+			start.setEnabled(tournamentStore.isLoaded() && fleetStore.isLoaded() && rulesStore.isLoaded());
 		}
 		schedulePanel.addUIElement(schedule).inTL(0f, 0f);
 	}
 
 	private void startTournament() {
+		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !rulesStore.isLoaded()) {
+			loadError = text("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
+					: !fleetStore.isLoaded() ? fleetStore.getLoadError() : rulesStore.getLoadError());
+			refreshContent();
+			return;
+		}
 		BattleNext_Tournament source = tournamentStore.get(selectedId);
 		if (source == null || source.isStarted()) return;
 		if (!List.of("single_elim", "double_elim", "round_robin", "kof").contains(source.getBracketType())
@@ -312,8 +323,13 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			return;
 		}
 		BattleNext_Tournament tournament;
-		try { tournament = BattleNext_Tournament.fromJson(source.toJson()); }
-		catch (Exception exception) { loadError = exception.getMessage(); refreshContent(); return; }
+		try {
+			tournament = BattleNext_Tournament.fromJson(source.toJson());
+		} catch (Exception exception) {
+			loadError = exception.getMessage();
+			refreshContent();
+			return;
+		}
 		if (rulesStore.get(tournament.getRulesId()) == null) {
 			loadError = text("tournament_rules_unavailable");
 			refreshContent();

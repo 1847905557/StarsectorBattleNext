@@ -21,7 +21,8 @@ public class BattleNext_RulesStandardLoader {
 				value.setSourceType(BattleNext_LoadSource.STANDARD);
 				value.setSourcePath(path);
 				result.put(value.getId(), value);
-			} catch (Exception ignored) {
+			} catch (Exception exception) {
+				throw new IllegalStateException("Unable to load rules: " + path, exception);
 			}
 		}
 		return result;

@@ -23,7 +23,8 @@ public class BattleNext_TournamentStandardLoader {
 				value.setSourcePath(path);
 				propagateToMatches(value);
 				result.put(value.getId(), value);
-			} catch (Exception ignored) {
+			} catch (Exception exception) {
+				throw new IllegalStateException("Unable to load tournament: " + path, exception);
 			}
 		}
 		return result;

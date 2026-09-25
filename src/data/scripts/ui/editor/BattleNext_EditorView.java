@@ -7,7 +7,7 @@ public interface BattleNext_EditorView extends BattleNext_PageView {
 	/** serialize the whole editor state (every input) into a comparable snapshot */
 	String serializeState();
 
-	/** serialize: capture the current inputs into the edit model and persist it; false = validation failed, model untouched */
+	/** Capture current inputs and persist a valid edit; false leaves persisted data unchanged. */
 	boolean serialize();
 
 	/** deserialize: reload the open baseline into the editor and lay it out; replaces unsaved edits */

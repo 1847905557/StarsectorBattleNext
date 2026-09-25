@@ -1,6 +1,5 @@
 package data.scripts.fleet;
 
-import com.fs.starfarer.api.Global;
 import data.scripts.fleet.io.BattleNext_FleetCommonLoader;
 import data.scripts.tools.BattleNext_LoadSource;
 import data.scripts.fleet.io.BattleNext_FleetSaver;
@@ -24,6 +23,7 @@ public class BattleNext_FleetStore {
 	private final BattleNext_FleetLegacyLoader legacyLoader;
 	private final BattleNext_FleetSaver saver;
 	private final Map<String, BattleNext_FleetModel> fleets = new LinkedHashMap<>();
+	private String loadError = "Fleet catalog has not been loaded";
 
 	public BattleNext_FleetStore() {
 		standardLoader = new BattleNext_FleetStandardLoader();
@@ -33,24 +33,40 @@ public class BattleNext_FleetStore {
 	}
 
 	public void reload() {
-		reload(loadLegacy());
+		try {
+			reload(loadLegacy());
+		} catch (RuntimeException exception) {
+			loadError = exception.getMessage();
+			throw exception;
+		}
 	}
 
 	private List<BattleNext_FleetModel> loadLegacy() {
 		try {
 			return legacyLoader.loadResourceDirectory(LEGACY_ROOT, MOD_ID);
 		} catch (IOException | JSONException exception) {
-			Global.getLogger(BattleNext_FleetStore.class).warn("Unable to load legacy fleets from " + LEGACY_ROOT, exception);
-			return List.of();
+			throw new IllegalStateException("Unable to load legacy fleets from " + LEGACY_ROOT + ": " + exception.getMessage(), exception);
 		}
 	}
 
 	public void reload(List<BattleNext_FleetModel> legacy) {
-		fleets.clear();
-		putIfAbsent(legacy);
-		putIfAbsent(standardLoader.load());
-		putOverride(commonLoader.load());
+		try {
+			Map<String, BattleNext_FleetModel> loaded = new LinkedHashMap<>();
+			putIfAbsent(loaded, legacy);
+			putIfAbsent(loaded, standardLoader.load());
+			putOverride(loaded, commonLoader.load());
+			fleets.clear();
+			fleets.putAll(loaded);
+			loadError = "";
+		} catch (RuntimeException exception) {
+			loadError = exception.getMessage();
+			throw exception;
+		}
 	}
+
+	public String getLoadError() { return loadError; }
+
+	public boolean isLoaded() { return loadError.isEmpty(); }
 
 	public Collection<BattleNext_FleetModel> getAll() {
 		return List.copyOf(fleets.values());
@@ -61,6 +77,7 @@ public class BattleNext_FleetStore {
 	}
 
 	public void save(BattleNext_FleetModel fleet) throws IOException, JSONException {
+		requireLoaded();
 		if (fleet == null || fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet id is required");
 		String path = saver.save(fleet);
 		fleet.setSourceType(BattleNext_LoadSource.COMMON);
@@ -69,21 +86,26 @@ public class BattleNext_FleetStore {
 	}
 
 	public void delete(BattleNext_FleetModel fleet) throws IOException {
+		requireLoaded();
 		if (fleet == null || !BattleNext_LoadSource.COMMON.equals(fleet.getSourceType())) return;
 		saver.delete(fleet);
 		fleets.remove(fleet.getId());
 	}
 
-	private void putIfAbsent(List<BattleNext_FleetModel> values) {
+	private void requireLoaded() {
+		if (!isLoaded()) throw new IllegalStateException(loadError);
+	}
+
+	private void putIfAbsent(Map<String, BattleNext_FleetModel> target, List<BattleNext_FleetModel> values) {
 		for (BattleNext_FleetModel fleet : values) {
 			if (fleet.getId().isEmpty()) continue;
-			fleets.putIfAbsent(fleet.getId(), fleet);
+			target.putIfAbsent(fleet.getId(), fleet);
 		}
 	}
 
-	private void putOverride(List<BattleNext_FleetModel> values) {
+	private void putOverride(Map<String, BattleNext_FleetModel> target, List<BattleNext_FleetModel> values) {
 		for (BattleNext_FleetModel fleet : values) {
-			if (!fleet.getId().isEmpty()) fleets.put(fleet.getId(), fleet);
+			if (!fleet.getId().isEmpty()) target.put(fleet.getId(), fleet);
 		}
 	}
 }

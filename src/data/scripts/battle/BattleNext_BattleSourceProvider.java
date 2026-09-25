@@ -27,11 +27,11 @@ public class BattleNext_BattleSourceProvider {
 	public List<BattleNext_Match> load() {
 		warnings.clear();
 		activeTournament = null;
-		fleetStore.reload();
 		try {
+			fleetStore.reload();
 			tournamentStore.reload();
 		} catch (Exception exception) {
-			warnings.add("Unable to load tournament state: " + exception.getMessage());
+			warnings.add("Unable to load battle sources: " + exception.getMessage());
 			return List.of();
 		}
 

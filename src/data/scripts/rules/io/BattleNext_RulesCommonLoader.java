@@ -21,7 +21,8 @@ public class BattleNext_RulesCommonLoader {
 				value.setSourceType(BattleNext_LoadSource.COMMON);
 				value.setSourcePath(path);
 				result.put(value.getId(), value);
-			} catch (IllegalArgumentException ignored) {
+			} catch (IllegalArgumentException exception) {
+				throw new IllegalStateException("Unable to load common rules: " + path, exception);
 			}
 		}
 		return result;

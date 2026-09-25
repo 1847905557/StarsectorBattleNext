@@ -294,7 +294,6 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			tournamentStore.reload();
 			activeTournamentId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			activeTournamentId = "";
 			error = text("load_failed") + ": " + exception.getMessage();
 		}
 		statusBar.update(error, activeTournamentId, pendingResult);

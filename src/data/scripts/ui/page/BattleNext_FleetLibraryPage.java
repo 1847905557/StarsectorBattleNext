@@ -13,7 +13,7 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.editor.BattleNext_FleetDraftEditor;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
 
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -25,7 +25,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
-	private final BattleNext_FleetDraftEditor editor = new BattleNext_FleetDraftEditor();
+	private final BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
 	private UIRect listRect;
@@ -34,6 +34,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private boolean draftOpen;
 	private String status = "";
 	private LabelAPI statusLabel;
+	private ButtonAPI saveButton;
 
 	public BattleNext_FleetLibraryPage(Runnable backAction, Consumer<Runnable> navigation,
 			BiConsumer<String, Runnable> deletion) {
@@ -45,7 +46,11 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	@Override
 	public void attach(CustomPanelAPI panel) {
 		this.panel = panel;
-		store.reload();
+		try {
+			store.reload();
+		} catch (RuntimeException exception) {
+			status = text("load_failed") + ": " + exception.getMessage();
+		}
 		selectedId = "";
 		draftOpen = false;
 		createContents();
@@ -58,15 +63,16 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 1f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
 		UIRect footerRect = regions[2];
 		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / 3f);
 		for (int index = 0; index < 3; index++) {
 			String[] actions = {"add", "save", "back"};
-			BattleNext_PageLayout.fixedButton(panel,
+			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
 					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
+			if (index == 1) { saveButton = button; saveButton.setEnabled(store.isLoaded()); }
 		}
 		float statusX = 3f * buttonWidth + 30f;
 		if (footerRect.getWidth() - statusX >= 60f) {
@@ -83,13 +89,13 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	@Override
 	public void refreshContent() {
 		listRect.removeLatestSubPanel();
-		CustomPanelAPI listPanel = listRect.createSubPanel(panel, null).getPanel();
+		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
 		addList(listContent);
 		listPanel.addUIElement(listContent).inTL(8f, 8f);
 
 		detailRect.removeLatestSubPanel();
-		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, null).getPanel();
+		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!draftOpen) {
 			TooltipMakerAPI prompt = detailPanel.createUIElement(detailRect.getWidth() - 18f, detailRect.getHeight() - 16f, false);
 			prompt.addTitle(text("select_fleet"));
@@ -98,7 +104,8 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 		BattleNext_FleetModel selected = selectedId.isEmpty() ? null : store.get(selectedId);
 		editor.open(selected, false);
-		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f, null);
+		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f,
+				detailPanel.getPlugin());
 		detailPanel.addComponent(editorPanel).inTL(8f, 8f);
 		editor.attach(editorPanel);
 		if (selected != null) {
@@ -106,7 +113,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
 					text("delete"), "delete", CutStyle.ALL, true);
 			boolean managed = BattleNext_LoadSource.COMMON.equals(selected.getSourceType());
-			delete.setEnabled(managed);
+			delete.setEnabled(managed && store.isLoaded());
 			if (!managed) {
 				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
 				note.addPara(note.shortenString(text("source_unavailable_short"), detailRect.getWidth() - 180f),
@@ -125,7 +132,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			navigation.accept(() -> { selectedId = ""; draftOpen = true; refreshContent(); });
 		} else if ("save".equals(buttonId)) {
 			save();
-		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()) {
+		} else if ("delete".equals(buttonId) && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_FleetModel selected = store.get(selectedId);
 			if (selected != null && BattleNext_LoadSource.COMMON.equals(selected.getSourceType())) {
 				deletion.accept(selected.getName() + " [" + selected.getId() + "]", () -> {
@@ -135,7 +142,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 						draftOpen = false;
 						status = text("deleted");
 						refreshContent();
-					} catch (IOException exception) {
+					} catch (IOException | RuntimeException exception) {
 						setStatus(text("save_failed") + ": " + exception.getMessage());
 					}
 				});
@@ -150,6 +157,8 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_fleets"));
+		if (!store.isLoaded()) listContent.addPara(text("load_failed") + ": " + store.getLoadError(),
+				8f, BattleNext_UiTheme.MUTED);
 		if (store.getAll().isEmpty()) listContent.addPara(text("no_fleets"), 10f, BattleNext_UiTheme.MUTED);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName() + " [" + fleet.getId() + "]",
@@ -161,6 +170,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
 	@Override public boolean save() {
 		if (!draftOpen) return true;
+		if (!store.isLoaded()) { setStatus(text("load_failed") + ": " + store.getLoadError()); return false; }
 		String id = editor.getDraftId();
 		if (!BattleNext_EntryId.isValid(id)) { setStatus(text("invalid_fleet_id")); return false; }
 		for (BattleNext_FleetModel fleet : store.getAll()) {
@@ -174,7 +184,12 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			setStatus(text("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) { setStatus(editor.getStatusText()); return false; }
-		store.reload();
+		try {
+			store.reload();
+		} catch (RuntimeException exception) {
+			setStatus(text("load_failed") + ": " + exception.getMessage());
+			return false;
+		}
 		selectedId = id;
 		status = text("saved");
 		refreshContent();

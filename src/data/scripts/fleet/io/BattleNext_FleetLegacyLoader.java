@@ -5,16 +5,15 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
 import data.scripts.tools.BattleNext_LoadSource;
+import data.scripts.tools.BattleNext_FileCatalog;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 public class BattleNext_FleetLegacyLoader {
@@ -40,17 +39,19 @@ public class BattleNext_FleetLegacyLoader {
 
 	public List<BattleNext_FleetModel> loadResourceDirectory(String root, String modId) throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		for (String dataPath : listResourceFiles(root)) {
+		List<String> paths = BattleNext_FileCatalog.resources(root, false);
+		for (String dataPath : paths) {
 			String fileName = dataPath.substring(dataPath.lastIndexOf('/') + 1);
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = root + "/player" + number + "_fleet.csv";
+			if (!paths.contains(fleetPath)) continue;
 			try {
 				String dataText = Global.getSettings().loadText(dataPath, modId);
 				String fleetText = Global.getSettings().loadText(fleetPath, modId);
 				result.add(loadFleet(number, rows(dataText, dataPath), rows(fleetText, fleetPath), dataPath));
 			} catch (IOException | JSONException exception) {
-				Global.getLogger(BattleNext_FleetLegacyLoader.class).warn("Skipping legacy fleet " + number + " from " + root, exception);
+				throw new IOException("Unable to load legacy fleet " + number + " from " + root, exception);
 			}
 		}
 		return result;
@@ -103,24 +104,6 @@ public class BattleNext_FleetLegacyLoader {
 			result.add(BattleNext_CsvLine.parse(line).toArray(new String[0]));
 		}
 		return result;
-	}
-
-	private List<String> listResourceFiles(String root) {
-		try {
-			Class<?> type = Class.forName("com.fs.starfarer.loading.LoadingUtils");
-			Method method = type.getMethod("listFilesOfType", String.class, String.class);
-			Object value = method.invoke(null, root, "csv");
-			if (value instanceof List<?> paths) {
-				List<String> result = new ArrayList<>();
-				for (Object path : paths) {
-					result.add(String.valueOf(path).replace("\\", "/"));
-				}
-				result.sort(Comparator.naturalOrder());
-				return result;
-			}
-		} catch (Exception ignored) {
-		}
-		return List.of();
 	}
 
 	private String column(String[] row, int index) {

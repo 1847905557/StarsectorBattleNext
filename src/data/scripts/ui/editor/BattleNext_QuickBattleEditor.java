@@ -3,6 +3,7 @@ package data.scripts.ui.editor;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.Alignment;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -74,6 +75,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	@Override
 	public boolean serialize() {
+		if (!fleetStore.isLoaded()) { setStatus(text("load_failed") + ": " + fleetStore.getLoadError()); return false; }
 		if (!captureFields()) return false;
 		try {
 			store.save();
@@ -109,9 +111,13 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	}
 
 	private void load() {
-		fleetStore.reload();
-		store.replaceAll(List.of());
 		loadError = "";
+		try {
+			fleetStore.reload();
+		} catch (RuntimeException exception) {
+			loadError = text("load_failed") + ": " + exception.getMessage();
+		}
+		store.replaceAll(List.of());
 		try {
 			if (store.hasUserFile()) {
 				store.load();
@@ -157,9 +163,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX(), footerRect.getY(), buttonWidth, 30f),
 				text("add"), "add", CutStyle.ALL, true);
-		BattleNext_PageLayout.fixedButton(panel,
+		ButtonAPI saveButton = BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + buttonWidth + 10f, footerRect.getY(), buttonWidth, 30f),
 				text("save"), "save", CutStyle.ALL, true);
+		saveButton.setEnabled(fleetStore.isLoaded());
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + 2f * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
 				text("back"), "back", CutStyle.ALL, true);
@@ -198,7 +205,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 		float width = rowsRect.getWidth() - SCROLLBAR_WIDTH;
 		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
-		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 1f);
+		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
 		UIRect[] cells = columns(width, ROW_HEIGHT);
 		boolean compactFont = width < 800f;
 		Row row = new Row();

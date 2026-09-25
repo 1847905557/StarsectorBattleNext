@@ -17,14 +17,26 @@ public class BattleNext_RulesStore {
 	private final BattleNext_RulesCommonLoader commonLoader = new BattleNext_RulesCommonLoader();
 	private final BattleNext_RulesSaver saver = new BattleNext_RulesSaver();
 	private final Map<String, BattleNext_RulesModel> rules = new LinkedHashMap<>();
+	private String loadError = "Rules catalog has not been loaded";
 
 	public void reload() throws IOException, JSONException {
-		rules.clear();
-		rules.putAll(standardLoader.load());
-		rules.putAll(commonLoader.load());
+		try {
+			Map<String, BattleNext_RulesModel> loaded = new LinkedHashMap<>(standardLoader.load());
+			loaded.putAll(commonLoader.load());
+			rules.clear();
+			rules.putAll(loaded);
+			loadError = "";
+		} catch (IOException | JSONException | RuntimeException exception) {
+			loadError = exception.getMessage();
+			throw exception;
+		}
 	}
 
+	public String getLoadError() { return loadError; }
+	public boolean isLoaded() { return loadError.isEmpty(); }
+
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
+		if (!isLoaded()) throw new IllegalStateException(loadError);
 		if (model == null) {
 			throw new IllegalArgumentException("Rules model is required");
 		}

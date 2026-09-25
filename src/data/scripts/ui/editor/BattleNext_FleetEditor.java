@@ -19,9 +19,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class BattleNext_FleetDraftEditor implements BattleNext_EditorView {
+public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
-	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
+	private final BattleNext_FleetStore store;
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<MemberFields> memberFields = new ArrayList<>();
@@ -45,7 +45,8 @@ public class BattleNext_FleetDraftEditor implements BattleNext_EditorView {
 	private boolean baselineClone;
 	private String savedSnapshot = "";
 
-	public BattleNext_FleetDraftEditor() {
+	public BattleNext_FleetEditor(BattleNext_FleetStore store) {
+		this.store = store;
 		catalog.refresh();
 	}
 
@@ -106,57 +107,63 @@ public class BattleNext_FleetDraftEditor implements BattleNext_EditorView {
 	@Override
 	public void refreshContent() {
 		contentRect.removeLatestSubPanel();
-		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, null).getPanel();
-		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
-		fillMeta(content);
-		fillMembers(content);
-		contentPanel.addUIElement(content).inTL(0f, 0f);
+		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
+		float gap = 10f;
+		float usableWidth = Math.max(2f, contentRect.getWidth() - gap);
+		float metaWidth = (float) Math.floor(usableWidth * 0.45f);
+		float memberWidth = usableWidth - metaWidth;
+		TooltipMakerAPI meta = contentPanel.createUIElement(metaWidth, contentRect.getHeight(), true);
+		fillMeta(meta, metaWidth);
+		contentPanel.addUIElement(meta).inTL(0f, 0f);
+		TooltipMakerAPI members = contentPanel.createUIElement(memberWidth, contentRect.getHeight(), true);
+		fillMembers(members, memberWidth);
+		contentPanel.addUIElement(members).inTL(metaWidth + gap, 0f);
 	}
 
-	private void fillMeta(TooltipMakerAPI metaContent) {
+	private void fillMeta(TooltipMakerAPI metaContent, float width) {
 		metaContent.addTitle(text("fleet_section_details"));
 		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
-		id = field(metaContent, text("fleet_id"), draft.getId());
-		name = field(metaContent, text("fleet_name"), draft.getName());
-		player = field(metaContent, text("fleet_player"), draft.getPlayer());
-		author = field(metaContent, text("fleet_author"), draft.getAuthor());
-		description = field(metaContent, text("fleet_description"), draft.getDescription());
-		behavior = field(metaContent, text("fleet_behavior"), draft.getBehavior());
-		color = field(metaContent, text("fleet_color"), draft.getColor());
-		vsImage = field(metaContent, text("fleet_vs_image"), draft.getVsImage());
-		skills = field(metaContent, text("fleet_skills"), String.join(",", draft.getSkills()));
-		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()));
-		rulesId = field(metaContent, text("fleet_rules"), draft.getRulesId());
+		id = field(metaContent, text("fleet_id"), draft.getId(), width);
+		name = field(metaContent, text("fleet_name"), draft.getName(), width);
+		player = field(metaContent, text("fleet_player"), draft.getPlayer(), width);
+		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width);
+		description = field(metaContent, text("fleet_description"), draft.getDescription(), width);
+		behavior = field(metaContent, text("fleet_behavior"), draft.getBehavior(), width);
+		color = field(metaContent, text("fleet_color"), draft.getColor(), width);
+		vsImage = field(metaContent, text("fleet_vs_image"), draft.getVsImage(), width);
+		skills = field(metaContent, text("fleet_skills"), String.join(",", draft.getSkills()), width);
+		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width);
+		rulesId = field(metaContent, text("fleet_rules"), draft.getRulesId(), width);
 	}
 
-	private void fillMembers(TooltipMakerAPI memberContent) {
+	private void fillMembers(TooltipMakerAPI memberContent, float width) {
 		memberContent.addTitle(text("fleet_section_members"));
-		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member", 150f);
+		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member", Math.min(150f, width - 20f));
 		memberFields.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
-			addMember(index, draft.getMembers().get(index), memberContent);
+			addMember(index, draft.getMembers().get(index), memberContent, width);
 		}
 	}
 
-	private void addMember(int index, BattleNext_MemberModel member, TooltipMakerAPI memberContent) {
+	private void addMember(int index, BattleNext_MemberModel member, TooltipMakerAPI memberContent, float width) {
 		memberContent.addSectionHeading(text("member") + " " + (index + 1),
 				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
 				com.fs.starfarer.api.ui.Alignment.MID, 8f);
 		MemberFields fields = new MemberFields();
-		fields.variant = field(memberContent, text("variant"), member.getVariantId());
-		fields.name = field(memberContent, text("member_name"), member.getName());
-		fields.personality = field(memberContent, text("personality"), member.getPersonality());
-		fields.skills = field(memberContent, text("member_skills"), String.join(",", member.getSkills()));
-		fields.portrait = field(memberContent, text("portrait"), member.getPortrait());
-		fields.orders = field(memberContent, text("orders"), member.getOrders());
-		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()));
-		BattleNext_PageLayout.button(memberContent, text("remove_member"), "remove_member:" + index, 150f);
+		fields.variant = field(memberContent, text("variant"), member.getVariantId(), width);
+		fields.name = field(memberContent, text("member_name"), member.getName(), width);
+		fields.personality = field(memberContent, text("personality"), member.getPersonality(), width);
+		fields.skills = field(memberContent, text("member_skills"), String.join(",", member.getSkills()), width);
+		fields.portrait = field(memberContent, text("portrait"), member.getPortrait(), width);
+		fields.orders = field(memberContent, text("orders"), member.getOrders(), width);
+		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()), width);
+		BattleNext_PageLayout.button(memberContent, text("remove_member"), "remove_member:" + index, Math.min(150f, width - 20f));
 		memberFields.add(fields);
 	}
 
-	private TextFieldAPI field(TooltipMakerAPI host, String label, String value) {
+	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, float sectionWidth) {
 		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
-		TextFieldAPI field = host.addTextField(Math.min(300f, host.getPosition().getWidth() - 20f), 2f);
+		TextFieldAPI field = host.addTextField(Math.max(40f, sectionWidth - 24f), 2f);
 		field.setText(value == null ? "" : value);
 		field.setMaxChars(240);
 		return field;
@@ -168,7 +175,7 @@ public class BattleNext_FleetDraftEditor implements BattleNext_EditorView {
 		try {
 			store.save(draft);
 		} catch (Exception exception) {
-			setStatus(text("save_failed"));
+			setStatus(text("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 		savedSnapshot = serializeState();

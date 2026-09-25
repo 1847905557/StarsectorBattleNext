@@ -68,7 +68,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	@Override
 	public void refreshContent() {
 		listRect.removeLatestSubPanel();
-		CustomPanelAPI listPanel = listRect.createSubPanel(panel, null).getPanel();
+		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth(), listRect.getHeight(), true);
 		addList(listContent);
 		listPanel.addUIElement(listContent).inTL(0f, 0f);

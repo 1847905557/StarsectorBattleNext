@@ -4,16 +4,13 @@ import com.fs.starfarer.api.Global;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.tools.BattleNext_LoadSource;
+import data.scripts.tools.BattleNext_FileCatalog;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class BattleNext_FleetCommonLoader {
 
@@ -21,13 +18,11 @@ public class BattleNext_FleetCommonLoader {
 
 	public List<BattleNext_FleetModel> load() {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		String savesPath = invokeSavesPath();
-		if (savesPath.isEmpty()) return List.of();
-		String commonPath = new File(savesPath, "common").getAbsolutePath();
-		String root = new File(commonPath, "AI_Battles_Next").getAbsolutePath();
-		List<String> dataPaths = invokeAbsoluteResourceList(root, commonPath, "json");
-		List<String> variantPaths = invokeAbsoluteResourceList(root, commonPath, "variant");
-		if (dataPaths.isEmpty()) dataPaths = listAbsoluteFiles(root, commonPath, "fleet_data.json");
+		List<String> paths = BattleNext_FileCatalog.common("AI_Battles_Next", true);
+		List<String> dataPaths = paths.stream().filter(path -> path.endsWith("/fleet_data.json.data"))
+				.map(this::stripDataSuffix).toList();
+		List<String> variantPaths = paths.stream().filter(path -> path.endsWith(".variant.data"))
+				.map(this::stripDataSuffix).toList();
 		for (String path : dataPaths) {
 			if (!path.endsWith("/fleet_data.json")) continue;
 			try {
@@ -57,67 +52,15 @@ public class BattleNext_FleetCommonLoader {
 				String text = Global.getSettings().readTextFileFromCommon(stripDataSuffix(variantPath));
 				fleet.putVariant(BattleNext_VariantModel.fromJson(new JSONObject(text), variantId));
 			} catch (IOException | JSONException exception) {
-				fleet.addLoadError("Unable to load variant " + variantId + ": " + exception.getMessage());
+				throw new IllegalStateException("Unable to load variant " + variantPath + ": " + exception.getMessage(), exception);
 			}
 		}
-		for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
-			if (fleet.getVariant(variantId) == null) fleet.addLoadError("Missing variant: " + variantId);
+		if (fleet.hasLocalVariants()) {
+			for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
+				if (fleet.getVariant(variantId) == null) throw new IllegalStateException("Missing variant " + variantId + " in " + path);
+			}
 		}
 		return fleet;
-	}
-
-	private List<String> invokeAbsoluteResourceList(String folder, String commonPath, String extension) {
-		try {
-			Class<?> type = Class.forName("com.fs.starfarer.loading.LoadingUtils");
-			Method method = type.getMethod("listFilesOfTypeAbsolute", String.class, String.class);
-			Object value = method.invoke(null, folder, extension);
-			List<String> result = new ArrayList<>();
-			for (String absolute : normalizePaths(value)) {
-				String relative = absolute.substring(commonPath.length()).replace("\\", "/");
-				if (relative.startsWith("/")) relative = relative.substring(1);
-				result.add(relative);
-			}
-			return result;
-		} catch (Exception ignored) {
-			return List.of();
-		}
-	}
-
-	private List<String> listAbsoluteFiles(String root, String commonPath, String fileName) {
-		List<String> result = new ArrayList<>();
-		File directory = new File(root);
-		File[] files = directory.listFiles();
-		if (files == null) return result;
-		for (File file : files) {
-			if (file.isDirectory()) result.addAll(listAbsoluteFiles(file.getAbsolutePath(), commonPath, fileName));
-			if (file.isFile() && file.getName().equals(fileName)) {
-				String relative = file.getAbsolutePath().substring(commonPath.length()).replace("\\", "/");
-				if (relative.startsWith("/")) relative = relative.substring(1);
-				result.add(relative);
-			}
-		}
-		return result;
-	}
-
-	private List<String> normalizePaths(Object value) {
-		if (!(value instanceof List<?> paths)) return List.of();
-		Map<String, String> unique = new LinkedHashMap<>();
-		for (Object path : paths) {
-			String normalized = String.valueOf(path).replace("\\", "/");
-			unique.put(normalized, normalized);
-		}
-		List<String> result = new ArrayList<>(unique.values());
-		result.sort(String::compareTo);
-		return result;
-	}
-
-	private String invokeSavesPath() {
-		try {
-			Class<?> type = Class.forName("com.fs.starfarer.settings.StarfarerSettings");
-			return String.valueOf(type.getMethod("getSavesPath").invoke(null));
-		} catch (Exception ignored) {
-			return "";
-		}
 	}
 
 	private String stripDataSuffix(String path) {

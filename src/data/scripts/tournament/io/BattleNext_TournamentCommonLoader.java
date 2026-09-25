@@ -27,7 +27,8 @@ public class BattleNext_TournamentCommonLoader {
 				value.setSourcePath(path);
 				propagateToMatches(value);
 				result.put(value.getId(), value);
-			} catch (IllegalArgumentException ignored) {
+			} catch (IllegalArgumentException exception) {
+				throw new IllegalStateException("Unable to load common tournament: " + path, exception);
 			}
 		}
 		return result;
