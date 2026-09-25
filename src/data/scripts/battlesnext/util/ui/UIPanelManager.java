@@ -32,6 +32,7 @@ public class UIPanelManager {
 	}
 
 	public void addComponent(UIComponentAPI component) {
+		components.add(component);
 		if (component instanceof TooltipMakerAPI) {
 			panel.addUIElement((TooltipMakerAPI) component);
 		} else {

@@ -1,6 +1,5 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -9,11 +8,9 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_PageView;
 import data.scripts.ui.BattleNext_UiTheme;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.function.Consumer;
 
 public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
@@ -23,10 +20,6 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
-	private TooltipMakerAPI heading;
-	private TooltipMakerAPI listContent;
-	private TooltipMakerAPI detailContent;
-	private TooltipMakerAPI footer;
 	private UIRect listRect;
 	private UIRect detailRect;
 	private BattleNext_FleetModel selected;
@@ -37,73 +30,77 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		this.editorAction = editorAction;
 	}
 
+	@Override
 	public void attach(CustomPanelAPI panel) {
-		if (this.panel != panel) {
-			heading = null;
-			listContent = null;
-			detailContent = null;
-			footer = null;
-		}
 		this.panel = panel;
 		store.reload();
 		selected = null;
-		rebuild();
+		createContents();
 	}
 
-	public void processInput(List<InputEventAPI> events) {
+	@Override
+	public void createContents() {
+		// left list / right details / bottom back button
+		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
+		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
+		BattleNext_PageLayout.heading(header[0], panel, text("page_fleets"));
+
+		float listWidth = BattleNext_PageLayout.listWidth(panel);
+		UIRect[] columns = bottom[0].splitHorizontally(listWidth + 10f);
+		listRect = columns[0];
+		detailRect = columns[1];
+
+		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
+		TooltipMakerAPI footer = BattleNext_PageLayout.footer(footerRect, panel);
+		BattleNext_PageLayout.button(footer, text("back"), "back", 160f).getPosition().inBL(0f, 0f);
+
+		refreshContent();
 	}
 
-	public void advance() {
+	@Override
+	public void refreshContent() {
+		listRect.removeLatestSubPanel();
+		CustomPanelAPI listPanel = listRect.createSubPanel(panel, null).getPanel();
+		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth(), listRect.getHeight(), true);
+		addList(listContent);
+		listPanel.addUIElement(listContent).inTL(0f, 0f);
+
+		detailRect.removeLatestSubPanel();
+		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, null).getPanel();
+		TooltipMakerAPI detailContent = detailPanel.createUIElement(detailRect.getWidth(), detailRect.getHeight(), true);
+		addDetails(detailContent);
+		detailPanel.addUIElement(detailContent).inTL(0f, 0f);
 	}
 
+	@Override
 	public void buttonPressed(Object buttonId) {
 		if (buttonId instanceof String && ((String) buttonId).startsWith("fleet:")) {
 			selected = store.get(((String) buttonId).substring("fleet:".length()));
-			rebuild();
+			refreshContent();
 		} else if ("new".equals(buttonId) || "edit".equals(buttonId) || "clone".equals(buttonId)) {
 			editorAction.accept(new DraftRequest((String)buttonId, selected));
 		} else if ("delete".equals(buttonId) && selected != null) {
 			try {
 				store.delete(selected);
 				selected = null;
-				rebuild();
+				refreshContent();
 			} catch (IOException exception) {
 				status = text("save_failed") + ": " + exception.getMessage();
-				rebuild();
+				refreshContent();
 			}
 		} else if ("back".equals(buttonId)) {
 			if (selected != null) {
 				selected = null;
-				rebuild();
+				refreshContent();
 			} else {
 				backAction.run();
 			}
 		}
 	}
 
-	private void rebuild() {
-		if (heading != null) panel.removeComponent(heading);
-		if (footer != null) panel.removeComponent(footer);
-
-		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
-		float listWidth = BattleNext_PageLayout.listWidth(panel);
-		UIRect[] columns = bottom[0].splitHorizontally(listWidth + 10f);
-		listRect = columns[0];
-		detailRect = columns[1];
-		heading = BattleNext_PageLayout.heading(header[0], panel, text("page_fleets"));
-		listContent = BattleNext_PageLayout.column(listRect, panel);
-		detailContent = BattleNext_PageLayout.column(detailRect, panel);
-		footer = BattleNext_PageLayout.footer(bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f), panel);
-		BattleNext_PageLayout.button(footer, text("back"), "back", 160f)
-				.getPosition().inBL(0f, 0f);
-		addList();
-		addDetails();
-	}
-
-	private void addList() {
+	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_fleets"));
 		BattleNext_PageLayout.button(listContent, text("new_fleet"), "new", 180f);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
@@ -113,7 +110,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 	}
 
-	private void addDetails() {
+	private void addDetails(TooltipMakerAPI detailContent) {
 		if (!status.isEmpty()) detailContent.addPara(status, 0f, BattleNext_UiTheme.MUTED);
 		if (selected == null) {
 			detailContent.addTitle(text("select_fleet"));

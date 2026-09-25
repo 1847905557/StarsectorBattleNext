@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 

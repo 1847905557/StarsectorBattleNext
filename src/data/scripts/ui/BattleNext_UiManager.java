@@ -1,6 +1,5 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -41,10 +40,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_StatusBar statusBar = new BattleNext_StatusBar();
 
 	private CustomPanelAPI panel;
-	private UIRect headingRect;
-	private UIRect tabsRect;
 	private UIRect bodyRect;
-	private UIRect footerRect;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
 	private Page currentPage = Page.BATTLE_SELECTOR;
 	private boolean editorOpen;
@@ -162,10 +158,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void buildShell() {
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		headingRect = new UIRect(8f, 8f, width - 16f, BattleNext_PageLayout.HEADER_HEIGHT);
-		tabsRect = new UIRect(8f, 46f, width - 16f, 30f);
+		UIRect headingRect = new UIRect(8f, 8f, width - 16f, BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect tabsRect = new UIRect(8f, 46f, width - 16f, 30f);
 		bodyRect = new UIRect(8f, 86f, width - 16f, height - 134f);
-		footerRect = new UIRect(8f, height - 38f, width - 16f, 30f);
+		UIRect footerRect = new UIRect(8f, height - 38f, width - 16f, 30f);
 
 		BattleNext_PageLayout.heading(headingRect, panel, text("panel_heading"));
 
