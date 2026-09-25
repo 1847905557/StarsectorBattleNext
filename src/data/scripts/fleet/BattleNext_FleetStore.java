@@ -64,9 +64,13 @@ public class BattleNext_FleetStore {
 		}
 	}
 
-	public String getLoadError() { return loadError; }
+	public String getLoadError() {
+		return loadError;
+	}
 
-	public boolean isLoaded() { return loadError.isEmpty(); }
+	public boolean isLoaded() {
+		return loadError.isEmpty();
+	}
 
 	public Collection<BattleNext_FleetModel> getAll() {
 		return List.copyOf(fleets.values());

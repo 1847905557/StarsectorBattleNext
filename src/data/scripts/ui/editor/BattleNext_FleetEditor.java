@@ -280,7 +280,9 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		result.setColor(source.getColor());
 		result.setVsImage(source.getVsImage());
 		result.setRulesId(source.getRulesId());
-		for (BattleNext_VariantModel variant : source.getVariants()) result.putVariant(variant);
+		for (BattleNext_VariantModel variant : source.getVariants()) {
+			result.putVariant(variant);
+		}
 		if (clone) result.setId(source.getId() + "_copy");
 		return result;
 	}

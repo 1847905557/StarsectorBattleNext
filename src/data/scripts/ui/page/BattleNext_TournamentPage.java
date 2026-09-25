@@ -138,14 +138,20 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
 			String id = ((String) buttonId).substring("tournament:select:".length());
 			navigation.accept(() -> {
-				if (!editor.open(tournamentStore.get(id))) { setStatus(editor.getStatusText()); return; }
+				if (!editor.open(tournamentStore.get(id))) {
+					setStatus(editor.getStatusText());
+					return;
+				}
 				selectedId = id;
 				draftOpen = true;
 				refreshContent();
 			});
 		} else if ("add".equals(buttonId)) {
 			navigation.accept(() -> {
-				if (!editor.open(null)) { setStatus(editor.getStatusText()); return; }
+				if (!editor.open(null)) {
+					setStatus(editor.getStatusText());
+					return;
+				}
 				selectedId = "";
 				draftOpen = true;
 				refreshContent();
@@ -186,9 +192,13 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		}
 	}
 
-	@Override public boolean hasUnsavedChanges() { return draftOpen && editor.hasUnsavedChanges(); }
+	@Override
+	public boolean hasUnsavedChanges() {
+		return draftOpen && editor.hasUnsavedChanges();
+	}
 
-	@Override public boolean save() {
+	@Override
+	public boolean save() {
 		if (!draftOpen || editor.isReadOnly()) return true;
 		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !rulesStore.isLoaded()) {
 			setStatus(text("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
@@ -196,7 +206,10 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 			return false;
 		}
 		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValid(id)) { setStatus(text("invalid_tournament_id")); return false; }
+		if (!BattleNext_EntryId.isValid(id)) {
+			setStatus(text("invalid_tournament_id"));
+			return false;
+		}
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, tournament.getId()) && !tournament.getId().equals(selectedId)) {
 				setStatus(text("duplicate_id")); return false;
@@ -206,11 +219,17 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 				&& !tournamentStore.isManaged(selectedId)) {
 			setStatus(text("source_unavailable")); return false;
 		}
-		if (!editor.serialize()) { setStatus(editor.getStatusText()); return false; }
+		if (!editor.serialize()) {
+			setStatus(editor.getStatusText());
+			return false;
+		}
 		try {
 			tournamentStore.reload();
 			selectedId = id;
-			if (!editor.open(tournamentStore.get(id))) { setStatus(editor.getStatusText()); return false; }
+			if (!editor.open(tournamentStore.get(id))) {
+				setStatus(editor.getStatusText());
+				return false;
+			}
 			setStatus(text("saved"));
 			refreshContent();
 			return true;
@@ -220,12 +239,20 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		}
 	}
 
-	@Override public void discard() {
-		if (selectedId.isEmpty()) { draftOpen = false; refreshContent(); }
-		else { editor.deserialize(); }
+	@Override
+	public void discard() {
+		if (selectedId.isEmpty()) {
+			draftOpen = false;
+			refreshContent();
+		} else {
+			editor.deserialize();
+		}
 	}
 
-	@Override public String getStatusText() { return status; }
+	@Override
+	public String getStatusText() {
+		return status;
+	}
 
 	private void setStatus(String value) {
 		status = value;

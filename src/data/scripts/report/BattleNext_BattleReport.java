@@ -39,7 +39,9 @@ public class BattleNext_BattleReport {
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
 		JSONArray members = new JSONArray();
-		for (BattleNext_MemberReport member : this.members) members.put(member.toJson());
+		for (BattleNext_MemberReport member : this.members) {
+			members.put(member.toJson());
+		}
 		json.put("members", members);
 		return json;
 	}

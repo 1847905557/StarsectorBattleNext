@@ -46,7 +46,9 @@ public final class BattleNext_FontData {
 		return font;
 	}
 
-	private BattleNext_FontData() {}
+	private BattleNext_FontData() {
+
+	}
 
 	public static final class TextObject {
 

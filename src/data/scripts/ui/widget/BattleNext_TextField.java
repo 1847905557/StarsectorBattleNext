@@ -503,30 +503,57 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	@Override
-	public PositionAPI getPosition() { return panel.getPosition(); }
+	public PositionAPI getPosition() {
+		return panel.getPosition();
+	}
 	@Override
-	public void render(float alphaMult) { panel.render(alphaMult); }
+	public void render(float alphaMult) {
+		panel.render(alphaMult);
+	}
 	@Override
-	public void processInput(List<InputEventAPI> events) { panel.processInput(events); }
+	public void processInput(List<InputEventAPI> events) {
+		panel.processInput(events);
+	}
 	@Override
-	public void advance(float amount) { panel.advance(amount); }
+	public void advance(float amount) {
+		panel.advance(amount);
+	}
 	@Override
-	public void setOpacity(float opacity) { panel.setOpacity(opacity); }
+	public void setOpacity(float opacity) {
+		panel.setOpacity(opacity);
+	}
 	@Override
-	public float getOpacity() { return panel.getOpacity(); }
+	public float getOpacity() {
+		return panel.getOpacity();
+	}
 
 	@Override
-	public void setPad(float pad) { this.pad = Math.max(0f, pad); refreshVisual(); }
+	public void setPad(float pad) {
+		this.pad = Math.max(0f, pad);
+		refreshVisual();
+	}
 	@Override
-	public LabelAPI getTextLabelAPI() { return textLabel; }
+	public LabelAPI getTextLabelAPI() {
+		return textLabel;
+	}
 	@Override
-	public void setMidAlignment() { textLabel.setAlignment(Alignment.LMID); refreshVisual(); }
+	public void setMidAlignment() {
+		textLabel.setAlignment(Alignment.LMID);
+		refreshVisual();
+	}
 	@Override
-	public void setColor(Color color) { textColor = color; textLabel.setColor(color); }
+	public void setColor(Color color) {
+		textColor = color;
+		textLabel.setColor(color);
+	}
 	@Override
-	public void setBgColor(Color color) { background = color; }
+	public void setBgColor(Color color) {
+		background = color;
+	}
 	@Override
-	public String getText() { return text; }
+	public String getText() {
+		return text;
+	}
 	@Override
 	public void setText(String value) {
 		text = value == null ? "" : value;
@@ -537,13 +564,21 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		notifyChanged();
 	}
 	@Override
-	public boolean isValidChar(char c) { return c != 0 && c != '%' && c != '$'; }
+	public boolean isValidChar(char c) {
+		return c != 0 && c != '%' && c != '$';
+	}
 	@Override
-	public boolean isLimitByStringWidth() { return limitByStringWidth; }
+	public boolean isLimitByStringWidth() {
+		return limitByStringWidth;
+	}
 	@Override
-	public void setLimitByStringWidth(boolean value) { limitByStringWidth = value; }
+	public void setLimitByStringWidth(boolean value) {
+		limitByStringWidth = value;
+	}
 	@Override
-	public boolean appendCharIfPossible(char c) { return appendCharIfPossible(c, true); }
+	public boolean appendCharIfPossible(char c) {
+		return appendCharIfPossible(c, true);
+	}
 	@Override
 	public boolean appendCharIfPossible(char c, boolean withSound) {
 		if (!isValidChar(c) || (maxChars >= 0 && !hasSelection() && text.length() >= maxChars)) return false;
@@ -552,48 +587,94 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		return oldCursor != cursor;
 	}
 	@Override
-	public int getMaxChars() { return maxChars; }
+	public int getMaxChars() {
+		return maxChars;
+	}
 	@Override
-	public void setMaxChars(int maxChars) { this.maxChars = maxChars; }
+	public void setMaxChars(int maxChars) {
+		this.maxChars = maxChars;
+	}
 	@Override
-	public void deleteAll() { deleteAll(true); }
+	public void deleteAll() {
+		deleteAll(true);
+	}
 	@Override
-	public void deleteAll(boolean withSound) { text = ""; cursor = 0; anchor = 0; notifyChanged(); }
+	public void deleteAll(boolean withSound) {
+		text = "";
+		cursor = 0;
+		anchor = 0;
+		notifyChanged();
+	}
 	@Override
 	public void deleteLastWord() {
-		if (hasSelection()) { deleteSelection(); return; }
+		if (hasSelection()) {
+			deleteSelection();
+			return;
+		}
 		int end = cursor;
-		while (end > 0 && Character.isWhitespace(text.charAt(end - 1))) end--;
-		while (end > 0 && !Character.isWhitespace(text.charAt(end - 1))) end--;
+		while (end > 0 && Character.isWhitespace(text.charAt(end - 1))) {
+			end--;
+		}
+		while (end > 0 && !Character.isWhitespace(text.charAt(end - 1))) {
+			end--;
+		}
 		text = text.substring(0, end) + text.substring(cursor);
 		cursor = end;
 		anchor = end;
 		notifyChanged();
 	}
 	@Override
-	public void grabFocus() { grabFocus(true); }
+	public void grabFocus() {
+		grabFocus(true);
+	}
 	@Override
-	public void grabFocus(boolean playSound) { FOCUS.current = this; undoText = text; resetBlink(); }
+	public void grabFocus(boolean playSound) {
+		FOCUS.current = this;
+		undoText = text;
+		resetBlink();
+	}
 	@Override
-	public boolean hasFocus() { return FOCUS.current == this; }
+	public boolean hasFocus() {
+		return FOCUS.current == this;
+	}
 	@Override
-	public boolean isUndoOnEscape() { return undoOnEscape; }
+	public boolean isUndoOnEscape() {
+		return undoOnEscape;
+	}
 	@Override
-	public void setUndoOnEscape(boolean value) { undoOnEscape = value; }
+	public void setUndoOnEscape(boolean value) {
+		undoOnEscape = value;
+	}
 	@Override
-	public boolean isHandleCtrlV() { return handleCtrlV; }
+	public boolean isHandleCtrlV() {
+		return handleCtrlV;
+	}
 	@Override
-	public void setHandleCtrlV(boolean value) { handleCtrlV = value; }
+	public void setHandleCtrlV(boolean value) {
+		handleCtrlV = value;
+	}
 	@Override
-	public Color getBorderColor() { return border; }
+	public Color getBorderColor() {
+		return border;
+	}
 	@Override
-	public void setBorderColor(Color color) { border = color; }
+	public void setBorderColor(Color color) {
+		border = color;
+	}
 	@Override
-	public boolean isVerticalCursor() { return verticalCursor; }
+	public boolean isVerticalCursor() {
+		return verticalCursor;
+	}
 	@Override
-	public void setVerticalCursor(boolean value) { verticalCursor = value; }
+	public void setVerticalCursor(boolean value) {
+		verticalCursor = value;
+	}
 	@Override
-	public void hideCursor() { showCursor = false; }
+	public void hideCursor() {
+		showCursor = false;
+	}
 	@Override
-	public void showCursor() { showCursor = true; }
+	public void showCursor() {
+		showCursor = true;
+	}
 }

@@ -117,7 +117,9 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		content.addPara(text("tournament_size") + ": " + teams.size(), 8f, BattleNext_UiTheme.MUTED);
 		content.addPara(text("teams"), 10f, BattleNext_UiTheme.ACCENT);
 		if (isReadOnly()) {
-			for (String team : teams) content.addPara(team, 5f, BattleNext_UiTheme.TEXT);
+			for (String team : teams) {
+				content.addPara(team, 5f, BattleNext_UiTheme.TEXT);
+			}
 		} else {
 			for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
 				String label = (teams.contains(fleet.getId()) ? "[x] " : "[ ] ") + fleet.getName() + " [" + fleet.getId() + "]";
@@ -162,7 +164,9 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		for (TextFieldAPI field : new TextFieldAPI[]{idField, nameField, bracketField, formatField, rulesField, mapField}) {
 			value.append(field.getText().length()).append(':').append(field.getText());
 		}
-		for (String team : teams) value.append(team.length()).append(':').append(team);
+		for (String team : teams) {
+			value.append(team.length()).append(':').append(team);
+		}
 		return value.toString();
 	}
 
@@ -192,7 +196,10 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			statusText = text("invalid_map");
 			return false;
 		}
-		if (map < -1 || map > 11) { statusText = text("invalid_map"); return false; }
+		if (map < -1 || map > 11) {
+			statusText = text("invalid_map");
+			return false;
+		}
 		draft.setMapId(map);
 		draft.setTeams(new ArrayList<>(teams));
 		try {

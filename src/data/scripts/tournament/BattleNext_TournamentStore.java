@@ -43,9 +43,15 @@ public class BattleNext_TournamentStore {
 		}
 	}
 
-	public String getLoadError() { return loadError; }
-	public boolean isLoaded() { return loadError.isEmpty(); }
-	private void requireLoaded() { if (!isLoaded()) throw new IllegalStateException(loadError); }
+	public String getLoadError() {
+		return loadError;
+	}
+	public boolean isLoaded() {
+		return loadError.isEmpty();
+	}
+	private void requireLoaded() {
+		if (!isLoaded()) throw new IllegalStateException(loadError);
+	}
 
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
 		requireLoaded();

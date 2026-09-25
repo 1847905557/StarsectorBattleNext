@@ -15,7 +15,9 @@ public final class BattleNext_FileCatalog {
 	private static final String MOD_ID = "AI_Battles_Next";
 	private static final String SAVES_PROPERTY = "com.fs.starfarer.settings.paths.saves";
 
-	private BattleNext_FileCatalog() { }
+	private BattleNext_FileCatalog() {
+
+	}
 
 	public static List<String> resources(String directory, boolean recursive) {
 		String root = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();

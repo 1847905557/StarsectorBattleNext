@@ -79,7 +79,10 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
 					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
-			if (index == 1) { saveButton = button; saveButton.setEnabled(store.isLoaded()); }
+			if (index == 1) {
+				saveButton = button;
+				saveButton.setEnabled(store.isLoaded());
+			}
 		}
 		float statusX = 3f * buttonWidth + 30f;
 		if (footerRect.getWidth() - statusX >= 60f) {
@@ -184,13 +187,23 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 	}
 
-	@Override public boolean hasUnsavedChanges() { return draftOpen && editor.hasUnsavedChanges(); }
+	@Override
+	public boolean hasUnsavedChanges() {
+		return draftOpen && editor.hasUnsavedChanges();
+	}
 
-	@Override public boolean save() {
+	@Override
+	public boolean save() {
 		if (!draftOpen) return true;
-		if (!store.isLoaded()) { setStatus(text("load_failed") + ": " + store.getLoadError()); return false; }
+		if (!store.isLoaded()) {
+			setStatus(text("load_failed") + ": " + store.getLoadError());
+			return false;
+		}
 		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValid(id)) { setStatus(text("invalid_fleet_id")); return false; }
+		if (!BattleNext_EntryId.isValid(id)) {
+			setStatus(text("invalid_fleet_id"));
+			return false;
+		}
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, fleet.getId()) && !fleet.getId().equals(selectedId)) {
 				setStatus(text("duplicate_id")); return false;
@@ -201,7 +214,10 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 				&& !BattleNext_LoadSource.COMMON.equals(original.getSourceType())) {
 			setStatus(text("source_unavailable")); return false;
 		}
-		if (!editor.serialize()) { setStatus(editor.getStatusText()); return false; }
+		if (!editor.serialize()) {
+			setStatus(editor.getStatusText());
+			return false;
+		}
 		try {
 			store.reload();
 		} catch (RuntimeException exception) {
@@ -214,12 +230,20 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		return true;
 	}
 
-	@Override public void discard() {
-		if (selectedId.isEmpty()) { draftOpen = false; refreshContent(); }
-		else { editor.deserialize(); }
+	@Override
+	public void discard() {
+		if (selectedId.isEmpty()) {
+			draftOpen = false;
+			refreshContent();
+		} else {
+			editor.deserialize();
+		}
 	}
 
-	@Override public String getStatusText() { return status; }
+	@Override
+	public String getStatusText() {
+		return status;
+	}
 
 	private void setStatus(String value) {
 		status = value;

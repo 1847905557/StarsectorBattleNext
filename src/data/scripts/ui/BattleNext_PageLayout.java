@@ -53,8 +53,12 @@ public class BattleNext_PageLayout {
 	public static ButtonAPI buttonWithTooltip(TooltipMakerAPI maker, String title, Object id, float width) {
 		ButtonAPI button = button(maker, title, id, width);
 		maker.addTooltipToPrevious(new BaseTooltipCreator() {
-			@Override public float getTooltipWidth(Object ignored) { return Math.min(500f, Math.max(220f, title.length() * 10f)); }
-			@Override public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return Math.min(500f, Math.max(220f, title.length() * 10f));
+			}
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 				tooltip.addPara(title, 0f, BattleNext_UiTheme.TEXT);
 			}
 		}, TooltipLocation.RIGHT);

@@ -70,7 +70,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	@Override
 	public boolean serialize() {
-		if (!fleetStore.isLoaded()) { setStatus(text("load_failed") + ": " + fleetStore.getLoadError()); return false; }
+		if (!fleetStore.isLoaded()) {
+			setStatus(text("load_failed") + ": " + fleetStore.getLoadError());
+			return false;
+		}
 		if (!captureFields()) return false;
 		try {
 			store.save();

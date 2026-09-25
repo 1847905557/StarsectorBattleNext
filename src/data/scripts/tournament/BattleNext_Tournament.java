@@ -211,7 +211,9 @@ public class BattleNext_Tournament {
 	public void setTeams(List<String> values) {
 		if (started) throw new IllegalStateException("Started tournament teams are locked");
 		teams.clear();
-		for (String value : values) addTeam(value);
+		for (String value : values) {
+			addTeam(value);
+		}
 		size = teams.size();
 	}
 

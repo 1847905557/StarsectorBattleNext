@@ -32,8 +32,12 @@ public class BattleNext_RulesStore {
 		}
 	}
 
-	public String getLoadError() { return loadError; }
-	public boolean isLoaded() { return loadError.isEmpty(); }
+	public String getLoadError() {
+		return loadError;
+	}
+	public boolean isLoaded() {
+		return loadError.isEmpty();
+	}
 
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
 		if (!isLoaded()) throw new IllegalStateException(loadError);

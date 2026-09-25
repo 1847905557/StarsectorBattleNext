@@ -103,7 +103,9 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			reportStore.reload();
 		} catch (Exception ignored) {
 		}
-		for (BattleNext_BattleReport report : reportStore.getRecent()) entries.add(new Entry(report, ""));
+		for (BattleNext_BattleReport report : reportStore.getRecent()) {
+			entries.add(new Entry(report, ""));
+		}
 		try {
 			tournamentStore.reload();
 			for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
@@ -123,7 +125,9 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private List<MatchWithRound> rounds(BattleNext_Tournament tournament) {
 		List<MatchWithRound> result = new ArrayList<>();
 		for (BattleNext_Match match : tournament.getMatches()) {
-			for (BattleNext_Round round : match.getRounds()) result.add(new MatchWithRound(match.getId(), round));
+			for (BattleNext_Round round : match.getRounds()) {
+				result.add(new MatchWithRound(match.getId(), round));
+			}
 		}
 		return result;
 	}

@@ -65,7 +65,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
 		api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(player.getDefinition().getTags()),
 				BattleNext_FleetBehavior.fromTags(enemy.getDefinition().getTags()), player.getDefinition(), enemy.getDefinition()));
-		api.addPlugin(new BattleNext_PresentationPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
+		api.addPlugin(new BattleNext_FreeCameraPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
 		api.addPlugin(new BattleNext_PostReport(scorekeeper));
 	}
 
