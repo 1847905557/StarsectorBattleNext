@@ -10,7 +10,6 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Pair;
 import com.fs.state.AppDriver;
-import data.scripts.ui.widget.BattleNext_BasePanelPlugin;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.config.BoxConfigGUI;

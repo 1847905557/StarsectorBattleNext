@@ -2,13 +2,7 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.Alignment;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.scripts.battle.BattleNext_Match;
@@ -19,6 +13,7 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -283,7 +278,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		return result;
 	}
 
-	private void addLabel(CustomPanelAPI host, UIRect rect, String value, java.awt.Color color,
+	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color,
 			boolean compactFont) {
 		TooltipMakerAPI maker = host.createUIElement(rect.getWidth() - 4f, rect.getHeight(), false);
 		if (compactFont) maker.setParaSmallInsignia();

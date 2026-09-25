@@ -1,5 +1,8 @@
 package data.scripts.ui.editor;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.characters.SkillSpecAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
@@ -14,6 +17,7 @@ import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_OptionField;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +30,8 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<MemberFields> memberFields = new ArrayList<>();
 	private CustomPanelAPI panel;
+	private CustomPanelAPI overlayHost;
+	private BattleNext_OptionField skillsPicker;
 	private UIRect contentRect;
 	private LabelAPI status;
 	private String statusText = "";
@@ -58,6 +64,18 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public String getDraftId() {
 		return id == null ? "" : id.getText().trim();
+	}
+
+	public void setOverlayHost(CustomPanelAPI overlayHost) {
+		this.overlayHost = overlayHost;
+	}
+
+	public void closePicker() {
+		if (skillsPicker != null) skillsPicker.close();
+	}
+
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		return skillsPicker != null && skillsPicker.handleGlobalInput(events);
 	}
 
 	@Override
@@ -106,6 +124,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		closePicker();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		float gap = 10f;
@@ -131,7 +150,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		behavior = field(metaContent, text("fleet_behavior"), draft.getBehavior(), width);
 		color = field(metaContent, text("fleet_color"), draft.getColor(), width);
 		vsImage = field(metaContent, text("fleet_vs_image"), draft.getVsImage(), width);
-		skills = field(metaContent, text("fleet_skills"), String.join(",", draft.getSkills()), width);
+		metaContent.addPara(text("fleet_skills"), 5f, BattleNext_UiTheme.MUTED);
+		skillsPicker = new BattleNext_OptionField(overlayHost, new SkillSource(), BattleNext_OptionField.Mode.MULTIPLE);
+		skills = skillsPicker.addTo(metaContent, panel, Math.max(72f, width - 24f),
+				String.join(",", draft.getSkills()));
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width);
 		rulesId = field(metaContent, text("fleet_rules"), draft.getRulesId(), width);
 	}
@@ -165,6 +187,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
 		TextFieldAPI field = host.addTextField(Math.max(40f, sectionWidth - 24f), 2f);
 		field.setText(value == null ? "" : value);
+		field.setVerticalCursor(true);
 		field.setMaxChars(240);
 		return field;
 	}
@@ -275,6 +298,36 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private String text(String key) {
 		return strings.get(key);
+	}
+
+	private static class SkillSource implements BattleNext_OptionField.Source {
+
+		@Override
+		public List<BattleNext_OptionField.Option> getOptions() {
+			List<BattleNext_OptionField.Option> options = new ArrayList<>();
+			for (String id : Global.getSettings().getSortedSkillIds()) {
+				SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
+				if (spec == null) continue;
+				options.add(new BattleNext_OptionField.Option(id, spec.getName()));
+			}
+			return options;
+		}
+
+		@Override
+		public String getIcon(String id) {
+			SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
+			return spec == null ? "" : spec.getSpriteName();
+		}
+
+		@Override
+		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionField.Option option) {
+			SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
+			tooltip.addTitle(option.getLabel());
+			tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);
+			if (spec != null && spec.getDescription() != null && !spec.getDescription().isBlank()) {
+				tooltip.addPara(spec.getDescription(), 8f, BattleNext_UiTheme.TEXT);
+			}
+		}
 	}
 
 	private static final class MemberFields {

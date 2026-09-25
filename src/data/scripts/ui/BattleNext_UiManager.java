@@ -10,6 +10,7 @@ import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_StatusBar;
+import data.scripts.ui.widget.BattleNext_TextField;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
@@ -110,6 +111,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		if (BattleNext_TextField.handleGlobalInput(events)) return true;
+		if (!confirmationDialog.isActive() && currentPage == Page.FLEETS && fleetPage != null
+				&& fleetPage.handleGlobalInput(events)) return true;
 		if (!confirmationDialog.isActive() && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
 				&& battleSelectorPage.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
@@ -177,12 +181,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void showPage() {
 		if (panel == null) return;
+		if (fleetPage != null) fleetPage.closePicker();
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(Page.values()[index] != currentPage);
 		}
 		bodyRect.removeLatestSubPanel();
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
-		activeView().attach(body);
+		BattleNext_PageView view = activeView();
+		if (currentPage == Page.FLEETS) fleetPage.setOverlayHost(panel);
+		view.attach(body);
 	}
 
 	private BattleNext_PageView activeView() {
@@ -218,6 +225,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void requestPage(Page page) {
 		if (page == currentPage) return;
+		if (fleetPage != null) fleetPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
 				currentPage = page;
@@ -232,6 +240,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void requestClose() {
+		if (fleetPage != null) fleetPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(closeAction);
 			return;

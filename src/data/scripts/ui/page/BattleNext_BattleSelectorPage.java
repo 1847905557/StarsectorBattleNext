@@ -47,6 +47,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private UIRect contentRect;
 	private UIRect sourceButtonRect;
 	private CustomPanelAPI dropdownPanel;
+
 	private ButtonAPI sourceButton;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();

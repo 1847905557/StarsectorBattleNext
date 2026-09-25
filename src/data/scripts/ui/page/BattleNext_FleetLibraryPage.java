@@ -5,6 +5,7 @@ import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_LoadSource;
@@ -16,6 +17,7 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.BiConsumer;
 
@@ -28,6 +30,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private final BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
+	private CustomPanelAPI overlayHost;
 	private UIRect listRect;
 	private UIRect detailRect;
 	private String selectedId = "";
@@ -41,6 +44,10 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		this.backAction = backAction;
 		this.navigation = navigation;
 		this.deletion = deletion;
+	}
+
+	public void setOverlayHost(CustomPanelAPI overlayHost) {
+		this.overlayHost = overlayHost;
 	}
 
 	@Override
@@ -88,6 +95,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
 	@Override
 	public void refreshContent() {
+		editor.closePicker();
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
@@ -104,6 +112,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 		BattleNext_FleetModel selected = selectedId.isEmpty() ? null : store.get(selectedId);
 		editor.open(selected, false);
+		editor.setOverlayHost(overlayHost);
 		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f,
 				detailPanel.getPlugin());
 		detailPanel.addComponent(editorPanel).inTL(8f, 8f);
@@ -123,8 +132,17 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 	}
 
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		return draftOpen && editor.handleGlobalInput(events);
+	}
+
+	public void closePicker() {
+		editor.closePicker();
+	}
+
 	@Override
 	public void buttonPressed(Object buttonId) {
+		editor.closePicker();
 		if (buttonId instanceof String && ((String) buttonId).startsWith("fleet:")) {
 			String id = ((String) buttonId).substring("fleet:".length());
 			navigation.accept(() -> { selectedId = id; draftOpen = true; refreshContent(); });

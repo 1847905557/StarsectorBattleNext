@@ -1,10 +1,9 @@
-package data.scripts.ui.widget;
+package data.scripts.ui;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
-import data.scripts.ui.BattleNext_UiManager;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
 import org.lwjgl.opengl.GL11;
