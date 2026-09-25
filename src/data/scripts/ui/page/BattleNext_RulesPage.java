@@ -26,12 +26,10 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		BattleNext_PageLayout.heading(header[0], panel, strings.get("page_rules"));
 
 		UIRect contentRect = rest[1];
-		TooltipMakerAPI content = contentRect.beginTooltip(panel, true);
-		BattleNext_UiTheme.configure(content);
+		TooltipMakerAPI content = BattleNext_PageLayout.column(contentRect, panel);
 		content.addTitle(strings.get("rules_heading"));
 		content.addPara(strings.get("rules_description"), 10f, BattleNext_UiTheme.TEXT);
 		content.addPara(strings.get("page_placeholder"), 8f, BattleNext_UiTheme.MUTED);
-		contentRect.addTooltip();
 	}
 
 	// static page: contents are created once and never refreshed

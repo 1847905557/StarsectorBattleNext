@@ -1,6 +1,7 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -95,17 +96,24 @@ public class BattleNext_FleetDraftEditor implements BattleNext_EditorView {
 		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
 		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		float metaWidth = BattleNext_PageLayout.listWidth(panel);
-		UIRect[] columns = bottom[0].splitHorizontally(metaWidth + 10f);
+		UIRect[] columns = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
+				.splitHorizontally(metaWidth + 10f);
 		metaRect = columns[0];
 		memberRect = columns[1];
 
 		BattleNext_PageLayout.heading(header[0], panel, text("fleet_editor"));
 
 		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
-		TooltipMakerAPI footer = BattleNext_PageLayout.footer(footerRect, panel);
-		BattleNext_PageLayout.button(footer, text("add_member"), "add_member", 180f).getPosition().inBL(0f, 0f);
-		BattleNext_PageLayout.button(footer, text("save"), "save", 180f).getPosition().inBL(190f, 0f);
-		BattleNext_PageLayout.button(footer, text("back"), "back", 180f).getPosition().inBL(380f, 0f);
+		float buttonWidth = Math.min(180f, (footerRect.getWidth() - 20f) / 3f);
+		BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX(), footerRect.getY(), buttonWidth, 30f),
+				text("add_member"), "add_member", CutStyle.ALL, true);
+		BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX() + buttonWidth + 10f, footerRect.getY(), buttonWidth, 30f),
+				text("save"), "save", CutStyle.ALL, true);
+		BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX() + 2f * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+				text("back"), "back", CutStyle.ALL, true);
 
 		refreshContent();
 	}

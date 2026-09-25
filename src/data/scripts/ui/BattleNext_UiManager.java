@@ -82,6 +82,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
+		if (currentPage == Page.BATTLE_SELECTOR && !editorOpen && battleSelectorPage != null
+				&& !confirmationDialog.isActive()) {
+			battleSelectorPage.refreshRowStatuses();
+		}
 	}
 
 	@Override
@@ -118,6 +122,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		if (!confirmationDialog.isActive() && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
 				&& battleSelectorPage.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
+			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				if (confirmationDialog.isActive()) {
 					confirmationDialog.handle("confirm_cancel");
@@ -165,31 +170,20 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 		BattleNext_PageLayout.heading(headingRect, panel, text("panel_heading"));
 
-		TooltipMakerAPI tabs = tabsRect.beginTooltip(panel, false);
-		tabs.setButtonFontOrbitron20();
-		float tabWidth = (width - 16f - 25f) / 6f;
+		float tabWidth = (tabsRect.getWidth() - 25f) / tabButtons.length;
 		for (int index = 0; index < 6; index++) {
 			Page page = Page.values()[index];
-			ButtonAPI button = tabs.addButton(text(page.titleKey), page, BattleNext_UiTheme.TEXT,
-					BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.TOP, tabWidth, 30f, 0f);
-			button.getPosition().inBL(index * (tabWidth + 5f), 0f);
-			button.setMouseOverSound("BUtil_button_in");
-			button.setButtonPressedSound("BUtil_button_down");
-			tabButtons[index] = button;
+			UIRect tabRect = new UIRect(tabsRect.getX() + index * (tabWidth + 5f), tabsRect.getY(), tabWidth, 30f);
+			tabButtons[index] = BattleNext_PageLayout.fixedButton(panel, tabRect,
+					text(page.titleKey), page, CutStyle.TOP, false);
 		}
-		// addButton accumulates row heights even after the buttons are positioned side by side.
-		tabs.setHeightSoFar(30f);
-		tabsRect.addTooltip();
 
-		TooltipMakerAPI footer = footerRect.beginTooltip(panel, false);
-		footer.setButtonFontOrbitron20();
-		statusBar.attach(footer);
-		ButtonAPI close = footer.addButton(text("close"), "close", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.BOTTOM, 180f, 30f, 0f);
-		close.getPosition().inBR(0f, 0f);
-		close.setMouseOverSound("BUtil_button_in");
-		close.setButtonPressedSound("BUtil_button_down");
-		footerRect.addTooltip();
+		float closeWidth = Math.min(180f, footerRect.getWidth() * 0.3f);
+		statusBar.attach(panel, new UIRect(footerRect.getX(), footerRect.getY(),
+				footerRect.getWidth() - closeWidth - 10f, footerRect.getHeight()));
+		BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth, footerRect.getY(), closeWidth, 30f),
+				text("close"), "close", CutStyle.BOTTOM, false);
 	}
 
 	private void showPage() {

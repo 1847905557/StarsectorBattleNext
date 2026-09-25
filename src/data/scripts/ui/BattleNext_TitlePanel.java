@@ -108,6 +108,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		for (InputEventAPI event : events) {
+			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				closePanel();
 				event.consume();

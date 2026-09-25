@@ -1,6 +1,7 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
@@ -51,13 +52,15 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		BattleNext_PageLayout.heading(header[0], panel, text("page_reports"));
 
 		float listWidth = BattleNext_PageLayout.listWidth(panel);
-		UIRect[] columns = bottom[0].splitHorizontally(listWidth + 10f);
+		UIRect[] columns = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
+				.splitHorizontally(listWidth + 10f);
 		listRect = columns[0];
 		detailRect = columns[1];
 
 		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
-		TooltipMakerAPI footer = BattleNext_PageLayout.footer(footerRect, panel);
-		BattleNext_PageLayout.button(footer, text("back"), "back", 160f).getPosition().inBL(0f, 0f);
+		BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX(), footerRect.getY(), Math.min(160f, footerRect.getWidth()), 30f),
+				text("back"), "back", CutStyle.ALL, true);
 
 		refreshContent();
 	}

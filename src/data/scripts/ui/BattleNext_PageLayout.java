@@ -22,11 +22,12 @@ public class BattleNext_PageLayout {
 	}
 
 	public static TooltipMakerAPI heading(UIRect rect, CustomPanelAPI panel, String title) {
-		TooltipMakerAPI maker = rect.beginTooltip(panel, false);
-		LabelAPI label = maker.addSectionHeading(title, BattleNext_UiTheme.TEXT,
+		TooltipMakerAPI maker = panel.createUIElement(Math.max(1f, rect.getWidth() - 10f), rect.getHeight(), false);
+		LabelAPI label = maker.addSectionHeading(maker.shortenString(title, rect.getWidth() - 10f), BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
 		label.getPosition().inTL(0f, 0f);
-		rect.addTooltip();
+		maker.setHeightSoFar(rect.getHeight());
+		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
 		return maker;
 	}
 
@@ -39,17 +40,26 @@ public class BattleNext_PageLayout {
 		return maker;
 	}
 
-	public static TooltipMakerAPI footer(UIRect rect, CustomPanelAPI panel) {
-		TooltipMakerAPI maker = rect.beginTooltip(panel, false);
-		rect.addTooltip();
-		return maker;
-	}
-
 	public static ButtonAPI button(TooltipMakerAPI maker, String title, Object id, float width) {
-		ButtonAPI button = maker.addButton(title, id, BattleNext_UiTheme.ACCENT,
+		ButtonAPI button = maker.addButton(maker.shortenString(title, Math.max(1f, width - 16f)), id, BattleNext_UiTheme.ACCENT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.ALL, width, FOOTER_HEIGHT, GAP);
 		button.setMouseOverSound("BUtil_button_in");
 		button.setButtonPressedSound("BUtil_button_down");
+		return button;
+	}
+
+	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
+			CutStyle style, boolean prominent) {
+		TooltipMakerAPI maker = panel.createUIElement(Math.max(1f, rect.getWidth() - 10f), rect.getHeight(), false);
+		maker.setButtonFontOrbitron20();
+		ButtonAPI button = maker.addButton(maker.shortenString(title, Math.max(1f, rect.getWidth() - 16f)), id,
+				prominent ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT,
+				BattleNext_UiTheme.PANEL, Alignment.MID, style, rect.getWidth(), rect.getHeight(), 0f);
+		button.getPosition().inTL(0f, 0f);
+		button.setMouseOverSound("BUtil_button_in");
+		button.setButtonPressedSound("BUtil_button_down");
+		maker.setHeightSoFar(rect.getHeight());
+		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
 		return button;
 	}
 

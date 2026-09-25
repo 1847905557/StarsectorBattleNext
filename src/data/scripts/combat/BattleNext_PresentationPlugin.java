@@ -68,6 +68,7 @@ public class BattleNext_PresentationPlugin extends BaseEveryFrameCombatPlugin {
 			engine.getCombatUI().addMessage(0, externalCamera ? "Free camera enabled" : "Free camera disabled");
 		}
 		for (InputEventAPI event : events) {
+			if (event.isConsumed()) continue;
 			if (event.isLMBDownEvent()) zoomIn = true;
 			if (event.isLMBUpEvent()) zoomIn = false;
 			if (event.isRMBDownEvent()) zoomOut = true;
