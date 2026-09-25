@@ -1,6 +1,5 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -16,15 +15,14 @@ import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.BattleNext_UiTheme;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
+import data.scripts.ui.widget.BattleNext_DropdownField;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
-	public static class SourceRequest {
-
+	public static final class SourceRequest {
 		private final String id;
 
 		public SourceRequest(String id) {
@@ -36,19 +34,12 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		}
 	}
 
-	private enum Action {
-		TOGGLE_SOURCE
-	}
-
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI panel;
 	private UIRect contentRect;
-	private UIRect sourceButtonRect;
-	private CustomPanelAPI dropdownPanel;
-
-	private ButtonAPI sourceButton;
+	private BattleNext_DropdownField sourceDropdown;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
@@ -64,7 +55,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
-		closeSourceList();
+		if (sourceDropdown != null) sourceDropdown.close();
 		this.panel = panel;
 		load();
 		createContents();
@@ -72,6 +63,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	@Override
 	public void createContents() {
+		if (sourceDropdown != null) sourceDropdown.close();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] sections = root.splitVertically(88f);
 		contentRect = sections[1];
@@ -88,16 +80,22 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 				.getPosition().inTL(0f, 5f);
 		sourceLabel.setHeightSoFar(labelRect.getHeight());
 		labelRect.addTooltip();
-		sourceButtonRect = new UIRect(groupX + labelWidth + 12f, 44f, buttonWidth, 30f);
-		sourceButton = BattleNext_PageLayout.fixedButton(panel, sourceButtonRect,
-				sourceLabel(), Action.TOGGLE_SOURCE, CutStyle.ALL, false);
-		sourceButton.setEnabled(tournamentStore.isLoaded());
+		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + 12f, 44f, buttonWidth, 30f);
+		sourceDropdown = new BattleNext_DropdownField(panel, inputOwner, buttonWidth,
+				id -> {
+					inputOwner.buttonPressed(new SourceRequest(id));
+				});
+		sourceDropdown.attach(null, sourceButtonRect);
+		sourceDropdown.setOptions(sourceOptions());
+		sourceDropdown.setValue(selectedId);
+		sourceDropdown.setEnabled(tournamentStore.isLoaded());
 
 		refreshContent();
 	}
 
 	@Override
 	public void refreshContent() {
+		if (sourceDropdown != null) sourceDropdown.close();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		quickBattleEditor = null;
@@ -125,7 +123,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	}
 
 	public void closeDropdown() {
-		closeSourceList();
+		if (sourceDropdown != null) sourceDropdown.close();
 	}
 
 	public void refreshRowStatuses() {
@@ -138,44 +136,16 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-
-		if (dropdownPanel == null) return false;
-		for (InputEventAPI event : events) {
-			if (event.isConsumed()) continue;
-			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
-				closeSourceList();
-				event.consume();
-				return true;
-			}
-			if (!event.isMouseDownEvent()) continue;
-			float scale = Global.getSettings().getScreenScaleMult();
-			float x = Mouse.getX() / scale;
-			float y = Mouse.getY() / scale;
-			if (!contains(dropdownPanel, x, y) && !contains(sourceButton, x, y)) {
-				closeSourceList();
-			}
-		}
-		return false;
+		return sourceDropdown != null && sourceDropdown.handleGlobalInput(events);
 	}
 
 	@Override
 	public void buttonPressed(Object buttonId) {
-		if (buttonId == Action.TOGGLE_SOURCE) {
-			if (dropdownPanel == null) openSourceList();
-			else closeSourceList();
-			return;
-		}
 		if ("tournament:start".equals(buttonId)) {
 			startTournament();
 		} else if (selectedId.isEmpty() && quickBattleEditor != null) {
 			quickBattleEditor.buttonPressed(buttonId);
 		}
-	}
-
-	private boolean contains(UIComponentAPI component, float x, float y) {
-		PositionAPI position = component.getPosition();
-		return x >= position.getX() && x < position.getX() + position.getWidth()
-				&& y >= position.getY() && y < position.getY() + position.getHeight();
 	}
 
 	private void load() {
@@ -205,29 +175,14 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		return tournament.getName() + " [" + selectedId + "]";
 	}
 
-	private void openSourceList() {
-
-		if (panel == null || dropdownPanel != null || !tournamentStore.isLoaded()) return;
-		float width = sourceButton.getPosition().getWidth();
-		int optionCount = tournamentStore.getAll().size() + 1;
-		float dropdownY = sourceButtonRect.getY() + sourceButtonRect.getHeight() + 2f;
-		float visibleHeight = Math.min(Math.min(240f, optionCount * 35f),
-				panel.getPosition().getHeight() - dropdownY - 8f);
-		dropdownPanel = panel.createCustomPanel(width, visibleHeight, inputOwner);
-		TooltipMakerAPI options = dropdownPanel.createUIElement(width - 5f, visibleHeight, true);
-		options.setButtonFontOrbitron20();
-		BattleNext_PageLayout.button(options, text("quick_battle"), new SourceRequest(""), width - 15f);
+	private List<BattleNext_DropdownField.Option> sourceOptions() {
+		List<BattleNext_DropdownField.Option> options = new ArrayList<>();
+		options.add(new BattleNext_DropdownField.Option("", text("quick_battle")));
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
-			String label = tournament.getName() + " [" + tournament.getId() + "]";
-			BattleNext_PageLayout.button(options, label, new SourceRequest(tournament.getId()), width - 15f);
+			options.add(new BattleNext_DropdownField.Option(tournament.getId(),
+					tournament.getName() + " [" + tournament.getId() + "]"));
 		}
-		dropdownPanel.addUIElement(options).inTL(0f, 0f);
-		panel.addComponent(dropdownPanel).inTL(sourceButtonRect.getX(), dropdownY);
-	}
-
-	private void closeSourceList() {
-		if (panel != null && dropdownPanel != null) panel.removeComponent(dropdownPanel);
-		dropdownPanel = null;
+		return options;
 	}
 
 	private void buildTournamentDetails(CustomPanelAPI detailPanel) {
