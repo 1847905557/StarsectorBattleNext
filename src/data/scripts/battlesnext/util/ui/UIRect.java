@@ -1,4 +1,4 @@
-package data.scripts.plsp.util.ui;
+package data.scripts.battlesnext.util.ui;
 // originally by Originem, forked and modified by AnyIDElse under license
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;

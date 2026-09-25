@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_UiTheme;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
@@ -73,7 +74,8 @@ public class BattleNext_ConfirmationDialog {
 		if (confirmation != null) return;
 		float width = Math.min(520f, parent.getPosition().getWidth() - 40f);
 		confirmation = Global.getSettings().createCustom(width, 160f, new ConfirmationPlugin(width));
-		TooltipMakerAPI dialog = confirmation.createUIElement(width, 160f, false);
+		UIRect dialogRect = new UIRect(0f, 0f, width, 160f);
+		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
 		BattleNext_UiTheme.configure(dialog);
 		dialog.addTitle(strings.get("unsaved_title"));
 		dialog.addPara(strings.get("unsaved_message"), 12f, BattleNext_UiTheme.TEXT);
@@ -86,7 +88,7 @@ public class BattleNext_ConfirmationDialog {
 			button.setMouseOverSound("BUtil_button_in");
 			button.setButtonPressedSound("BUtil_button_down");
 		}
-		confirmation.addUIElement(dialog);
+		dialogRect.addTooltip();
 		parent.addComponent(confirmation).inMid();
 	}
 

@@ -11,6 +11,7 @@ import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
@@ -121,12 +122,16 @@ public class BattleNext_QuickBattleEditor {
 	private void rebuild() {
 		if (panel == null) return;
 		if (heading != null) panel.removeComponent(heading);
-		if (content != null) panel.removeComponent(content);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("quick_battle"));
-		content = BattleNext_PageLayout.column(panel, 0f, panel.getPosition().getWidth());
-		footer = BattleNext_PageLayout.footer(panel);
+		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
+		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
+		UIRect contentRect = bottom[0];
+		heading = BattleNext_PageLayout.heading(header[0], panel, text("quick_battle"));
+		content = BattleNext_PageLayout.column(contentRect, panel);
+		footer = BattleNext_PageLayout.footer(bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f), panel);
 		content.addTitle(text("quick_battle"));
 		status = content.addPara(loadError.isEmpty() ? text("ready") : loadError,
 				8f, BattleNext_UiTheme.MUTED);

@@ -1,5 +1,6 @@
 package data.scripts.battle;
 
+import data.scripts.battle.io.BattleNext_PvpLegacyLoader;
 import data.scripts.battle.io.BattleNext_QuickBattleLoader;
 import data.scripts.battle.io.BattleNext_QuickBattleSaver;
 import org.json.JSONException;
@@ -11,6 +12,7 @@ import java.util.List;
 public class BattleNext_QuickBattleStore {
 
 	private final BattleNext_QuickBattleLoader loader = new BattleNext_QuickBattleLoader();
+	private final BattleNext_PvpLegacyLoader pvpLegacyLoader = new BattleNext_PvpLegacyLoader();
 	private final BattleNext_QuickBattleSaver saver = new BattleNext_QuickBattleSaver();
 	private final List<BattleNext_Match> matches = new ArrayList<>();
 	private final List<String> comments = new ArrayList<>();
@@ -21,10 +23,12 @@ public class BattleNext_QuickBattleStore {
 
 	public void load() throws IOException {
 		apply(loader.loadUser());
+		appendPvpLegacy();
 	}
 
 	public void loadBuiltIn() throws IOException, JSONException {
 		apply(loader.loadBuiltIn());
+		appendPvpLegacy();
 	}
 
 	public void save() throws IOException {
@@ -57,5 +61,20 @@ public class BattleNext_QuickBattleStore {
 		comments.clear();
 		matches.addAll(snapshot.matches());
 		comments.addAll(snapshot.comments());
+	}
+
+	private void appendPvpLegacy() {
+		for (BattleNext_Match match : pvpLegacyLoader.load()) {
+			if (containsMatch(match)) continue;
+			matches.add(match);
+		}
+	}
+
+	private boolean containsMatch(BattleNext_Match candidate) {
+		for (BattleNext_Match match : matches) {
+			if (match.getPlayer().equals(candidate.getPlayer()) && match.getEnemy().equals(candidate.getEnemy())
+					&& match.getMap() == candidate.getMap() && match.getSize() == candidate.getSize()) return true;
+		}
+		return false;
 	}
 }

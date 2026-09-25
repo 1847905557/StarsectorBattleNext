@@ -1,7 +1,9 @@
 package data.scripts.fleet;
 
+import com.fs.starfarer.api.Global;
 import data.scripts.fleet.io.BattleNext_FleetLoader;
 import data.scripts.fleet.io.BattleNext_FleetSaver;
+import data.scripts.fleet.io.BattleNext_LegacyLoader;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -12,17 +14,31 @@ import java.util.Map;
 
 public class BattleNext_FleetStore {
 
+	private static final String LEGACY_ROOT = "tournament";
+	private static final String MOD_ID = "AI_Battles_Next";
+
 	private final BattleNext_FleetLoader loader;
+	private final BattleNext_LegacyLoader legacyLoader;
 	private final BattleNext_FleetSaver saver;
 	private final Map<String, BattleNext_FleetModel> fleets = new LinkedHashMap<>();
 
 	public BattleNext_FleetStore() {
 		loader = new BattleNext_FleetLoader();
+		legacyLoader = new BattleNext_LegacyLoader();
 		saver = new BattleNext_FleetSaver();
 	}
 
 	public void reload() {
-		reload(List.of());
+		reload(loadLegacy());
+	}
+
+	private List<BattleNext_FleetModel> loadLegacy() {
+		try {
+			return legacyLoader.loadResourceDirectory(LEGACY_ROOT, MOD_ID);
+		} catch (IOException | JSONException exception) {
+			Global.getLogger(BattleNext_FleetStore.class).warn("Unable to load legacy fleets from " + LEGACY_ROOT, exception);
+			return List.of();
+		}
 	}
 
 	public void reload(List<BattleNext_FleetModel> legacy) {

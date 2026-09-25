@@ -11,6 +11,7 @@ import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantModel;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_PageView;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -31,6 +32,8 @@ public class BattleNext_FleetDraftEditor implements BattleNext_PageView {
 	private TooltipMakerAPI metaContent;
 	private TooltipMakerAPI memberContent;
 	private TooltipMakerAPI footer;
+	private UIRect metaRect;
+	private UIRect memberRect;
 	private LabelAPI status;
 	private String statusText = "";
 	private TextFieldAPI id;
@@ -97,16 +100,20 @@ public class BattleNext_FleetDraftEditor implements BattleNext_PageView {
 
 	private void rebuild() {
 		if (heading != null) panel.removeComponent(heading);
-		if (metaContent != null) panel.removeComponent(metaContent);
-		if (memberContent != null) panel.removeComponent(memberContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("fleet_editor"));
+		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
+		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		float metaWidth = BattleNext_PageLayout.listWidth(panel);
-		metaContent = BattleNext_PageLayout.column(panel, 0f, metaWidth);
-		memberContent = BattleNext_PageLayout.column(panel, metaWidth + 10f,
-				panel.getPosition().getWidth() - metaWidth - 10f);
-		footer = BattleNext_PageLayout.footer(panel);
+		UIRect[] columns = bottom[0].splitHorizontally(metaWidth + 10f);
+		metaRect = columns[0];
+		memberRect = columns[1];
+		heading = BattleNext_PageLayout.heading(header[0], panel, text("fleet_editor"));
+		metaContent = BattleNext_PageLayout.column(metaRect, panel);
+		memberContent = BattleNext_PageLayout.column(memberRect, panel);
+		footer = BattleNext_PageLayout.footer(bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f), panel);
 		metaContent.addTitle(text("fleet_section_details"));
 		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
 		id = field(metaContent, text("fleet_id"), draft.getId());

@@ -4,6 +4,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.member.BattleNext_MemberModel;
@@ -26,6 +27,8 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private TooltipMakerAPI listContent;
 	private TooltipMakerAPI detailContent;
 	private TooltipMakerAPI footer;
+	private UIRect listRect;
+	private UIRect detailRect;
 	private BattleNext_FleetModel selected;
 	private String status = "";
 
@@ -80,16 +83,20 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
 	private void rebuild() {
 		if (heading != null) panel.removeComponent(heading);
-		if (listContent != null) panel.removeComponent(listContent);
-		if (detailContent != null) panel.removeComponent(detailContent);
 		if (footer != null) panel.removeComponent(footer);
 
-		heading = BattleNext_PageLayout.heading(panel, text("page_fleets"));
+		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
+		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] bottom = rest[1].splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		float listWidth = BattleNext_PageLayout.listWidth(panel);
-		listContent = BattleNext_PageLayout.column(panel, 0f, listWidth);
-		detailContent = BattleNext_PageLayout.column(panel, listWidth + 10f,
-				panel.getPosition().getWidth() - listWidth - 10f);
-		footer = BattleNext_PageLayout.footer(panel);
+		UIRect[] columns = bottom[0].splitHorizontally(listWidth + 10f);
+		listRect = columns[0];
+		detailRect = columns[1];
+		heading = BattleNext_PageLayout.heading(header[0], panel, text("page_fleets"));
+		listContent = BattleNext_PageLayout.column(listRect, panel);
+		detailContent = BattleNext_PageLayout.column(detailRect, panel);
+		footer = BattleNext_PageLayout.footer(bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f), panel);
 		BattleNext_PageLayout.button(footer, text("back"), "back", 160f)
 				.getPosition().inBL(0f, 0f);
 		addList();

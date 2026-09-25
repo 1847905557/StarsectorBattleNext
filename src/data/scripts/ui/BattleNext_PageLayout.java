@@ -1,11 +1,13 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battlesnext.util.ui.UIPanelManager;
+import data.scripts.battlesnext.util.ui.UIRect;
 
 public class BattleNext_PageLayout {
 
@@ -14,30 +16,32 @@ public class BattleNext_PageLayout {
 	public static final float CONTENT_TOP = 40f;
 	public static final float FOOTER_HEIGHT = 30f;
 	public static final float CONTENT_BOTTOM = 48f;
+	public static final float FOOTER_MARGIN = 8f;
 
 	private BattleNext_PageLayout() {
 	}
 
-	public static TooltipMakerAPI heading(CustomPanelAPI panel, String title) {
-		TooltipMakerAPI maker = panel.createUIElement(panel.getPosition().getWidth(), HEADER_HEIGHT, false);
+	public static TooltipMakerAPI heading(UIRect rect, CustomPanelAPI panel, String title) {
+		TooltipMakerAPI maker = rect.beginTooltip(panel, false);
 		LabelAPI label = maker.addSectionHeading(title, BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
-		label.getPosition().inTL(0f, 0f);
-		panel.addUIElement(maker).inTL(0f, 0f);
+		rect.syncPositionSize(label.getPosition());
+		rect.addTooltip();
 		return maker;
 	}
 
-	public static TooltipMakerAPI column(CustomPanelAPI panel, float x, float width) {
-		float height = panel.getPosition().getHeight() - CONTENT_TOP - CONTENT_BOTTOM;
-		TooltipMakerAPI maker = panel.createUIElement(width, height, true);
+	public static TooltipMakerAPI column(UIRect rect, CustomPanelAPI panel) {
+		rect.removeLatestSubPanel();
+		UIPanelManager manager = rect.createSubPanel(panel, null);
+		TooltipMakerAPI maker = manager.getPanel().createUIElement(rect.getWidth(), rect.getHeight(), true);
 		BattleNext_UiTheme.configure(maker);
-		panel.addUIElement(maker).inTL(x, CONTENT_TOP);
+		manager.getPanel().addUIElement(maker).inTL(0f, 0f);
 		return maker;
 	}
 
-	public static TooltipMakerAPI footer(CustomPanelAPI panel) {
-		TooltipMakerAPI maker = panel.createUIElement(panel.getPosition().getWidth(), FOOTER_HEIGHT, false);
-		panel.addUIElement(maker).inBL(0f, 8f);
+	public static TooltipMakerAPI footer(UIRect rect, CustomPanelAPI panel) {
+		TooltipMakerAPI maker = rect.beginTooltip(panel, false);
+		rect.addTooltip();
 		return maker;
 	}
 

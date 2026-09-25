@@ -5,6 +5,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tournament.BattleNext_TournamentStore;
@@ -40,7 +41,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_StatusBar statusBar = new BattleNext_StatusBar();
 
 	private CustomPanelAPI panel;
-	private CustomPanelAPI body;
+	private UIRect headingRect;
+	private UIRect tabsRect;
+	private UIRect bodyRect;
+	private UIRect footerRect;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
 	private Page currentPage = Page.BATTLE_SELECTOR;
 	private boolean editorOpen;
@@ -158,13 +162,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void buildShell() {
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		TooltipMakerAPI heading = panel.createUIElement(width - 16f, 30f, false);
-		LabelAPI title = heading.addSectionHeading(text("panel_heading"), BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
-		title.getPosition().inTL(0f, 0f);
-		panel.addUIElement(heading).inTL(8f, 8f);
+		headingRect = new UIRect(8f, 8f, width - 16f, BattleNext_PageLayout.HEADER_HEIGHT);
+		tabsRect = new UIRect(8f, 46f, width - 16f, 30f);
+		bodyRect = new UIRect(8f, 86f, width - 16f, height - 134f);
+		footerRect = new UIRect(8f, height - 38f, width - 16f, 30f);
 
-		TooltipMakerAPI tabs = panel.createUIElement(width - 16f, 30f, false);
+		BattleNext_PageLayout.heading(headingRect, panel, text("panel_heading"));
+
+		TooltipMakerAPI tabs = tabsRect.beginTooltip(panel, false);
 		tabs.setButtonFontOrbitron20();
 		float tabWidth = (width - 16f - 25f) / 6f;
 		for (int index = 0; index < 6; index++) {
@@ -178,9 +183,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 		// addButton accumulates row heights even after the buttons are positioned side by side.
 		tabs.setHeightSoFar(30f);
-		panel.addUIElement(tabs).inTL(8f, 46f);
+		tabsRect.addTooltip();
 
-		TooltipMakerAPI footer = panel.createUIElement(width - 16f, 30f, false);
+		TooltipMakerAPI footer = footerRect.beginTooltip(panel, false);
 		footer.setButtonFontOrbitron20();
 		statusBar.attach(footer);
 		ButtonAPI close = footer.addButton(text("close"), "close", BattleNext_UiTheme.TEXT,
@@ -188,7 +193,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		close.getPosition().inBR(0f, 0f);
 		close.setMouseOverSound("BUtil_button_in");
 		close.setButtonPressedSound("BUtil_button_down");
-		panel.addUIElement(footer).inBL(8f, 8f);
+		footerRect.addTooltip();
 	}
 
 	private void showPage() {
@@ -196,11 +201,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(editorOpen || Page.values()[index] != currentPage);
 		}
-		if (body != null) panel.removeComponent(body);
-		float width = panel.getPosition().getWidth();
-		float height = panel.getPosition().getHeight();
-		body = Global.getSettings().createCustom(width - 16f, height - 134f, this);
-		panel.addComponent(body).inTL(8f, 86f);
+		bodyRect.removeLatestSubPanel();
+		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
 		activeView().attach(body);
 	}
 

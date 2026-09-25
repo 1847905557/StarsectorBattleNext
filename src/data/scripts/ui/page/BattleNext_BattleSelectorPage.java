@@ -12,6 +12,8 @@ import data.scripts.tournament.BattleNext_Tournament;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_PageView;
+import data.scripts.battlesnext.util.ui.UIPanelManager;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.BattleNext_UiTheme;
 import org.lwjgl.input.Keyboard;
@@ -50,6 +52,11 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
+	private UIRect sourceBarRect;
+	private UIRect contentRect;
+	private UIRect summaryRect;
+	private UIRect scheduleRect;
+	private UIRect sourceListRect;
 	private int selectedSlot = -1;
 	private String loadError = "";
 
@@ -150,11 +157,20 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		closeSourceList();
 		if (heading != null) panel.removeComponent(heading);
 		if (sourceBar != null) panel.removeComponent(sourceBar);
-		if (contentPanel != null) panel.removeComponent(contentPanel);
+		if (contentRect != null) contentRect.removeLatestSubPanel();
+		if (summaryRect != null) summaryRect.removeLatestSubPanel();
+		if (scheduleRect != null) scheduleRect.removeLatestSubPanel();
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		heading = BattleNext_PageLayout.heading(panel, text("page_battle_selector"));
-		sourceBar = panel.createUIElement(width, 30f, false);
+		UIRect root = new UIRect(0f, 0f, width, height);
+		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect[] bars = rest[1].splitVertically(30f);
+		sourceBarRect = bars[0];
+		contentRect = bars[1];
+		heading = BattleNext_PageLayout.heading(header[0], panel, text("page_battle_selector"));
+
+		sourceBar = sourceBarRect.beginTooltip(panel, false);
 		sourceBar.setButtonFontOrbitron20();
 		sourceBar.addPara(text("battle_source"), 0f, BattleNext_UiTheme.ACCENT)
 				.getPosition().inBL(0f, 8f);
@@ -165,14 +181,12 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		sourceButton.setMouseOverSound("BUtil_button_in");
 		sourceButton.setButtonPressedSound("BUtil_button_down");
 		sourceBar.setHeightSoFar(30f);
-		panel.addUIElement(sourceBar).inTL(0f, 40f);
+		sourceBarRect.addTooltip();
 
-		contentPanel = Global.getSettings().createCustom(width, height - 84f, inputOwner);
-		panel.addComponent(contentPanel).inTL(0f, 84f);
 		quickBattleEditor = null;
 		if (selectedSlot == -1) {
 			quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
-			quickBattleEditor.attach(contentPanel);
+			quickBattleEditor.attach(contentRect.createSubPanel(panel, inputOwner).getPanel());
 		} else {
 			buildTournamentDetails();
 		}
@@ -192,14 +206,16 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		int optionCount = tournamentStore.getAll().size() + 1;
 		float visibleHeight = Math.min(240f, optionCount * 35f);
 		sourceListPanel = Global.getSettings().createCustom(width, visibleHeight, inputOwner);
-		TooltipMakerAPI options = sourceListPanel.createUIElement(width - 5f, visibleHeight, true);
+		sourceListRect = new UIRect(0f, 0f, width - 5f, visibleHeight);
+		UIPanelManager manager = sourceListRect.createSubPanel(sourceListPanel, null);
+		TooltipMakerAPI options = manager.getPanel().createUIElement(width - 5f, visibleHeight, true);
 		options.setButtonFontOrbitron20();
 		BattleNext_PageLayout.button(options, text("quick_battle"), new SourceRequest(-1), width - 15f);
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
 			String label = tournament.getName() + " (#" + tournament.getSlot() + ")";
 			BattleNext_PageLayout.button(options, label, new SourceRequest(tournament.getSlot()), width - 15f);
 		}
-		sourceListPanel.addUIElement(options).inTL(0f, 0f);
+		manager.getPanel().addUIElement(options).inTL(0f, 0f);
 		panel.addComponent(sourceListPanel).inTL(185f, 72f);
 	}
 
@@ -213,17 +229,18 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 		BattleNext_Tournament tournament = tournamentStore.get(selectedSlot);
 		if (tournament == null) {
-			TooltipMakerAPI message = BattleNext_PageLayout.column(contentPanel, 0f,
-					contentPanel.getPosition().getWidth());
+			TooltipMakerAPI message = BattleNext_PageLayout.column(contentRect, panel);
 			message.addTitle(text("tournament_missing"));
 			message.addPara(text("tournament_missing_detail"), 8f, BattleNext_UiTheme.MUTED);
 			return;
 		}
-		BattleNext_PageLayout.heading(contentPanel, tournament.getName());
-		float listWidth = BattleNext_PageLayout.listWidth(contentPanel);
-		TooltipMakerAPI summary = BattleNext_PageLayout.column(contentPanel, 0f, listWidth);
-		TooltipMakerAPI schedule = BattleNext_PageLayout.column(contentPanel, listWidth + 10f,
-				contentPanel.getPosition().getWidth() - listWidth - 10f);
+		UIRect[] rows = contentRect.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + 10f);
+		UIRect[] columns = rows[1].splitHorizontally(BattleNext_PageLayout.listWidth(panel) + 10f);
+		summaryRect = columns[0];
+		scheduleRect = columns[1];
+		BattleNext_PageLayout.heading(rows[0], panel, tournament.getName());
+		TooltipMakerAPI summary = BattleNext_PageLayout.column(summaryRect, panel);
+		TooltipMakerAPI schedule = BattleNext_PageLayout.column(scheduleRect, panel);
 		if (!loadError.isEmpty()) summary.addPara(loadError, 0f, BattleNext_UiTheme.MUTED);
 		summary.addTitle(text("tournament_summary"));
 		summary.addPara(text("status") + ": " + tournamentStatus(tournament), 8f, BattleNext_UiTheme.TEXT);
