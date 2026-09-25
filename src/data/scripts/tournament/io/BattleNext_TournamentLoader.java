@@ -1,6 +1,7 @@
 package data.scripts.tournament.io;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.battlesnext.util.BattleNext_JsonCatalog;
 import data.scripts.tournament.BattleNext_Tournament;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,38 +12,39 @@ import java.util.Map;
 
 public class BattleNext_TournamentLoader {
 
-	private static final int SLOT_COUNT = 32;
 	private static final String COMMON_ROOT = "AI_Battles_Next/tournament/";
 	private static final String META_PATH = "AI_Battles_Next/meta.json";
 	private static final String MOD_ID = "AI_Battles_Next";
 
-	public Map<Integer, BattleNext_Tournament> loadBuiltIn() {
-		Map<Integer, BattleNext_Tournament> result = new LinkedHashMap<>();
-		for (int slot = 0; slot < SLOT_COUNT; slot++) {
+	public Map<String, BattleNext_Tournament> loadBuiltIn() {
+		Map<String, BattleNext_Tournament> result = new LinkedHashMap<>();
+		for (String path : BattleNext_JsonCatalog.resourceFiles("tournament")) {
 			try {
-				result.put(slot, BattleNext_Tournament.fromJson(Global.getSettings().loadJSON("tournament/tournament_" + slot + ".json", MOD_ID)));
+				BattleNext_Tournament value = BattleNext_Tournament.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+				if (!value.getId().isEmpty()) result.put(value.getId(), value);
 			} catch (Exception ignored) {
 			}
 		}
 		return result;
 	}
 
-	public Map<Integer, BattleNext_Tournament> loadUser() throws IOException, JSONException {
-		Map<Integer, BattleNext_Tournament> result = new LinkedHashMap<>();
-		for (int slot = 0; slot < SLOT_COUNT; slot++) {
-			String userPath = COMMON_ROOT + "tournament_" + slot + ".json";
-			if (Global.getSettings().fileExistsInCommon(userPath)) {
-				result.put(slot, BattleNext_Tournament.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
+	public Map<String, BattleNext_Tournament> loadUser() throws IOException, JSONException {
+		Map<String, BattleNext_Tournament> result = new LinkedHashMap<>();
+		for (String path : BattleNext_JsonCatalog.commonFiles("AI_Battles_Next/tournament")) {
+			try {
+				BattleNext_Tournament value = BattleNext_Tournament.fromJson(Global.getSettings().readJSONFromCommon(path, false));
+				if (!value.getId().isEmpty()) result.put(value.getId(), value);
+			} catch (IllegalArgumentException ignored) {
 			}
 		}
 		return result;
 	}
 
-	public int loadActiveSlot() throws IOException, JSONException {
-		if (!Global.getSettings().fileExistsInCommon(META_PATH)) return -1;
+	public String loadActiveId() throws IOException, JSONException {
+		if (!Global.getSettings().fileExistsInCommon(META_PATH)) return "";
 		JSONObject meta = Global.getSettings().readJSONFromCommon(META_PATH, false);
 		int version = meta.optInt("formatVersion", BattleNext_Tournament.META_FORMAT_VERSION);
-		if (version != BattleNext_Tournament.META_FORMAT_VERSION) throw new IllegalArgumentException("Unsupported meta formatVersion: " + version);
-		return meta.optInt("activeTournamentSlot", -1);
+		if (version != BattleNext_Tournament.META_FORMAT_VERSION) return "";
+		return meta.optString("activeTournamentId", "");
 	}
 }

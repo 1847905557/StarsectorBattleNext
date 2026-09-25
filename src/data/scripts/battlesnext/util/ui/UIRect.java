@@ -172,6 +172,10 @@ public class UIRect {
 		rootPanel.addUIElement(tooltipMaker).inTL(x, y);
 	}
 
+	public void addBorder(CustomPanelAPI rootPanel, Color color, float thickness) {
+		addBoarder(rootPanel, color, thickness);
+	}
+
 	public PositionAPI syncPositionSize(PositionAPI position) {
 		return position.setSize(width, height);
 	}

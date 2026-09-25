@@ -1,6 +1,7 @@
 package data.scripts.rules.io;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.battlesnext.util.BattleNext_JsonCatalog;
 import data.scripts.rules.BattleNext_RulesModel;
 import org.json.JSONException;
 
@@ -10,26 +11,27 @@ import java.util.Map;
 
 public class BattleNext_RulesLoader {
 
-	private static final int SLOT_COUNT = 32;
 	private static final String MOD_ID = "AI_Battles_Next";
 
-	public Map<Integer, BattleNext_RulesModel> loadBuiltIn() {
-		Map<Integer, BattleNext_RulesModel> result = new LinkedHashMap<>();
-		for (int slot = 0; slot < SLOT_COUNT; slot++) {
+	public Map<String, BattleNext_RulesModel> loadBuiltIn() {
+		Map<String, BattleNext_RulesModel> result = new LinkedHashMap<>();
+		for (String path : BattleNext_JsonCatalog.resourceFiles("tournament/rules")) {
 			try {
-				result.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().loadJSON("rules/rules_" + slot + ".json", MOD_ID)));
+				BattleNext_RulesModel value = BattleNext_RulesModel.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+				if (!value.getId().isEmpty()) result.put(value.getId(), value);
 			} catch (Exception ignored) {
 			}
 		}
 		return result;
 	}
 
-	public Map<Integer, BattleNext_RulesModel> loadUser() throws IOException, JSONException {
-		Map<Integer, BattleNext_RulesModel> result = new LinkedHashMap<>();
-		for (int slot = 0; slot < SLOT_COUNT; slot++) {
-			String userPath = "AI_Battles_Next/rules/rules_" + slot + ".json";
-			if (Global.getSettings().fileExistsInCommon(userPath)) {
-				result.put(slot, BattleNext_RulesModel.fromJson(Global.getSettings().readJSONFromCommon(userPath, false)));
+	public Map<String, BattleNext_RulesModel> loadUser() throws IOException, JSONException {
+		Map<String, BattleNext_RulesModel> result = new LinkedHashMap<>();
+		for (String path : BattleNext_JsonCatalog.commonFiles("AI_Battles_Next/rules")) {
+			try {
+				BattleNext_RulesModel value = BattleNext_RulesModel.fromJson(Global.getSettings().readJSONFromCommon(path, false));
+				if (!value.getId().isEmpty()) result.put(value.getId(), value);
+			} catch (IllegalArgumentException ignored) {
 			}
 		}
 		return result;

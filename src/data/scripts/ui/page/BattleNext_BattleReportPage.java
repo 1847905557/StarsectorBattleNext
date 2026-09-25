@@ -110,7 +110,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 				for (MatchWithRound match : rounds(tournament)) {
 					if (match.round.getReport() != null) {
 						entries.add(new Entry(match.round.getReport(), text("tournament_context") + " "
-								+ tournament.getSlot() + " / " + text("match") + " " + match.matchId
+								+ tournament.getId() + " / " + text("match") + " " + match.matchId
 								+ " / " + text("round") + " " + match.round.getNumber()
 								+ " / " + text("attempt") + " " + match.round.getAttempt()));
 					}

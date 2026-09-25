@@ -23,13 +23,13 @@ public class BattleNext_StatusBar {
 		rect.addTooltip();
 	}
 
-	public void update(String error, int activeTournamentSlot, boolean pendingResult) {
+	public void update(String error, String activeTournamentId, boolean pendingResult) {
 		if (statusLabel == null) return;
 		StringBuilder text = new StringBuilder();
 		if (!error.isEmpty()) {
 			text.append(error);
-		} else if (activeTournamentSlot >= 0) {
-			text.append(strings.get("tournament_active")).append(": ").append(activeTournamentSlot);
+		} else if (!activeTournamentId.isEmpty()) {
+			text.append(strings.get("tournament_active")).append(": ").append(activeTournamentId);
 		} else if (pendingResult) {
 			text.append(strings.get("result_updated"));
 		} else {

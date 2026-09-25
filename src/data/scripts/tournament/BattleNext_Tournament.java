@@ -11,17 +11,17 @@ import java.util.List;
 
 public class BattleNext_Tournament {
 
-	public static final int FORMAT_VERSION = 1;
-	public static final int META_FORMAT_VERSION = 1;
+	public static final int FORMAT_VERSION = 2;
+	public static final int META_FORMAT_VERSION = 2;
 
-	private int slot;
+	private String id;
 	private String name;
 	private String bracketType;
 	private String matchFormat;
 	private int size;
 	private final List<String> teams = new ArrayList<>();
 	private final List<BattleNext_Match> matches = new ArrayList<>();
-	private int rulesSlot = -1;
+	private String rulesId = "";
 	private int mapId = -1;
 	private boolean started;
 	private boolean completed;
@@ -29,11 +29,8 @@ public class BattleNext_Tournament {
 	private String pendingMatchId = "";
 	private int kofNextIndex;
 
-	public BattleNext_Tournament(int slot, String name, String bracketType, String matchFormat, int size) {
-		if (slot < 0 || slot > 31) {
-			throw new IllegalArgumentException("Tournament slot must be between 0 and 31");
-		}
-		this.slot = slot;
+	public BattleNext_Tournament(String id, String name, String bracketType, String matchFormat, int size) {
+		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
 		this.bracketType = bracketType == null ? "single_elim" : bracketType.trim();
 		this.matchFormat = matchFormat == null ? "BO1" : matchFormat.trim();
@@ -43,8 +40,8 @@ public class BattleNext_Tournament {
 	public static BattleNext_Tournament fromJson(JSONObject json) {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
-		BattleNext_Tournament tournament = new BattleNext_Tournament(json.optInt("slot", 0), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
-		tournament.rulesSlot = json.optInt("rulesSlot", -1);
+		BattleNext_Tournament tournament = new BattleNext_Tournament(json.optString("id", ""), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
+		tournament.rulesId = json.optString("rulesId", "");
 		tournament.mapId = json.optInt("mapId", -1);
 		tournament.started = json.optBoolean("started", false);
 		tournament.completed = json.optBoolean("completed", false);
@@ -71,7 +68,7 @@ public class BattleNext_Tournament {
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
-		json.put("slot", slot);
+		json.put("id", id);
 		json.put("name", name);
 		json.put("bracketType", bracketType);
 		json.put("matchFormat", matchFormat);
@@ -82,7 +79,7 @@ public class BattleNext_Tournament {
 			matchArray.put(match.toJson());
 		}
 		json.put("matches", matchArray);
-		json.put("rulesSlot", rulesSlot);
+		json.put("rulesId", rulesId);
 		json.put("mapId", mapId);
 		json.put("started", started);
 		json.put("completed", completed);
@@ -92,32 +89,60 @@ public class BattleNext_Tournament {
 		return json;
 	}
 
-	public int getSlot() {
-		return slot;
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id == null ? "" : id.trim();
 	}
 
 	public String getName() {
 		return name;
 	}
 
+	public void setName(String name) {
+		this.name = name == null ? "" : name.trim();
+	}
+
 	public String getBracketType() {
 		return bracketType;
+	}
+
+	public void setBracketType(String bracketType) {
+		this.bracketType = bracketType == null ? "" : bracketType.trim();
 	}
 
 	public String getMatchFormat() {
 		return matchFormat;
 	}
 
+	public void setMatchFormat(String matchFormat) {
+		this.matchFormat = matchFormat == null ? "" : matchFormat.trim();
+	}
+
 	public int getSize() {
 		return size;
 	}
 
-	public int getRulesSlot() {
-		return rulesSlot;
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getRulesId() {
+		return rulesId;
+	}
+
+	public void setRulesId(String rulesId) {
+		this.rulesId = rulesId == null ? "" : rulesId.trim();
 	}
 
 	public int getMapId() {
 		return mapId;
+	}
+
+	public void setMapId(int mapId) {
+		this.mapId = mapId;
 	}
 
 	public boolean isStarted() {
@@ -162,6 +187,13 @@ public class BattleNext_Tournament {
 
 	public List<String> getTeams() {
 		return Collections.unmodifiableList(teams);
+	}
+
+	public void setTeams(List<String> values) {
+		if (started) throw new IllegalStateException("Started tournament teams are locked");
+		teams.clear();
+		for (String value : values) addTeam(value);
+		size = teams.size();
 	}
 
 	public List<BattleNext_Match> getMatches() {

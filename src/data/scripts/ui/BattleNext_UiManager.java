@@ -5,10 +5,8 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.ui.editor.BattleNext_FleetDraftEditor;
 import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_StatusBar;
@@ -43,13 +41,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private UIRect bodyRect;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
 	private Page currentPage = Page.BATTLE_SELECTOR;
-	private boolean editorOpen;
-	private int activeTournamentSlot = -1;
+	private String activeTournamentId = "";
 	private boolean pendingResult;
 
 	private BattleNext_BattleSelectorPage battleSelectorPage;
 	private BattleNext_FleetLibraryPage fleetPage;
-	private BattleNext_FleetDraftEditor draftEditor;
 	private BattleNext_BattleReportPage reportPage;
 	private BattleNext_TournamentPage tournamentPage;
 	private BattleNext_RulesPage rulesPage;
@@ -67,7 +63,6 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	public void open() {
 		currentPage = Page.BATTLE_SELECTOR;
-		editorOpen = false;
 		refreshState();
 		showPage();
 	}
@@ -82,7 +77,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
-		if (currentPage == Page.BATTLE_SELECTOR && !editorOpen && battleSelectorPage != null
+		if (currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
 				&& !confirmationDialog.isActive()) {
 			battleSelectorPage.refreshRowStatuses();
 		}
@@ -103,19 +98,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return;
 		}
 		if (buttonId instanceof BattleNext_BattleSelectorPage.SourceRequest request) {
-			requestSource(request.getSlot());
+			requestSource(request.getId());
 			return;
 		}
 		if ("close".equals(buttonId)) {
 			requestClose();
 			return;
 		}
-		if (buttonId instanceof BattleNext_FleetLibraryPage.DraftRequest request) {
-			openEditor(request);
-			return;
-		}
 		activeView().buttonPressed(buttonId);
-		if (currentPage == Page.TOURNAMENTS) refreshState();
+		if (currentPage == Page.TOURNAMENTS || "tournament:start".equals(buttonId)) refreshState();
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -126,8 +117,6 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				if (confirmationDialog.isActive()) {
 					confirmationDialog.handle("confirm_cancel");
-				} else if (editorOpen) {
-					requestPage(Page.FLEETS);
 				} else if (currentPage == Page.FLEETS && fleetPage != null) {
 					fleetPage.buttonPressed("back");
 				} else if (currentPage == Page.REPORTS && reportPage != null) {
@@ -144,8 +133,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		return false;
 	}
 
-	public int getActiveTournamentSlot() {
-		return activeTournamentSlot;
+	public String getActiveTournamentId() {
+		return activeTournamentId;
 	}
 
 	public boolean hasPendingResult() {
@@ -189,7 +178,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void showPage() {
 		if (panel == null) return;
 		for (int index = 0; index < tabButtons.length; index++) {
-			tabButtons[index].setEnabled(editorOpen || Page.values()[index] != currentPage);
+			tabButtons[index].setEnabled(Page.values()[index] != currentPage);
 		}
 		bodyRect.removeLatestSubPanel();
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
@@ -197,12 +186,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private BattleNext_PageView activeView() {
-		return editorOpen ? editorView() : viewFor(currentPage);
-	}
-
-	private BattleNext_FleetDraftEditor editorView() {
-		if (draftEditor == null) draftEditor = new BattleNext_FleetDraftEditor(() -> requestPage(Page.FLEETS));
-		return draftEditor;
+		return viewFor(currentPage);
 	}
 
 	private BattleNext_PageView viewFor(Page page) {
@@ -211,7 +195,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return battleSelectorPage;
 		}
 		if (page == Page.FLEETS) {
-			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToBattleSelector, this::buttonPressed);
+			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToBattleSelector,
+					this::confirmNavigation, this::confirmDelete);
 			return fleetPage;
 		}
 		if (page == Page.REPORTS) {
@@ -219,7 +204,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return reportPage;
 		}
 		if (page == Page.TOURNAMENTS) {
-			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector);
+			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector,
+					this::confirmNavigation, this::confirmDelete);
 			return tournamentPage;
 		}
 		if (page == Page.RULES) {
@@ -231,17 +217,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void requestPage(Page page) {
-		if (!editorOpen && page == currentPage) return;
+		if (page == currentPage) return;
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
-				editorOpen = false;
 				currentPage = page;
 				refreshState();
 				showPage();
 			});
 			return;
 		}
-		editorOpen = false;
 		currentPage = page;
 		refreshState();
 		showPage();
@@ -259,43 +243,42 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		return activeView().hasUnsavedChanges();
 	}
 
-	private void requestSource(int slot) {
+	private void requestSource(String id) {
 
 		battleSelectorPage.closeDropdown();
-		if (slot == activeTournamentSlot) return;
+		if (id.equals(activeTournamentId)) return;
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
-				if (applySource(slot)) showPage();
+				if (applySource(id)) showPage();
 			});
 			return;
 		}
-		if (applySource(slot)) showPage();
+		if (applySource(id)) showPage();
 	}
 
-	private void openEditor(BattleNext_FleetLibraryPage.DraftRequest request) {
-		BattleNext_FleetModel source = request.getFleet();
-		boolean clone = "clone".equals(request.getAction());
+	private void confirmNavigation(Runnable action) {
 		if (hasUnsavedChanges()) {
-			confirmationDialog.request(() -> {
-				editorView().open(source, clone);
-				editorOpen = true;
-				showPage();
-			});
+			confirmationDialog.request(action);
 			return;
 		}
-		editorView().open(source, clone);
-		editorOpen = true;
-		showPage();
+		action.run();
 	}
 
-	private boolean applySource(int slot) {
+	private void confirmDelete(String description, Runnable action) {
+		confirmationDialog.requestDelete(description, () -> {
+			action.run();
+			refreshState();
+		});
+	}
+
+	private boolean applySource(String id) {
 
 		try {
 			tournamentStore.reload();
-			if (slot >= 0 && tournamentStore.get(slot) == null) {
+			if (!id.isEmpty() && tournamentStore.get(id) == null) {
 				throw new IllegalArgumentException(text("tournament_missing"));
 			}
-			tournamentStore.setActiveSlot(slot);
+			tournamentStore.setActiveId(id);
 			refreshState();
 			return true;
 		} catch (Exception exception) {
@@ -309,12 +292,12 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		String error = "";
 		try {
 			tournamentStore.reload();
-			activeTournamentSlot = tournamentStore.getActiveSlot();
+			activeTournamentId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			activeTournamentSlot = -1;
+			activeTournamentId = "";
 			error = text("load_failed") + ": " + exception.getMessage();
 		}
-		statusBar.update(error, activeTournamentSlot, pendingResult);
+		statusBar.update(error, activeTournamentId, pendingResult);
 	}
 
 	@Override

@@ -8,8 +8,10 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.fleet.BattleNext_FleetStore;
 import data.scripts.rules.BattleNext_RulesStore;
 import data.scripts.tournament.BattleNext_Tournament;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
@@ -23,14 +25,14 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	public static class SourceRequest {
 
-		private final int slot;
+		private final String id;
 
-		public SourceRequest(int slot) {
-			this.slot = slot;
+		public SourceRequest(String id) {
+			this.id = id;
 		}
 
-		public int getSlot() {
-			return slot;
+		public String getId() {
+			return id;
 		}
 	}
 
@@ -48,8 +50,10 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private ButtonAPI sourceButton;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
+	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
+	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RulesStore rulesStore = new BattleNext_RulesStore();
-	private int selectedSlot = -1;
+	private String selectedId = "";
 	private String loadError = "";
 
 	public BattleNext_BattleSelectorPage(Runnable backAction, CustomUIPanelPlugin inputOwner) {
@@ -95,7 +99,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		quickBattleEditor = null;
-		if (selectedSlot == -1) {
+		if (selectedId.isEmpty()) {
 			quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
 			quickBattleEditor.attach(contentPanel);
 		} else {
@@ -105,7 +109,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	@Override
 	public boolean hasUnsavedChanges() {
-		return selectedSlot == -1 && quickBattleEditor != null && quickBattleEditor.hasUnsavedChanges();
+		return selectedId.isEmpty() && quickBattleEditor != null && quickBattleEditor.hasUnsavedChanges();
 	}
 
 	@Override
@@ -159,7 +163,9 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			else closeSourceList();
 			return;
 		}
-		if (selectedSlot == -1 && quickBattleEditor != null) {
+		if ("tournament:start".equals(buttonId)) {
+			startTournament();
+		} else if (selectedId.isEmpty() && quickBattleEditor != null) {
 			quickBattleEditor.buttonPressed(buttonId);
 		}
 	}
@@ -174,23 +180,24 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		loadError = "";
 		try {
 			tournamentStore.reload();
-			selectedSlot = tournamentStore.getActiveSlot();
+			selectedId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			selectedSlot = -1;
+			selectedId = "";
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
 		try {
 			rulesStore.reload();
+			fleetStore.reload();
 		} catch (Exception exception) {
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
 	}
 
 	private String sourceLabel() {
-		if (selectedSlot < 0) return text("quick_battle");
-		BattleNext_Tournament tournament = tournamentStore.get(selectedSlot);
-		if (tournament == null) return text("tournament_missing") + " #" + selectedSlot;
-		return tournament.getName() + " (#" + selectedSlot + ")";
+		if (selectedId.isEmpty()) return text("quick_battle");
+		BattleNext_Tournament tournament = tournamentStore.get(selectedId);
+		if (tournament == null) return text("tournament_missing") + " [" + selectedId + "]";
+		return tournament.getName() + " [" + selectedId + "]";
 	}
 
 	private void openSourceList() {
@@ -204,10 +211,10 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		dropdownPanel = panel.createCustomPanel(width, visibleHeight, inputOwner);
 		TooltipMakerAPI options = dropdownPanel.createUIElement(width - 5f, visibleHeight, true);
 		options.setButtonFontOrbitron20();
-		BattleNext_PageLayout.button(options, text("quick_battle"), new SourceRequest(-1), width - 15f);
+		BattleNext_PageLayout.button(options, text("quick_battle"), new SourceRequest(""), width - 15f);
 		for (BattleNext_Tournament tournament : tournamentStore.getAll()) {
-			String label = tournament.getName() + " (#" + tournament.getSlot() + ")";
-			BattleNext_PageLayout.button(options, label, new SourceRequest(tournament.getSlot()), width - 15f);
+			String label = tournament.getName() + " [" + tournament.getId() + "]";
+			BattleNext_PageLayout.button(options, label, new SourceRequest(tournament.getId()), width - 15f);
 		}
 		dropdownPanel.addUIElement(options).inTL(0f, 0f);
 		panel.addComponent(dropdownPanel).inTL(sourceButtonRect.getX(), dropdownY);
@@ -220,7 +227,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private void buildTournamentDetails(CustomPanelAPI detailPanel) {
 
-		BattleNext_Tournament tournament = tournamentStore.get(selectedSlot);
+		BattleNext_Tournament tournament = tournamentStore.get(selectedId);
 		if (tournament == null) {
 			UIRect messageRect = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight());
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
@@ -250,7 +257,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		summary.addPara(text("tournament_format") + ": " + tournament.getBracketType()
 				+ " / " + tournament.getMatchFormat(), 6f, BattleNext_UiTheme.TEXT);
 		summary.addPara(text("tournament_rules") + ": "
-				+ (rulesStore.get(tournament.getRulesSlot()) == null
+				+ (rulesStore.get(tournament.getRulesId()) == null
 						? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
 				6f, BattleNext_UiTheme.TEXT);
 		summary.addPara(text("teams"), 10f, BattleNext_UiTheme.ACCENT);
@@ -283,7 +290,51 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 						+ text("winner") + ": " + round.getWinner(), 4f, BattleNext_UiTheme.MUTED);
 			}
 		}
+		if (!tournament.isStarted()) {
+			BattleNext_PageLayout.button(schedule, text("tournament_start"), "tournament:start", 220f);
+		}
 		schedulePanel.addUIElement(schedule).inTL(0f, 0f);
+	}
+
+	private void startTournament() {
+		BattleNext_Tournament source = tournamentStore.get(selectedId);
+		if (source == null || source.isStarted()) return;
+		if (!List.of("single_elim", "double_elim", "round_robin", "kof").contains(source.getBracketType())
+				|| !List.of("BO1", "BO3", "BO5").contains(source.getMatchFormat())
+				|| source.getMapId() < -1 || source.getMapId() > 11) {
+			loadError = text("invalid_tournament_format");
+			refreshContent();
+			return;
+		}
+		if (source.getTeams().size() < 2 || source.getTeams().size() > 32) {
+			loadError = text("tournament_need_fleets");
+			refreshContent();
+			return;
+		}
+		BattleNext_Tournament tournament;
+		try { tournament = BattleNext_Tournament.fromJson(source.toJson()); }
+		catch (Exception exception) { loadError = exception.getMessage(); refreshContent(); return; }
+		if (rulesStore.get(tournament.getRulesId()) == null) {
+			loadError = text("tournament_rules_unavailable");
+			refreshContent();
+			return;
+		}
+		for (String team : tournament.getTeams()) {
+			if (fleetStore.get(team) == null) {
+				loadError = text("invalid_player") + ": " + team;
+				refreshContent();
+				return;
+			}
+		}
+		try {
+			tournamentEngine.start(tournament);
+			tournamentStore.save(tournament);
+			tournamentStore.setActiveId(tournament.getId());
+			loadError = text("tournament_started");
+		} catch (Exception exception) {
+			loadError = exception.getMessage();
+		}
+		refreshContent();
 	}
 
 	private BattleNext_Match nextMatch(BattleNext_Tournament tournament) {

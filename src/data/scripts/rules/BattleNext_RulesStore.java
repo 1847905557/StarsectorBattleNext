@@ -13,7 +13,7 @@ public class BattleNext_RulesStore {
 
 	private final BattleNext_RulesLoader loader = new BattleNext_RulesLoader();
 	private final BattleNext_RulesSaver saver = new BattleNext_RulesSaver();
-	private final Map<Integer, BattleNext_RulesModel> rules = new LinkedHashMap<>();
+	private final Map<String, BattleNext_RulesModel> rules = new LinkedHashMap<>();
 
 	public void reload() throws IOException, JSONException {
 		rules.clear();
@@ -26,11 +26,11 @@ public class BattleNext_RulesStore {
 			throw new IllegalArgumentException("Rules model is required");
 		}
 		saver.save(model);
-		rules.put(model.getSlot(), model);
+		rules.put(model.getId(), model);
 	}
 
-	public BattleNext_RulesModel get(int slot) {
-		return rules.get(slot);
+	public BattleNext_RulesModel get(String id) {
+		return rules.get(id);
 	}
 
 	public List<BattleNext_RulesModel> getAll() {

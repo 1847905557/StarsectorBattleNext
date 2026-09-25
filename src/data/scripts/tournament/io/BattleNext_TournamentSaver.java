@@ -13,13 +13,20 @@ public class BattleNext_TournamentSaver {
 	private static final String META_PATH = "AI_Battles_Next/meta.json";
 
 	public void save(BattleNext_Tournament tournament) throws IOException, JSONException {
-		Global.getSettings().writeJSONToCommon(COMMON_ROOT + "tournament_" + tournament.getSlot() + ".json", tournament.toJson(), false);
+		Global.getSettings().writeJSONToCommon(COMMON_ROOT + tournament.getId() + ".json", tournament.toJson(), false);
 	}
 
-	public void saveActiveSlot(int slot) throws IOException, JSONException {
+	public void saveActiveId(String id) throws IOException, JSONException {
 		JSONObject meta = new JSONObject();
 		meta.put("formatVersion", BattleNext_Tournament.META_FORMAT_VERSION);
-		meta.put("activeTournamentSlot", slot);
+		meta.put("activeTournamentId", id);
 		Global.getSettings().writeJSONToCommon(META_PATH, meta, false);
+	}
+
+	public void delete(String id) throws IOException {
+		Global.getSettings().deleteTextFileFromCommon(COMMON_ROOT + id + ".json");
+		if (Global.getSettings().fileExistsInCommon(COMMON_ROOT + id + ".json")) {
+			throw new IOException("Tournament file remains after deletion: " + id);
+		}
 	}
 }

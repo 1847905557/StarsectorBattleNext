@@ -1,11 +1,13 @@
 package data.scripts.ui;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.scripts.battlesnext.util.ui.UIPanelManager;
 import data.scripts.battlesnext.util.ui.UIRect;
 
@@ -48,6 +50,17 @@ public class BattleNext_PageLayout {
 		return button;
 	}
 
+	public static ButtonAPI buttonWithTooltip(TooltipMakerAPI maker, String title, Object id, float width) {
+		ButtonAPI button = button(maker, title, id, width);
+		maker.addTooltipToPrevious(new BaseTooltipCreator() {
+			@Override public float getTooltipWidth(Object ignored) { return Math.min(500f, Math.max(220f, title.length() * 10f)); }
+			@Override public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				tooltip.addPara(title, 0f, BattleNext_UiTheme.TEXT);
+			}
+		}, TooltipLocation.RIGHT);
+		return button;
+	}
+
 	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
 			CutStyle style, boolean prominent) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(1f, rect.getWidth() - 10f), rect.getHeight(), false);
@@ -65,5 +78,18 @@ public class BattleNext_PageLayout {
 
 	public static float listWidth(CustomPanelAPI panel) {
 		return Math.min(480f, Math.max(320f, panel.getPosition().getWidth() * 0.38f));
+	}
+
+	public static UIRect[] managementRegions(CustomPanelAPI panel) {
+		float width = panel.getPosition().getWidth();
+		float height = panel.getPosition().getHeight();
+		float listWidth = Math.min(400f, Math.max(260f, width * 0.22f));
+		listWidth = Math.min(listWidth, width * 0.4f);
+		float contentHeight = height - CONTENT_TOP - CONTENT_BOTTOM - FOOTER_MARGIN;
+		UIRect list = new UIRect(8f, CONTENT_TOP, listWidth, contentHeight);
+		UIRect detail = new UIRect(28f + listWidth, CONTENT_TOP, width - listWidth - 36f, contentHeight);
+		UIRect footer = new UIRect(8f, height - CONTENT_BOTTOM + FOOTER_MARGIN,
+				width - 16f, FOOTER_HEIGHT);
+		return new UIRect[]{list, detail, footer};
 	}
 }

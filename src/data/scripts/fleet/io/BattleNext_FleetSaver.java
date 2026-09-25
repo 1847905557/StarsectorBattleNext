@@ -27,6 +27,9 @@ public class BattleNext_FleetSaver {
 	public void delete(BattleNext_FleetModel fleet) throws IOException {
 		String directory = "AI_Battles_Next/" + fleet.getId() + "/";
 		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json");
+		if (Global.getSettings().fileExistsInCommon(directory + "fleet_data.json")) {
+			throw new IOException("Fleet file remains after deletion: " + fleet.getId());
+		}
 		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json.bak");
 		for (BattleNext_VariantModel variant : fleet.getVariants()) {
 			Global.getSettings().deleteTextFileFromCommon(directory + variant.getId() + ".variant");

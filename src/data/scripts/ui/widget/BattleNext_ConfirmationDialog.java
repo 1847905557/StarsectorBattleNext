@@ -28,6 +28,7 @@ public class BattleNext_ConfirmationDialog {
 	private TooltipMakerAPI confirmationStatusContent;
 	private LabelAPI confirmationStatus;
 	private Runnable onConfirm;
+	private String deleteDescription;
 
 	public BattleNext_ConfirmationDialog(Host host) {
 		this.host = host;
@@ -43,13 +44,30 @@ public class BattleNext_ConfirmationDialog {
 
 	public void request(Runnable confirmAction) {
 		if (confirmation != null) return;
+		deleteDescription = null;
 		onConfirm = confirmAction;
 		showConfirmation();
 	}
 
+	public void requestDelete(String description, Runnable deleteAction) {
+		if (confirmation != null) return;
+		deleteDescription = description;
+		onConfirm = deleteAction;
+		showConfirmation();
+	}
+
 	public void handle(Object action) {
-		if ("confirm_cancel".equals(action)) {
+		if ("confirm_cancel".equals(action) || "delete_cancel".equals(action)) {
 			close();
+			return;
+		}
+		if (deleteDescription != null) {
+			if ("delete_confirm".equals(action)) {
+				close();
+				Runnable pending = onConfirm;
+				onConfirm = null;
+				if (pending != null) pending.run();
+			}
 			return;
 		}
 		if (!"confirm_save".equals(action) && !"confirm_discard".equals(action)) return;
@@ -72,6 +90,7 @@ public class BattleNext_ConfirmationDialog {
 		confirmation = null;
 		confirmationStatusContent = null;
 		confirmationStatus = null;
+		deleteDescription = null;
 	}
 
 	private void showConfirmation() {
@@ -81,21 +100,24 @@ public class BattleNext_ConfirmationDialog {
 		UIRect dialogRect = new UIRect(12f, 8f, width - 24f, 75f);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
 		BattleNext_UiTheme.configure(dialog);
-		dialog.addTitle(strings.get("unsaved_title"));
-		dialog.addPara(strings.get("unsaved_message"), 12f, BattleNext_UiTheme.TEXT);
+		dialog.addTitle(strings.get(deleteDescription == null ? "unsaved_title" : "delete_title"));
+		dialog.addPara(deleteDescription == null ? strings.get("unsaved_message")
+				: strings.get("delete_message") + " " + deleteDescription, 12f, BattleNext_UiTheme.TEXT);
 		dialogRect.addTooltip();
 		UIRect statusRect = new UIRect(12f, 88f, width - 24f, 25f);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
 		confirmationStatus = confirmationStatusContent.addPara("", 0f, BattleNext_UiTheme.MUTED);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
-		String[] actions = {"save", "discard", "cancel"};
-		float buttonWidth = Math.min(145f, (width - 40f) / 3f);
-		float firstX = (width - (buttonWidth * 3f + 16f)) * 0.5f;
+		String[] actions = deleteDescription == null
+				? new String[]{"save", "discard", "cancel"} : new String[]{"confirm", "cancel"};
+		float buttonWidth = Math.min(145f, (width - 40f) / actions.length);
+		float firstX = (width - (buttonWidth * actions.length + 8f * (actions.length - 1))) * 0.5f;
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(confirmation,
 					new UIRect(firstX + index * (buttonWidth + 8f), 118f, buttonWidth, 30f),
-					strings.get("unsaved_" + actions[index]), "confirm_" + actions[index], CutStyle.ALL, false);
+					strings.get((deleteDescription == null ? "unsaved_" : "delete_") + actions[index]),
+					(deleteDescription == null ? "confirm_" : "delete_") + actions[index], CutStyle.ALL, false);
 		}
 		parent.addComponent(confirmation).inMid();
 	}

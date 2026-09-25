@@ -26,7 +26,7 @@ public class BattleNext_FleetModel {
 	private String behavior;
 	private String color;
 	private String vsImage;
-	private int rulesSlot;
+	private String rulesId;
 	private String source;
 	private String sourcePath;
 	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
@@ -49,7 +49,7 @@ public class BattleNext_FleetModel {
 		this.behavior = "";
 		this.color = "";
 		this.vsImage = "";
-		this.rulesSlot = -1;
+		this.rulesId = "";
 		this.source = "native";
 		this.sourcePath = "";
 	}
@@ -77,7 +77,7 @@ public class BattleNext_FleetModel {
 		result.behavior = json.optString("behavior", "");
 		result.color = json.optString("color", "");
 		result.vsImage = json.optString("vsImage", "");
-		result.rulesSlot = json.optInt("rulesSlot", -1);
+		result.rulesId = json.optString("rulesId", "");
 		return result;
 	}
 
@@ -99,7 +99,7 @@ public class BattleNext_FleetModel {
 		json.put("behavior", behavior);
 		json.put("color", color);
 		json.put("vsImage", vsImage);
-		json.put("rulesSlot", rulesSlot);
+		json.put("rulesId", rulesId);
 		return json;
 	}
 
@@ -191,12 +191,12 @@ public class BattleNext_FleetModel {
 		this.vsImage = normalize(vsImage);
 	}
 
-	public int getRulesSlot() {
-		return rulesSlot;
+	public String getRulesId() {
+		return rulesId;
 	}
 
-	public void setRulesSlot(int rulesSlot) {
-		this.rulesSlot = rulesSlot;
+	public void setRulesId(String rulesId) {
+		this.rulesId = normalize(rulesId);
 	}
 
 	public String getSource() {

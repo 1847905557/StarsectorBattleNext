@@ -35,11 +35,11 @@ public class BattleNext_BattleSourceProvider {
 			return List.of();
 		}
 
-		int activeSlot = tournamentStore.getActiveSlot();
-		if (activeSlot >= 0) {
-			BattleNext_Tournament tournament = tournamentStore.get(activeSlot);
+		String activeId = tournamentStore.getActiveId();
+		if (!activeId.isEmpty()) {
+			BattleNext_Tournament tournament = tournamentStore.get(activeId);
 			if (tournament == null) {
-				warnings.add("Active tournament slot is missing: " + activeSlot);
+				warnings.add("Active tournament is missing: " + activeId);
 				return List.of();
 			}
 			activeTournament = tournament;
@@ -47,7 +47,7 @@ public class BattleNext_BattleSourceProvider {
 				return List.of();
 			}
 			BattleNext_Match next = tournamentEngine.getNextMatch(tournament);
-			return next == null ? List.of() : validate(List.of(next), "tournament slot " + activeSlot);
+			return next == null ? List.of() : validate(List.of(next), "tournament " + activeId);
 		}
 
 		BattleNext_QuickBattleStore quickBattleStore = new BattleNext_QuickBattleStore();

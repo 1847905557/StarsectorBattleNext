@@ -9,6 +9,6 @@ import java.io.IOException;
 public class BattleNext_RulesSaver {
 
 	public void save(BattleNext_RulesModel model) throws IOException, JSONException {
-		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/rules_" + model.getSlot() + ".json", model.toJson(), false);
+		Global.getSettings().writeJSONToCommon("AI_Battles_Next/rules/" + model.getId() + ".json", model.toJson(), false);
 	}
 }
