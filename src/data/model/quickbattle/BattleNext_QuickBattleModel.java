@@ -63,6 +63,9 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	private static String normalizeComment(String value) {
 		String trimmed = value == null ? "" : value.trim();
+		while (trimmed.startsWith("#")) {
+			trimmed = trimmed.substring(1).trim();
+		}
 		return trimmed.isEmpty() ? "#" : "# " + trimmed;
 	}
 

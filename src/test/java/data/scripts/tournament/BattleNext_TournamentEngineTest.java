@@ -204,6 +204,15 @@ class BattleNext_TournamentEngineTest {
 	}
 
 	@Test
+	void rawCommentEditDoesNotDuplicateCommentPrefix() {
+		BattleNext_QuickBattleModel comment = BattleNext_QuickBattleModel.parseLine("# 文本", false);
+		assertEquals(BattleNext_QuickBattleModel.RowType.RAW, comment.getRowType());
+		assertEquals("# 文本", comment.getRawContent());
+		comment.promoteRaw("# 文本1");
+		assertEquals("# 文本1", comment.toSourceLine());
+	}
+
+	@Test
 	void nestedEnumsRejectUnknownValues() throws Exception {
 		BattleNext_TournamentModel tournament = tournament(2, BracketType.SINGLE_ELIMINATION, 1);
 		engine.start(tournament);
