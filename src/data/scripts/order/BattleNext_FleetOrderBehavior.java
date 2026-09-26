@@ -2,23 +2,22 @@ package data.scripts.combat;
 
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.util.IntervalUtil;
-import data.model.fleet.BattleNext_FleetModel;
-import data.automation.BattleNext_OrderField;
-import data.automation.BattleNext_OrderRegistry;
-import data.automation.BattleNext_OrderSpec;
-import data.automation.OrderFilter;
-import data.automation.OrderPicker;
-import data.automation.OrderStarter;
-import data.automation.OrderSuffix;
-import java.util.HashMap;
+import data.order.BattleNext_OrderField;
+import data.order.BattleNext_OrderProcessor;
+import data.order.BattleNext_OrderRegistry;
+import data.scripts.fleet.BattleNext_FleetAssembly;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 
@@ -32,7 +31,8 @@ public class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 	public static final float FULL_ASSAULT_INTERVAL = 1f;
 	private final Mode playerMode;
 	private final Mode enemyMode;
-	private final Map<String, String> ordersByVariant = new HashMap<>();
+	private final Map<FleetMemberAPI, BattleNext_OrderProcessor> ordersByMember = new IdentityHashMap<>();
+	private final Set<BattleNext_OrderField> activeFields = new HashSet<>();
 	private final IntervalUtil ordersInterval = new IntervalUtil(ORDERS_INTERVAL, ORDERS_INTERVAL);
 	private final IntervalUtil assaultInterval = new IntervalUtil(FULL_ASSAULT_INTERVAL, FULL_ASSAULT_INTERVAL);
 	private CombatEngineAPI engine;
@@ -42,15 +42,23 @@ public class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 		this.enemyMode = enemyMode;
 	}
 
-	public BattleNext_FleetBehavior(Mode playerMode, Mode enemyMode, BattleNext_FleetModel player, BattleNext_FleetModel enemy) {
+	public BattleNext_FleetBehavior(Mode playerMode, Mode enemyMode, BattleNext_FleetAssembly player, BattleNext_FleetAssembly enemy) {
 		this(playerMode, enemyMode);
-		addOrders(player);
-		addOrders(enemy);
+		if (playerMode == Mode.ORDERS) addOrders(player);
+		if (enemyMode == Mode.ORDERS) addOrders(enemy);
 	}
 
-	private void addOrders(BattleNext_FleetModel fleet) {
-		if (fleet == null) return;
-		fleet.getMembers().forEach(member -> ordersByVariant.put(member.getVariantId(), member.getOrders()));
+	private void addOrders(BattleNext_FleetAssembly assembly) {
+		if (assembly == null) return;
+		for (int index = 0; index < assembly.getMembers().size(); index++) {
+			FleetMemberAPI member = assembly.getMembers().get(index);
+			String script = assembly.getDefinition().getMembers().get(index).getOrders();
+			String label = assembly.getDefinition().getName() + " member[" + index + "] "
+					+ assembly.getDefinition().getMembers().get(index).getVariantId();
+			BattleNext_OrderProcessor processor = new BattleNext_OrderProcessor(script, label,
+					BattleNext_OrderRegistry.getInstance(), message -> Global.getLogger(BattleNext_FleetBehavior.class).error(message));
+			if (!processor.isEmpty()) ordersByMember.put(member, processor);
+		}
 	}
 
 	public static Mode fromTags(List<String> tags) {
@@ -92,44 +100,21 @@ public class BattleNext_FleetBehavior extends BaseEveryFrameCombatPlugin {
 
 	private void processOrders(FleetSide side, Mode mode) {
 		if (mode != Mode.ORDERS) return;
-		BattleNext_OrderField field = BattleNext_OrderField.getInstance(engine, side.ordinal(), false);
 		for (ShipAPI ship : engine.getShips()) {
-			if (!ship.isAlive() || ship.isFighter() || ship.isStation() || ship.getOwner() != side.ordinal()) continue;
+			if (!ship.isAlive() || ship.isFighter() || ship.isStation() || ship.isStationModule()
+					|| ship.getOriginalOwner() != side.ordinal()) continue;
+			BattleNext_OrderProcessor processor = ordersByMember.get(ship.getFleetMember());
+			if (processor == null) continue;
+			CombatTaskManagerAPI tasks = engine.getFleetManager(ship.getOwner()).getTaskManager(ship.isAlly());
+			if (tasks.isFullAssault() || tasks.isInFullRetreat()) continue;
+			BattleNext_OrderField field = BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly());
 			field.registerShip(ship);
-			if (field.getInfoFor(ship) == null) {
-				applyScript(field, ship);
-			}
+			field.reconcileShip(ship);
+			activeFields.add(field);
+			processor.advance(ship, engine, field);
 		}
-		field.pruneAssignments();
-	}
-
-	private void applyScript(BattleNext_OrderField field, ShipAPI ship) {
-		String script = ship.getVariant() == null ? "" : ordersByVariant.get(ship.getVariant().getHullVariantId());
-		if (script == null || script.trim().isEmpty()) return;
-		BattleNext_OrderSpec.ParseResult parsed = BattleNext_OrderSpec.parse(script);
-		if (!parsed.isValid()) return;
-		BattleNext_OrderSpec.Command command = parsed.getCommand();
-		try {
-			OrderStarter starter = (OrderStarter)BattleNext_OrderRegistry.getInstance().create("starter", command.getStarter());
-			List<? extends CombatEntityAPI> targets = starter.getInitialTargets(ship, engine);
-			for (BattleNext_OrderSpec.Part part : command.getFilters()) {
-				OrderFilter filter = (OrderFilter)BattleNext_OrderRegistry.getInstance().create("filter", part.getId());
-				filter.filterTargets(ship, targets, part.getParams().toArray(new String[0]), engine);
-				if (targets.isEmpty()) return;
-			}
-			OrderPicker picker = (OrderPicker)BattleNext_OrderRegistry.getInstance().create("picker", command.getPicker());
-			Object target = picker.pick(ship, targets, starter.getCombatAssignmentType(), engine);
-			float priority = 0f;
-			Object custom = null;
-			for (BattleNext_OrderSpec.Part part : command.getSuffixes()) {
-				OrderSuffix suffix = (OrderSuffix)BattleNext_OrderRegistry.getInstance().create("suffix", part.getId());
-				priority = suffix.getFloatResultWithTarget((com.fs.starfarer.api.combat.AssignmentTargetAPI)target,
-						part.getParams().toArray(new String[0]), custom, engine);
-				custom = suffix.getCustomResultWithTarget((com.fs.starfarer.api.combat.AssignmentTargetAPI)target,
-						part.getParams().toArray(new String[0]), custom, engine);
-			}
-			field.apply(ship, starter.getCombatAssignmentType(), (com.fs.starfarer.api.combat.AssignmentTargetAPI)target, priority);
-		} catch (RuntimeException ignored) {
+		for (BattleNext_OrderField field : activeFields) {
+			field.pruneAssignments();
 		}
 	}
 

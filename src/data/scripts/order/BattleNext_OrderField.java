@@ -1,4 +1,4 @@
-package data.automation;
+package data.order;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
@@ -47,7 +47,15 @@ public class BattleNext_OrderField {
 		AssignmentInfo current = tasks.getAssignmentFor(ship);
 		if (current == null) return false;
 		OrderInfo generatedInfo = automation.get(ship);
-		return generatedInfo == null || !sameAssignment(generatedInfo.assignment, current);
+		if (generatedInfo == null) return true;
+		return !sameAssignment(generatedInfo.assignment, current);
+	}
+
+	public void reconcileShip(ShipAPI ship) {
+		OrderInfo generatedInfo = automation.get(ship);
+		if (generatedInfo != null && !sameAssignment(generatedInfo.assignment, tasks.getAssignmentFor(ship))) {
+			automation.remove(ship);
+		}
 	}
 
 	public AssignmentInfo getInfoFor(ShipAPI ship) {
@@ -98,8 +106,14 @@ public class BattleNext_OrderField {
 
 	public boolean apply(ShipAPI ship, CombatAssignmentType type, AssignmentTargetAPI target, float priority) {
 		if (hasPlayerForcedAssignment(ship)) return false;
-		if (target == null) {
+		if (type == null) {
 			assignToAutomationInfo(ship, null, null, priority);
+			return true;
+		}
+		if (target == null) return false;
+		OrderInfo own = automation.get(ship);
+		if (own != null && own.assignment.getType() == type && own.assignment.getTarget() == target) {
+			automation.put(ship, new OrderInfo(own.assignment, priority));
 			return true;
 		}
 		CombatAssignmentType existingType = getAssignmentTypeOnTarget(target);
@@ -115,8 +129,7 @@ public class BattleNext_OrderField {
 			}
 			return false;
 		}
-		AssignmentInfo current = getInfoFor(ship);
-		if (existingAutomation.assignment.getType() == type && current != existingAutomation.assignment) {
+		if (existingAutomation.assignment.getType() == type) {
 			if (type != CombatAssignmentType.RETREAT) {
 				assignToAutomationInfo(ship, existingAutomation);
 			}
@@ -144,6 +157,7 @@ public class BattleNext_OrderField {
 	}
 
 	public void pruneAssignments() {
+		automation.keySet().removeIf(ship -> !visited.contains(ship));
 		List<AssignmentInfo> remove = new ArrayList<>();
 		for (AssignmentInfo info : tasks.getAllAssignments()) {
 			boolean assignedToVisited = false;
