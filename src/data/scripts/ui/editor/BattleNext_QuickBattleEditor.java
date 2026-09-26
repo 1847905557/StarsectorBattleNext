@@ -158,7 +158,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		float stripHeight = Math.min(HEADER_HEIGHT, headerStrip.getPosition().getHeight());
 		UIRect[] headings = columns(tableHeader.getWidth(), stripHeight);
 		String[] labels = {"#", text("battle_player_short"), text("battle_enemy_short"), text("battle_map_short"),
-				text("battle_size_short"), text("status"), text("enabled"), text("actions")};
+				text("battle_map_scale_short"), text("status"), text("enabled"), text("actions")};
 		for (int index = 0; index < headings.length; index++) {
 			UIRect cell = headings[index];
 			addLabel(panel, new UIRect(tableHeader.getX() + cell.getX(), tableHeader.getY(),
@@ -228,7 +228,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			row.player = addField(cells[1], card, entry.getPlayer());
 			row.enemy = addField(cells[2], card, entry.getEnemy());
 			row.map = addField(cells[3], card, Integer.toString(entry.getMap()));
-			row.size = addField(cells[4], card, Float.toString(entry.getSize()));
+			row.mapScale = addField(cells[4], card, Float.toString(entry.getMapScale()));
 		}
 
 		UIRect statusRect = cells[5];
@@ -364,10 +364,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			errors.add(text("invalid_map"));
 		}
 		try {
-			float size = Float.parseFloat(row.size.getText().trim());
-			if (!Float.isFinite(size) || size <= 0f) errors.add(text("invalid_size"));
+			float mapScale = Float.parseFloat(row.mapScale.getText().trim());
+			if (!Float.isFinite(mapScale) || mapScale <= 0f) errors.add(text("invalid_map_scale"));
 		} catch (NumberFormatException exception) {
-			errors.add(text("invalid_size"));
+			errors.add(text("invalid_map_scale"));
 		}
 		return errors;
 	}
@@ -394,21 +394,21 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			}
 			try {
 				int map = Integer.parseInt(row.map.getText().trim());
-				float size = Float.parseFloat(row.size.getText().trim());
+				float mapScale = Float.parseFloat(row.mapScale.getText().trim());
 				if (row.player.getText().trim().isEmpty() || row.enemy.getText().trim().isEmpty()
-						|| map < -1 || map > 11 || !Float.isFinite(size) || size <= 0f) {
-					setStatus(text("invalid_map_size"));
+						|| map < -1 || map > 11 || !Float.isFinite(mapScale) || mapScale <= 0f) {
+					setStatus(text("invalid_map_scale_combined"));
 					return false;
 				}
 				model.setPlayer(row.player.getText());
 				model.setEnemy(row.enemy.getText());
 				model.setMap(map);
-				model.setSize(size);
+				model.setMapScale(mapScale);
 				model.setEnabled(row.enabled.isChecked());
 				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.RowType.BATTLE
 						: model.getRowType());
 			} catch (NumberFormatException exception) {
-				setStatus(text("invalid_map_size"));
+				setStatus(text("invalid_map_scale_combined"));
 				return false;
 			}
 		}
@@ -450,7 +450,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		StringBuilder value = new StringBuilder();
 		for (Row row : rows) {
 			value.append(row.model.getRowType()).append(row.enabled != null && row.enabled.isChecked());
-			for (TextFieldAPI field : new TextFieldAPI[]{row.player, row.enemy, row.map, row.size, row.raw}) {
+			for (TextFieldAPI field : new TextFieldAPI[]{row.player, row.enemy, row.map, row.mapScale, row.raw}) {
 				if (field != null) {
 					value.append(field.getText().length()).append(':').append(field.getText());
 				}
@@ -477,7 +477,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		private TextFieldAPI player;
 		private TextFieldAPI enemy;
 		private TextFieldAPI map;
-		private TextFieldAPI size;
+		private TextFieldAPI mapScale;
 		private TextFieldAPI raw;
 		private ButtonAPI enabled;
 		private LabelAPI status;

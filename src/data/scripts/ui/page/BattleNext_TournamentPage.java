@@ -1,6 +1,7 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -14,10 +15,19 @@ import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_TournamentPage implements BattleNext_PageView {
+
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		return draftOpen && editor.handleGlobalInput(events);
+	}
+
+	public void closePicker() {
+		editor.closePicker();
+	}
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;

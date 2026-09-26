@@ -91,7 +91,7 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 		String player = legacy ? stripLegacyPrefix(model.getPlayer()) : model.getPlayer();
 		String enemy = legacy ? stripLegacyPrefix(model.getEnemy()) : model.getEnemy();
 		String line = BattleNext_CsvLine.escape(player) + "," + BattleNext_CsvLine.escape(enemy)
-				+ "," + model.getMap() + "," + model.getSize();
+				+ "," + model.getMap() + "," + model.getMapScale();
 		return model.isEnabled() ? line : "# " + line;
 	}
 

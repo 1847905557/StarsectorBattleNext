@@ -1,270 +1,360 @@
 package data.scripts.tournament;
 
-import data.model.tournament.BattleNext_TournamentModel;
 import data.model.report.BattleNext_BattleReportModel;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentModel.BracketType;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_Match.Stage;
+import data.scripts.battle.BattleNext_Match.Status;
 import data.scripts.battle.BattleNext_Round;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class BattleNext_TournamentEngine {
 
 	public void start(BattleNext_TournamentModel tournament) {
-		if (tournament.isStarted()) {
-			throw new IllegalStateException("Tournament has already started");
-		}
-		validateTeams(tournament);
-		tournament.clearMatches();
-		generateMatches(tournament);
-		if ("kof".equals(tournament.getBracketType())) {
-			tournament.setKofNextIndex(2);
-		}
+		if (tournament.isStarted()) throw new IllegalStateException("Tournament has already started");
+		validate(tournament);
+		tournament.clearGeneratedMatches();
 		tournament.setStarted(true);
 		tournament.setCompleted(false);
-		tournament.setChampion("");
-		selectPendingMatch(tournament);
+		tournament.setChampionFleetId("");
+		createOpeningMatches(tournament, Map.of());
+		reconcile(tournament, Map.of());
 	}
 
 	public BattleNext_Match getNextMatch(BattleNext_TournamentModel tournament) {
-		String pendingMatchId = tournament.getPendingMatchId();
-		if (!pendingMatchId.isEmpty()) {
-			BattleNext_Match pending = tournament.findMatch(pendingMatchId);
-			if (pending != null && "pending".equals(pending.getStatus())) {
-				return pending;
-			}
-		}
+		if (!tournament.isStarted() || tournament.isCompleted()) return null;
+		BattleNext_Match match = tournament.findMatch(tournament.getPendingMatchId());
+		if (match != null && match.getStatus() == Status.PENDING) return match;
 		selectPendingMatch(tournament);
-		return tournament.getPendingMatchId().isEmpty() ? null : tournament.findMatch(tournament.getPendingMatchId());
+		return tournament.findMatch(tournament.getPendingMatchId());
 	}
 
 	public void recordRound(BattleNext_TournamentModel tournament, String matchId, String winner,
 			BattleNext_BattleReportModel report) {
 		BattleNext_Match match = tournament.findMatch(matchId);
-		if (!tournament.isStarted() || tournament.isCompleted() || match == null) {
+		if (!tournament.isStarted() || tournament.isCompleted() || match == null || match.getStatus() != Status.PENDING) {
 			throw new IllegalStateException("Tournament match is unavailable");
 		}
-		if (!"pending".equals(match.getStatus())) {
-			throw new IllegalStateException("Tournament match is already complete");
-		}
-		String result = normalizeWinner(winner, match);
-		BattleNext_Round previous = match.getRounds().isEmpty()
-				? null : match.getRounds().get(match.getRounds().size() - 1);
-		int number = previous == null ? 1 : previous.getNumber();
-		int attempt = previous == null ? 0 : previous.getAttempt() + 1;
-		if (previous != null && !"draw".equals(previous.getWinner()) && !match.isReplay()) {
-			number++;
-			attempt = 0;
-		}
-		BattleNext_Round round = new BattleNext_Round(number, match.getPlayer(), match.getEnemy());
-		round.setWinner(result);
-		round.setAttempt(attempt);
+		BattleNext_Round.Status result = resultFor(winner, match);
+		BattleNext_Round round = new BattleNext_Round(match.getPlayer(), match.getEnemy());
+		round.setStatus(result);
 		round.setReport(report);
 		match.addRound(round);
-		if ("draw".equals(result)) {
-			return;
-		}
-		match.setReplay(false);
-		if (result.equals(match.getPlayer())) {
-			match.addPlayerWin();
-		} else {
-			match.addEnemyWin();
-		}
-		int winsNeeded = winsNeeded(tournament.getMatchFormat());
+		if (result == BattleNext_Round.Status.DRAW) return;
+		int winsNeeded = tournament.getWinTarget();
 		if (match.getPlayerWins() >= winsNeeded || match.getEnemyWins() >= winsNeeded) {
-			match.setStatus("complete");
-			advance(tournament, match, result);
+			match.setStatus(Status.COMPLETE);
+			reconcile(tournament, Map.of());
 			return;
 		}
 		match.setSides(match.getEnemy(), match.getPlayer());
 	}
 
 	public void rollback(BattleNext_TournamentModel tournament, String matchId) {
-		BattleNext_Match target = tournament.findMatch(matchId);
-		if (target == null) {
+		if (tournament.findMatch(matchId) == null) {
 			throw new IllegalArgumentException("Unknown tournament match: " + matchId);
 		}
-		boolean reached = false;
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if (match == target) {
-				reached = true;
-			}
-			if (reached) {
-				if (match == target) {
-					match.resetProgressForReplay();
-				} else {
-					match.clearRoundsAfter(1);
-					match.setStatus("pending");
+		Set<String> affected = new HashSet<>();
+		affected.add(matchId);
+		boolean changed;
+		do {
+			changed = false;
+			for (BattleNext_Match match : tournament.getMatches()) {
+				for (String dependency : match.getDependencies()) {
+					if (affected.contains(dependency) && affected.add(match.getId())) changed = true;
 				}
 			}
+		} while (changed);
+		Map<String, BattleNext_Match> preserved = new HashMap<>();
+		for (BattleNext_Match match : tournament.getMatches()) {
+			if (!affected.contains(match.getId())) preserved.put(match.getId(), match);
 		}
+		tournament.clearGeneratedMatches();
 		tournament.setCompleted(false);
-		tournament.setChampion("");
-		tournament.setPendingMatchId(matchId);
+		tournament.setChampionFleetId("");
+		createOpeningMatches(tournament, preserved);
+		reconcile(tournament, preserved);
 	}
 
-	private void validateTeams(BattleNext_TournamentModel tournament) {
-		if (tournament.getTeams().size() < 2 || tournament.getTeams().size() > 32) {
-			throw new IllegalArgumentException("Tournament requires between 2 and 32 teams");
+	private void validate(BattleNext_TournamentModel tournament) {
+		List<String> fleets = tournament.getFleetIds();
+		if (tournament.getBracketType() == null || tournament.getBoCount() < 1
+				|| tournament.getMaxFleet() < 2 || tournament.getMaxFleet() > 32
+				|| fleets.size() < 2 || fleets.size() > tournament.getMaxFleet()) {
+			throw new IllegalArgumentException("Invalid tournament configuration");
 		}
 		Set<String> seen = new HashSet<>();
-		for (String team : tournament.getTeams()) {
-			if (team.isEmpty() || !seen.add(team)) {
-				throw new IllegalArgumentException("Tournament teams must be non-empty and unique");
+		for (String fleet : fleets) {
+			if (fleet.isEmpty() || !seen.add(fleet)) {
+				throw new IllegalArgumentException("Tournament fleets must be unique");
 			}
 		}
 	}
 
-	private void generateMatches(BattleNext_TournamentModel tournament) {
-		List<String> teams = tournament.getTeams();
-		String bracketType = tournament.getBracketType();
-		if ("round_robin".equals(bracketType)) {
-			for (int first = 0; first < teams.size(); first++) {
-				for (int second = first + 1; second < teams.size(); second++) {
-					addMatch(tournament, "round-robin-" + first + "-" + second, teams.get(first), teams.get(second), "round_robin");
+	private void createOpeningMatches(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+		List<String> fleets = tournament.getFleetIds();
+		if (tournament.getBracketType() == BracketType.ROUND_ROBIN) {
+			for (int first = 0; first < fleets.size(); first++) {
+				for (int second = first + 1; second < fleets.size(); second++) {
+					addMatch(tournament, "RR-" + first + "-" + second, new Entry(fleets.get(first), ""),
+							new Entry(fleets.get(second), ""), Stage.ROUND_ROBIN, preserved);
 				}
 			}
 			return;
 		}
-		if ("kof".equals(bracketType)) {
-			addMatch(tournament, "kof-1", teams.get(0), teams.get(1), "kof");
+		if (tournament.getBracketType() == BracketType.KING_OF_THE_HILL) {
+			addMatch(tournament, "K-1", new Entry(fleets.get(0), ""), new Entry(fleets.get(1), ""),
+					Stage.KING_OF_THE_HILL, preserved);
 			return;
 		}
-		for (int index = 0; index + 1 < teams.size(); index += 2) {
-			String stage = "double_elim".equals(bracketType) ? "winners" : "main";
-			addMatch(tournament, stage + "-" + (index / 2 + 1), teams.get(index), teams.get(index + 1), stage);
+		int width = bracketWidth(fleets.size());
+		List<Integer> seedOrder = new ArrayList<>(List.of(1, 2));
+		for (int bracket = 4; bracket <= width; bracket *= 2) {
+			List<Integer> next = new ArrayList<>();
+			for (int seed : seedOrder) {
+				next.add(seed);
+				next.add(bracket + 1 - seed);
+			}
+			seedOrder = next;
 		}
-		if (teams.size() % 2 != 0) {
-			addMatch(tournament, "main-bye", teams.get(teams.size() - 1), "", "bye");
+		List<Entry> entries = new ArrayList<>();
+		for (int seed : seedOrder) {
+			entries.add(new Entry(seed <= fleets.size() ? fleets.get(seed - 1) : "", ""));
+		}
+		pair(tournament, "W1", entries, tournament.getBracketType() == BracketType.DOUBLE_ELIMINATION
+				? Stage.WINNERS : Stage.MAIN, preserved);
+	}
+
+	private void reconcile(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+		boolean changed;
+		do {
+			int count = tournament.getMatches().size();
+			BracketType type = tournament.getBracketType();
+			if (type == BracketType.ROUND_ROBIN) {
+				if (allComplete(tournament.getMatches())) finish(tournament, roundRobinChampion(tournament));
+			} else if (type == BracketType.KING_OF_THE_HILL) {
+				advanceKof(tournament, preserved);
+			} else {
+				advanceBracket(tournament, type == BracketType.DOUBLE_ELIMINATION, preserved);
+			}
+			changed = tournament.getMatches().size() != count;
+		} while (changed);
+		selectPendingMatch(tournament);
+	}
+
+	private void advanceKof(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+		int index = tournament.getMatches().size();
+		BattleNext_Match last = tournament.findMatch("K-" + index);
+		if (last == null || last.getStatus() != Status.COMPLETE) return;
+		if (index + 1 >= tournament.getFleetIds().size()) {
+			finish(tournament, last.getWinnerFleetId());
+			return;
+		}
+		addMatch(tournament, "K-" + (index + 1), new Entry(last.getWinnerFleetId(), last.getId()),
+				new Entry(tournament.getFleetIds().get(index + 1), ""), Stage.KING_OF_THE_HILL, preserved);
+	}
+
+	private void advanceBracket(BattleNext_TournamentModel tournament, boolean doubleElim,
+			Map<String, BattleNext_Match> preserved) {
+		int width = bracketWidth(tournament.getFleetIds().size());
+		int levels = Integer.numberOfTrailingZeros(width);
+		for (int round = 1; round < levels; round++) {
+			if (roundComplete(tournament, "W" + round, width >> round)
+					&& tournament.findMatch("W" + (round + 1) + "-1") == null) {
+				pair(tournament, "W" + (round + 1), winners(tournament, "W" + round, width >> round),
+						doubleElim ? Stage.WINNERS : Stage.MAIN, preserved);
+			}
+		}
+		if (!doubleElim) {
+			if (roundComplete(tournament, "W" + levels, 1)) {
+				finish(tournament, tournament.findMatch("W" + levels + "-1").getWinnerFleetId());
+			}
+			return;
+		}
+		if (roundComplete(tournament, "W1", width / 2) && tournament.findMatch("L1-1") == null) {
+			pair(tournament, "L1", losers(tournament, "W1", width / 2), Stage.LOSERS, preserved);
+		}
+		for (int round = 2; round <= levels; round++) {
+			int previousLoserRound = round == 2 ? 1 : 2 * round - 3;
+			int previousCount = Math.max(1, width >> round);
+			int loserRound = 2 * round - 2;
+			if (roundComplete(tournament, "W" + round, width >> round)
+					&& roundComplete(tournament, "L" + previousLoserRound, previousCount)
+					&& tournament.findMatch("L" + loserRound + "-1") == null) {
+				List<Entry> survivors = winners(tournament, "L" + previousLoserRound, previousCount);
+				List<Entry> fallen = losers(tournament, "W" + round, width >> round);
+				for (int index = 0; index < fallen.size(); index++) {
+					addMatch(tournament, "L" + loserRound + "-" + (index + 1), survivors.get(index),
+							fallen.get(index), Stage.LOSERS, preserved);
+				}
+			}
+			if (round < levels && roundComplete(tournament, "L" + loserRound, width >> round)
+					&& tournament.findMatch("L" + (loserRound + 1) + "-1") == null) {
+				pair(tournament, "L" + (loserRound + 1), winners(tournament, "L" + loserRound, width >> round),
+						Stage.LOSERS, preserved);
+			}
+		}
+		int finalLoserRound = Math.max(1, 2 * levels - 2);
+		if (roundComplete(tournament, "W" + levels, 1)
+				&& roundComplete(tournament, "L" + finalLoserRound, 1)
+				&& tournament.findMatch("GF") == null) {
+			addMatch(tournament, "GF", winner(tournament.findMatch("W" + levels + "-1")),
+					winner(tournament.findMatch("L" + finalLoserRound + "-1")), Stage.GRAND_FINAL, preserved);
+		}
+		BattleNext_Match grandFinal = tournament.findMatch("GF");
+		if (grandFinal == null || grandFinal.getStatus() != Status.COMPLETE) return;
+		String winnersChampion = tournament.findMatch("W" + levels + "-1").getWinnerFleetId();
+		if (winnersChampion.equals(grandFinal.getWinnerFleetId())) {
+			finish(tournament, winnersChampion);
+			return;
+		}
+		if (tournament.findMatch("GF_RESET") == null) {
+			addMatch(tournament, "GF_RESET", new Entry(winnersChampion, "GF"),
+					new Entry(grandFinal.getWinnerFleetId(), "GF"), Stage.GRAND_FINAL_RESET, preserved);
+		}
+		BattleNext_Match reset = tournament.findMatch("GF_RESET");
+		if (reset.getStatus() == Status.COMPLETE) finish(tournament, reset.getWinnerFleetId());
+	}
+
+	private void pair(BattleNext_TournamentModel tournament, String prefix, List<Entry> entries,
+			Stage stage, Map<String, BattleNext_Match> preserved) {
+		for (int index = 0; index < entries.size(); index += 2) {
+			Entry second = index + 1 < entries.size() ? entries.get(index + 1) : new Entry("", "");
+			addMatch(tournament, prefix + "-" + (index / 2 + 1), entries.get(index), second, stage, preserved);
 		}
 	}
 
-	private void addMatch(BattleNext_TournamentModel tournament, String id, String player, String enemy, String stage) {
-		BattleNext_Match match = new BattleNext_Match(id, player, enemy, tournament.getMapId(), 1f);
-		match.setStage(stage);
-		if ("bye".equals(stage)) {
-			match.setStatus("complete");
+	private void addMatch(BattleNext_TournamentModel tournament, String id, Entry first, Entry second,
+			Stage stage, Map<String, BattleNext_Match> preserved) {
+		Entry player = first.fleetId.isEmpty() ? second : first;
+		Entry enemy = first.fleetId.isEmpty() ? first : second;
+		BattleNext_Match match = new BattleNext_Match(id, player.fleetId, enemy.fleetId, tournament.getMapId(), 1f);
+		match.setStage(enemy.fleetId.isEmpty() ? Stage.BYE : stage);
+		match.addDependency(first.sourceId);
+		match.addDependency(second.sourceId);
+		if (enemy.fleetId.isEmpty()) match.setStatus(Status.COMPLETE);
+		BattleNext_Match old = preserved.get(id);
+		if (old != null && old.getStage() == match.getStage()
+				&& initialPlayer(old).equals(match.getPlayer()) && initialEnemy(old).equals(match.getEnemy())
+				&& old.getDependencies().equals(match.getDependencies())) {
+			match = old;
 		}
 		tournament.addGeneratedMatch(match);
 	}
 
-	private void advance(BattleNext_TournamentModel tournament, BattleNext_Match completed, String winner) {
-		if ("kof".equals(tournament.getBracketType())) {
-			advanceKof(tournament, completed, winner);
-			return;
-		}
-		if ("round_robin".equals(tournament.getBracketType())) {
-			if (allMatchesComplete(tournament)) {
-				tournament.setChampion(findRoundRobinChampion(tournament));
-				tournament.setCompleted(true);
-			}
-			return;
-		}
-		if (hasPendingMatch(tournament)) {
-			return;
-		}
-		List<String> winners = completedWinners(tournament);
-		if (winners.size() == 1) {
-			tournament.setChampion(winners.get(0));
-			tournament.setCompleted(true);
-			return;
-		}
-		for (int index = 0; index + 1 < winners.size(); index += 2) {
-			addMatch(tournament, "final-" + tournament.getMatches().size(), winners.get(index), winners.get(index + 1), "final");
-		}
+	private String initialPlayer(BattleNext_Match match) {
+		return match.getRounds().isEmpty() ? match.getPlayer() : match.getRounds().get(0).getPlayer();
 	}
 
-	private void advanceKof(BattleNext_TournamentModel tournament, BattleNext_Match completed, String winner) {
-		int nextIndex = tournament.getKofNextIndex();
-		if (nextIndex >= tournament.getTeams().size()) {
-			tournament.setChampion(winner);
-			tournament.setCompleted(true);
-			return;
-		}
-		tournament.setKofNextIndex(nextIndex + 1);
-		String id = "kof-" + (tournament.getMatches().size() + 1);
-		addMatch(tournament, id, winner, tournament.getTeams().get(nextIndex), "kof");
+	private String initialEnemy(BattleNext_Match match) {
+		return match.getRounds().isEmpty() ? match.getEnemy() : match.getRounds().get(0).getEnemy();
 	}
 
-	private void selectPendingMatch(BattleNext_TournamentModel tournament) {
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if ("pending".equals(match.getStatus()) && !match.getEnemy().isEmpty()) {
-				tournament.setPendingMatchId(match.getId());
-				return;
-			}
-		}
-		tournament.setPendingMatchId("");
-	}
-
-	private boolean hasPendingMatch(BattleNext_TournamentModel tournament) {
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if ("pending".equals(match.getStatus()) && !match.getEnemy().isEmpty()) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private boolean allMatchesComplete(BattleNext_TournamentModel tournament) {
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if (!"complete".equals(match.getStatus())) {
-				return false;
-			}
+	private boolean roundComplete(BattleNext_TournamentModel tournament, String prefix, int count) {
+		for (int index = 1; index <= count; index++) {
+			BattleNext_Match match = tournament.findMatch(prefix + "-" + index);
+			if (match == null || match.getStatus() != Status.COMPLETE) return false;
 		}
 		return true;
 	}
 
-	private List<String> completedWinners(BattleNext_TournamentModel tournament) {
-		List<String> winners = new ArrayList<>();
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if (!"complete".equals(match.getStatus()) || match.getRounds().isEmpty()) {
-				continue;
-			}
-			BattleNext_Round round = match.getRounds().get(match.getRounds().size() - 1);
-			if (!"draw".equals(round.getWinner())) {
-				winners.add(round.getWinner());
-			}
-		}
-		return winners;
+	private List<Entry> winners(BattleNext_TournamentModel tournament, String prefix, int count) {
+		List<Entry> result = new ArrayList<>();
+		for (int index = 1; index <= count; index++) result.add(winner(tournament.findMatch(prefix + "-" + index)));
+		return result;
 	}
 
-	private String findRoundRobinChampion(BattleNext_TournamentModel tournament) {
-		String champion = tournament.getTeams().get(0);
-		int bestWins = -1;
-		for (String team : tournament.getTeams()) {
-			int wins = 0;
+	private List<Entry> losers(BattleNext_TournamentModel tournament, String prefix, int count) {
+		List<Entry> result = new ArrayList<>();
+		for (int index = 1; index <= count; index++) {
+			BattleNext_Match match = tournament.findMatch(prefix + "-" + index);
+			result.add(new Entry(match.getLoserFleetId(), match.getId()));
+		}
+		return result;
+	}
+
+	private Entry winner(BattleNext_Match match) {
+		return new Entry(match.getWinnerFleetId(), match.getId());
+	}
+
+	private String roundRobinChampion(BattleNext_TournamentModel tournament) {
+		List<String> fleets = tournament.getFleetIds();
+		Map<String, Integer> wins = new HashMap<>();
+		for (BattleNext_Match match : tournament.getMatches()) wins.merge(match.getWinnerFleetId(), 1, Integer::sum);
+		int best = -1;
+		for (String fleet : fleets) best = Math.max(best, wins.getOrDefault(fleet, 0));
+		Set<String> tied = new HashSet<>();
+		for (String fleet : fleets) {
+			if (wins.getOrDefault(fleet, 0) == best) tied.add(fleet);
+		}
+		String champion = "";
+		int headToHead = -1;
+		for (String fleet : fleets) {
+			if (!tied.contains(fleet)) continue;
+			int score = 0;
 			for (BattleNext_Match match : tournament.getMatches()) {
-				if (!match.getRounds().isEmpty() && team.equals(match.getRounds().get(match.getRounds().size() - 1).getWinner())) {
-					wins++;
-				}
+				if (fleet.equals(match.getWinnerFleetId()) && tied.contains(match.getLoserFleetId())) score++;
 			}
-			if (wins > bestWins) {
-				champion = team;
-				bestWins = wins;
+			// Three-way cycles are rare; seed order resolves a remaining tie.
+			if (score > headToHead) {
+				champion = fleet;
+				headToHead = score;
 			}
 		}
 		return champion;
 	}
 
-	private String normalizeWinner(String winner, BattleNext_Match match) {
-		if (winner == null || winner.trim().isEmpty() || "draw".equals(winner)) {
-			return "draw";
+	private boolean allComplete(List<BattleNext_Match> matches) {
+		for (BattleNext_Match match : matches) {
+			if (match.getStatus() != Status.COMPLETE) return false;
 		}
-		if (!winner.equals(match.getPlayer()) && !winner.equals(match.getEnemy())) {
-			throw new IllegalArgumentException("Winner is not a participant in the match");
-		}
-		return winner;
+		return true;
 	}
 
-	private int winsNeeded(String matchFormat) {
-		if ("BO3".equalsIgnoreCase(matchFormat)) {
-			return 2;
+	private int bracketWidth(int count) {
+		int width = 2;
+		while (width < count) width *= 2;
+		return width;
+	}
+
+	private BattleNext_Round.Status resultFor(String winner, BattleNext_Match match) {
+		if (winner == null || winner.isEmpty() || "draw".equals(winner)) return BattleNext_Round.Status.DRAW;
+		if (winner.equals(match.getPlayer())) return BattleNext_Round.Status.PLAYER_WIN;
+		if (winner.equals(match.getEnemy())) return BattleNext_Round.Status.ENEMY_WIN;
+		throw new IllegalArgumentException("Winner is not a participant in the match");
+	}
+
+	private void finish(BattleNext_TournamentModel tournament, String champion) {
+		tournament.setChampionFleetId(champion);
+		tournament.setCompleted(true);
+	}
+
+	private void selectPendingMatch(BattleNext_TournamentModel tournament) {
+		if (!tournament.isCompleted()) {
+			for (BattleNext_Match match : tournament.getMatches()) {
+				if (match.getStatus() == Status.PENDING) {
+					tournament.setPendingMatchId(match.getId());
+					return;
+				}
+			}
 		}
-		if ("BO5".equalsIgnoreCase(matchFormat)) {
-			return 3;
+		tournament.setPendingMatchId("");
+	}
+
+	private static class Entry {
+		private final String fleetId;
+		private final String sourceId;
+
+		private Entry(String fleetId, String sourceId) {
+			this.fleetId = fleetId;
+			this.sourceId = sourceId;
 		}
-		return 1;
 	}
 }

@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -159,10 +160,11 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		}
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			for (BattleNext_Match match : tournament.getMatches()) {
-				for (BattleNext_Round round : match.getRounds()) {
+				for (int index = 0; index < match.getRounds().size(); index++) {
+					BattleNext_Round round = match.getRounds().get(index);
 					if (!round.getReport().getId().isEmpty()) {
 						entries.add(new Entry(round.getReport(),
-								context(tournament, match.getId(), round), tournament, round));
+								context(tournament, match.getId(), index + 1), tournament, round));
 					}
 				}
 			}
@@ -221,9 +223,13 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		return result;
 	}
 
-	private String context(BattleNext_TournamentModel tournament, String matchId, BattleNext_Round round) {
-		return text("tournament_context") + " " + tournament.getId() + " / " + text("match") + " " + matchId
-				+ " / " + text("round") + " " + round.getNumber() + " / " + text("attempt") + " " + round.getAttempt();
+	private String context(BattleNext_TournamentModel tournament, String matchId, int roundNumber) {
+		BattleNext_Match match = tournament.findMatch(matchId);
+		if (match == null || match.getEnemy().isEmpty()) {
+			return text("tournament_context") + " " + tournament.getId() + " / " + matchId;
+		}
+		return text("tournament_context") + " " + tournament.getId() + " / "
+				+ BattleNext_MatchProgress.tournament(tournament, match, roundNumber).format(strings);
 	}
 
 	private String listLabel(Entry entry) {

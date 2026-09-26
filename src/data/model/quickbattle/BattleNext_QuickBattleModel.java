@@ -19,17 +19,17 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	private String player;
 	private String enemy;
 	private int map;
-	private float size;
+	private float mapScale;
 	private String rawContent = "";
 	private RowType rowType = RowType.BATTLE;
 	private boolean enabled = true;
 	private boolean legacyIds;
 
-	public BattleNext_QuickBattleModel(String player, String enemy, int map, float size) {
+	public BattleNext_QuickBattleModel(String player, String enemy, int map, float mapScale) {
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
 		this.map = map;
-		this.size = size;
+		this.mapScale = mapScale;
 	}
 
 	public static BattleNext_QuickBattleModel fromCsvRow(String line) {
@@ -72,7 +72,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	}
 
 	public BattleNext_QuickBattleModel copy() {
-		BattleNext_QuickBattleModel copy = new BattleNext_QuickBattleModel(player, enemy, map, size);
+		BattleNext_QuickBattleModel copy = new BattleNext_QuickBattleModel(player, enemy, map, mapScale);
 		copy.id = id;
 		copy.rawContent = rawContent;
 		copy.rowType = rowType;
@@ -89,7 +89,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 			player = parsed.player;
 			enemy = parsed.enemy;
 			map = parsed.map;
-			size = parsed.size;
+			mapScale = parsed.mapScale;
 			rowType = parsed.rowType;
 			enabled = false;
 			rawContent = parsed.rawContent;
@@ -118,12 +118,12 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		player = fields.get(0).trim();
 		enemy = fields.get(1).trim();
 		map = parsedMap;
-		size = parsedSize;
+		mapScale = parsedSize;
 	}
 
 	@Override
 	public String toCsvLine() {
-		return BattleNext_CsvLine.escape(player) + "," + BattleNext_CsvLine.escape(enemy) + "," + map + "," + size;
+		return BattleNext_CsvLine.escape(player) + "," + BattleNext_CsvLine.escape(enemy) + "," + map + "," + mapScale;
 	}
 
 	public String toSourceLine() {
@@ -164,12 +164,12 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		this.map = map;
 	}
 
-	public float getSize() {
-		return size;
+	public float getMapScale() {
+		return mapScale;
 	}
 
-	public void setSize(float size) {
-		this.size = size;
+	public void setMapScale(float mapScale) {
+		this.mapScale = mapScale;
 	}
 
 	public String getRawContent() {

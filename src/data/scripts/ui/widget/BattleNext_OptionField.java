@@ -268,7 +268,9 @@ public class BattleNext_OptionField {
 			}
 		}
 		TooltipMakerAPI fallback = tile.createUIElement(60f, 60f, false);
-		fallback.addPara("?", 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
+		fallback.setParaSmallInsignia();
+		fallback.addPara(fallback.shortenString(option.label, 54f), 0f, BattleNext_UiTheme.MUTED)
+				.getPosition().inMid();
 		tile.addUIElement(fallback).inTL(2f, 2f);
 	}
 

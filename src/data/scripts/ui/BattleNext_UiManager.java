@@ -116,6 +116,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				&& fleetPage.handleGlobalInput(events)) return true;
 		if (!confirmationDialog.isActive() && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
 				&& battleSelectorPage.handleGlobalInput(events)) return true;
+		if (!confirmationDialog.isActive() && currentPage == Page.TOURNAMENTS && tournamentPage != null
+				&& tournamentPage.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
@@ -183,6 +185,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		if (panel == null) return;
 		BattleNext_TextField.clearRegisteredFields();
 		if (fleetPage != null) fleetPage.closePicker();
+		if (tournamentPage != null) tournamentPage.closePicker();
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(Page.values()[index] != currentPage);
 		}
@@ -228,6 +231,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void requestPage(Page page) {
 		if (page == currentPage) return;
 		if (fleetPage != null) fleetPage.closePicker();
+		if (tournamentPage != null) tournamentPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
 				currentPage = page;
@@ -244,6 +248,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void requestClose() {
 		BattleNext_TextField.releaseFocusedField();
 		if (fleetPage != null) fleetPage.closePicker();
+		if (tournamentPage != null) tournamentPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(closeAction);
 			return;

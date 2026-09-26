@@ -52,6 +52,7 @@ sourceSets {
 	main {
 		java {
 			srcDirs = [mainSourceDir]
+			exclude "test/**"
 		}
 	}
 	projectRules {
@@ -67,7 +68,17 @@ dependencies {
 	modJarDirs.each { dir ->
 		compileOnly fileTree(dir: dir, include: ["*.jar"])
 	}
+	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+	testImplementation fileTree(dir: "${gameRoot}/starsector-core", include: ["*.jar"])
+	modJarDirs.each { dir ->
+		testImplementation fileTree(dir: dir, include: ["*.jar"])
+	}
 	projectRulesImplementation "com.github.javaparser:javaparser-symbol-solver-core:3.26.4"
+}
+
+tasks.named("test") {
+	useJUnitPlatform()
 }
 
 // Compilation
@@ -268,13 +279,13 @@ tasks.named("projectRulesCheck") {
 tasks.register("fixProject") {
 	group = "formatting"
 	description = "Formats, compiles, and checks the full project."
-	dependsOn "formatProject", "compileJava", "projectRulesCheck", "projectRulesFixtureCheck", "projectRulesIntegrityCheck"
+	dependsOn "formatProject", "compileJava", "test", "projectRulesCheck", "projectRulesFixtureCheck", "projectRulesIntegrityCheck"
 }
 
 tasks.register("verifyProject") {
 	group = "verification"
 	description = "Compiles and checks the full project without formatting writes."
-	dependsOn "verifyFormat", "compileJava", "projectRulesCheck", "projectRulesFixtureCheck", "projectRulesIntegrityCheck"
+	dependsOn "verifyFormat", "compileJava", "test", "projectRulesCheck", "projectRulesFixtureCheck", "projectRulesIntegrityCheck"
 }
 
 tasks.named("check") {

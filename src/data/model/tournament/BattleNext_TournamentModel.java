@@ -13,34 +13,35 @@ import java.util.List;
 
 public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
+	public enum BracketType { SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN, KING_OF_THE_HILL }
+
 	public static final int FORMAT_VERSION = 1;
 	public static final int META_FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;
-	private String bracketType;
-	private String matchFormat;
-	private int size;
-	private final List<String> teams = new ArrayList<>();
+	private BracketType bracketType;
+	private int boCount;
+	private int maxFleet;
+	private final List<String> fleetIds = new ArrayList<>();
 	private final List<BattleNext_Match> matches = new ArrayList<>();
 	private String rulesId = "";
 	private int mapId = -1;
 	private boolean started;
 	private boolean completed;
-	private String champion = "";
+	private String championFleetId = "";
 	private String pendingMatchId = "";
-	private int kofNextIndex;
 
 	public BattleNext_TournamentModel() {
-		this("", "", "single_elim", "BO1", 2);
+		this("", "", BracketType.SINGLE_ELIMINATION, 1, 2);
 	}
 
-	public BattleNext_TournamentModel(String id, String name, String bracketType, String matchFormat, int size) {
+	public BattleNext_TournamentModel(String id, String name, BracketType bracketType, int boCount, int maxFleet) {
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
-		this.bracketType = bracketType == null ? "single_elim" : bracketType.trim();
-		this.matchFormat = matchFormat == null ? "BO1" : matchFormat.trim();
-		this.size = size;
+		this.bracketType = bracketType;
+		this.boCount = boCount;
+		this.maxFleet = maxFleet;
 	}
 
 	@Override
@@ -49,22 +50,27 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
 		setId(json.optString("id", ""));
 		setName(json.optString("name", ""));
-		setBracketType(json.optString("bracketType", "single_elim"));
-		setMatchFormat(json.optString("matchFormat", "BO1"));
-		size = json.optInt("size", 2);
+		try {
+			bracketType = BracketType.valueOf(json.getString("bracketType"));
+		} catch (IllegalArgumentException exception) {
+			throw new IllegalArgumentException("Invalid tournament.bracketType: " + json.getString("bracketType"), exception);
+		}
+		boCount = json.getInt("boCount");
+		maxFleet = json.getInt("maxFleet");
+		if (boCount < 1 || maxFleet < 2 || maxFleet > 32) throw new IllegalArgumentException("Invalid tournament limits");
 		rulesId = json.optString("rulesId", "");
 		mapId = json.optInt("mapId", -1);
 		started = json.optBoolean("started", false);
 		completed = json.optBoolean("completed", false);
-		champion = json.optString("champion", "");
+		championFleetId = json.optString("championFleetId", "");
 		pendingMatchId = json.optString("pendingMatchId", "");
-		kofNextIndex = Math.max(0, json.optInt("kofNextIndex", 0));
-		JSONArray teamValues = json.optJSONArray("teams");
-		if (teamValues != null) {
-			for (int index = 0; index < teamValues.length(); index++) {
-				teams.add(teamValues.optString(index, ""));
-			}
+		fleetIds.clear();
+		JSONArray teamValues = json.getJSONArray("fleetIds");
+		for (int index = 0; index < teamValues.length(); index++) {
+			fleetIds.add(teamValues.getString(index));
 		}
+		if (fleetIds.size() > maxFleet) throw new IllegalArgumentException("fleetIds exceeds maxFleet");
+		matches.clear();
 		JSONArray matchValues = json.optJSONArray("matches");
 		if (matchValues != null) {
 			for (int index = 0; index < matchValues.length(); index++) {
@@ -81,10 +87,10 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
 		json.put("name", name);
-		json.put("bracketType", bracketType);
-		json.put("matchFormat", matchFormat);
-		json.put("size", size);
-		json.put("teams", new JSONArray(teams));
+		json.put("bracketType", bracketType.name());
+		json.put("boCount", boCount);
+		json.put("maxFleet", maxFleet);
+		json.put("fleetIds", new JSONArray(fleetIds));
 		JSONArray matchArray = new JSONArray();
 		for (BattleNext_Match match : matches) {
 			matchArray.put(match.toJson());
@@ -94,9 +100,8 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		json.put("mapId", mapId);
 		json.put("started", started);
 		json.put("completed", completed);
-		json.put("champion", champion);
+		json.put("championFleetId", championFleetId);
 		json.put("pendingMatchId", pendingMatchId);
-		json.put("kofNextIndex", kofNextIndex);
 		return json;
 	}
 
@@ -117,28 +122,32 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		this.name = name == null ? "" : name.trim();
 	}
 
-	public String getBracketType() {
+	public BracketType getBracketType() {
 		return bracketType;
 	}
 
-	public void setBracketType(String bracketType) {
-		this.bracketType = bracketType == null ? "" : bracketType.trim();
+	public void setBracketType(BracketType bracketType) {
+		this.bracketType = bracketType;
 	}
 
-	public String getMatchFormat() {
-		return matchFormat;
+	public int getBoCount() {
+		return boCount;
 	}
 
-	public void setMatchFormat(String matchFormat) {
-		this.matchFormat = matchFormat == null ? "" : matchFormat.trim();
+	public int getWinTarget() {
+		return boCount / 2 + 1;
 	}
 
-	public int getSize() {
-		return size;
+	public void setBoCount(int boCount) {
+		this.boCount = boCount;
 	}
 
-	public void setSize(int size) {
-		this.size = size;
+	public int getMaxFleet() {
+		return maxFleet;
+	}
+
+	public void setMaxFleet(int maxFleet) {
+		this.maxFleet = maxFleet;
 	}
 
 	public String getRulesId() {
@@ -173,12 +182,12 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		this.completed = completed;
 	}
 
-	public String getChampion() {
-		return champion;
+	public String getChampionFleetId() {
+		return championFleetId;
 	}
 
-	public void setChampion(String champion) {
-		this.champion = champion == null ? "" : champion.trim();
+	public void setChampionFleetId(String championFleetId) {
+		this.championFleetId = championFleetId == null ? "" : championFleetId.trim();
 	}
 
 	public String getPendingMatchId() {
@@ -187,14 +196,6 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public void setPendingMatchId(String pendingMatchId) {
 		this.pendingMatchId = pendingMatchId == null ? "" : pendingMatchId.trim();
-	}
-
-	public int getKofNextIndex() {
-		return kofNextIndex;
-	}
-
-	public void setKofNextIndex(int kofNextIndex) {
-		this.kofNextIndex = Math.max(0, kofNextIndex);
 	}
 
 	@Override
@@ -213,26 +214,52 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		}
 	}
 
-	public List<String> getTeams() {
-		return Collections.unmodifiableList(teams);
+	public List<String> getFleetIds() {
+		return Collections.unmodifiableList(fleetIds);
 	}
 
-	public void setTeams(List<String> values) {
+	public void setFleetIds(List<String> values) {
 		if (started) throw new IllegalStateException("Started tournament teams are locked");
-		teams.clear();
+		fleetIds.clear();
 		for (String value : values) {
-			addTeam(value);
+			fleetIds.add(value == null ? "" : value.trim());
 		}
-		size = teams.size();
 	}
 
 	public List<BattleNext_Match> getMatches() {
 		return Collections.unmodifiableList(matches);
 	}
 
-	public void addTeam(String team) {
-		if (!started && teams.size() < 32) {
-			teams.add(team == null ? "" : team.trim());
+	public int getPlayableMatchCount() {
+		int count = 0;
+		for (BattleNext_Match match : matches) {
+			if (!match.getEnemy().isEmpty()) count++;
+		}
+		return count;
+	}
+
+	public int getPlayableMatchTotal() {
+		int fleetCount = fleetIds.size();
+		if (bracketType == BracketType.ROUND_ROBIN) return fleetCount * (fleetCount - 1) / 2;
+		if (bracketType == BracketType.DOUBLE_ELIMINATION) {
+			return 2 * fleetCount - 2 + (findMatch("GF_RESET") == null ? 0 : 1);
+		}
+		return Math.max(0, fleetCount - 1);
+	}
+
+	public int getPlayableMatchIndex(String matchId) {
+		int index = 0;
+		for (BattleNext_Match match : matches) {
+			if (match.getEnemy().isEmpty()) continue;
+			if (match.getId().equals(matchId)) return index;
+			index++;
+		}
+		return -1;
+	}
+
+	public void addFleetId(String fleetId) {
+		if (!started && fleetIds.size() < 32) {
+			fleetIds.add(fleetId == null ? "" : fleetId.trim());
 		}
 	}
 
@@ -261,5 +288,10 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		if (!started) {
 			matches.clear();
 		}
+	}
+
+	public void clearGeneratedMatches() {
+		matches.clear();
+		pendingMatchId = "";
 	}
 }

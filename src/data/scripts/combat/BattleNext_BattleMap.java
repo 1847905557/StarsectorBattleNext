@@ -15,8 +15,8 @@ public class BattleNext_BattleMap {
 		return map < 0 ? Math.floorMod(seed, MAP_COUNT) : Math.floorMod(map, MAP_COUNT);
 	}
 
-	public static void apply(MissionDefinitionAPI api, int map, float size) {
-		float scale = Math.max(MIN_MAP_SCALE, size);
+	public static void apply(MissionDefinitionAPI api, int map, float mapScale) {
+		float scale = Math.max(MIN_MAP_SCALE, mapScale);
 		float width;
 		float height;
 		switch (Math.floorMod(map, MAP_COUNT)) {

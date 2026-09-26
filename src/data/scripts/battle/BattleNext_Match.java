@@ -11,34 +11,36 @@ import java.util.List;
 
 public class BattleNext_Match {
 
+	public enum Status { PENDING, COMPLETE }
+	public enum Stage { MAIN, WINNERS, LOSERS, GRAND_FINAL, GRAND_FINAL_RESET, ROUND_ROBIN, KING_OF_THE_HILL, BYE }
+
 	private String id;
 	private String player;
 	private String enemy;
 	private int map;
-	private float size;
+	private float mapScale;
 	private final List<BattleNext_Round> rounds = new ArrayList<>();
-	private int playerWins;
-	private int enemyWins;
-	private String status = "pending";
-	private String stage = "main";
-	private boolean replay;
+	private Status status = Status.PENDING;
+	private Stage stage = Stage.MAIN;
+	private final List<String> dependencies = new ArrayList<>();
 	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.CREATED;
 	private String sourcePath = "";
 
-	public BattleNext_Match(String id, String player, String enemy, int map, float size) {
+	public BattleNext_Match(String id, String player, String enemy, int map, float mapScale) {
 		this.id = id == null ? "" : id.trim();
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
 		this.map = map;
-		this.size = size;
+		this.mapScale = mapScale;
 	}
 
 	public static BattleNext_Match fromQuickBattle(BattleNext_QuickBattleModel model) {
-		return new BattleNext_Match(model.getId(), model.getPlayer(), model.getEnemy(), model.getMap(), model.getSize());
+		return new BattleNext_Match(model.getId(), model.getPlayer(), model.getEnemy(), model.getMap(), model.getMapScale());
 	}
 
 	public static BattleNext_Match fromJson(JSONObject json) throws JSONException {
-		BattleNext_Match match = new BattleNext_Match(json.optString("id", ""), json.optString("player", ""), json.optString("enemy", ""), json.optInt("map", -1), (float)json.optDouble("size", 1f));
+		BattleNext_Match match = new BattleNext_Match(json.getString("id"), json.getString("player"), json.getString("enemy"), json.getInt("map"), (float)json.getDouble("mapScale"));
+		if (!Float.isFinite(match.mapScale) || match.mapScale <= 0f) throw new IllegalArgumentException("Invalid match mapScale");
 		org.json.JSONArray values = json.optJSONArray("rounds");
 		if (values != null) {
 			for (int index = 0; index < values.length(); index++) {
@@ -47,11 +49,22 @@ public class BattleNext_Match {
 				}
 			}
 		}
-		match.playerWins = Math.max(0, json.optInt("playerWins", 0));
-		match.enemyWins = Math.max(0, json.optInt("enemyWins", 0));
-		match.status = json.optString("status", "pending");
-		match.stage = json.optString("stage", "main");
-		match.replay = json.optBoolean("replay", false);
+		try {
+			match.status = Status.valueOf(json.getString("status"));
+		} catch (IllegalArgumentException exception) {
+			throw new IllegalArgumentException("Invalid match.status: " + json.getString("status"), exception);
+		}
+		try {
+			match.stage = Stage.valueOf(json.getString("stage"));
+		} catch (IllegalArgumentException exception) {
+			throw new IllegalArgumentException("Invalid match.stage: " + json.getString("stage"), exception);
+		}
+		org.json.JSONArray sources = json.optJSONArray("dependencies");
+		if (sources != null) {
+			for (int index = 0; index < sources.length(); index++) {
+				match.dependencies.add(sources.getString(index));
+			}
+		}
 		return match;
 	}
 
@@ -61,17 +74,15 @@ public class BattleNext_Match {
 		json.put("player", player);
 		json.put("enemy", enemy);
 		json.put("map", map);
-		json.put("size", size);
+		json.put("mapScale", mapScale);
 		org.json.JSONArray values = new org.json.JSONArray();
 		for (BattleNext_Round round : rounds) {
 			values.put(round.toJson());
 		}
 		json.put("rounds", values);
-		json.put("playerWins", playerWins);
-		json.put("enemyWins", enemyWins);
-		json.put("status", status);
-		json.put("stage", stage);
-		json.put("replay", replay);
+		json.put("status", status.name());
+		json.put("stage", stage.name());
+		json.put("dependencies", new org.json.JSONArray(dependencies));
 		return json;
 	}
 
@@ -97,8 +108,8 @@ public class BattleNext_Match {
 		return map;
 	}
 
-	public float getSize() {
-		return size;
+	public float getMapScale() {
+		return mapScale;
 	}
 
 	public List<BattleNext_Round> getRounds() {
@@ -106,35 +117,27 @@ public class BattleNext_Match {
 	}
 
 	public int getPlayerWins() {
-		return playerWins;
+		return winsFor(player);
 	}
 
 	public int getEnemyWins() {
-		return enemyWins;
+		return winsFor(enemy);
 	}
 
-	public String getStatus() {
+	public Status getStatus() {
 		return status;
 	}
 
-	public String getStage() {
+	public Stage getStage() {
 		return stage;
 	}
 
-	public void addPlayerWin() {
-		playerWins++;
+	public void setStatus(Status status) {
+		this.status = status;
 	}
 
-	public void addEnemyWin() {
-		enemyWins++;
-	}
-
-	public void setStatus(String status) {
-		this.status = status == null || status.trim().isEmpty() ? "pending" : status.trim();
-	}
-
-	public void setStage(String stage) {
-		this.stage = stage == null || stage.trim().isEmpty() ? "main" : stage.trim();
+	public void setStage(Stage stage) {
+		this.stage = stage;
 	}
 
 	public void setSides(String player, String enemy) {
@@ -142,14 +145,31 @@ public class BattleNext_Match {
 		this.enemy = enemy == null ? "" : enemy.trim();
 	}
 
-	public void clearRoundsAfter(int roundNumber) {
-		while (!rounds.isEmpty() && rounds.get(rounds.size() - 1).getNumber() >= roundNumber) {
-			rounds.remove(rounds.size() - 1);
-		}
+	public void addDependency(String matchId) {
+		if (matchId != null && !matchId.isEmpty() && !dependencies.contains(matchId)) dependencies.add(matchId);
 	}
 
-	public boolean isReplay() {
-		return replay;
+	public List<String> getDependencies() {
+		return Collections.unmodifiableList(dependencies);
+	}
+
+	public String getWinnerFleetId() {
+		if (status != Status.COMPLETE) return "";
+		if (enemy.isEmpty()) return player;
+		return getPlayerWins() > getEnemyWins() ? player : enemy;
+	}
+
+	public String getLoserFleetId() {
+		if (status != Status.COMPLETE || enemy.isEmpty()) return "";
+		return getWinnerFleetId().equals(player) ? enemy : player;
+	}
+
+	private int winsFor(String fleetId) {
+		int wins = 0;
+		for (BattleNext_Round round : rounds) {
+			if (fleetId.equals(round.getWinnerFleetId())) wins++;
+		}
+		return wins;
 	}
 
 	public BattleNext_LoadSource getSourceType() {
@@ -168,14 +188,8 @@ public class BattleNext_Match {
 		this.sourcePath = sourcePath;
 	}
 
-	public void setReplay(boolean replay) {
-		this.replay = replay;
-	}
-
 	public void resetProgressForReplay() {
-		playerWins = 0;
-		enemyWins = 0;
-		status = "pending";
-		replay = true;
+		rounds.clear();
+		status = Status.PENDING;
 	}
 }

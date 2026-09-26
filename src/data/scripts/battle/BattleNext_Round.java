@@ -6,24 +6,26 @@ import org.json.JSONObject;
 
 public class BattleNext_Round {
 
-	private int number;
+	public enum Status { PLAYER_WIN, ENEMY_WIN, DRAW }
+
 	private String player;
 	private String enemy;
-	private String winner = "draw";
-	private int attempt;
+	private Status status = Status.DRAW;
 	private BattleNext_BattleReportModel report;
 
-	public BattleNext_Round(int number, String player, String enemy) {
-		this.number = number;
+	public BattleNext_Round(String player, String enemy) {
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
 		this.report = new BattleNext_BattleReportModel();
 	}
 
 	public static BattleNext_Round fromJson(JSONObject json) throws JSONException {
-		BattleNext_Round round = new BattleNext_Round(json.optInt("number", 0), json.optString("player", ""), json.optString("enemy", ""));
-		round.winner = json.optString("winner", "draw");
-		round.attempt = Math.max(0, json.optInt("attempt", 0));
+		BattleNext_Round round = new BattleNext_Round(json.getString("player"), json.getString("enemy"));
+		try {
+			round.status = Status.valueOf(json.getString("status"));
+		} catch (IllegalArgumentException exception) {
+			throw new IllegalArgumentException("Invalid round.status: " + json.getString("status"), exception);
+		}
 		JSONObject report = json.optJSONObject("report");
 		if (report != null) {
 			BattleNext_BattleReportModel reportModel = new BattleNext_BattleReportModel();
@@ -35,17 +37,11 @@ public class BattleNext_Round {
 
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
-		json.put("number", number);
 		json.put("player", player);
 		json.put("enemy", enemy);
-		json.put("winner", winner);
-		json.put("attempt", attempt);
+		json.put("status", status.name());
 		json.put("report", report.toJson());
 		return json;
-	}
-
-	public int getNumber() {
-		return number;
 	}
 
 	public String getPlayer() {
@@ -56,20 +52,18 @@ public class BattleNext_Round {
 		return enemy;
 	}
 
-	public String getWinner() {
-		return winner;
+	public Status getStatus() {
+		return status;
 	}
 
-	public void setWinner(String winner) {
-		this.winner = winner == null || winner.trim().isEmpty() ? "draw" : winner.trim();
+	public void setStatus(Status status) {
+		this.status = status;
 	}
 
-	public int getAttempt() {
-		return attempt;
-	}
-
-	public void setAttempt(int attempt) {
-		this.attempt = Math.max(0, attempt);
+	public String getWinnerFleetId() {
+		if (status == Status.PLAYER_WIN) return player;
+		if (status == Status.ENEMY_WIN) return enemy;
+		return "";
 	}
 
 	public BattleNext_BattleReportModel getReport() {

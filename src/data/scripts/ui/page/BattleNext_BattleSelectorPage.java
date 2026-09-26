@@ -4,6 +4,7 @@ import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -214,15 +215,19 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		if (!loadError.isEmpty()) summary.addPara(loadError, 0f, BattleNext_UiTheme.MUTED);
 		summary.addTitle(text("tournament_summary"));
 		summary.addPara(text("status") + ": " + tournamentStatus(tournament), 8f, BattleNext_UiTheme.TEXT);
-		summary.addPara(text("tournament_format") + ": " + tournament.getBracketType()
-				+ " / " + tournament.getMatchFormat(), 6f, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("tournament_format") + ": " + bracketLabel(tournament)
+				+ " / " + strings.format("bo", tournament.getBoCount()), 6f, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(), 6f, BattleNext_UiTheme.TEXT);
+		if (tournament.isCompleted()) {
+			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(), 6f, BattleNext_UiTheme.TEXT);
+		}
 		summary.addPara(text("tournament_rules") + ": "
 				+ (rulesStore.get(tournament.getRulesId()) == null
 						? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
 				6f, BattleNext_UiTheme.TEXT);
-		summary.addPara(text("teams"), 10f, BattleNext_UiTheme.ACCENT);
-		for (String team : tournament.getTeams()) {
-			summary.addPara(team, 5f, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("fleet_ids"), 10f, BattleNext_UiTheme.ACCENT);
+		for (String fleet : tournament.getFleetIds()) {
+			summary.addPara(fleet, 5f, BattleNext_UiTheme.TEXT);
 		}
 		summaryPanel.addUIElement(summary).inTL(0f, 0f);
 	}
@@ -241,13 +246,18 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		}
 		schedule.addPara(text("matches"), 12f, BattleNext_UiTheme.ACCENT);
 		for (BattleNext_Match match : tournament.getMatches()) {
-			schedule.addPara(text("match") + " " + match.getId() + ": " + match.getPlayer()
-					+ " / " + match.getEnemy() + " [" + match.getStatus() + "]",
+			String matchLabel = match.getEnemy().isEmpty() ? text("stage_bye")
+					: BattleNext_MatchProgress.tournament(tournament, match).format(strings);
+			schedule.addPara(matchLabel + " / " + match.getId() + ": " + match.getPlayer()
+					+ " / " + match.getEnemy() + " [" + enumLabel("stage_", match.getStage())
+					+ " / " + enumLabel("match_status_", match.getStatus()) + "]",
 					8f, BattleNext_UiTheme.TEXT);
-			for (BattleNext_Round round : match.getRounds()) {
-				schedule.addPara(text("round") + " " + round.getNumber() + " / "
-						+ text("attempt") + " " + round.getAttempt() + " / "
-						+ text("winner") + ": " + round.getWinner(), 4f, BattleNext_UiTheme.MUTED);
+			for (int index = 0; index < match.getRounds().size(); index++) {
+				BattleNext_Round round = match.getRounds().get(index);
+				String outcome = enumLabel("round_status_", round.getStatus());
+				if (round.getStatus() != BattleNext_Round.Status.DRAW) outcome += " (" + round.getWinnerFleetId() + ")";
+				schedule.addPara(strings.format("round_progress", index + 1, tournament.getBoCount())
+						+ " / " + text("status") + ": " + outcome, 4f, BattleNext_UiTheme.MUTED);
 			}
 		}
 		if (!tournament.isStarted()) {
@@ -266,14 +276,14 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		}
 		BattleNext_TournamentModel source = tournamentStore.get(selectedId);
 		if (source == null || source.isStarted()) return;
-		if (!List.of("single_elim", "double_elim", "round_robin", "kof").contains(source.getBracketType())
-				|| !List.of("BO1", "BO3", "BO5").contains(source.getMatchFormat())
+		if (source.getBracketType() == null || source.getBoCount() < 1
+				|| source.getMaxFleet() < 2 || source.getMaxFleet() > 32
 				|| source.getMapId() < -1 || source.getMapId() > 11) {
 			loadError = text("invalid_tournament_format");
 			refreshContent();
 			return;
 		}
-		if (source.getTeams().size() < 2 || source.getTeams().size() > 32) {
+		if (source.getFleetIds().size() < 2 || source.getFleetIds().size() > source.getMaxFleet()) {
 			loadError = text("tournament_need_fleets");
 			refreshContent();
 			return;
@@ -292,9 +302,9 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			refreshContent();
 			return;
 		}
-		for (String team : tournament.getTeams()) {
-			if (fleetStore.get(team) == null) {
-				loadError = text("invalid_player") + ": " + team;
+		for (String fleet : tournament.getFleetIds()) {
+			if (fleetStore.get(fleet) == null) {
+				loadError = text("invalid_player") + ": " + fleet;
 				refreshContent();
 				return;
 			}
@@ -313,9 +323,9 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private BattleNext_Match nextMatch(BattleNext_TournamentModel tournament) {
 		if (!tournament.isStarted() || tournament.isCompleted()) return null;
 		BattleNext_Match pending = tournament.findMatch(tournament.getPendingMatchId());
-		if (pending != null && "pending".equals(pending.getStatus())) return pending;
+		if (pending != null && pending.getStatus() == BattleNext_Match.Status.PENDING) return pending;
 		for (BattleNext_Match match : tournament.getMatches()) {
-			if ("pending".equals(match.getStatus()) && !match.getEnemy().isEmpty()) return match;
+			if (match.getStatus() == BattleNext_Match.Status.PENDING && !match.getEnemy().isEmpty()) return match;
 		}
 		return null;
 	}
@@ -324,6 +334,14 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		if (tournament.isCompleted()) return text("tournament_completed");
 		if (tournament.isStarted()) return text("tournament_in_progress");
 		return text("tournament_not_started");
+	}
+
+	private String bracketLabel(BattleNext_TournamentModel tournament) {
+		return text("bracket_" + tournament.getBracketType().name().toLowerCase(java.util.Locale.ROOT));
+	}
+
+	private String enumLabel(String prefix, Enum<?> value) {
+		return text(prefix + value.name().toLowerCase(java.util.Locale.ROOT));
 	}
 
 	private String text(String key) {
