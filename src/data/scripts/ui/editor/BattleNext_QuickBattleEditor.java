@@ -22,7 +22,7 @@ import java.util.List;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
-	private static final float HEADER_HEIGHT = 34f;
+	private static final float HEADER_HEIGHT = 18f;
 	private static final float ROW_HEIGHT = 38f;
 	private static final float FIELD_HEIGHT = 28f;
 	private static final float COLUMN_GAP = 8f;
