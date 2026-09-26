@@ -6,7 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantAdapter;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.tools.BattleNext_ModFileCatalog;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -23,7 +23,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_ModFileCatalog.resources(BASE_FOLDER, true);
+		List<String> paths = BattleNext_ModFileManager.list(BASE_FOLDER, true);
 		List<String> variantPaths = paths.stream().filter(path -> path.endsWith(".variant")).toList();
 		List<String> dataPaths = paths.stream().filter(BattleNext_FleetStandardLoader::isFleetDataPath)
 				.filter(path -> !BattleNext_EntryId.isReservedFolder(fleetFolder(path))).toList();

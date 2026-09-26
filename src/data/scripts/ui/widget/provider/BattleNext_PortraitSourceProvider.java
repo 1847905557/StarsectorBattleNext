@@ -1,75 +1,99 @@
 package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.characters.SkillEffectType;
-import com.fs.starfarer.api.characters.SkillSpecAPI;
-import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Skills;
+import com.fs.starfarer.api.campaign.FactionSpecAPI;
+import com.fs.starfarer.api.characters.FullName.Gender;
+import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionField.Option;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 
-public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.Source {
+public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField.Source {
+
+	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 
 	@Override
 	public int getMaxCount(String id) {
-		SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
-		if (spec == null) return 0;
-
-		List<SkillEffectSpecAPI> effects = spec.getEffectsAPI();
-		for (SkillEffectSpecAPI effect : effects) {
-			if (effect.getType() == SkillEffectType.ABILITY_UNLOCK) continue;
-			if (effect.getType() == SkillEffectType.HULLMOD_UNLOCK) continue;
-			if (effect.getType() == SkillEffectType.DESCRIPTION) continue;
-
-			if (effect.getRequiredSkillLevel() > 1f) {
-				return 2;
-			}
-		}
-
 		return 1;
 	}
 
 	@Override
 	public List<Option> getOptions() {
-		List<Option> options = new ArrayList<>();
-		for (String id : Global.getSettings().getSortedSkillIds()) {
-			SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
-			if (spec == null) continue;
 
-			if (spec.hasTag("BattleNext_forceAllowed")) {
-				options.add(new Option(id, spec.getName()));
-				continue;
+		List<Option> options = new ArrayList<>(selfPortraits());
+		Set<String> loaded = new LinkedHashSet<>();
+
+		List<FactionSpecAPI> specs = Global.getSettings().getAllFactionSpecs();
+		FactionSpecAPI player = Global.getSettings().getFactionSpec(Factions.PLAYER);
+		specs.remove(player);
+		specs.add(player);
+
+		for (FactionSpecAPI spec : specs) {
+
+			for (String path : spec.getAllPortraits(Gender.MALE)) {
+				if (!loaded.contains(path)) {
+					loaded.add(path);
+					options.add(new Option(path, spec.getDisplayName()));
+				}
 			}
 
-			if (isSkillBanned(spec)) continue;
-			if (spec.hasTag(Skills.TAG_DEPRECATED)) continue;
-			options.add(new Option(id, spec.getName()));
+			for (String path : spec.getAllPortraits(Gender.FEMALE)) {
+				if (!loaded.contains(path)) {
+					loaded.add(path);
+					options.add(new Option(path, spec.getDisplayName()));
+				}
+			}
+
+			for (String path : spec.getAllPortraits(Gender.ANY)) {
+				if (!loaded.contains(path)) {
+					loaded.add(path);
+					options.add(new Option(path, spec.getDisplayName()));
+				}
+			}
 		}
+
 		return options;
 	}
 
-	public boolean isSkillBanned(SkillSpecAPI spec) {
-		return true;
+	private List<Option> selfPortraits() {
+		List<Option> result = new ArrayList<>();
+		try {
+			for (String path : BattleNext_ModFileManager.list(MOD_PORTRAIT_ROOT, true)) {
+				if (!isPortraitFile(path)) continue;
+				Global.getSettings().loadTexture(path);
+				result.add(new Option(path, fileName(path)));
+			}
+		} catch (IOException exception) {
+			Global.getLogger(BattleNext_PortraitSourceProvider.class).warn(
+					"Mod portraits are unavailable: " + exception.getMessage());
+		}
+		return result;
+	}
+
+	private boolean isPortraitFile(String path) {
+		String normalized = path.toLowerCase();
+		return normalized.endsWith(".png") || normalized.endsWith(".jpg") || normalized.endsWith(".jpeg");
+	}
+
+	private String fileName(String path) {
+		String name = path.substring(path.lastIndexOf('/') + 1);
+		int dot = name.lastIndexOf('.');
+		return dot < 0 ? name : name.substring(0, dot);
 	}
 
 	@Override
-	public String getIcon(String id) {
-		SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
-		return spec == null ? "" : spec.getSpriteName();
+	public String getIconPath(String id) {
+		return id;
 	}
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, Option option) {
-		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		tooltip.addTitle(option.getLabel());
 		tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);
-		if (spec != null && spec.getDescription() != null && !spec.getDescription().isBlank()) {
-			tooltip.addPara(spec.getDescription(), 8f, BattleNext_UiTheme.TEXT);
-		}
 	}
 }

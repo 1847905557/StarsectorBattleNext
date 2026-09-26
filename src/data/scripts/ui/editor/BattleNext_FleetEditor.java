@@ -19,6 +19,7 @@ import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_PortraitSourceProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +28,6 @@ import java.util.List;
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private static final float FIELD_HEIGHT = 28f;
-	private static final int MEMBER_SKILL_MAX_COUNT = 2;
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
@@ -190,7 +190,11 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		fields.skills = memberSkills.addTo(memberContent, panel, Math.max(72f, width - 24f),
 				String.join(",", member.getSkills()));
 		memberPickers.add(memberSkills);
-		fields.portrait = field(memberContent, text("portrait"), member.getPortrait(), width);
+		memberContent.addPara(text("portrait"), 5f, BattleNext_UiTheme.MUTED);
+		BattleNext_OptionField portraitPicker = new BattleNext_OptionField(overlayHost,
+				new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.Mode.SINGLE);
+		fields.portrait = portraitPicker.addTo(memberContent, panel, Math.max(72f, width - 24f), member.getPortrait());
+		memberPickers.add(portraitPicker);
 		fields.orders = field(memberContent, text("orders"), member.getOrders(), width);
 		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()), width);
 		BattleNext_PageLayout.button(memberContent, text("remove_member"), "remove_member:" + index, Math.min(150f, width - 20f));

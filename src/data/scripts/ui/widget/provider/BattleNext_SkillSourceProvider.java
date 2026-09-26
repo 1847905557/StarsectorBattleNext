@@ -36,6 +36,7 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.So
 
 	@Override
 	public List<Option> getOptions() {
+
 		List<Option> options = new ArrayList<>();
 		for (String id : Global.getSettings().getSortedSkillIds()) {
 			SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
@@ -50,6 +51,7 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.So
 			if (spec.hasTag(Skills.TAG_DEPRECATED)) continue;
 			options.add(new Option(id, spec.getName()));
 		}
+
 		return options;
 	}
 
@@ -58,7 +60,7 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.So
 	}
 
 	@Override
-	public String getIcon(String id) {
+	public String getIconPath(String id) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
 		return spec == null ? "" : spec.getSpriteName();
 	}

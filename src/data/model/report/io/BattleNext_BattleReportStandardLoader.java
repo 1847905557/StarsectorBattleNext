@@ -4,7 +4,7 @@ import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.report.BattleNext_BattleReportModel;
-import data.scripts.tools.BattleNext_ModFileCatalog;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return BattleNext_ModFileCatalog.resourceFiles(RESOURCE_FOLDER);
+		return BattleNext_ModFileManager.listJson(RESOURCE_FOLDER);
 	}
 
 	@Override

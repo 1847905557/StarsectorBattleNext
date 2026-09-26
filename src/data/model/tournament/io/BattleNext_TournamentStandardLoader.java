@@ -4,7 +4,6 @@ import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.scripts.tools.BattleNext_ModFileCatalog;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,7 +19,7 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return BattleNext_ModFileCatalog.resourceFiles(RESOURCE_FOLDER).stream()
+		return BattleNext_ModFileManager.listJson(RESOURCE_FOLDER).stream()
 				.filter(path -> !path.endsWith("/meta.json") && !path.equals(META_FILE))
 				.toList();
 	}

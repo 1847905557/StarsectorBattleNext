@@ -52,7 +52,7 @@ public class BattleNext_OptionField {
 
 		int getMaxCount(String id);
 
-		String getIcon(String id);
+		String getIconPath(String id);
 
 		void createTooltip(TooltipMakerAPI tooltip, Option option);
 	}
@@ -68,6 +68,7 @@ public class BattleNext_OptionField {
 	private static final float TILE_GAP = 8f;
 	private static final float PADDING = 8f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
+	private static final Color BORDER_COLOR = BattleNext_UiTheme.HEADER;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
@@ -184,6 +185,7 @@ public class BattleNext_OptionField {
 				hostWidth - width - PADDING));
 
 		popup = overlayHost.createCustomPanel(width, height, new PopupPlugin());
+		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, 2f);
 		popup.addUIElement(searchElement(width)).inTL(PADDING, PADDING);
 		float buttonWidth = Math.min(120f, (width - 3f * PADDING) * 0.5f);
 		float buttonY = height - 38f;
@@ -251,7 +253,7 @@ public class BattleNext_OptionField {
 
 	private void addIcon(CustomPanelAPI tile, Option option) {
 
-		String icon = source.getIcon(option.id);
+		String icon = source.getIconPath(option.id);
 		if (icon != null && !icon.isBlank()) {
 			try {
 				Global.getSettings().getSprite(icon);
@@ -382,6 +384,7 @@ public class BattleNext_OptionField {
 		float width = Math.min(300f, popup.getPosition().getWidth() - 16f);
 		float height = Math.min(180f, popup.getPosition().getHeight() - 16f);
 		hoverPanel = popup.createCustomPanel(width, height, new HoverPlugin(target.option));
+		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, 2f);
 		hoveredOption = target.option;
 		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - 12f, height - 12f, false);
 		BattleNext_UiTheme.configure(tooltip);
@@ -536,7 +539,8 @@ public class BattleNext_OptionField {
 
 		@Override
 		public void renderBelow(float alphaMult) {
-			if (hoverPanel != null) drawRect(hoverPanel.getPosition(), HOVER_BACKGROUND, alphaMult);
+			if (hoverPanel == null) return;
+			drawRect(hoverPanel.getPosition(), HOVER_BACKGROUND, alphaMult);
 		}
 	}
 

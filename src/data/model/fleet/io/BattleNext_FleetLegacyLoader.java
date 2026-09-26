@@ -6,7 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
-import data.scripts.tools.BattleNext_ModFileCatalog;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -21,7 +21,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_ModFileCatalog.resources(LEGACY_FOLDER, false);
+		List<String> paths = BattleNext_ModFileManager.list(LEGACY_FOLDER, false);
 		for (String dataPath : paths) {
 			String fileName = dataPath.substring(dataPath.lastIndexOf('/') + 1);
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;

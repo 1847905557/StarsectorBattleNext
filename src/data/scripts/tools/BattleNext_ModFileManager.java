@@ -7,6 +7,9 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 public class BattleNext_ModFileManager {
@@ -97,6 +100,15 @@ public class BattleNext_ModFileManager {
 		return new String(readBytes(relativePath), StandardCharsets.UTF_8);
 	}
 
+	public static List<String> list(String directory, boolean recursive) throws IOException {
+		Bridge bridge = createBridge(directory);
+		return listRoot(bridge, normalizePath(directory), recursive);
+	}
+
+	public static List<String> listJson(String directory) throws IOException {
+		return list(directory, false).stream().filter(path -> path.endsWith(".json")).toList();
+	}
+
 	public static boolean exists(String relativePath) throws IOException {
 		Bridge bridge = createBridge(relativePath);
 		Target target = resolveExisting(bridge, relativePath);
@@ -134,6 +146,8 @@ public class BattleNext_ModFileManager {
 					lookup.findConstructor(fileType, MethodType.methodType(void.class, String.class)),
 					lookup.findVirtual(fileType, "exists", MethodType.methodType(boolean.class)),
 					lookup.findVirtual(fileType, "isDirectory", MethodType.methodType(boolean.class)),
+					lookup.findVirtual(fileType, "isFile", MethodType.methodType(boolean.class)),
+					lookup.findVirtual(fileType, "getName", MethodType.methodType(String.class)),
 					lookup.findVirtual(fileType, "getCanonicalPath", MethodType.methodType(String.class)),
 					lookup.findVirtual(fileType, "getAbsolutePath", MethodType.methodType(String.class)),
 					lookup.findVirtual(fileType, "getParentFile", MethodType.methodType(fileType)),
@@ -168,7 +182,7 @@ public class BattleNext_ModFileManager {
 			String rootCanonical = (String) bridge.canonicalPath.invoke(root);
 			String targetCanonical = (String) bridge.canonicalPath.invoke(target);
 			ensureInsideRoot(rootCanonical, targetCanonical, normalizedPath);
-			if (rootCanonical.equals(targetCanonical)) {
+			if (samePath(rootCanonical, targetCanonical)) {
 				throw new IOException("The mod root is not a file target: " + normalizedPath);
 			}
 			if ((boolean) bridge.exists.invoke(target)) {
@@ -273,6 +287,49 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
+	private static List<String> listRoot(Bridge bridge, String directory, boolean recursive) throws IOException {
+		try {
+			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
+			Object root = bridge.fileConstructor.invoke(rootPath);
+			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
+				throw new IOException("Mod root is missing: " + rootPath);
+			}
+			Object folder = bridge.fileConstructor.invoke(rootPath + "/" + directory);
+			if (!(boolean) bridge.exists.invoke(folder)) return List.of();
+			if (!(boolean) bridge.directoryCheck.invoke(folder)) {
+				throw new IOException("Not a directory: " + rootPath + "/" + directory);
+			}
+			List<String> result = new ArrayList<>();
+			collect(bridge, folder, directory, recursive, result);
+			Collections.sort(result);
+			return result;
+		} catch (IOException exception) {
+			throw exception;
+		} catch (Throwable exception) {
+			throw fileFailure(directory, exception);
+		}
+	}
+
+	private static void collect(Bridge bridge, Object folder, String relative, boolean recursive, List<String> result)
+			throws IOException {
+		try {
+			Object[] children = (Object[]) bridge.listFiles.invoke(folder);
+			if (children == null) throw new IOException("Unable to list directory: " + relative);
+			for (Object child : children) {
+				String path = relative + "/" + (String) bridge.name.invoke(child);
+				if ((boolean) bridge.regularFile.invoke(child)) {
+					result.add(path);
+				} else if (recursive && (boolean) bridge.directoryCheck.invoke(child)) {
+					collect(bridge, child, path, true, result);
+				}
+			}
+		} catch (IOException exception) {
+			throw exception;
+		} catch (Throwable exception) {
+			throw fileFailure(relative, exception);
+		}
+	}
+
 	private static String targetPath(Object target) {
 		return ((Target) target).canonicalPath;
 	}
@@ -335,6 +392,8 @@ public class BattleNext_ModFileManager {
 		private final MethodHandle fileConstructor;
 		private final MethodHandle exists;
 		private final MethodHandle directoryCheck;
+		private final MethodHandle regularFile;
+		private final MethodHandle name;
 		private final MethodHandle canonicalPath;
 		private final MethodHandle absolutePath;
 		private final MethodHandle parent;
@@ -353,7 +412,8 @@ public class BattleNext_ModFileManager {
 		private final MethodHandle toByteArray;
 
 		private Bridge(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
-				MethodHandle canonicalPath, MethodHandle absolutePath, MethodHandle parent, MethodHandle mkdirs,
+				MethodHandle regularFile, MethodHandle name, MethodHandle canonicalPath,
+				MethodHandle absolutePath, MethodHandle parent, MethodHandle mkdirs,
 				MethodHandle listFiles, MethodHandle delete, MethodHandle inputConstructor, MethodHandle read,
 				MethodHandle outputConstructor, MethodHandle write, MethodHandle flush, MethodHandle close,
 				MethodHandle closeInput, MethodHandle byteArrayOutputConstructor, MethodHandle byteArrayWrite,
@@ -361,6 +421,8 @@ public class BattleNext_ModFileManager {
 			this.fileConstructor = fileConstructor;
 			this.exists = exists;
 			this.directoryCheck = directoryCheck;
+			this.regularFile = regularFile;
+			this.name = name;
 			this.canonicalPath = canonicalPath;
 			this.absolutePath = absolutePath;
 			this.parent = parent;
