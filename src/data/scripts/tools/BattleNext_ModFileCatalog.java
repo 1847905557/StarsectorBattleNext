@@ -10,11 +10,11 @@ import java.util.Collections;
 import java.util.List;
 
 /** Lists names under this mod's data roots; file contents remain owned by SettingsAPI. */
-public final class BattleNext_FileCatalog {
+public final class BattleNext_ModFileCatalog {
 
 	private static final String MOD_ID = "AI_Battles_Next";
 
-	private BattleNext_FileCatalog() {
+	private BattleNext_ModFileCatalog() {
 
 	}
 
@@ -38,10 +38,12 @@ public final class BattleNext_FileCatalog {
 			MethodHandle regular = lookup.findVirtual(fileType, "isFile", MethodType.methodType(boolean.class));
 			MethodHandle name = lookup.findVirtual(fileType, "getName", MethodType.methodType(String.class));
 			MethodHandle children = lookup.findVirtual(fileType, "listFiles", MethodType.methodType(fileType.arrayType()));
-			Object folder = construct.invoke(path);
-			if (!(boolean) exists.invoke(folder)) {
-				throw new IllegalStateException("Resource directory is missing: " + path);
+			Object rootFolder = construct.invoke(root);
+			if (!(boolean) exists.invoke(rootFolder) || !(boolean) directoryCheck.invoke(rootFolder)) {
+				throw new IllegalStateException("Mod root is missing: " + root);
 			}
+			Object folder = construct.invoke(path);
+			if (!(boolean) exists.invoke(folder)) return List.of();
 			if (!(boolean) directoryCheck.invoke(folder)) throw new IllegalStateException("Not a directory: " + path);
 			List<String> result = new ArrayList<>();
 			collect(folder, directory, recursive, result, directoryCheck, regular, name, children);

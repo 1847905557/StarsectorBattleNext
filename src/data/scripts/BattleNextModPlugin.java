@@ -17,7 +17,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 	public void onApplicationLoad() {
 
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
-			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 Ai Battles Next");
+			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 AI Battles Next");
 		}
 		try {
 			BattleNext_FontData.init();

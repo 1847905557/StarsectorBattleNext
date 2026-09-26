@@ -31,7 +31,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private static final Color DEFAULT_BACKGROUND = new Color(20, 48, 57, 210);
 	private static final Color DEFAULT_BORDER = new Color(35, 105, 123, 220);
 	private static final float CARET_WIDTH = 2f;
-	public static final int RECOMMENDED_MAX_CHARS = 360;
+	public static final int RECOMMENDED_MAX_CHARS = 200;
 	public static final float AUTO_SCROLL_START_SPEED = 40f;
 	public static final float AUTO_SCROLL_MAX_SPEED = 160f;
 	public static final float AUTO_SCROLL_ACCELERATION = 20f;

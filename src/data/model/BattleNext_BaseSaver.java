@@ -1,6 +1,6 @@
 package data.model;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,7 +14,7 @@ public abstract class BattleNext_BaseSaver<T extends BattleNext_BaseModel> {
 
 	public abstract void delete(T model) throws IOException;
 
-	protected void writeCommonJson(String path, JSONObject json) throws IOException, JSONException {
-		Global.getSettings().writeJSONToCommon(path, json, false);
+	protected void writeResourceJson(String path, JSONObject json) throws IOException, JSONException {
+		BattleNext_ModFileManager.writeText(path, json.toString());
 	}
 }

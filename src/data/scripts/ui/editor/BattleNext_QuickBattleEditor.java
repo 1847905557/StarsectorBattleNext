@@ -369,7 +369,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		}
 		for (BattleNext_QuickBattleModel stored : store.getAll()) {
 			if (keptIds.contains(stored.getId())) continue;
-			if (stored.getSourceType() != BattleNext_LoadSource.COMMON) continue;
+			if (stored.getSourceType() != BattleNext_LoadSource.CREATED) continue;
 			store.delete(stored.getId());
 		}
 	}

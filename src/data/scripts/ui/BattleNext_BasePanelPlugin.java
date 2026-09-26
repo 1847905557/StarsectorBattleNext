@@ -92,6 +92,12 @@ public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 	@Override
 	public void processInput(List<InputEventAPI> events) {
 		uiManager.processInput(events);
+
+		// Prevent unhandled events from reaching the underlying title controls.
+		for (InputEventAPI event : events) {
+			if (event.isConsumed()) continue;
+			event.consume();
+		}
 	}
 
 	@Override

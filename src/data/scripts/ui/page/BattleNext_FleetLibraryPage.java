@@ -125,7 +125,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
 					text("delete"), "delete", CutStyle.ALL, true);
-			boolean managed = selected.getSourceType() == BattleNext_LoadSource.COMMON;
+			boolean managed = store.isManaged(selected.getId());
 			delete.setEnabled(managed && store.isLoaded());
 			if (!managed) {
 				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
@@ -156,7 +156,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_FleetModel selected = store.get(selectedId);
-			if (selected != null && selected.getSourceType() == BattleNext_LoadSource.COMMON) {
+			if (selected != null && store.isManaged(selected.getId())) {
 				deletion.accept(selected.getName() + " [" + selected.getId() + "]", () -> {
 					try {
 						store.delete(selected.getId());
@@ -201,7 +201,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			return false;
 		}
 		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValid(id)) {
+		if (!BattleNext_EntryId.isValidPathSegment(id)) {
 			setStatus(text("invalid_fleet_id"));
 			return false;
 		}
@@ -210,9 +210,22 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 				setStatus(text("duplicate_id")); return false;
 			}
 		}
+		String folderName = editor.getDraftFolderName();
+		if (folderName.isEmpty()) folderName = id;
+		if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
+			setStatus(text("invalid_fleet_folder"));
+			return false;
+		}
+		for (BattleNext_FleetModel fleet : store.getAll()) {
+			if (BattleNext_EntryId.sameFileName(folderName, fleet.getFolderName())
+					&& !fleet.getId().equals(selectedId)) {
+				setStatus(text("duplicate_fleet_folder"));
+				return false;
+			}
+		}
 		BattleNext_FleetModel original = selectedId.isEmpty() ? null : store.get(selectedId);
 			if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
-					&& original.getSourceType() != BattleNext_LoadSource.COMMON) {
+					&& original.getSourceType() == BattleNext_LoadSource.LEGACY) {
 			setStatus(text("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) {

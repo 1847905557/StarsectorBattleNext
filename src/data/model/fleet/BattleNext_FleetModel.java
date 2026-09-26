@@ -14,6 +14,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 	public static final int FORMAT_VERSION = 1;
 
 	private String id;
+	private String folderName;
 	private String name;
 	private List<String> skills;
 	private List<String> tags;
@@ -24,12 +25,18 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
-		this("", "", List.of(), List.of(), List.of());
+		this("", "", "", List.of(), List.of(), List.of());
 	}
 
 	public BattleNext_FleetModel(String id, String name, List<String> skills, List<String> tags,
 			List<BattleNext_MemberModel> members) {
+		this(id, id, name, skills, tags, members);
+	}
+
+	public BattleNext_FleetModel(String id, String folderName, String name, List<String> skills, List<String> tags,
+			List<BattleNext_MemberModel> members) {
 		this.id = normalize(id);
+		this.folderName = normalize(folderName);
 		this.name = normalize(name);
 		this.skills = copyStrings(skills);
 		this.tags = copyStrings(tags);
@@ -87,6 +94,14 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	public void setId(String id) {
 		this.id = normalize(id);
+	}
+
+	public String getFolderName() {
+		return folderName;
+	}
+
+	public void setFolderName(String folderName) {
+		this.folderName = normalize(folderName);
 	}
 
 	public String getName() {

@@ -1,8 +1,8 @@
 package data.model.quickbattle.io;
 
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 
 public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext_QuickBattleModel> {
 
-	private static final String USER_PATH = "AI_Battles_Next/quick_battle.csv";
+	private static final String USER_PATH = "tournament/quick_battle.csv";
 	private static final String HEADER = "player,enemy,map,size";
 
 	private final Supplier<List<BattleNext_QuickBattleModel>> entries;
@@ -64,6 +64,6 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 		for (BattleNext_QuickBattleModel model : models) {
 			text.append(model.toCsvLine()).append('\n');
 		}
-		Global.getSettings().writeTextFileToCommon(USER_PATH, text.toString());
+		BattleNext_ModFileManager.writeText(USER_PATH, text.toString());
 	}
 }

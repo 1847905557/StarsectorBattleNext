@@ -37,7 +37,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public void save(T model) throws IOException, JSONException {
 		requireLoaded();
-		if (model == null || !BattleNext_EntryId.isValid(model.getId())) {
+		if (model == null || !BattleNext_EntryId.isValidPathSegment(model.getId())) {
 			throw new IllegalArgumentException("Entry id is required");
 		}
 		register(model, saver().save(model));
@@ -46,7 +46,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	public void delete(String id) throws IOException, JSONException {
 		requireLoaded();
 		T model = get(id);
-		if (model == null || model.getSourceType() != BattleNext_LoadSource.COMMON) {
+		if (!isManaged(model)) {
 			throw new IllegalStateException("Entry is not managed: " + id);
 		}
 		saver().delete(model);
@@ -78,6 +78,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	protected abstract List<BattleNext_BaseLoader<T>> sources();
 
+	protected boolean isManaged(T model) {
+		return model != null && model.getSourceType() == BattleNext_LoadSource.CREATED;
+	}
+
 	protected void loadState() throws IOException, JSONException {
 
 	}
@@ -104,7 +108,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	}
 
 	private void register(T model, String path) {
-		model.setSourceType(BattleNext_LoadSource.COMMON);
+		model.setSourceType(BattleNext_LoadSource.CREATED);
 		model.setSourcePath(path);
 		entries.put(model.getId(), model);
 	}

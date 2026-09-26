@@ -1,8 +1,9 @@
 package data.model.tournament.io;
 
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -10,13 +11,15 @@ import java.io.IOException;
 
 public class BattleNext_TournamentSaver extends BattleNext_BaseSaver<BattleNext_TournamentModel> {
 
-	private static final String COMMON_ROOT = "AI_Battles_Next/tournaments/";
-	private static final String META_PATH = "AI_Battles_Next/meta.json";
+	private static final String RESOURCE_ROOT = "tournament/_tournaments/";
+	private static final String META_FILE = "meta.json";
+	private static final String META_PATH = RESOURCE_ROOT + META_FILE;
 
 	@Override
 	public String save(BattleNext_TournamentModel tournament) throws IOException, JSONException {
-		String path = COMMON_ROOT + tournament.getId() + ".json";
-		writeCommonJson(path, tournament.toJson());
+		if (!BattleNext_EntryId.isValidPathSegment(tournament.getId())) throw new IOException("Invalid tournament ID: " + tournament.getId());
+		String path = RESOURCE_ROOT + tournament.getId() + ".json";
+		writeResourceJson(path, tournament.toJson());
 		return path;
 	}
 
@@ -24,15 +27,14 @@ public class BattleNext_TournamentSaver extends BattleNext_BaseSaver<BattleNext_
 		JSONObject meta = new JSONObject();
 		meta.put("formatVersion", BattleNext_TournamentModel.META_FORMAT_VERSION);
 		meta.put("activeTournamentId", id);
-		Global.getSettings().writeJSONToCommon(META_PATH, meta, false);
+		BattleNext_ModFileManager.writeText(META_PATH, meta.toString());
 	}
 
 	@Override
 	public void delete(BattleNext_TournamentModel tournament) throws IOException {
-		String path = COMMON_ROOT + tournament.getId() + ".json";
-		Global.getSettings().deleteTextFileFromCommon(path);
-		if (Global.getSettings().fileExistsInCommon(path)) {
-			throw new IOException("Tournament file remains after deletion: " + tournament.getId());
-		}
+		if (!BattleNext_EntryId.isValidPathSegment(tournament.getId())) throw new IOException("Invalid tournament ID: " + tournament.getId());
+		String path = RESOURCE_ROOT + tournament.getId() + ".json";
+		BattleNext_ModFileManager.delete(path);
+		if (BattleNext_ModFileManager.exists(path)) throw new IOException("Tournament file remains after deletion: " + tournament.getId());
 	}
 }

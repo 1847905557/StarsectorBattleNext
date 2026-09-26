@@ -22,7 +22,7 @@ public class BattleNext_Match {
 	private String status = "pending";
 	private String stage = "main";
 	private boolean replay;
-	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.NATIVE;
+	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.CREATED;
 	private String sourcePath = "";
 
 	public BattleNext_Match(String id, String player, String enemy, int map, float size) {

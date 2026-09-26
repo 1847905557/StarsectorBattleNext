@@ -16,12 +16,22 @@ public class BattleNext_EntryId {
 		}
 		String stem = value.split("\\.", 2)[0].toUpperCase(Locale.ROOT);
 		if (stem.matches("CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]")) return false;
-		// Reserves the fixed common subdirectory names: reports, rules, tournaments.
-		if (value.matches("(?i)reports|rules|tournaments")) return false;
+		// Reserves fixed resource directory names.
+		if (isReservedFolder(value)) return false;
 		return true;
 	}
 
+	public static boolean isValidPathSegment(String value) {
+		if (!isValid(value)) return false;
+		return !value.equals(".") && !value.equals("..")
+				&& value.indexOf('/') < 0 && value.indexOf('\\') < 0;
+	}
+
+	public static boolean isReservedFolder(String folderName) {
+		return folderName.matches("(?i)_reports|_rules|_tournaments");
+	}
+
 	public static boolean sameFileName(String first, String second) {
-		return first.equalsIgnoreCase(second);
+		return first.equals(second);
 	}
 }

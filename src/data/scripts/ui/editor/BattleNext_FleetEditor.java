@@ -41,6 +41,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private LabelAPI status;
 	private String statusText = "";
 	private TextFieldAPI id;
+	private TextFieldAPI folderName;
 	private TextFieldAPI name;
 	private TextFieldAPI author;
 	private TextFieldAPI description;
@@ -64,6 +65,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public String getDraftId() {
 		return id == null ? "" : id.getText().trim();
+	}
+
+	public String getDraftFolderName() {
+		return folderName == null ? "" : folderName.getText().trim();
 	}
 
 	public void setOverlayHost(CustomPanelAPI overlayHost) {
@@ -150,6 +155,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		metaContent.addTitle(text("fleet_section_details"));
 		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
 		id = field(metaContent, text("fleet_id"), draft.getId(), width);
+		folderName = field(metaContent, text("fleet_folder_name"), draft.getFolderName(), width);
 		name = field(metaContent, text("fleet_name"), draft.getName(), width);
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width);
@@ -226,7 +232,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	public String serializeState() {
 		if (id == null) return "";
 		StringBuilder value = new StringBuilder();
-		for (TextFieldAPI field : new TextFieldAPI[]{id, name, author, description, skills, tags}) {
+		for (TextFieldAPI field : new TextFieldAPI[]{id, folderName, name, author, description, skills, tags}) {
 			value.append(field.getText().length()).append(':').append(field.getText());
 		}
 		for (MemberFields member : memberFields) {
@@ -240,11 +246,21 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private boolean captureDraft(boolean validate) {
 		String fleetId = id.getText().trim();
-		if (validate && !BattleNext_EntryId.isValid(fleetId)) {
+		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetId)) {
 			setStatus(text("invalid_fleet_id"));
 			return false;
 		}
+		String fleetFolderName = folderName.getText().trim();
+		if (fleetFolderName.isEmpty()) {
+			fleetFolderName = fleetId;
+			folderName.setText(fleetFolderName);
+		}
+		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetFolderName)) {
+			setStatus(text("invalid_fleet_folder"));
+			return false;
+		}
 		draft.setId(fleetId);
+		draft.setFolderName(fleetFolderName);
 		draft.setName(name.getText());
 		draft.setAuthor(author.getText());
 		draft.setDescription(description.getText());
@@ -275,13 +291,17 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	}
 
 	private BattleNext_FleetModel copy(BattleNext_FleetModel source, boolean clone) {
-		BattleNext_FleetModel result = new BattleNext_FleetModel(source.getId(), source.getName(),
+		String copiedFolder = source.getFolderName();
+		if (clone && !copiedFolder.isEmpty()) copiedFolder += "_copy";
+		BattleNext_FleetModel result = new BattleNext_FleetModel(source.getId(), copiedFolder, source.getName(),
 				source.getSkills(), source.getTags(), source.getMembers());
 		result.setAuthor(source.getAuthor());
 		result.setDescription(source.getDescription());
 		for (BattleNext_VariantAdapter variant : source.getVariants()) {
 			result.putVariant(variant);
 		}
+		result.setSourceType(clone ? data.model.BattleNext_LoadSource.CREATED : source.getSourceType());
+		result.setSourcePath(clone ? "" : source.getSourcePath());
 		if (clone) result.setId(source.getId() + "_copy");
 		return result;
 	}

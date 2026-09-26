@@ -14,6 +14,7 @@ import java.util.List;
 public final class BattleNext_DropdownField {
 
 	public static final class Option {
+
 		private final String id;
 		private final String label;
 		private final boolean enabled;

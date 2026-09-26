@@ -6,7 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
-import data.scripts.tools.BattleNext_FileCatalog;
+import data.scripts.tools.BattleNext_ModFileCatalog;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -16,24 +16,24 @@ import java.util.List;
 
 public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNext_FleetModel> {
 
-	private static final String LEGACY_ROOT = "tournament";
+	private static final String LEGACY_FOLDER = "tournament";
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_FileCatalog.resources(LEGACY_ROOT, false);
+		List<String> paths = BattleNext_ModFileCatalog.resources(LEGACY_FOLDER, false);
 		for (String dataPath : paths) {
 			String fileName = dataPath.substring(dataPath.lastIndexOf('/') + 1);
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
-			String fleetPath = LEGACY_ROOT + "/player" + number + "_fleet.csv";
+			String fleetPath = LEGACY_FOLDER + "/player" + number + "_fleet.csv";
 			if (!paths.contains(fleetPath)) continue;
 			try {
 				String dataText = Global.getSettings().loadText(dataPath, MOD_ID);
 				String fleetText = Global.getSettings().loadText(fleetPath, MOD_ID);
 				result.add(readFleet(number, rows(dataText, dataPath), rows(fleetText, fleetPath), dataPath));
 			} catch (IOException | JSONException exception) {
-				throw new IOException("Unable to load legacy fleet " + number + " from " + LEGACY_ROOT, exception);
+				throw new IOException("Unable to load legacy fleet " + number + " from " + LEGACY_FOLDER, exception);
 			}
 		}
 		return result;
@@ -59,6 +59,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 					splitValues(column(row, 3)), column(row, 5), column(row, 6), splitValues(column(row, 7))));
 		}
 		BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, column(data, 0), skills, tags, members);
+		result.setFolderName("legacy_" + number);
 		result.setAuthor(column(data, 1));
 		markSource(result, sourcePath);
 		return result;

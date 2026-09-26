@@ -26,7 +26,10 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	private final BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 
-	private static int currentIndex;
+	private static final IndexState CURRENT_INDEX = new IndexState();
+	private static final class IndexState {
+		private int index;
+	}
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
@@ -44,8 +47,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			return;
 		}
 
-		currentIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(currentIndex, matches.size());
-		BattleNext_Match match = matches.get(currentIndex);
+		CURRENT_INDEX.index = BattleNext_KeyTuning.adjustHorizontalWrapped(CURRENT_INDEX.index, matches.size());
+		BattleNext_Match match = matches.get(CURRENT_INDEX.index);
 		int totalRounds = roundTotal();
 		int currentRound = roundCurrent(match, totalRounds);
 		BattleNext_FleetStore fleets = provider.getFleetStore();
@@ -68,7 +71,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		configureFleet(api, FleetSide.ENEMY, enemy);
 		api.addBriefingItem("Map " + match.getMap() + ", size " + match.getSize());
 		api.addBriefingItem("Round " + currentRound + " / " + totalRounds);
-		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), currentIndex), match.getSize());
+		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), CURRENT_INDEX.index), match.getSize());
 		api.addPlugin(new BattleNext_Deployment());
 		api.addPlugin(new BattleNext_MissionPlugin());
 		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(player, enemy);

@@ -4,19 +4,25 @@ import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.scripts.tools.BattleNext_JsonCatalog;
+import data.scripts.tools.BattleNext_ModFileCatalog;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
 
 public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoader<BattleNext_TournamentModel> {
 
-	private static final String RESOURCE_ROOT = "tournament";
+	private static final String RESOURCE_FOLDER = "tournament/_tournaments";
+	private static final String META_FILE = "meta.json";
+	private static final String META_PATH = RESOURCE_FOLDER + "/" + META_FILE;
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return BattleNext_JsonCatalog.resourceFiles(RESOURCE_ROOT);
+		return BattleNext_ModFileCatalog.resourceFiles(RESOURCE_FOLDER).stream()
+				.filter(path -> !path.endsWith("/meta.json") && !path.equals(META_FILE))
+				.toList();
 	}
 
 	@Override
@@ -34,5 +40,13 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 	@Override
 	protected String kind() {
 		return "tournament";
+	}
+
+	public String loadActiveId() throws IOException, JSONException {
+		if (!BattleNext_ModFileManager.exists(META_PATH)) return "";
+		JSONObject meta = new JSONObject(BattleNext_ModFileManager.readText(META_PATH));
+		int version = meta.optInt("formatVersion", BattleNext_TournamentModel.META_FORMAT_VERSION);
+		if (version != BattleNext_TournamentModel.META_FORMAT_VERSION) return "";
+		return meta.optString("activeTournamentId", "");
 	}
 }

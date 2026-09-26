@@ -208,7 +208,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 			return false;
 		}
 		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValid(id)) {
+		if (!BattleNext_EntryId.isValidPathSegment(id)) {
 			setStatus(text("invalid_tournament_id"));
 			return false;
 		}
