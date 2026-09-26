@@ -13,8 +13,6 @@ import java.util.List;
 public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<BattleNext_QuickBattleModel> {
 
 	private static final String LEGACY_PATH = "tournament/PvP_matches.csv";
-	private static final String LEGACY_FLEET_ID_PREFIX = "ab_player";
-
 	@Override
 	public List<BattleNext_QuickBattleModel> load() throws IOException, JSONException {
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
@@ -26,11 +24,12 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 			return result;
 		}
 		int index = 0;
-		for (String line : text.split("\\R")) {
-			BattleNext_QuickBattleModel model = BattleNext_QuickBattleModel.fromCsvRow(line);
+		String[] lines = text.split("\\R", -1);
+		int limit = text.endsWith("\n") || text.endsWith("\r") ? lines.length - 1 : lines.length;
+		for (int lineIndex = 0; lineIndex < limit; lineIndex++) {
+			String line = lines[lineIndex];
+			BattleNext_QuickBattleModel model = BattleNext_QuickBattleModel.parseLine(line, true);
 			if (model == null) continue;
-			model.setPlayer(LEGACY_FLEET_ID_PREFIX + model.getPlayer());
-			model.setEnemy(LEGACY_FLEET_ID_PREFIX + model.getEnemy());
 			model.setId("pvp-legacy-" + index);
 			index++;
 			markSource(model, LEGACY_PATH);

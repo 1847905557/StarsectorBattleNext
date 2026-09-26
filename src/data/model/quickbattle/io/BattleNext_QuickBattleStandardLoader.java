@@ -18,22 +18,17 @@ public class BattleNext_QuickBattleStandardLoader extends BattleNext_BaseLoader<
 	public List<BattleNext_QuickBattleModel> load() throws IOException, JSONException {
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
 		int index = 0;
-		for (String line : Global.getSettings().loadText(BUILT_IN_PATH, MOD_ID).split("\\R")) {
-			BattleNext_QuickBattleModel model = BattleNext_QuickBattleModel.fromCsvRow(line);
+		String text = Global.getSettings().loadText(BUILT_IN_PATH, MOD_ID);
+		String[] lines = text.split("\\R", -1);
+		int limit = text.endsWith("\n") || text.endsWith("\r") ? lines.length - 1 : lines.length;
+		for (int lineIndex = 0; lineIndex < limit; lineIndex++) {
+			String line = lines[lineIndex];
+			BattleNext_QuickBattleModel model = BattleNext_QuickBattleModel.parseLine(line, false);
 			if (model == null) continue;
 			model.setId("quick-standard-" + index);
 			index++;
 			markSource(model, BUILT_IN_PATH);
 			result.add(model);
-		}
-		return result;
-	}
-
-	public List<String> loadComments() throws IOException, JSONException {
-		List<String> result = new ArrayList<>();
-		for (String line : Global.getSettings().loadText(BUILT_IN_PATH, MOD_ID).split("\\R")) {
-			String trimmed = line.trim();
-			if (trimmed.startsWith("#")) result.add(trimmed);
 		}
 		return result;
 	}

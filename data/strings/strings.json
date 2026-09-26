@@ -18,6 +18,8 @@
 		"BattleNext_ui_battle_size": "Size multiplier",
 		"BattleNext_ui_battle_size_short": "Size mult",
 		"BattleNext_ui_actions": "Actions",
+		"BattleNext_ui_enabled": "Enabled",
+		"BattleNext_ui_raw_row": "Raw row",
 		"BattleNext_ui_available": "Available",
 		"BattleNext_ui_unavailable": "Unavailable",
 		"BattleNext_ui_source_save_failed": "Could not change battle source",

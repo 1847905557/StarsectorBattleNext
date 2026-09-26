@@ -59,6 +59,9 @@ public class BattleNext_BattleSourceProvider {
 		}
 		List<BattleNext_Match> matches = new ArrayList<>();
 		for (BattleNext_QuickBattleModel model : quickBattleStore.getAll()) {
+			if (!model.isEnabled() || model.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+				continue;
+			}
 			matches.add(BattleNext_Match.fromQuickBattle(model));
 		}
 		return validate(matches, "quick battle");

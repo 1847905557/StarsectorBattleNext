@@ -8,27 +8,27 @@ import data.model.quickbattle.io.BattleNext_QuickBattleStandardLoader;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class BattleNext_QuickBattleStore extends BattleNext_BaseStore<BattleNext_QuickBattleModel> {
 
 	private final BattleNext_QuickBattleStandardLoader standardLoader = new BattleNext_QuickBattleStandardLoader();
 	private final BattleNext_QuickBattleLegacyLoader legacyLoader = new BattleNext_QuickBattleLegacyLoader();
-	private final BattleNext_QuickBattleSaver saver = new BattleNext_QuickBattleSaver(this::getAll, this::getComments);
-	private List<String> comments = new ArrayList<>();
+	private final BattleNext_QuickBattleSaver saver = new BattleNext_QuickBattleSaver(this::getAll);
 
 	public BattleNext_QuickBattleStore() {
 		super("Quick battle catalog has not been loaded");
 	}
 
-	public List<String> getComments() {
-		return List.copyOf(comments);
-	}
-
 	@Override
-	protected void loadState() throws IOException, JSONException {
-		comments = standardLoader.loadComments();
+	public void save(BattleNext_QuickBattleModel model) throws IOException, JSONException {
+		data.model.BattleNext_LoadSource source = model.getSourceType();
+		String path = model.getSourcePath();
+		super.save(model);
+		if (source != data.model.BattleNext_LoadSource.CREATED) {
+			model.setSourceType(source);
+			model.setSourcePath(path);
+		}
 	}
 
 	@Override
