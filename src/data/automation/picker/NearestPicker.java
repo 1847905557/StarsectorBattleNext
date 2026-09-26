@@ -1,11 +1,11 @@
-package data.scripts.orders.picker;
+package data.automation.picker;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.orders.OrderPicker;
+import data.automation.OrderPicker;
 import org.lazywizard.lazylib.CollectionUtils;
 import java.util.List;
 

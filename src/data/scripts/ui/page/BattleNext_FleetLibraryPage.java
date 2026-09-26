@@ -1,4 +1,4 @@
-package data.ui.page;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
@@ -12,9 +12,9 @@ import data.model.BattleNext_LoadSource;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
-import data.ui.editor.BattleNext_FleetEditor;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
 
 import java.io.IOException;
 import org.json.JSONException;

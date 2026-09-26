@@ -1,6 +1,7 @@
-package data.scripts.report;
+package data.model.report;
 
-import data.model.BattleNext_BaseModel;
+import data.model.BattleNext_JsonModel;
+import data.scripts.report.BattleNext_MemberReport;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_BattleReportModel extends BattleNext_BaseModel {
+public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 

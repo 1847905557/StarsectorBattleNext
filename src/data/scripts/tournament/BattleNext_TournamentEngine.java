@@ -1,6 +1,7 @@
 package data.scripts.tournament;
 
-import data.scripts.report.BattleNext_BattleReportModel;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 

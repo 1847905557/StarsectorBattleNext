@@ -1,18 +1,19 @@
-package data.ui.editor;
+package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
-import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_QuickBattleStore;
+import data.model.BattleNext_LoadSource;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
-import data.ui.widget.BattleNext_TextField;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TextField;
 import org.json.JSONException;
 
 import java.awt.Color;
@@ -35,6 +36,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private final BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
 	private final List<Row> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private UIRect rowsArea;
@@ -77,11 +79,19 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			setStatus(text("load_failed") + ": " + fleetStore.getLoadError());
 			return false;
 		}
+		if (!store.isLoaded()) {
+			setStatus(text("load_failed") + ": " + store.getLoadError());
+			return false;
+		}
 		if (!captureFields()) return false;
 		try {
-			store.save();
-		} catch (IOException exception) {
-			setStatus(text("save_failed"));
+			deleteRemovedEntries();
+			for (BattleNext_QuickBattleModel entry : entries) {
+				if (entry.getId().isEmpty()) entry.setId(mintId());
+				store.save(entry);
+			}
+		} catch (IOException | JSONException | RuntimeException exception) {
+			setStatus(text("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 		savedFields = serializeState();
@@ -100,7 +110,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	public void buttonPressed(Object buttonId) {
 		if ("add".equals(buttonId)) {
 			if (!captureFields()) return;
-			store.add(new BattleNext_Match("quick-" + store.getMatches().size(), "", "", -1, 1f));
+			entries.add(new BattleNext_QuickBattleModel("", "", -1, 1f));
 			refreshContent();
 		} else if ("save".equals(buttonId)) {
 			save();
@@ -118,16 +128,13 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		} catch (IOException | JSONException | RuntimeException exception) {
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
-		store.replaceAll(List.of());
 		try {
-			if (store.hasUserFile()) {
-				store.load();
-			} else {
-				store.loadBuiltIn();
-			}
-		} catch (Exception exception) {
+			store.reload();
+		} catch (IOException | JSONException | RuntimeException exception) {
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
+		entries.clear();
+		entries.addAll(store.getAll());
 		loaded = true;
 	}
 
@@ -189,31 +196,31 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (panel == null) return;
 		if (rowsRect != null) rowsRect.removeLatestSubPanel();
 		rows.clear();
-		List<BattleNext_Match> matches = store.getMatches();
-		if (matches.isEmpty()) return;
-		float visibleHeight = Math.min(rowsArea.getHeight(), matches.size() * ROW_HEIGHT + 10f);
+		if (entries.isEmpty()) return;
+		float visibleHeight = Math.min(rowsArea.getHeight(), entries.size() * ROW_HEIGHT + 10f);
 		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
 		CustomPanelAPI contentPanel = rowsRect.createSubPanel(panel, inputOwner).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(rowsRect.getWidth() - 10f, visibleHeight, true);
-		for (int index = 0; index < matches.size(); index++) {
-			addRow(index, matches.get(index), content);
+		for (int index = 0; index < entries.size(); index++) {
+			addRow(index, entries.get(index), content);
 		}
 		contentPanel.addUIElement(content).inTL(0f, 0f);
 		refreshRowStatuses();
 	}
 
-	private void addRow(int index, BattleNext_Match match, TooltipMakerAPI content) {
+	private void addRow(int index, BattleNext_QuickBattleModel entry, TooltipMakerAPI content) {
 
 		float width = rowsRect.getWidth() - SCROLLBAR_WIDTH;
 		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
 		UIRect[] cells = columns(width, ROW_HEIGHT);
 		Row row = new Row();
+		row.id = entry.getId();
 		addLabel(card, cells[0], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
-		row.player = addField(cells[1], card, match.getPlayer());
-		row.enemy = addField(cells[2], card, match.getEnemy());
-		row.map = addField(cells[3], card, Integer.toString(match.getMap()));
-		row.size = addField(cells[4], card, Float.toString(match.getSize()));
+		row.player = addField(cells[1], card, entry.getPlayer());
+		row.enemy = addField(cells[2], card, entry.getEnemy());
+		row.map = addField(cells[3], card, Integer.toString(entry.getMap()));
+		row.size = addField(cells[4], card, Float.toString(entry.getSize()));
 
 		UIRect statusRect = cells[5];
 		TooltipMakerAPI state = card.createUIElement(statusRect.getWidth() - 4f, ROW_HEIGHT, false);
@@ -330,7 +337,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	}
 
 	private boolean captureFields(int skipIndex) {
-		List<BattleNext_Match> values = new ArrayList<>();
+		List<BattleNext_QuickBattleModel> values = new ArrayList<>();
 		for (int index = 0; index < rows.size(); index++) {
 			if (index == skipIndex) continue;
 			Row row = rows.get(index);
@@ -341,14 +348,46 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 					setStatus(text("invalid_map_size"));
 					return false;
 				}
-				values.add(new BattleNext_Match("quick-" + values.size(), row.player.getText(), row.enemy.getText(), map, size));
+				BattleNext_QuickBattleModel value = new BattleNext_QuickBattleModel(
+						row.player.getText(), row.enemy.getText(), map, size);
+				value.setId(row.id);
+				values.add(value);
 			} catch (NumberFormatException exception) {
 				setStatus(text("invalid_map_size"));
 				return false;
 			}
 		}
-		store.replaceAll(values);
+		entries.clear();
+		entries.addAll(values);
 		return true;
+	}
+
+	private void deleteRemovedEntries() throws IOException, JSONException {
+		List<String> keptIds = new ArrayList<>();
+		for (BattleNext_QuickBattleModel entry : entries) {
+			keptIds.add(entry.getId());
+		}
+		for (BattleNext_QuickBattleModel stored : store.getAll()) {
+			if (keptIds.contains(stored.getId())) continue;
+			if (stored.getSourceType() != BattleNext_LoadSource.COMMON) continue;
+			store.delete(stored.getId());
+		}
+	}
+
+	private String mintId() {
+		int index = 0;
+		while (true) {
+			String candidate = "quick-" + index;
+			if (store.get(candidate) == null && !containsId(candidate)) return candidate;
+			index++;
+		}
+	}
+
+	private boolean containsId(String id) {
+		for (BattleNext_QuickBattleModel entry : entries) {
+			if (entry.getId().equals(id)) return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -375,6 +414,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private static final class Row {
 
+		private String id = "";
 		private TextFieldAPI player;
 		private TextFieldAPI enemy;
 		private TextFieldAPI map;

@@ -1,8 +1,8 @@
-package data.scripts.tournament.io;
+package data.model.tournament.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
-import data.scripts.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 

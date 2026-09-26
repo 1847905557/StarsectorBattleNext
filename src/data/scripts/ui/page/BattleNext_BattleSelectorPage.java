@@ -1,4 +1,4 @@
-package data.ui.page;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -12,10 +12,10 @@ import data.model.rules.BattleNext_RulesStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.editor.BattleNext_QuickBattleEditor;
-import data.ui.BattleNext_UiTheme;
-import data.ui.widget.BattleNext_DropdownField;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_DropdownField;
 
 import java.util.ArrayList;
 import java.util.List;

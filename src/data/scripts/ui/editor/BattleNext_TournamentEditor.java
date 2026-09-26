@@ -1,4 +1,4 @@
-package data.ui.editor;
+package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
@@ -11,9 +11,9 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.model.rules.BattleNext_RulesStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
-import data.ui.widget.BattleNext_TextField;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TextField;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

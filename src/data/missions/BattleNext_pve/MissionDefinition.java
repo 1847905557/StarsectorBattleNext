@@ -7,7 +7,7 @@ import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.scripts.combat.BattleNext_Scorekeeper;
 import data.scripts.fleet.BattleNext_FleetAssembler;
 import data.scripts.fleet.BattleNext_FleetAssembly;
-import data.scripts.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.member.BattleNext_MemberModel;

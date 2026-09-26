@@ -1,9 +1,9 @@
-package data.scripts.rules.io;
+package data.model.rules.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
-import data.scripts.rules.BattleNext_RulesModel;
+import data.model.rules.BattleNext_RulesModel;
 import data.scripts.tools.BattleNext_JsonCatalog;
 import org.json.JSONException;
 

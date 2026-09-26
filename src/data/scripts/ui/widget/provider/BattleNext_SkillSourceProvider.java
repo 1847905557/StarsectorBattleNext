@@ -1,4 +1,4 @@
-package data.ui.widget.provider;
+package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.SkillEffectType;
@@ -6,9 +6,9 @@ import com.fs.starfarer.api.characters.SkillSpecAPI;
 import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.ui.BattleNext_UiTheme;
-import data.ui.widget.BattleNext_OptionField;
-import data.ui.widget.BattleNext_OptionField.Option;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_OptionField.Option;
 
 import java.util.ArrayList;
 import java.util.List;

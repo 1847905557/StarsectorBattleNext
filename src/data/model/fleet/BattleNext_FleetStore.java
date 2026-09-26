@@ -1,11 +1,11 @@
-package data.scripts.fleet;
+package data.model.fleet;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
-import data.scripts.fleet.io.BattleNext_FleetCommonLoader;
-import data.scripts.fleet.io.BattleNext_FleetLegacyLoader;
-import data.scripts.fleet.io.BattleNext_FleetSaver;
-import data.scripts.fleet.io.BattleNext_FleetStandardLoader;
+import data.model.fleet.io.BattleNext_FleetCommonLoader;
+import data.model.fleet.io.BattleNext_FleetLegacyLoader;
+import data.model.fleet.io.BattleNext_FleetSaver;
+import data.model.fleet.io.BattleNext_FleetStandardLoader;
 
 import java.util.List;
 

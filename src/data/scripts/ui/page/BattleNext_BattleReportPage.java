@@ -1,4 +1,4 @@
-package data.ui.page;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -14,8 +14,8 @@ import data.model.report.BattleNext_BattleReportStore;
 import data.scripts.report.BattleNext_MemberReport;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.json.JSONException;
 
 import java.io.IOException;

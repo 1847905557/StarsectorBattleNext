@@ -4,11 +4,11 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.combat.BattleNext_Scorekeeper;
 import data.scripts.tools.BattleNext_BattleSignals;
-import data.scripts.report.BattleNext_BattleReportModel;
-import data.scripts.report.BattleNext_BattleReportStore;
-import data.scripts.tournament.BattleNext_TournamentModel;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.tournament.BattleNext_TournamentStore;
+import data.model.tournament.BattleNext_TournamentStore;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +34,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		recorded = true;
 		try {
 			record(scorekeeper.getFrozenReport());
-		} catch (IOException | org.json.JSONException exception) {
+		} catch (IOException | org.json.JSONException | RuntimeException exception) {
 			com.fs.starfarer.api.Global.getLogger(BattleNext_BattleResultRecorder.class).error("Unable to save battle report", exception);
 		}
 	}
@@ -45,6 +45,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		BattleNext_TournamentModel tournament = provider == null ? null : provider.getActiveTournament();
 		if (tournament == null) {
 			BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
+			store.reload();
 			store.save(report);
 		} else {
 			BattleNext_TournamentEngine engine = provider.getTournamentEngine();

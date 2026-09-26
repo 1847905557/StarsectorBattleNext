@@ -1,4 +1,4 @@
-package data.ui;
+package data.scripts.ui;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;

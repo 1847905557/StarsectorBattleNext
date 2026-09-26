@@ -1,11 +1,11 @@
-package data.scripts.orders.starter;
+package data.automation.starter;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.orders.BattleNext_OrderUtils;
-import data.scripts.orders.OrderStarter;
+import data.automation.BattleNext_OrderUtils;
+import data.automation.OrderStarter;
 import java.util.List;
 
 public class EliminateStarter implements OrderStarter {

@@ -1,6 +1,6 @@
-package data.scripts.rules;
+package data.model.rules;
 
-import data.model.BattleNext_BaseModel;
+import data.model.BattleNext_JsonModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_RulesModel extends BattleNext_BaseModel {
+public class BattleNext_RulesModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 

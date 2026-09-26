@@ -1,4 +1,4 @@
-package data.scripts.orders;
+package data.automation;
 
 import com.fs.starfarer.api.Global;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;

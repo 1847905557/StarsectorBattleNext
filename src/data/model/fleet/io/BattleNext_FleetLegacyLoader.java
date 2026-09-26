@@ -1,9 +1,9 @@
-package data.scripts.fleet.io;
+package data.model.fleet.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
-import data.scripts.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
 import data.scripts.tools.BattleNext_FileCatalog;

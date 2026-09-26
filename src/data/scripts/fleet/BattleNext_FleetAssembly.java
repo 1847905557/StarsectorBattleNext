@@ -2,6 +2,7 @@ package data.scripts.fleet;
 
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import data.model.fleet.BattleNext_FleetModel;
 
 import java.util.Collections;
 import java.util.List;

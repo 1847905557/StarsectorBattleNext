@@ -5,18 +5,18 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
-import data.scripts.combat.*;
-import data.scripts.fleet.BattleNext_FleetAssembler;
-import data.scripts.fleet.BattleNext_FleetAssembly;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.combat.*;
+import data.scripts.fleet.BattleNext_FleetAssembler;
+import data.scripts.fleet.BattleNext_FleetAssembly;
 import data.scripts.tools.BattleNext_KeyTuning;
-import data.scripts.tournament.BattleNext_TournamentModel;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	private final BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 
-	private int currentIndex;
+	private static int currentIndex;
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {

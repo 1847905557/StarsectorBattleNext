@@ -3,7 +3,7 @@ package data.scripts;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
-import data.scripts.orders.BattleNext_OrderRegistry;
+import data.automation.BattleNext_OrderRegistry;
 import data.scripts.battlesnext.util.BattleNext_FontData;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 

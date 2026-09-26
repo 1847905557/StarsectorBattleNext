@@ -1,8 +1,8 @@
-package data.scripts.report.io;
+package data.model.report.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
-import data.scripts.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportModel;
 import org.json.JSONException;
 
 import java.io.IOException;

@@ -3,35 +3,20 @@ package data.model;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 
 	protected static final String MOD_ID = "AI_Battles_Next";
 
-	public List<T> load() throws IOException, JSONException {
-		List<T> result = new ArrayList<>();
-		for (String path : catalogPaths()) {
-			T value;
-			try {
-				value = parse(path);
-			} catch (IOException | JSONException | IllegalArgumentException exception) {
-				throw new IllegalStateException("Unable to load " + kind() + ": " + path, exception);
-			}
-			if (value.getId().isEmpty()) continue;
-			value.setSourceType(source());
-			value.setSourcePath(path);
-			result.add(value);
-		}
-		return result;
-	}
+	protected BattleNext_BaseLoader() {}
 
-	protected abstract List<String> catalogPaths() throws IOException, JSONException;
-
-	protected abstract T parse(String path) throws IOException, JSONException;
+	public abstract List<T> load() throws IOException, JSONException;
 
 	protected abstract BattleNext_LoadSource source();
 
-	protected abstract String kind();
+	protected void markSource(T model, String path) {
+		model.setSourceType(source());
+		model.setSourcePath(path);
+	}
 }

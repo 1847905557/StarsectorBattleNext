@@ -1,10 +1,10 @@
-package data.scripts.orders.filter;
+package data.automation.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.orders.BattleNext_OrderUtils;
-import data.scripts.orders.OrderFilter;
+import data.automation.BattleNext_OrderUtils;
+import data.automation.OrderFilter;
 import java.util.List;
 
 public class TargetHpFilter implements OrderFilter {

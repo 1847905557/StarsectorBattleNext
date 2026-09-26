@@ -82,7 +82,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	}
 
-	protected void onEntryRemoved(String id) {
+	protected void onEntryRemoved(String id) throws IOException, JSONException {
 
 	}
 

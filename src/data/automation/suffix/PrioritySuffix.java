@@ -1,8 +1,8 @@
-package data.scripts.orders.suffix;
+package data.automation.suffix;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
-import data.scripts.orders.OrderSuffix;
+import data.automation.OrderSuffix;
 
 public class PrioritySuffix implements OrderSuffix {
 

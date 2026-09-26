@@ -1,4 +1,4 @@
-package data.ui.editor;
+package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -13,12 +13,12 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantAdapter;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
-import data.ui.widget.BattleNext_OptionField;
-import data.ui.widget.BattleNext_TextField;
-import data.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
-import data.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;

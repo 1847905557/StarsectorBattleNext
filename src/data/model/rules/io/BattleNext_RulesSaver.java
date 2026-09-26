@@ -1,8 +1,8 @@
-package data.scripts.rules.io;
+package data.model.rules.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
-import data.scripts.rules.BattleNext_RulesModel;
+import data.model.rules.BattleNext_RulesModel;
 import org.json.JSONException;
 
 import java.io.IOException;

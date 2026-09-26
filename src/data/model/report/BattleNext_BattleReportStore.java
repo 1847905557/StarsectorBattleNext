@@ -1,9 +1,9 @@
-package data.scripts.report;
+package data.model.report;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
-import data.scripts.report.io.BattleNext_BattleReportCommonLoader;
-import data.scripts.report.io.BattleNext_BattleReportSaver;
+import data.model.report.io.BattleNext_BattleReportCommonLoader;
+import data.model.report.io.BattleNext_BattleReportSaver;
 
 import java.util.List;
 

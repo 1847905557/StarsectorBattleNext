@@ -1,6 +1,6 @@
 package data.scripts.battle;
 
-import data.scripts.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,13 +20,15 @@ public class BattleNext_Round {
 		this.report = new BattleNext_BattleReportModel();
 	}
 
-	public static BattleNext_Round fromJson(JSONObject json) {
+	public static BattleNext_Round fromJson(JSONObject json) throws JSONException {
 		BattleNext_Round round = new BattleNext_Round(json.optInt("number", 0), json.optString("player", ""), json.optString("enemy", ""));
 		round.winner = json.optString("winner", "draw");
 		round.attempt = Math.max(0, json.optInt("attempt", 0));
 		JSONObject report = json.optJSONObject("report");
 		if (report != null) {
-			round.report = BattleNext_BattleReportModel.fromJson(report);
+			BattleNext_BattleReportModel reportModel = new BattleNext_BattleReportModel();
+			reportModel.fromJson(report);
+			round.report = reportModel;
 		}
 		return round;
 	}

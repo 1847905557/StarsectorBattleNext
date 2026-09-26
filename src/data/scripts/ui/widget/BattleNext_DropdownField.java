@@ -1,12 +1,12 @@
-package data.ui.widget;
+package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.ArrayList;
 import java.util.List;

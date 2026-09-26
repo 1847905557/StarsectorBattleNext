@@ -11,8 +11,8 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import data.scripts.fleet.BattleNext_FleetAssembly;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.report.BattleNext_BattleReportModel;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
 
 import java.util.ArrayList;

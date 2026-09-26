@@ -1,10 +1,10 @@
-package data.scripts.orders.suffix;
+package data.automation.suffix;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import data.scripts.orders.BattleNext_OrderUtils;
-import data.scripts.orders.OrderSuffix;
+import data.automation.BattleNext_OrderUtils;
+import data.automation.OrderSuffix;
 
 public class PersistSuffix implements OrderSuffix {
 

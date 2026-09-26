@@ -1,9 +1,9 @@
-package data.scripts.fleet.io;
+package data.model.fleet.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseSaver;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_VariantModel;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_VariantAdapter;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,7 +20,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			writeCommonJson(directory + "fleet_data.json.bak", previous);
 		}
 		writeCommonJson(path, fleet.toJson());
-		for (BattleNext_VariantModel variant : fleet.getVariants()) {
+		for (BattleNext_VariantAdapter variant : fleet.getVariants()) {
 			Global.getSettings().writeTextFileToCommon(directory + variant.getId() + ".variant", variant.toJson().toString(2));
 		}
 		return path;
@@ -34,7 +34,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			throw new IOException("Fleet file remains after deletion: " + fleet.getId());
 		}
 		Global.getSettings().deleteTextFileFromCommon(directory + "fleet_data.json.bak");
-		for (BattleNext_VariantModel variant : fleet.getVariants()) {
+		for (BattleNext_VariantAdapter variant : fleet.getVariants()) {
 			Global.getSettings().deleteTextFileFromCommon(directory + variant.getId() + ".variant");
 		}
 	}

@@ -1,4 +1,4 @@
-package data.ui.page;
+package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.*;
 import data.scripts.tools.BattleNext_EntryId;
@@ -8,9 +8,9 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.model.rules.BattleNext_RulesStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.ui.BattleNext_PageLayout;
-import data.ui.BattleNext_UiTheme;
-import data.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import org.json.JSONException;
 
 import java.io.IOException;

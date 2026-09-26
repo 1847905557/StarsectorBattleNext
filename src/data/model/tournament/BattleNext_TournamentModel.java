@@ -1,6 +1,6 @@
-package data.scripts.tournament;
+package data.model.tournament;
 
-import data.model.BattleNext_BaseModel;
+import data.model.BattleNext_JsonModel;
 import data.model.BattleNext_LoadSource;
 import data.scripts.battle.BattleNext_Match;
 import org.json.JSONArray;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_TournamentModel extends BattleNext_BaseModel {
+public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 	public static final int META_FORMAT_VERSION = 1;

@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberBuilder;
 
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class BattleNext_FleetAssembler {
 		for (int index = 0; index < definition.getMembers().size(); index++) {
 			try {
 				String variantId = definition.getMembers().get(index).getVariantId();
-				BattleNext_VariantModel localVariant = definition.getVariant(variantId);
+				BattleNext_VariantAdapter localVariant = definition.getVariant(variantId);
 				if (definition.hasLocalVariants()) {
 					if (localVariant == null) throw new IllegalArgumentException("Missing local variant: " + variantId);
 					ShipVariantAPI variant = localVariant.build();

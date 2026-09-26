@@ -1,4 +1,4 @@
-package data.scripts.orders;
+package data.automation;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;

@@ -1,10 +1,10 @@
-package data.scripts.orders.starter;
+package data.automation.starter;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.orders.OrderStarter;
+import data.automation.OrderStarter;
 import java.util.ArrayList;
 import java.util.List;
 

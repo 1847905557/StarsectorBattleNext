@@ -1,4 +1,4 @@
-package data.ui;
+package data.scripts.ui;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -8,10 +8,9 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.page.*;
-import data.ui.page.*;
-import data.ui.widget.BattleNext_ConfirmationDialog;
-import data.ui.widget.BattleNext_StatusBar;
-import data.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
+import data.scripts.ui.widget.BattleNext_StatusBar;
+import data.scripts.ui.widget.BattleNext_TextField;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;

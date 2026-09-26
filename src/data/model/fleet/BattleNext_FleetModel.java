@@ -1,18 +1,15 @@
-package data.scripts.fleet;
+package data.model.fleet;
 
-import data.model.BattleNext_BaseModel;
+import data.model.BattleNext_JsonModel;
+import data.scripts.fleet.BattleNext_VariantAdapter;
 import data.scripts.member.BattleNext_MemberModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class BattleNext_FleetModel extends BattleNext_BaseModel {
+public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 
@@ -23,7 +20,7 @@ public class BattleNext_FleetModel extends BattleNext_BaseModel {
 	private List<BattleNext_MemberModel> members;
 	private String author;
 	private String description;
-	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
+	private final Map<String, BattleNext_VariantAdapter> variants = new LinkedHashMap<>();
 	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
@@ -140,15 +137,15 @@ public class BattleNext_FleetModel extends BattleNext_BaseModel {
 		this.description = normalize(description);
 	}
 
-	public void putVariant(BattleNext_VariantModel variant) {
+	public void putVariant(BattleNext_VariantAdapter variant) {
 		if (variant != null && !variant.getId().isEmpty()) variants.put(variant.getId(), variant);
 	}
 
-	public BattleNext_VariantModel getVariant(String variantId) {
+	public BattleNext_VariantAdapter getVariant(String variantId) {
 		return variants.get(variantId);
 	}
 
-	public List<BattleNext_VariantModel> getVariants() {
+	public List<BattleNext_VariantAdapter> getVariants() {
 		return List.copyOf(variants.values());
 	}
 

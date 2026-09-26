@@ -1,4 +1,4 @@
-package data.scripts.orders;
+package data.automation;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,10 +1,10 @@
-package data.scripts.orders.filter;
+package data.automation.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import data.scripts.orders.OrderFilter;
+import data.automation.OrderFilter;
 import java.util.Arrays;
 import java.util.List;
 

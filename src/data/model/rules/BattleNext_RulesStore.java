@@ -1,10 +1,10 @@
-package data.scripts.rules;
+package data.model.rules;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
-import data.scripts.rules.io.BattleNext_RulesCommonLoader;
-import data.scripts.rules.io.BattleNext_RulesSaver;
-import data.scripts.rules.io.BattleNext_RulesStandardLoader;
+import data.model.rules.io.BattleNext_RulesCommonLoader;
+import data.model.rules.io.BattleNext_RulesSaver;
+import data.model.rules.io.BattleNext_RulesStandardLoader;
 
 import java.util.List;
 

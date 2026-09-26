@@ -1,10 +1,12 @@
 package data.scripts.battle;
 
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.tournament.BattleNext_TournamentModel;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.model.quickbattle.BattleNext_QuickBattleStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.tournament.BattleNext_TournamentStore;
+import data.model.tournament.BattleNext_TournamentStore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +34,6 @@ public class BattleNext_BattleSourceProvider {
 			tournamentStore.reload();
 		} catch (Exception exception) {
 			warnings.add("Unable to load battle sources: " + exception.getMessage());
-			return List.of();
 		}
 
 		String activeId = tournamentStore.getActiveId();
@@ -51,18 +52,16 @@ public class BattleNext_BattleSourceProvider {
 		}
 
 		BattleNext_QuickBattleStore quickBattleStore = new BattleNext_QuickBattleStore();
-		boolean userFile = quickBattleStore.hasUserFile();
 		try {
-			if (userFile) {
-				quickBattleStore.load();
-			} else {
-				quickBattleStore.loadBuiltIn();
-			}
+			quickBattleStore.reload();
 		} catch (Exception exception) {
-			warnings.add("Unable to load " + (userFile ? "user" : "built-in")
-					+ " quick battle list: " + exception.getMessage());
+			warnings.add("Unable to load quick battle list: " + exception.getMessage());
 		}
-		return validate(quickBattleStore.getMatches(), "quick battle");
+		List<BattleNext_Match> matches = new ArrayList<>();
+		for (BattleNext_QuickBattleModel model : quickBattleStore.getAll()) {
+			matches.add(BattleNext_Match.fromQuickBattle(model));
+		}
+		return validate(matches, "quick battle");
 	}
 
 	public List<String> getWarnings() {

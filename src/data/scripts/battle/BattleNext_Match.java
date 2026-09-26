@@ -1,6 +1,7 @@
 package data.scripts.battle;
 
-import data.scripts.tools.BattleNext_LoadSource;
+import data.model.BattleNext_LoadSource;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -21,7 +22,7 @@ public class BattleNext_Match {
 	private String status = "pending";
 	private String stage = "main";
 	private boolean replay;
-	private String sourceType = BattleNext_LoadSource.NATIVE;
+	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.NATIVE;
 	private String sourcePath = "";
 
 	public BattleNext_Match(String id, String player, String enemy, int map, float size) {
@@ -32,7 +33,11 @@ public class BattleNext_Match {
 		this.size = size;
 	}
 
-	public static BattleNext_Match fromJson(JSONObject json) {
+	public static BattleNext_Match fromQuickBattle(BattleNext_QuickBattleModel model) {
+		return new BattleNext_Match(model.getId(), model.getPlayer(), model.getEnemy(), model.getMap(), model.getSize());
+	}
+
+	public static BattleNext_Match fromJson(JSONObject json) throws JSONException {
 		BattleNext_Match match = new BattleNext_Match(json.optString("id", ""), json.optString("player", ""), json.optString("enemy", ""), json.optInt("map", -1), (float)json.optDouble("size", 1f));
 		org.json.JSONArray values = json.optJSONArray("rounds");
 		if (values != null) {
@@ -147,11 +152,11 @@ public class BattleNext_Match {
 		return replay;
 	}
 
-	public String getSourceType() {
+	public BattleNext_LoadSource getSourceType() {
 		return sourceType;
 	}
 
-	public void setSourceType(String sourceType) {
+	public void setSourceType(BattleNext_LoadSource sourceType) {
 		this.sourceType = sourceType;
 	}
 

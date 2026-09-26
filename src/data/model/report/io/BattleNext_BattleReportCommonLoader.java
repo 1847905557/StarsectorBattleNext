@@ -1,9 +1,9 @@
-package data.scripts.report.io;
+package data.model.report.io;
 
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
-import data.scripts.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.tools.BattleNext_JsonCatalog;
 import org.json.JSONException;
 
