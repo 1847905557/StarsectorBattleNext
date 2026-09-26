@@ -15,9 +15,9 @@ import org.lwjgl.input.Keyboard;
 
 import java.util.List;
 
-public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements BattleNext_ConfirmationDialog.Host {
+public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
 
-	private enum Page {
+	private enum BattleManagementPage {
 		BATTLE_SELECTOR("page_battle_selector"),
 		FLEETS("page_fleets"),
 		REPORTS("page_reports"),
@@ -27,7 +27,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 		private final String titleKey;
 
-		Page(String titleKey) {
+		BattleManagementPage(String titleKey) {
 			this.titleKey = titleKey;
 		}
 	}
@@ -41,7 +41,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private CustomPanelAPI panel;
 	private UIRect bodyRect;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
-	private Page currentPage = Page.BATTLE_SELECTOR;
+	private BattleManagementPage currentPage = BattleManagementPage.BATTLE_SELECTOR;
 	private String activeTournamentId = "";
 	private boolean pendingResult;
 
@@ -63,7 +63,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public void open() {
-		currentPage = Page.BATTLE_SELECTOR;
+		currentPage = BattleManagementPage.BATTLE_SELECTOR;
 		refreshState();
 		showPage();
 	}
@@ -78,9 +78,12 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
-		if (currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
+		if (currentPage == BattleManagementPage.BATTLE_SELECTOR && battleSelectorPage != null
 				&& !confirmationDialog.isActive()) {
 			battleSelectorPage.refreshRowStatuses();
+		}
+		if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null && !confirmationDialog.isActive()) {
+			tournamentPage.refreshDraftValidation();
 		}
 	}
 
@@ -94,11 +97,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			confirmationDialog.handle(buttonId);
 			return;
 		}
-		if (buttonId instanceof Page) {
-			requestPage((Page) buttonId);
+		if (buttonId instanceof BattleManagementPage) {
+			requestPage((BattleManagementPage) buttonId);
 			return;
 		}
-		if (buttonId instanceof BattleNext_BattleSelectorPage.SourceRequest request) {
+		if (buttonId instanceof BattleNext_BattleSelectorPage.BattleSourceSelectionRequest request) {
 			requestSource(request.getId());
 			return;
 		}
@@ -107,27 +110,29 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return;
 		}
 		activeView().buttonPressed(buttonId);
-		if (currentPage == Page.TOURNAMENTS || "tournament:start".equals(buttonId)) refreshState();
+		if (currentPage == BattleManagementPage.TOURNAMENTS || "tournament:start".equals(buttonId)) refreshState();
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		if (BattleNext_TextField.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == Page.FLEETS && fleetPage != null
+		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.FLEETS && fleetPage != null
 				&& fleetPage.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == Page.BATTLE_SELECTOR && battleSelectorPage != null
+		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.BATTLE_SELECTOR && battleSelectorPage != null
 				&& battleSelectorPage.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == Page.TOURNAMENTS && tournamentPage != null
+		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null
 				&& tournamentPage.handleGlobalInput(events)) return true;
+		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.RULES && rulesPage != null
+				&& rulesPage.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				if (confirmationDialog.isActive()) {
 					confirmationDialog.handle("confirm_cancel");
-				} else if (currentPage == Page.FLEETS && fleetPage != null) {
+				} else if (currentPage == BattleManagementPage.FLEETS && fleetPage != null) {
 					fleetPage.buttonPressed("back");
-				} else if (currentPage == Page.REPORTS && reportPage != null) {
+				} else if (currentPage == BattleManagementPage.REPORTS && reportPage != null) {
 					reportPage.buttonPressed("back");
-				} else if (currentPage == Page.TOURNAMENTS && tournamentPage != null) {
+				} else if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null) {
 					tournamentPage.buttonPressed("back");
 				} else {
 					requestClose();
@@ -148,11 +153,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void returnToBattleSelector() {
-		if (currentPage == Page.BATTLE_SELECTOR) {
+		if (currentPage == BattleManagementPage.BATTLE_SELECTOR) {
 			requestClose();
 			return;
 		}
-		requestPage(Page.BATTLE_SELECTOR);
+		requestPage(BattleManagementPage.BATTLE_SELECTOR);
 	}
 
 	private void buildShell() {
@@ -167,7 +172,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 		float tabWidth = (tabsRect.getWidth() - 25f) / tabButtons.length;
 		for (int index = 0; index < 6; index++) {
-			Page page = Page.values()[index];
+			BattleManagementPage page = BattleManagementPage.values()[index];
 			UIRect tabRect = new UIRect(tabsRect.getX() + index * (tabWidth + 5f), tabsRect.getY(), tabWidth, 30f);
 			tabButtons[index] = BattleNext_PageLayout.fixedButton(panel, tabRect,
 					text(page.titleKey), page, CutStyle.TOP, false);
@@ -186,13 +191,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		BattleNext_TextField.clearRegisteredFields();
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
+		if (rulesPage != null) rulesPage.closePicker();
 		for (int index = 0; index < tabButtons.length; index++) {
-			tabButtons[index].setEnabled(Page.values()[index] != currentPage);
+			tabButtons[index].setEnabled(BattleManagementPage.values()[index] != currentPage);
 		}
 		bodyRect.removeLatestSubPanel();
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
 		BattleNext_PageView view = activeView();
-		if (currentPage == Page.FLEETS) fleetPage.setOverlayHost(panel);
+		if (currentPage == BattleManagementPage.FLEETS) fleetPage.setOverlayHost(panel);
 		view.attach(body);
 	}
 
@@ -200,38 +206,39 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		return viewFor(currentPage);
 	}
 
-	private BattleNext_PageView viewFor(Page page) {
-		if (page == Page.BATTLE_SELECTOR) {
+	private BattleNext_PageView viewFor(BattleManagementPage page) {
+		if (page == BattleManagementPage.BATTLE_SELECTOR) {
 			if (battleSelectorPage == null) battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this);
 			return battleSelectorPage;
 		}
-		if (page == Page.FLEETS) {
+		if (page == BattleManagementPage.FLEETS) {
 			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToBattleSelector,
 					this::confirmNavigation, this::confirmDelete);
 			return fleetPage;
 		}
-		if (page == Page.REPORTS) {
+		if (page == BattleManagementPage.REPORTS) {
 			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector,
 					this::confirmNavigation, this::confirmDelete);
 			return reportPage;
 		}
-		if (page == Page.TOURNAMENTS) {
+		if (page == BattleManagementPage.TOURNAMENTS) {
 			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector,
 					this::confirmNavigation, this::confirmDelete);
 			return tournamentPage;
 		}
-		if (page == Page.RULES) {
-			if (rulesPage == null) rulesPage = new BattleNext_RulesPage();
+		if (page == BattleManagementPage.RULES) {
+			if (rulesPage == null) rulesPage = new BattleNext_RulesPage(this::confirmNavigation, this::confirmDelete);
 			return rulesPage;
 		}
 		if (settingsPage == null) settingsPage = new BattleNext_SettingsPage();
 		return settingsPage;
 	}
 
-	private void requestPage(Page page) {
+	private void requestPage(BattleManagementPage page) {
 		if (page == currentPage) return;
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
+		if (rulesPage != null) rulesPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
 				currentPage = page;
@@ -249,6 +256,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		BattleNext_TextField.releaseFocusedField();
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
+		if (rulesPage != null) rulesPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(closeAction);
 			return;
@@ -296,6 +304,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				throw new IllegalArgumentException(text("tournament_missing"));
 			}
 			tournamentStore.setActiveId(id);
+			BattleNext_BattleSignals.clearAuthorization();
 			refreshState();
 			return true;
 		} catch (Exception exception) {

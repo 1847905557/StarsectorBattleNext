@@ -1,68 +1,55 @@
-package data.model.rules;
+package data.model.rule;
 
 import data.model.BattleNext_JsonModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-public class BattleNext_RulesModel extends BattleNext_JsonModel {
+public class BattleNext_RuleModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;
-	private final List<BattleNext_RulesModel> children = new ArrayList<>();
-	private boolean enabled;
-	private double value;
+	private final List<BattleNext_RuleRestriction> restrictions = new ArrayList<>();
 
-	public BattleNext_RulesModel() {
+	public BattleNext_RuleModel() {
 		this("", "");
 	}
 
-	public BattleNext_RulesModel(String id, String name) {
+	public BattleNext_RuleModel(String id, String name) {
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
 	}
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
-		int version = json.optInt("formatVersion", FORMAT_VERSION);
-		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported rules formatVersion: " + version);
-		id = json.optString("id", "").trim();
-		name = json.optString("name", "").trim();
-		enabled = json.optBoolean("enabled", false);
-		value = json.optDouble("value", 0d);
-		JSONArray childValues = json.optJSONArray("children");
-		if (childValues != null) {
-			for (int index = 0; index < childValues.length(); index++) {
-				JSONObject childJson = childValues.optJSONObject(index);
-				if (childJson != null) {
-					BattleNext_RulesModel child = new BattleNext_RulesModel();
-					child.fromJson(childJson);
-					children.add(child);
-				}
-			}
+		if (json.getInt("formatVersion") != FORMAT_VERSION) {
+			throw new IllegalArgumentException("Unsupported rule formatVersion");
 		}
+		id = json.getString("id").trim();
+		name = json.getString("name").trim();
+		JSONArray values = json.getJSONArray("restrictions");
+		List<BattleNext_RuleRestriction> parsed = new ArrayList<>();
+		for (int index = 0; index < values.length(); index++) {
+			parsed.add(BattleNext_RuleRestriction.fromJson(values.getJSONObject(index)));
+		}
+		setRestrictions(parsed);
 	}
 
 	@Override
 	public JSONObject toJson() throws JSONException {
-		JSONObject json = new JSONObject();
-		json.put("formatVersion", FORMAT_VERSION);
-		json.put("id", id);
-		json.put("name", name);
-		json.put("enabled", enabled);
-		json.put("value", value);
+		JSONObject json = new JSONObject().put("formatVersion", FORMAT_VERSION).put("id", id).put("name", name);
 		JSONArray values = new JSONArray();
-		for (BattleNext_RulesModel child : children) {
-			values.put(child.toJson());
+		for (BattleNext_RuleRestriction restriction : restrictions) {
+			values.put(restriction.toJson());
 		}
-		json.put("children", values);
-		return json;
+		return json.put("restrictions", values);
 	}
 
 	@Override
@@ -70,33 +57,37 @@ public class BattleNext_RulesModel extends BattleNext_JsonModel {
 		return id;
 	}
 
+	public void setId(String id) {
+		this.id = id == null ? "" : id.trim();
+	}
+
 	public String getName() {
 		return name;
 	}
 
-	public boolean isEnabled() {
-		return enabled;
+	public void setName(String name) {
+		this.name = name == null ? "" : name.trim();
 	}
 
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
+	public List<BattleNext_RuleRestriction> getRestrictions() {
+		return Collections.unmodifiableList(restrictions);
 	}
 
-	public double getValue() {
-		return value;
-	}
-
-	public void setValue(double value) {
-		this.value = value;
-	}
-
-	public List<BattleNext_RulesModel> getChildren() {
-		return Collections.unmodifiableList(children);
-	}
-
-	public void addChild(BattleNext_RulesModel child) {
-		if (child != null) {
-			children.add(child);
+	public BattleNext_RuleRestriction getRestriction(String restrictionId) {
+		for (BattleNext_RuleRestriction restriction : restrictions) {
+			if (restriction.getId().equals(restrictionId)) return restriction;
 		}
+		return null;
+	}
+
+	public void setRestrictions(List<BattleNext_RuleRestriction> values) {
+		Set<String> ids = new HashSet<>();
+		for (BattleNext_RuleRestriction restriction : values) {
+			if (!ids.add(restriction.getId())) {
+				throw new IllegalArgumentException("Duplicate restriction ID: " + restriction.getId());
+			}
+		}
+		restrictions.clear();
+		restrictions.addAll(values);
 	}
 }

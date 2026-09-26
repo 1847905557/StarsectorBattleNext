@@ -11,8 +11,8 @@ import java.util.List;
 
 public class BattleNext_Match {
 
-	public enum Status { PENDING, COMPLETE }
-	public enum Stage { MAIN, WINNERS, LOSERS, GRAND_FINAL, GRAND_FINAL_RESET, ROUND_ROBIN, KING_OF_THE_HILL, BYE }
+	public enum MatchStatus { PENDING, COMPLETE }
+	public enum MatchStage { MAIN, WINNERS, LOSERS, GRAND_FINAL, GRAND_FINAL_RESET, ROUND_ROBIN, KING_OF_THE_HILL, BYE }
 
 	private String id;
 	private String player;
@@ -20,8 +20,8 @@ public class BattleNext_Match {
 	private int map;
 	private float mapScale;
 	private final List<BattleNext_Round> rounds = new ArrayList<>();
-	private Status status = Status.PENDING;
-	private Stage stage = Stage.MAIN;
+	private MatchStatus status = MatchStatus.PENDING;
+	private MatchStage stage = MatchStage.MAIN;
 	private final List<String> dependencies = new ArrayList<>();
 	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.CREATED;
 	private String sourcePath = "";
@@ -50,12 +50,12 @@ public class BattleNext_Match {
 			}
 		}
 		try {
-			match.status = Status.valueOf(json.getString("status"));
+			match.status = MatchStatus.valueOf(json.getString("status"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid match.status: " + json.getString("status"), exception);
 		}
 		try {
-			match.stage = Stage.valueOf(json.getString("stage"));
+			match.stage = MatchStage.valueOf(json.getString("stage"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid match.stage: " + json.getString("stage"), exception);
 		}
@@ -124,19 +124,19 @@ public class BattleNext_Match {
 		return winsFor(enemy);
 	}
 
-	public Status getStatus() {
+	public MatchStatus getStatus() {
 		return status;
 	}
 
-	public Stage getStage() {
+	public MatchStage getStage() {
 		return stage;
 	}
 
-	public void setStatus(Status status) {
+	public void setStatus(MatchStatus status) {
 		this.status = status;
 	}
 
-	public void setStage(Stage stage) {
+	public void setStage(MatchStage stage) {
 		this.stage = stage;
 	}
 
@@ -154,13 +154,13 @@ public class BattleNext_Match {
 	}
 
 	public String getWinnerFleetId() {
-		if (status != Status.COMPLETE) return "";
+		if (status != MatchStatus.COMPLETE) return "";
 		if (enemy.isEmpty()) return player;
 		return getPlayerWins() > getEnemyWins() ? player : enemy;
 	}
 
 	public String getLoserFleetId() {
-		if (status != Status.COMPLETE || enemy.isEmpty()) return "";
+		if (status != MatchStatus.COMPLETE || enemy.isEmpty()) return "";
 		return getWinnerFleetId().equals(player) ? enemy : player;
 	}
 
@@ -190,6 +190,6 @@ public class BattleNext_Match {
 
 	public void resetProgressForReplay() {
 		rounds.clear();
-		status = Status.PENDING;
+		status = MatchStatus.PENDING;
 	}
 }

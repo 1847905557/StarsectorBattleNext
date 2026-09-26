@@ -1,5 +1,5 @@
 package data.scripts.battlesnext.util;
-/// 20260706
+/// 20260927
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.*;
@@ -615,7 +615,7 @@ public class BattleNext_BoxBasedUtils {
 	public static void startFakeBeam(TrailEntity fakeBeam, float in) {
 		if (fakeBeam.getGlobalTimerState() == BoxEnum.TIMER_IN) return;
 		if (fakeBeam.getGlobalTimerState() == BoxEnum.TIMER_FULL) return;
-		fakeBeam.setControlData(new SelfRenewControlData());
+		fakeBeam.setControlData(new SelfRenewingControlData());
 		fakeBeam.setGlobalTimer(in, 1f, in);
 	}
 
@@ -623,7 +623,7 @@ public class BattleNext_BoxBasedUtils {
 		if (fakeBeam.getGlobalTimerState() == BoxEnum.TIMER_OUT) return;
 		if (fakeBeam.getGlobalTimerState() == BoxEnum.TIMER_INVALID) return;
 		if (fakeBeam.getGlobalTimerState() == BoxEnum.TIMER_ONCE) return;
-		if (fakeBeam.getControlData() instanceof SelfRenewControlData) {
+		if (fakeBeam.getControlData() instanceof SelfRenewingControlData) {
 			fakeBeam.setControlData(null);
 		}
 		fakeBeam.setGlobalTimer(0f, 0f, out);
@@ -705,7 +705,7 @@ public class BattleNext_BoxBasedUtils {
 	public static void startCurveLine(CurveEntity curveEntity, float in) {
 		if (curveEntity.getGlobalTimerState() == BoxEnum.TIMER_IN) return;
 		if (curveEntity.getGlobalTimerState() == BoxEnum.TIMER_FULL) return;
-		curveEntity.setControlData(new SelfRenewControlData());
+		curveEntity.setControlData(new SelfRenewingControlData());
 		curveEntity.setGlobalTimer(in, 1f, in);
 	}
 
@@ -713,7 +713,7 @@ public class BattleNext_BoxBasedUtils {
 		if (curveEntity.getGlobalTimerState() == BoxEnum.TIMER_OUT) return;
 		if (curveEntity.getGlobalTimerState() == BoxEnum.TIMER_INVALID) return;
 		if (curveEntity.getGlobalTimerState() == BoxEnum.TIMER_ONCE) return;
-		if (curveEntity.getControlData() instanceof SelfRenewControlData) {
+		if (curveEntity.getControlData() instanceof SelfRenewingControlData) {
 			curveEntity.setControlData(null);
 		}
 		curveEntity.setGlobalTimer(0f, 0f, out);
@@ -773,7 +773,7 @@ public class BattleNext_BoxBasedUtils {
 		flareEntity.setRenderingCount(dataList.size());
 		flareEntity.setAlwaysRefreshInstanceData(true);
 
-		flareEntity.setControlData(new SizeBaseFlaredControlData());
+		flareEntity.setControlData(new SizeBasedFlaredControlData());
 
 		flareEntity.setLayer(CombatEngineLayers.ABOVE_PARTICLES_LOWER);
 		flareEntity.setGlobalTimer(in, full, out);
@@ -904,7 +904,7 @@ public class BattleNext_BoxBasedUtils {
 		}
 	}
 
-	public static class SelfRenewControlData extends BaseControlData {
+	public static class SelfRenewingControlData extends BaseControlData {
 
 		@Override
 		public void controlAdvance(@NotNull RenderDataAPI renderEntity, float amount) {
@@ -917,7 +917,7 @@ public class BattleNext_BoxBasedUtils {
 		}
 	}
 
-	public static class SizeBaseFlaredControlData extends BaseControlData {
+	public static class SizeBasedFlaredControlData extends BaseControlData {
 
 		private float[] wh = null;
 

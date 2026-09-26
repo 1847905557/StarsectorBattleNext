@@ -7,7 +7,7 @@ import java.util.List;
 
 public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
-	public enum RowType {
+	public enum QuickBattleRowType {
 		BATTLE,
 		COMMENT_BATTLE,
 		RAW
@@ -21,7 +21,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	private int map;
 	private float mapScale;
 	private String rawContent = "";
-	private RowType rowType = RowType.BATTLE;
+	private QuickBattleRowType rowType = QuickBattleRowType.BATTLE;
 	private boolean enabled = true;
 	private boolean legacyIds;
 
@@ -34,7 +34,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	public static BattleNext_QuickBattleModel fromCsvRow(String line) {
 		BattleNext_QuickBattleModel model = parseLine(line, false);
-		return model != null && model.rowType == RowType.BATTLE ? model : null;
+		return model != null && model.rowType == QuickBattleRowType.BATTLE ? model : null;
 	}
 
 	public static BattleNext_QuickBattleModel parseLine(String line, boolean legacy) {
@@ -47,13 +47,13 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		try {
 			model.fromCsvLine(BattleNext_CsvLine.parse(candidate));
 			if (legacy) model.convertLegacyIds();
-			model.rowType = commented ? RowType.COMMENT_BATTLE : RowType.BATTLE;
+			model.rowType = commented ? QuickBattleRowType.COMMENT_BATTLE : QuickBattleRowType.BATTLE;
 			model.enabled = !commented;
 			model.legacyIds = legacy;
 			model.rawContent = commented ? normalizeComment(candidate) : "";
 			return model;
 		} catch (IllegalArgumentException exception) {
-			model.rowType = RowType.RAW;
+			model.rowType = QuickBattleRowType.RAW;
 			model.enabled = false;
 			model.legacyIds = legacy;
 			model.rawContent = normalizeComment(candidate);
@@ -88,7 +88,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	public void promoteRaw(String value) {
 		BattleNext_QuickBattleModel parsed = parseLine(value, legacyIds);
-		if (parsed != null && parsed.rowType != RowType.RAW) {
+		if (parsed != null && parsed.rowType != QuickBattleRowType.RAW) {
 			player = parsed.player;
 			enemy = parsed.enemy;
 			map = parsed.map;
@@ -97,7 +97,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 			enabled = false;
 			rawContent = parsed.rawContent;
 		} else {
-			rowType = RowType.RAW;
+			rowType = QuickBattleRowType.RAW;
 			enabled = false;
 			rawContent = normalizeComment(value);
 		}
@@ -130,7 +130,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	}
 
 	public String toSourceLine() {
-		if (rowType == RowType.RAW) return rawContent.isEmpty() ? "#" : rawContent;
+		if (rowType == QuickBattleRowType.RAW) return rawContent.isEmpty() ? "#" : rawContent;
 		String line = toCsvLine();
 		return enabled ? line : "# " + line;
 	}
@@ -183,12 +183,12 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		this.rawContent = normalizeComment(rawContent);
 	}
 
-	public RowType getRowType() {
+	public QuickBattleRowType getRowType() {
 		return rowType;
 	}
 
-	public void setRowType(RowType rowType) {
-		this.rowType = rowType == null ? RowType.RAW : rowType;
+	public void setRowType(QuickBattleRowType rowType) {
+		this.rowType = rowType == null ? QuickBattleRowType.RAW : rowType;
 	}
 
 	public boolean isEnabled() {

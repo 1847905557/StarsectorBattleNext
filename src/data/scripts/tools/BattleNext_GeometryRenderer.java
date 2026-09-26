@@ -83,18 +83,18 @@ public class BattleNext_GeometryRenderer {
 		GL11.glPopAttrib();
 	}
 
-	public static ClipState pushClip(PositionAPI position) {
+	public static GeometryClipState pushClip(PositionAPI position) {
 		return pushClip(position.getX(), position.getY(), position.getWidth(), position.getHeight());
 	}
 
-	public static ClipState pushClip(float x, float y, float width, float height) {
+	public static GeometryClipState pushClip(float x, float y, float width, float height) {
 		float xScale = Global.getSettings().getScreenWidthPixels()
 				/ Math.max(1f, Global.getSettings().getScreenWidth());
 		float yScale = Global.getSettings().getScreenHeightPixels()
 				/ Math.max(1f, Global.getSettings().getScreenHeight());
 		IntBuffer box = BufferUtils.createIntBuffer(16);
 		GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
-		ClipState state = new ClipState(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1),
+		GeometryClipState state = new GeometryClipState(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1),
 				box.get(2), box.get(3));
 		GL11.glEnable(GL11.GL_SCISSOR_TEST);
 		GL11.glScissor((int) (x * xScale), (int) (y * yScale),
@@ -102,7 +102,7 @@ public class BattleNext_GeometryRenderer {
 		return state;
 	}
 
-	public static void popClip(ClipState state) {
+	public static void popClip(GeometryClipState state) {
 		if (state.enabled) {
 			GL11.glEnable(GL11.GL_SCISSOR_TEST);
 		} else {
@@ -180,14 +180,14 @@ public class BattleNext_GeometryRenderer {
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
 	}
 
-	public static class ClipState {
+	public static class GeometryClipState {
 		private final boolean enabled;
 		private final int x;
 		private final int y;
 		private final int width;
 		private final int height;
 
-		private ClipState(boolean enabled, int x, int y, int width, int height) {
+		private GeometryClipState(boolean enabled, int x, int y, int width, int height) {
 			this.enabled = enabled;
 			this.x = x;
 			this.y = y;

@@ -1,0 +1,92 @@
+package data.restriction;
+
+import com.fs.starfarer.api.Global;
+import data.scripts.battlesnext.util.annotation.LifecycleEntry;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.function.Function;
+
+public class BattleNext_RestrictionRegistry {
+
+	public static final String PATH = "data/config/BattleNext_restrictions.csv";
+	private static final BattleNext_RestrictionRegistry INSTANCE = new BattleNext_RestrictionRegistry();
+
+	private static final List<String> TYPES = List.of("number", "list");
+
+	private Map<String, BattleNext_RestrictionSpec> entries = Map.of();
+	private Function<String, Object> scriptFactory;
+
+	@LifecycleEntry
+	public static BattleNext_RestrictionRegistry getInstance() {
+		return INSTANCE;
+	}
+
+	public static void loadFromSettings() {
+		try {
+			JSONArray rows = Global.getSettings().getMergedSpreadsheetData("id", PATH);
+			INSTANCE.load(rows, name -> Global.getSettings().getInstanceOfScript(name));
+		} catch (IOException | JSONException exception) {
+			throw new IllegalArgumentException("Unable to read " + PATH, exception);
+		}
+	}
+
+	public void load(JSONArray rows, Function<String, Object> scriptFactory) throws JSONException {
+		Map<String, BattleNext_RestrictionSpec> parsed = new LinkedHashMap<>();
+		List<String> errors = new ArrayList<>();
+		for (int index = 0; index < rows.length(); index++) {
+			JSONObject row = rows.getJSONObject(index);
+			String id = row.optString("id", "").trim();
+			String type = row.optString("type", "").trim();
+			String script = row.optString("script", "").trim();
+			String description = row.optString("desc", "").trim();
+			if (id.isEmpty() || script.isEmpty() || description.isEmpty() || !TYPES.contains(type)) {
+				errors.add("row " + (index + 1) + ": invalid id,type,script,desc");
+				continue;
+			}
+			if (parsed.containsKey(id)) {
+				errors.add("row " + (index + 1) + ": duplicate restriction " + id);
+				continue;
+			}
+			try {
+				Object instance = scriptFactory.apply(script);
+				if (!(instance instanceof BattleNext_RestrictionScript)) {
+					errors.add(id + ": script does not implement BattleNext_RestrictionScript");
+					continue;
+				}
+				parsed.put(id, new BattleNext_RestrictionSpec(id, type, script, description));
+			} catch (RuntimeException exception) {
+				errors.add(id + ": cannot instantiate " + script + ": " + exception.getMessage());
+			}
+		}
+		if (!errors.isEmpty()) {
+			throw new IllegalArgumentException("Invalid " + PATH + ": " + String.join("; ", errors));
+		}
+		entries = parsed;
+		this.scriptFactory = scriptFactory;
+	}
+
+	public Object create(String id) {
+		BattleNext_RestrictionSpec spec = entries.get(id);
+		try {
+			return scriptFactory.apply(spec.getScript());
+		} catch (RuntimeException exception) {
+			throw new IllegalStateException("Unable to instantiate restriction " + id, exception);
+		}
+	}
+
+	public BattleNext_RestrictionSpec get(String id) {
+		return entries.get(id);
+	}
+
+	public List<BattleNext_RestrictionSpec> getAll() {
+		return List.copyOf(entries.values());
+	}
+
+	public List<BattleNext_RestrictionSpec> getByType(String type) {
+		return entries.values().stream().filter(entry -> entry.getType().equals(type)).toList();
+	}
+}

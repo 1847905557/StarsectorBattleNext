@@ -10,7 +10,7 @@ import com.fs.starfarer.api.combat.listeners.DamageListener;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
-import data.scripts.fleet.BattleNext_FleetAssembly;
+import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
@@ -22,15 +22,15 @@ import java.util.Map;
 
 public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implements DamageListener {
 
-	private final List<TrackedMember> trackedMembers = new ArrayList<>();
-	private final Map<FleetMemberAPI, TrackedMember> membersByFleetMember = new IdentityHashMap<>();
+	private final List<ScoreTrackedFleetMember> trackedMembers = new ArrayList<>();
+	private final Map<FleetMemberAPI, ScoreTrackedFleetMember> membersByFleetMember = new IdentityHashMap<>();
 	private CombatEngineAPI engine;
 	private BattleNext_BattleReportModel frozenReport;
 	private boolean battleStarted;
 
-	public BattleNext_Scorekeeper(BattleNext_FleetAssembly playerAssembly, BattleNext_FleetAssembly enemyAssembly) {
-		registerMembers(playerAssembly, true);
-		registerMembers(enemyAssembly, false);
+	public BattleNext_Scorekeeper(BattleNext_AssembledFleet assembledPlayerFleet, BattleNext_AssembledFleet assembledEnemyFleet) {
+		registerMembers(assembledPlayerFleet, true);
+		registerMembers(assembledEnemyFleet, false);
 	}
 
 	public BattleNext_Scorekeeper(List<FleetMemberAPI> playerMembers, List<FleetMemberAPI> enemyMembers) {
@@ -59,11 +59,11 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	@Override
 	public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
 		if (frozenReport != null || result == null) return;
-		TrackedMember targetMember = findTracked(target);
+		ScoreTrackedFleetMember targetMember = findTracked(target);
 		if (targetMember != null) {
 			targetMember.report.addDamageTaken(result.getDamageToHull(), result.getDamageToShields(), result.getEmpDamage());
 		}
-		TrackedMember sourceMember = findTracked(sourceShip(source));
+		ScoreTrackedFleetMember sourceMember = findTracked(sourceShip(source));
 		if (sourceMember != null) {
 			sourceMember.report.addDamageDealt(result.getDamageToHull(), result.getDamageToShields(), result.getEmpDamage());
 		}
@@ -81,13 +81,13 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		return "BattleNext_Scorekeeper";
 	}
 
-	private void registerMembers(BattleNext_FleetAssembly assembly, boolean playerSide) {
-		BattleNext_FleetModel definition = assembly.getDefinition();
-		List<FleetMemberAPI> members = assembly.getMembers();
+	private void registerMembers(BattleNext_AssembledFleet assembledFleet, boolean playerSide) {
+		BattleNext_FleetModel definition = assembledFleet.getDefinition();
+		List<FleetMemberAPI> members = assembledFleet.getMembers();
 		for (int index = 0; index < members.size(); index++) {
 			String variantId = definition.getMembers().get(index).getVariantId();
 			String name = definition.getMembers().get(index).getName();
-			TrackedMember tracked = new TrackedMember(variantId, name, members.get(index), playerSide);
+			ScoreTrackedFleetMember tracked = new ScoreTrackedFleetMember(variantId, name, members.get(index), playerSide);
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(members.get(index), tracked);
 		}
@@ -97,7 +97,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		for (int index = 0; index < members.size(); index++) {
 			FleetMemberAPI member = members.get(index);
 			String variantId = member.getVariant().getHullVariantId();
-			TrackedMember tracked = new TrackedMember(variantId, member.getShipName(), member, playerSide);
+			ScoreTrackedFleetMember tracked = new ScoreTrackedFleetMember(variantId, member.getShipName(), member, playerSide);
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(member, tracked);
 		}
@@ -106,7 +106,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	private void refreshShips() {
 		for (ShipAPI ship : engine.getShips()) {
 			FleetMemberAPI member = ship.getFleetMember();
-			TrackedMember tracked = membersByFleetMember.get(member);
+			ScoreTrackedFleetMember tracked = membersByFleetMember.get(member);
 			if (tracked != null) {
 				tracked.ship = ship;
 				tracked.everDeployed = true;
@@ -115,7 +115,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	}
 
 	private boolean hasActiveShip() {
-		for (TrackedMember tracked : trackedMembers) {
+		for (ScoreTrackedFleetMember tracked : trackedMembers) {
 			if (tracked.ship != null && tracked.ship.isAlive() && !tracked.ship.isFighter()
 					&& !tracked.ship.isStation()) return true;
 		}
@@ -132,7 +132,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	}
 
 	private boolean hasAliveShips(FleetSide side) {
-		for (TrackedMember tracked : trackedMembers) {
+		for (ScoreTrackedFleetMember tracked : trackedMembers) {
 			if (tracked.ship != null && tracked.ship.getOwner() == side.ordinal() && tracked.ship.isAlive()
 					&& !tracked.ship.isFighter() && !tracked.ship.isStation()) return true;
 		}
@@ -144,7 +144,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setWinner(winner);
 		report.setDurationMillis((long)(engine.getTotalElapsedTime(false) * 1000f));
-		for (TrackedMember tracked : trackedMembers) {
+		for (ScoreTrackedFleetMember tracked : trackedMembers) {
 			tracked.freeze();
 			if (tracked.playerSide) report.addPlayerMember(tracked.report);
 			else report.addEnemyMember(tracked.report);
@@ -152,7 +152,7 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		frozenReport = report;
 	}
 
-	private TrackedMember findTracked(CombatEntityAPI entity) {
+	private ScoreTrackedFleetMember findTracked(CombatEntityAPI entity) {
 		if (!(entity instanceof ShipAPI)) return null;
 		return membersByFleetMember.get(((ShipAPI)entity).getFleetMember());
 	}
@@ -163,14 +163,14 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 		return null;
 	}
 
-	private class TrackedMember {
+	private class ScoreTrackedFleetMember {
 		private final BattleNext_MemberReport report;
 		private final FleetMemberAPI member;
 		private final boolean playerSide;
 		private ShipAPI ship;
 		private boolean everDeployed;
 
-		private TrackedMember(String variantId, String name, FleetMemberAPI member, boolean playerSide) {
+		private ScoreTrackedFleetMember(String variantId, String name, FleetMemberAPI member, boolean playerSide) {
 			report = new BattleNext_MemberReport(variantId, name);
 			this.member = member;
 			this.playerSide = playerSide;

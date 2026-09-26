@@ -2,7 +2,7 @@ package data.model.fleet.io;
 
 import data.model.BattleNext_BaseSaver;
 import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_VariantAdapter;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
@@ -28,7 +28,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			writeResourceJson(directory + DATA_FILE + ".bak", previous);
 		}
 		writeResourceJson(path, fleet.toJson());
-		for (BattleNext_VariantAdapter variant : fleet.getVariants()) {
+		for (BattleNext_VariantBuilder variant : fleet.getVariants()) {
 			if (!BattleNext_EntryId.isValidPathSegment(variant.getId())) {
 				throw new IOException("Invalid fleet variant ID: " + variant.getId());
 			}

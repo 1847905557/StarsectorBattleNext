@@ -1,10 +1,15 @@
-package data.automation;
+package data.order;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
+
+import java.util.List;
 
 public interface OrderSuffix {
 
-	float getFloatResultWithTarget(AssignmentTargetAPI target, String[] params, Object custom, CombatEngineAPI engine);
-	Object getCustomResultWithTarget(AssignmentTargetAPI target, String[] params, Object custom, CombatEngineAPI engine);
+	AssignmentTargetAPI selectTarget(AssignmentTargetAPI target, List<? extends CombatEntityAPI> candidates,
+			boolean continuing, String[] params, CombatEngineAPI engine);
+
+	float resolvePriority(float current, AssignmentTargetAPI target, String[] params, CombatEngineAPI engine);
 }

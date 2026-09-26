@@ -1,11 +1,11 @@
-package data.automation.starter;
+package data.order.starter;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.automation.BattleNext_OrderUtils;
-import data.automation.OrderStarter;
+import data.order.BattleNext_OrderUtils;
+import data.order.OrderStarter;
 import java.util.List;
 
 public class ControlStarter implements OrderStarter {

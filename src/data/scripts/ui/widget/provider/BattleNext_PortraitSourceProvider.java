@@ -8,12 +8,12 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.BattleNext_OptionField.Option;
+import data.scripts.ui.widget.BattleNext_OptionField.OptionFieldChoice;
 
 import java.io.IOException;
 import java.util.*;
 
-public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField.Source {
+public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField.OptionFieldChoiceSource {
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 
@@ -23,9 +23,9 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField
 	}
 
 	@Override
-	public List<Option> getOptions() {
+	public List<OptionFieldChoice> getOptions() {
 
-		List<Option> options = new ArrayList<>(selfPortraits());
+		List<OptionFieldChoice> options = new ArrayList<>(selfPortraits());
 		Set<String> loaded = new LinkedHashSet<>();
 
 		List<FactionSpecAPI> specs = Global.getSettings().getAllFactionSpecs();
@@ -38,21 +38,21 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField
 			for (String path : spec.getAllPortraits(Gender.MALE)) {
 				if (!loaded.contains(path)) {
 					loaded.add(path);
-					options.add(new Option(path, spec.getDisplayName()));
+					options.add(new OptionFieldChoice(path, spec.getDisplayName()));
 				}
 			}
 
 			for (String path : spec.getAllPortraits(Gender.FEMALE)) {
 				if (!loaded.contains(path)) {
 					loaded.add(path);
-					options.add(new Option(path, spec.getDisplayName()));
+					options.add(new OptionFieldChoice(path, spec.getDisplayName()));
 				}
 			}
 
 			for (String path : spec.getAllPortraits(Gender.ANY)) {
 				if (!loaded.contains(path)) {
 					loaded.add(path);
-					options.add(new Option(path, spec.getDisplayName()));
+					options.add(new OptionFieldChoice(path, spec.getDisplayName()));
 				}
 			}
 		}
@@ -60,13 +60,13 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField
 		return options;
 	}
 
-	private List<Option> selfPortraits() {
-		List<Option> result = new ArrayList<>();
+	private List<OptionFieldChoice> selfPortraits() {
+		List<OptionFieldChoice> result = new ArrayList<>();
 		try {
 			for (String path : BattleNext_ModFileManager.list(MOD_PORTRAIT_ROOT, true)) {
 				if (!isPortraitFile(path)) continue;
 				Global.getSettings().loadTexture(path);
-				result.add(new Option(path, fileName(path)));
+				result.add(new OptionFieldChoice(path, fileName(path)));
 			}
 		} catch (IOException exception) {
 			Global.getLogger(BattleNext_PortraitSourceProvider.class).warn(
@@ -92,7 +92,7 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionField
 	}
 
 	@Override
-	public void createTooltip(TooltipMakerAPI tooltip, Option option) {
+	public void createTooltip(TooltipMakerAPI tooltip, OptionFieldChoice option) {
 		tooltip.addTitle(option.getLabel());
 		tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);
 	}

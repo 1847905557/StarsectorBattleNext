@@ -74,7 +74,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
 			float width, float height, String value) {
-		FieldPlugin plugin = new FieldPlugin();
+		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
 		CustomPanelAPI panel = owner.createCustomPanel(width, height, plugin);
 		BattleNext_TextField field = new BattleNext_TextField(panel, width, height);
 		BattleNext_TextFieldSession.register(field);
@@ -343,9 +343,9 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		BattleNext_TextFieldSession.finish(true);
 	}
 
-	private static final class FieldPlugin extends BaseCustomUIPanelPlugin {
+	private static final class TextFieldPanelPlugin extends BaseCustomUIPanelPlugin {
 		private BattleNext_TextField field;
-		private BattleNext_GeometryRenderer.ClipState clipState;
+		private BattleNext_GeometryRenderer.GeometryClipState clipState;
 
 		@Override
 		public void renderBelow(float alphaMult) {

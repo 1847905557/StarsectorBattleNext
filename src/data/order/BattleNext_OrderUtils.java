@@ -1,4 +1,4 @@
-package data.automation;
+package data.order;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
@@ -30,11 +30,12 @@ public class BattleNext_OrderUtils {
 		HULL_SIZES.put("cruiser", HullSize.CRUISER);
 		HULL_SIZES.put("capital", HullSize.CAPITAL_SHIP);
 	}
+
 	private BattleNext_OrderUtils() {
 	}
 
 	public static HullSize hullSize(String value) {
-		return HULL_SIZES.get(value.toLowerCase());
+		return HULL_SIZES.get(value);
 	}
 
 	public static List<ShipAPI> enemies(ShipAPI source) {

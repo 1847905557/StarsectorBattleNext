@@ -7,14 +7,14 @@ import data.model.fleet.BattleNext_FleetModel;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_FleetAssembly {
+public class BattleNext_AssembledFleet {
 
 	private final BattleNext_FleetModel definition;
 	private final PersonAPI commander;
 	private final List<FleetMemberAPI> members;
 	private final List<String> memberErrors;
 
-	public BattleNext_FleetAssembly(BattleNext_FleetModel definition, PersonAPI commander,
+	public BattleNext_AssembledFleet(BattleNext_FleetModel definition, PersonAPI commander,
 			List<FleetMemberAPI> members, List<String> memberErrors) {
 		this.definition = definition;
 		this.commander = commander;

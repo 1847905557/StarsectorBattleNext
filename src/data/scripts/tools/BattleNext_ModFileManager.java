@@ -35,7 +35,7 @@ public class BattleNext_ModFileManager {
 
 	public static void writeBytes(String relativePath, byte[] data, boolean overwrite) throws IOException {
 		if (data == null) throw new IOException("Unable to write null data: " + relativePath);
-		Bridge bridge = createBridge(relativePath);
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
 		Object target = resolveTarget(bridge, relativePath, overwrite);
 		Object output = null;
 		Throwable failure = null;
@@ -59,8 +59,8 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static byte[] readBytes(String relativePath) throws IOException {
-		Bridge bridge = createBridge(relativePath);
-		Target target = resolveExisting(bridge, relativePath);
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
+		ModFileOperationTarget target = resolveExisting(bridge, relativePath);
 		if (!(boolean) invoke(bridge.exists, target.file)) {
 			throw new IOException("The target does not exist: " + relativePath);
 		}
@@ -101,7 +101,7 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static List<String> list(String directory, boolean recursive) throws IOException {
-		Bridge bridge = createBridge(directory);
+		ReflectiveModFileOperations bridge = createBridge(directory);
 		return listRoot(bridge, normalizePath(directory), recursive);
 	}
 
@@ -110,14 +110,14 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static boolean exists(String relativePath) throws IOException {
-		Bridge bridge = createBridge(relativePath);
-		Target target = resolveExisting(bridge, relativePath);
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
+		ModFileOperationTarget target = resolveExisting(bridge, relativePath);
 		return (boolean) invoke(bridge.exists, target.file);
 	}
 
 	public static void delete(String relativePath) throws IOException {
-		Bridge bridge = createBridge(relativePath);
-		Target target = resolveExisting(bridge, relativePath);
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
+		ModFileOperationTarget target = resolveExisting(bridge, relativePath);
 		if (!(boolean) invoke(bridge.exists, target.file)) return;
 		if ((boolean) invoke(bridge.directoryCheck, target.file)) {
 			throw new IOException("The target is a directory: " + relativePath);
@@ -126,8 +126,8 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static void deleteRecursively(String relativePath) throws IOException {
-		Bridge bridge = createBridge(relativePath);
-		Target target = resolveExisting(bridge, relativePath);
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
+		ModFileOperationTarget target = resolveExisting(bridge, relativePath);
 		if (!(boolean) invoke(bridge.exists, target.file)) return;
 		if (!(boolean) invoke(bridge.directoryCheck, target.file)) {
 			throw new IOException("The target is not a directory: " + relativePath);
@@ -135,14 +135,14 @@ public class BattleNext_ModFileManager {
 		deleteTree(bridge, target.file, target.rootCanonical, relativePath);
 	}
 
-	private static Bridge createBridge(String relativePath) throws IOException {
+	private static ReflectiveModFileOperations createBridge(String relativePath) throws IOException {
 		try {
 			Class<?> fileType = Class.forName("java.io.File", false, null);
 			Class<?> inputType = Class.forName("java.io.FileInputStream", false, null);
 			Class<?> outputType = Class.forName("java.io.FileOutputStream", false, null);
 			Class<?> byteArrayOutputType = Class.forName("java.io.ByteArrayOutputStream", false, null);
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-			return new Bridge(
+			return new ReflectiveModFileOperations(
 					lookup.findConstructor(fileType, MethodType.methodType(void.class, String.class)),
 					lookup.findVirtual(fileType, "exists", MethodType.methodType(boolean.class)),
 					lookup.findVirtual(fileType, "isDirectory", MethodType.methodType(boolean.class)),
@@ -170,7 +170,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static Object resolveTarget(Bridge bridge, String relativePath, boolean overwrite) throws IOException {
+	private static Object resolveTarget(ReflectiveModFileOperations bridge, String relativePath, boolean overwrite) throws IOException {
 		String normalizedPath = normalizePath(relativePath);
 		try {
 			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
@@ -203,7 +203,7 @@ public class BattleNext_ModFileManager {
 			}
 			targetCanonical = (String) bridge.canonicalPath.invoke(target);
 			ensureInsideRoot(rootCanonical, targetCanonical, normalizedPath);
-			return new Target(target, targetCanonical, rootCanonical);
+			return new ModFileOperationTarget(target, targetCanonical, rootCanonical);
 		} catch (IOException exception) {
 			throw exception;
 		} catch (Throwable exception) {
@@ -211,7 +211,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static Target resolveExisting(Bridge bridge, String relativePath) throws IOException {
+	private static ModFileOperationTarget resolveExisting(ReflectiveModFileOperations bridge, String relativePath) throws IOException {
 		String normalizedPath = normalizePath(relativePath);
 		try {
 			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
@@ -226,7 +226,7 @@ public class BattleNext_ModFileManager {
 			if (samePath(rootCanonical, targetCanonical)) {
 				throw new IOException("The mod root is not a file target: " + normalizedPath);
 			}
-			return new Target(target, targetCanonical, rootCanonical);
+			return new ModFileOperationTarget(target, targetCanonical, rootCanonical);
 		} catch (IOException exception) {
 			throw exception;
 		} catch (Throwable exception) {
@@ -253,7 +253,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static void deleteTarget(Bridge bridge, Object target, String relativePath) throws IOException {
+	private static void deleteTarget(ReflectiveModFileOperations bridge, Object target, String relativePath) throws IOException {
 		try {
 			if (!(boolean) bridge.delete.invoke(target) && (boolean) bridge.exists.invoke(target)) {
 				throw new IOException("Unable to delete target: " + relativePath);
@@ -265,7 +265,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static void deleteTree(Bridge bridge, Object target, String rootCanonical, String relativePath)
+	private static void deleteTree(ReflectiveModFileOperations bridge, Object target, String rootCanonical, String relativePath)
 			throws IOException {
 		try {
 			String canonical = (String) bridge.canonicalPath.invoke(target);
@@ -287,7 +287,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static List<String> listRoot(Bridge bridge, String directory, boolean recursive) throws IOException {
+	private static List<String> listRoot(ReflectiveModFileOperations bridge, String directory, boolean recursive) throws IOException {
 		try {
 			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
 			Object root = bridge.fileConstructor.invoke(rootPath);
@@ -310,7 +310,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static void collect(Bridge bridge, Object folder, String relative, boolean recursive, List<String> result)
+	private static void collect(ReflectiveModFileOperations bridge, Object folder, String relative, boolean recursive, List<String> result)
 			throws IOException {
 		try {
 			Object[] children = (Object[]) bridge.listFiles.invoke(folder);
@@ -331,7 +331,7 @@ public class BattleNext_ModFileManager {
 	}
 
 	private static String targetPath(Object target) {
-		return ((Target) target).canonicalPath;
+		return ((ModFileOperationTarget) target).canonicalPath;
 	}
 
 	private static void ensureInsideRoot(String root, String target, String relativePath) throws IOException {
@@ -376,19 +376,19 @@ public class BattleNext_ModFileManager {
 		return fileFailure(relativePath, exception);
 	}
 
-	private static class Target {
+	private static class ModFileOperationTarget {
 		private final Object file;
 		private final String canonicalPath;
 		private final String rootCanonical;
 
-		private Target(Object file, String canonicalPath, String rootCanonical) {
+		private ModFileOperationTarget(Object file, String canonicalPath, String rootCanonical) {
 			this.file = file;
 			this.canonicalPath = canonicalPath;
 			this.rootCanonical = rootCanonical;
 		}
 	}
 
-	private static class Bridge {
+	private static class ReflectiveModFileOperations {
 		private final MethodHandle fileConstructor;
 		private final MethodHandle exists;
 		private final MethodHandle directoryCheck;
@@ -411,7 +411,7 @@ public class BattleNext_ModFileManager {
 		private final MethodHandle byteArrayWrite;
 		private final MethodHandle toByteArray;
 
-		private Bridge(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
+		private ReflectiveModFileOperations(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
 				MethodHandle regularFile, MethodHandle name, MethodHandle canonicalPath,
 				MethodHandle absolutePath, MethodHandle parent, MethodHandle mkdirs,
 				MethodHandle listFiles, MethodHandle delete, MethodHandle inputConstructor, MethodHandle read,

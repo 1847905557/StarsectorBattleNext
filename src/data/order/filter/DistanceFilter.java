@@ -1,9 +1,9 @@
-package data.automation.filter;
+package data.order.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.automation.OrderFilter;
+import data.order.OrderFilter;
 import org.lazywizard.lazylib.MathUtils;
 import java.util.List;
 

@@ -8,7 +8,7 @@ import java.util.WeakHashMap;
 
 public class BattleNext_TextFieldSession {
 
-	private enum Phase {
+	private enum TextFieldPointerPhase {
 		IDLE,
 		PRESSED,
 		DRAGGING
@@ -18,7 +18,7 @@ public class BattleNext_TextFieldSession {
 
 	private static BattleNext_TextField focusedField;
 	private static BattleNext_TextField pointerOwner;
-	private static Phase phase = Phase.IDLE;
+	private static TextFieldPointerPhase phase = TextFieldPointerPhase.IDLE;
 	private static float pointerX;
 	private static float pointerY;
 	private static long generation;
@@ -51,7 +51,7 @@ public class BattleNext_TextFieldSession {
 		focusedField = field;
 		field.onFocusGained();
 		pointerOwner = field;
-		phase = Phase.PRESSED;
+		phase = TextFieldPointerPhase.PRESSED;
 		generation++;
 		pointerX = event.getX();
 		pointerY = event.getY();
@@ -63,7 +63,7 @@ public class BattleNext_TextFieldSession {
 	}
 
 	static boolean isDragging(BattleNext_TextField field) {
-		return pointerOwner == field && phase == Phase.DRAGGING;
+		return pointerOwner == field && phase == TextFieldPointerPhase.DRAGGING;
 	}
 
 	static float getPointerX() {
@@ -79,7 +79,7 @@ public class BattleNext_TextFieldSession {
 		BattleNext_TextField oldPointer = pointerOwner;
 		focusedField = null;
 		pointerOwner = null;
-		phase = Phase.IDLE;
+		phase = TextFieldPointerPhase.IDLE;
 		generation++;
 		if (oldPointer != null) {
 			oldPointer.endPointer(clearSelection);
@@ -92,7 +92,7 @@ public class BattleNext_TextFieldSession {
 	static void finishPointer() {
 		BattleNext_TextField oldPointer = pointerOwner;
 		pointerOwner = null;
-		phase = Phase.IDLE;
+		phase = TextFieldPointerPhase.IDLE;
 		generation++;
 		if (oldPointer != null) {
 			oldPointer.endPointer(false);
@@ -119,18 +119,18 @@ public class BattleNext_TextFieldSession {
 			}
 
 			if (event.isMouseMoveEvent() && activeGeneration == generation && pointerOwner != null
-					&& (phase == Phase.PRESSED || phase == Phase.DRAGGING)) {
+					&& (phase == TextFieldPointerPhase.PRESSED || phase == TextFieldPointerPhase.DRAGGING)) {
 				pointerX = event.getX();
 				pointerY = event.getY();
 				pointerOwner.updateDragFromPointer(pointerX, pointerY, true);
-				phase = Phase.DRAGGING;
+				phase = TextFieldPointerPhase.DRAGGING;
 				event.consume();
 				handled = true;
 				continue;
 			}
 
 			if (event.isLMBUpEvent() && activeGeneration == generation && pointerOwner != null
-					&& (phase == Phase.PRESSED || phase == Phase.DRAGGING)) {
+					&& (phase == TextFieldPointerPhase.PRESSED || phase == TextFieldPointerPhase.DRAGGING)) {
 				pointerX = event.getX();
 				pointerY = event.getY();
 				pointerOwner.updateDragFromPointer(pointerX, pointerY, true);

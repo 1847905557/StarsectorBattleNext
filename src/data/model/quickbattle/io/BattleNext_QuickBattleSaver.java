@@ -85,7 +85,7 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 	}
 
 	private String sourceLine(BattleNext_QuickBattleModel model, boolean legacy) {
-		if (model.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+		if (model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			return model.getRawContent().isEmpty() ? "#" : model.getRawContent();
 		}
 		String player = legacy ? stripLegacyPrefix(model.getPlayer()) : model.getPlayer();

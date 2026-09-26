@@ -1,0 +1,27 @@
+id,type,script,desc
+assault,starter,data.order.starter.AssaultStarter,Assault starter
+avoid,starter,data.order.starter.AvoidStarter,Avoid starter
+capture,starter,data.order.starter.CaptureStarter,Capture starter
+clean,starter,data.order.starter.CleanStarter,Clean starter
+control,starter,data.order.starter.ControlStarter,Control starter
+defend,starter,data.order.starter.DefendStarter,Defend starter
+eliminate,starter,data.order.starter.EliminateStarter,Eliminate starter
+engage,starter,data.order.starter.EngageStarter,Engage starter
+escort,starter,data.order.starter.EscortStarter,Escort starter
+fighter,starter,data.order.starter.FighterStrikeStarter,Fighter strike starter
+harass,starter,data.order.starter.HarassStarter,Harass starter
+retreat,starter,data.order.starter.RetreatStarter,Retreat starter
+distance,filter,data.order.filter.DistanceFilter,Distance filter
+hullsize,filter,data.order.filter.HullSizeFilter,Hull size filter
+hulltype,filter,data.order.filter.HullTypeFilter,Hull type filter
+selfFlux,filter,data.order.filter.SelfFluxFilter,Self flux filter
+selfHp,filter,data.order.filter.SelfHpFilter,Self hp filter
+targetFlux,filter,data.order.filter.TargetFluxFilter,Target flux filter
+targetHp,filter,data.order.filter.TargetHpFilter,Target hp filter
+targetSpeed,filter,data.order.filter.TargetSpeedFilter,Target speed filter
+concentrate,picker,data.order.picker.ConcentratePicker,Concentrate picker
+nearest,picker,data.order.picker.NearestPicker,Nearest picker
+random,picker,data.order.picker.RandomPicker,Random picker
+spread,picker,data.order.picker.SpreadPicker,Spread picker
+persist,suffix,data.order.suffix.PersistSuffix,Persist suffix
+priority,suffix,data.order.suffix.PrioritySuffix,Priority suffix

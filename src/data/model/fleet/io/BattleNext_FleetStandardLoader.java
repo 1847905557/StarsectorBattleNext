@@ -4,7 +4,7 @@ import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_VariantAdapter;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
@@ -56,7 +56,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 			String variantId = normalizedVariant.substring(folderPrefix.length(), normalizedVariant.length() - ".variant".length());
 			try {
 				String text = Global.getSettings().loadText(variantPath, MOD_ID);
-				fleet.putVariant(BattleNext_VariantAdapter.fromJson(new JSONObject(text), variantId));
+				fleet.putVariant(BattleNext_VariantBuilder.fromJson(new JSONObject(text), variantId));
 			} catch (IOException | JSONException exception) {
 				throw new IllegalStateException("Unable to load variant " + variantPath + ": " + exception.getMessage(), exception);
 			}

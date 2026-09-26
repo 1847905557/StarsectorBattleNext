@@ -1,101 +1,76 @@
-package data.automation;
+package data.order;
 
 import com.fs.starfarer.api.Global;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
-import data.scripts.tools.BattleNext_CsvLine;
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 
 public class BattleNext_OrderRegistry {
 
-
-	private static final List<String> TYPES = List.of("starter", "filter", "picker", "suffix");
-	private static final String ORDERS_CSV_PATH = "data/automation/orders.csv";
-	private static final String MOD_ID = "AI_Battles_Next";
+	public static final String PATH = "data/config/BattleNext_orders.csv";
 	private static final BattleNext_OrderRegistry INSTANCE = new BattleNext_OrderRegistry();
 
-	private final Map<String, Map<String, BattleNext_OrderSpec>> byType = new LinkedHashMap<>();
+	private static final List<String> TYPES = List.of("starter", "filter", "picker", "suffix");
 
-	private BattleNext_OrderRegistry() {
-		for (String type : TYPES) {
-			byType.put(type, new LinkedHashMap<>());
-		}
-	}
+	private Map<String, BattleNext_OrderSpec> entries = Map.of();
+	private Function<String, Object> scriptFactory;
 
 	@LifecycleEntry
-	public static void loadFromSettings() {
-		String orders;
-		try {
-			orders = Global.getSettings().loadText(ORDERS_CSV_PATH, MOD_ID);
-		} catch (IOException | JSONException exception) {
-			throw new IllegalArgumentException("Unable to read data/automation/orders.csv", exception);
-		}
-		List<String> errors = INSTANCE.loadCsv(orders);
-		errors.addAll(INSTANCE.validate());
-		if (!errors.isEmpty()) throw new IllegalArgumentException("Invalid data/automation/orders.csv: " + String.join("; ", errors));
-	}
-
 	public static BattleNext_OrderRegistry getInstance() {
 		return INSTANCE;
 	}
 
-	public List<String> loadCsv(String csv) {
-		List<String> errors = new ArrayList<>();
-		if (csv == null) {
-			return List.of("orders.csv is null");
+	public static void loadFromSettings() {
+		try {
+			JSONArray rows = Global.getSettings().getMergedSpreadsheetData("id", PATH);
+			INSTANCE.load(rows, name -> Global.getSettings().getInstanceOfScript(name));
+		} catch (IOException | JSONException exception) {
+			throw new IllegalArgumentException("Unable to read " + PATH, exception);
 		}
-		for (String type : TYPES) {
-			byType.get(type).clear();
-		}
-		int lineNumber = 0;
-		for (String line : csv.split("\\R")) {
-			lineNumber++;
-			String trimmed = line.trim();
-			if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.equals("id,type,script,desc")) {
-				continue;
-			}
-			List<String> fields = BattleNext_CsvLine.parse(line);
-			if (fields.size() < 4) {
-				errors.add("line " + lineNumber + ": expected id,type,script,desc");
-				continue;
-			}
-			String type = fields.get(1).toLowerCase(Locale.ROOT);
-			if (!byType.containsKey(type)) {
-				errors.add("line " + lineNumber + ": unsupported type " + type);
-				continue;
-			}
-			if (fields.get(0).isEmpty() || fields.get(2).isEmpty()) {
-				errors.add("line " + lineNumber + ": id and script are required");
-				continue;
-			}
-			byType.get(type).put(fields.get(0), new BattleNext_OrderSpec(fields.get(0), type, fields.get(2), fields.get(3)));
-		}
-		return errors;
 	}
 
-	public List<String> validate() {
+	public void load(JSONArray rows, Function<String, Object> scriptFactory) throws JSONException {
+		Map<String, BattleNext_OrderSpec> parsed = new LinkedHashMap<>();
 		List<String> errors = new ArrayList<>();
-		for (Map<String, BattleNext_OrderSpec> values : byType.values()) {
-			for (BattleNext_OrderSpec spec : values.values()) {
-				try {
-					Class<?> scriptClass = Global.getSettings().getScriptClassLoader().loadClass(spec.getScript());
-					Class<?> contract = contractFor(spec.getType());
-					if (contract != null && !contract.isAssignableFrom(scriptClass)) {
-						errors.add(spec.getId() + ": script does not implement " + contract.getSimpleName());
-					}
-				} catch (Exception exception) {
-					errors.add(spec.getId() + ": cannot load " + spec.getScript());
+		for (int index = 0; index < rows.length(); index++) {
+			JSONObject row = rows.getJSONObject(index);
+			String id = row.optString("id", "").trim();
+			String type = row.optString("type", "").trim();
+			String script = row.optString("script", "").trim();
+			String description = row.optString("desc", "").trim();
+			if (id.isEmpty() || script.isEmpty() || description.isEmpty() || !TYPES.contains(type)) {
+				errors.add("row " + (index + 1) + ": invalid id,type,script,desc");
+				continue;
+			}
+			if (parsed.containsKey(id)) {
+				errors.add("row " + (index + 1) + ": duplicate order " + id);
+				continue;
+			}
+			try {
+				Object instance = scriptFactory.apply(script);
+				Class<?> contract = contractFor(type);
+				if (!contract.isInstance(instance)) {
+					errors.add(id + ": script does not implement " + contract.getSimpleName());
+					continue;
 				}
+				parsed.put(id, new BattleNext_OrderSpec(id, type, script, description));
+			} catch (RuntimeException exception) {
+				errors.add(id + ": cannot instantiate " + script + ": " + exception.getMessage());
 			}
 		}
-		return errors;
+		if (!errors.isEmpty()) {
+			throw new IllegalArgumentException("Invalid " + PATH + ": " + String.join("; ", errors));
+		}
+		entries = parsed;
+		this.scriptFactory = scriptFactory;
 	}
 
 	private Class<?> contractFor(String type) {
@@ -103,23 +78,27 @@ public class BattleNext_OrderRegistry {
 		if ("filter".equals(type)) return OrderFilter.class;
 		if ("picker".equals(type)) return OrderPicker.class;
 		if ("suffix".equals(type)) return OrderSuffix.class;
-		return null;
+		throw new IllegalArgumentException("Unknown order type: " + type);
 	}
 
-	public Object create(String type, String id) {
-		Map<String, BattleNext_OrderSpec> values = byType.get(type == null ? "" : type.toLowerCase(Locale.ROOT));
-		if (values == null || !values.containsKey(id)) {
-			throw new IllegalArgumentException("Unknown order: " + type + "/" + id);
-		}
-		BattleNext_OrderSpec spec = values.get(id);
+	public Object create(String id) {
+		BattleNext_OrderSpec spec = entries.get(id);
 		try {
-			return Global.getSettings().getScriptClassLoader().loadClass(spec.getScript()).getDeclaredConstructor().newInstance();
-		} catch (Exception exception) {
+			return scriptFactory.apply(spec.getScript());
+		} catch (RuntimeException exception) {
 			throw new IllegalStateException("Unable to instantiate order " + id, exception);
 		}
 	}
 
-	public Map<String, BattleNext_OrderSpec> get(String type) {
-		return Collections.unmodifiableMap(byType.getOrDefault(type == null ? "" : type.toLowerCase(Locale.ROOT), Map.of()));
+	public BattleNext_OrderSpec get(String id) {
+		return entries.get(id);
+	}
+
+	public List<BattleNext_OrderSpec> getAll() {
+		return List.copyOf(entries.values());
+	}
+
+	public List<BattleNext_OrderSpec> getByType(String type) {
+		return entries.values().stream().filter(entry -> entry.getType().equals(type)).toList();
 	}
 }

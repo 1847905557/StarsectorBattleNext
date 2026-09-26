@@ -5,8 +5,8 @@ import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.scripts.combat.BattleNext_Scorekeeper;
-import data.scripts.fleet.BattleNext_FleetAssembler;
-import data.scripts.fleet.BattleNext_FleetAssembly;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
@@ -29,12 +29,12 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	public void defineMission(MissionDefinitionAPI api) {
 		expectedDp = BattleNext_KeyTuning.adjustVerticalClamped(expectedDp, EXPECTED_DP_STEP, MIN_EXPECTED_DP, MAX_EXPECTED_DP);
 		factionIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(factionIndex, FACTION_COUNT);
-		BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
-		BattleNext_FleetAssembly player = assembler.assemble(createFleet("pve-player", "Player fleet", "wolf_CS"));
-		BattleNext_FleetAssembly enemy = assembler.assemble(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
-		configureFleet(api, FleetSide.PLAYER, player, true);
-		configureFleet(api, FleetSide.ENEMY, enemy, false);
-		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(player.getMembers(), enemy.getMembers());
+		BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
+		BattleNext_AssembledFleet assembledPlayerFleet = fleetBuilder.build(createFleet("pve-player", "Player fleet", "wolf_CS"));
+		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
+		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, true);
+		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet, false);
+		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(assembledPlayerFleet.getMembers(), assembledEnemyFleet.getMembers());
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
 				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null));
@@ -48,11 +48,11 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		return new BattleNext_FleetModel(id, name, List.of(), List.of(), List.of(member));
 	}
 
-	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly,
+	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet assembledFleet,
 			boolean defaultAi) {
 		api.initFleet(side, "", FleetGoal.ATTACK, defaultAi, 1);
-		api.setFleetTagline(side, assembly.getDefinition().getName());
-		for (com.fs.starfarer.api.fleet.FleetMemberAPI member : assembly.getMembers()) {
+		api.setFleetTagline(side, assembledFleet.getDefinition().getName());
+		for (com.fs.starfarer.api.fleet.FleetMemberAPI member : assembledFleet.getMembers()) {
 			api.addFleetMember(side, member);
 		}
 	}

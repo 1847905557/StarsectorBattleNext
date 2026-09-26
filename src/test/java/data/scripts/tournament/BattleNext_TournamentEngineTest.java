@@ -3,7 +3,7 @@ package data.scripts.tournament;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.model.tournament.BattleNext_TournamentModel.BracketType;
+import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import org.json.JSONObject;
@@ -22,7 +22,7 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void jsonUsesNewFieldsAndRejectsUnknownEnums() throws Exception {
-		BattleNext_TournamentModel tournament = tournament(3, BracketType.DOUBLE_ELIMINATION, 4);
+		BattleNext_TournamentModel tournament = tournament(3, TournamentBracketType.DOUBLE_ELIMINATION, 4);
 		engine.start(tournament);
 		JSONObject json = tournament.toJson();
 		assertEquals(1, json.getInt("formatVersion"));
@@ -43,18 +43,18 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void drawAndSideSwapUseOrderedRounds() {
-		BattleNext_TournamentModel tournament = tournament(2, BracketType.SINGLE_ELIMINATION, 4);
+		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.SINGLE_ELIMINATION, 4);
 		engine.start(tournament);
 		BattleNext_Match match = engine.getNextMatch(tournament);
 		engine.recordRound(tournament, match.getId(), "draw", report());
-		assertEquals(BattleNext_Round.Status.DRAW, match.getRounds().get(0).getStatus());
+		assertEquals(BattleNext_Round.RoundStatus.DRAW, match.getRounds().get(0).getStatus());
 		assertEquals("F1", match.getPlayer());
 		engine.recordRound(tournament, match.getId(), "F1", report());
 		assertEquals("F2", match.getPlayer());
 		engine.recordRound(tournament, match.getId(), "F1", report());
-		assertEquals(BattleNext_Round.Status.ENEMY_WIN, match.getRounds().get(2).getStatus());
+		assertEquals(BattleNext_Round.RoundStatus.ENEMY_WIN, match.getRounds().get(2).getStatus());
 		assertEquals(2, match.getPlayerWins());
-		assertEquals(BattleNext_Match.Status.PENDING, match.getStatus());
+		assertEquals(BattleNext_Match.MatchStatus.PENDING, match.getStatus());
 		engine.recordRound(tournament, match.getId(), "F1", report());
 		assertEquals("F1", tournament.getChampionFleetId());
 		assertEquals(4, match.getRounds().size());
@@ -62,24 +62,24 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void largeBoCountDoesNotOverflowThreshold() {
-		BattleNext_TournamentModel tournament = tournament(2, BracketType.SINGLE_ELIMINATION, Integer.MAX_VALUE);
+		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.SINGLE_ELIMINATION, Integer.MAX_VALUE);
 		engine.start(tournament);
 		BattleNext_Match match = engine.getNextMatch(tournament);
 		engine.recordRound(tournament, match.getId(), match.getPlayer(), report());
-		assertEquals(BattleNext_Match.Status.PENDING, match.getStatus());
+		assertEquals(BattleNext_Match.MatchStatus.PENDING, match.getStatus());
 	}
 
 	@Test
 	void playableMatchTotalsUseFormatAndSkipByes() {
 		for (int count : new int[]{2, 3, 4, 5, 8, 32}) {
-			BattleNext_TournamentModel single = tournament(count, BracketType.SINGLE_ELIMINATION, 3);
+			BattleNext_TournamentModel single = tournament(count, TournamentBracketType.SINGLE_ELIMINATION, 3);
 			assertEquals(count - 1, single.getPlayableMatchTotal());
-			BattleNext_TournamentModel roundRobin = tournament(count, BracketType.ROUND_ROBIN, 3);
+			BattleNext_TournamentModel roundRobin = tournament(count, TournamentBracketType.ROUND_ROBIN, 3);
 			assertEquals(count * (count - 1) / 2, roundRobin.getPlayableMatchTotal());
-			BattleNext_TournamentModel doubleElimination = tournament(count, BracketType.DOUBLE_ELIMINATION, 3);
+			BattleNext_TournamentModel doubleElimination = tournament(count, TournamentBracketType.DOUBLE_ELIMINATION, 3);
 			assertEquals(2 * count - 2, doubleElimination.getPlayableMatchTotal());
 		}
-		BattleNext_TournamentModel tournament = tournament(4, BracketType.SINGLE_ELIMINATION, 4);
+		BattleNext_TournamentModel tournament = tournament(4, TournamentBracketType.SINGLE_ELIMINATION, 4);
 		engine.start(tournament);
 		assertEquals(3, tournament.getPlayableMatchTotal());
 		assertEquals(2, tournament.getPlayableMatchCount());
@@ -89,7 +89,7 @@ class BattleNext_TournamentEngineTest {
 	@Test
 	void seededBracketsCompleteForSupportedFleetCounts() {
 		for (int count : new int[]{2, 3, 4, 5, 8, 32}) {
-			for (BracketType type : new BracketType[]{BracketType.SINGLE_ELIMINATION, BracketType.DOUBLE_ELIMINATION}) {
+			for (TournamentBracketType type : new TournamentBracketType[]{TournamentBracketType.SINGLE_ELIMINATION, TournamentBracketType.DOUBLE_ELIMINATION}) {
 				BattleNext_TournamentModel tournament = tournament(count, type, 1);
 				engine.start(tournament);
 				int played = finishByPlayer(tournament);
@@ -105,7 +105,7 @@ class BattleNext_TournamentEngineTest {
 	@Test
 	void doubleEliminationHandlesAlternatingWinners() {
 		for (int count : new int[]{2, 3, 4, 5, 8, 32}) {
-			BattleNext_TournamentModel tournament = tournament(count, BracketType.DOUBLE_ELIMINATION, 1);
+			BattleNext_TournamentModel tournament = tournament(count, TournamentBracketType.DOUBLE_ELIMINATION, 1);
 			engine.start(tournament);
 			int played = 0;
 			while (!tournament.isCompleted() && played < 2000) {
@@ -115,26 +115,26 @@ class BattleNext_TournamentEngineTest {
 				played++;
 			}
 			assertTrue(tournament.isCompleted(), "Alternating results with " + count + " fleets");
-			assertEliminationLosses(tournament, BracketType.DOUBLE_ELIMINATION, count);
+			assertEliminationLosses(tournament, TournamentBracketType.DOUBLE_ELIMINATION, count);
 		}
 	}
 
 	@Test
 	void grandFinalResetsWhenLosersChampionWins() {
-		BattleNext_TournamentModel tournament = tournament(2, BracketType.DOUBLE_ELIMINATION, 1);
+		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.DOUBLE_ELIMINATION, 1);
 		engine.start(tournament);
 		engine.recordRound(tournament, "W1-1", "F1", report());
 		assertEquals("F2", tournament.findMatch("L1-1").getWinnerFleetId());
 		engine.recordRound(tournament, "GF", "F2", report());
 		assertFalse(tournament.isCompleted());
-		assertEquals(BattleNext_Match.Stage.GRAND_FINAL_RESET, tournament.findMatch("GF_RESET").getStage());
+		assertEquals(BattleNext_Match.MatchStage.GRAND_FINAL_RESET, tournament.findMatch("GF_RESET").getStage());
 		engine.recordRound(tournament, "GF_RESET", "F1", report());
 		assertEquals("F1", tournament.getChampionFleetId());
 	}
 
 	@Test
 	void rollbackKeepsIndependentResultsAndClearsDependents() throws Exception {
-		for (BracketType type : new BracketType[]{BracketType.SINGLE_ELIMINATION, BracketType.DOUBLE_ELIMINATION}) {
+		for (TournamentBracketType type : new TournamentBracketType[]{TournamentBracketType.SINGLE_ELIMINATION, TournamentBracketType.DOUBLE_ELIMINATION}) {
 			BattleNext_TournamentModel tournament = tournament(4, type, 1);
 			engine.start(tournament);
 			engine.recordRound(tournament, "W1-1", tournament.findMatch("W1-1").getPlayer(), report());
@@ -145,8 +145,8 @@ class BattleNext_TournamentEngineTest {
 			dependent.setId("discard-me-123");
 			engine.recordRound(tournament, "W2-1", tournament.findMatch("W2-1").getPlayer(), dependent);
 			engine.rollback(tournament, "W1-1");
-			assertEquals(BattleNext_Match.Status.PENDING, tournament.findMatch("W1-1").getStatus());
-			assertEquals(BattleNext_Match.Status.COMPLETE, tournament.findMatch("W1-2").getStatus());
+			assertEquals(BattleNext_Match.MatchStatus.PENDING, tournament.findMatch("W1-1").getStatus());
+			assertEquals(BattleNext_Match.MatchStatus.COMPLETE, tournament.findMatch("W1-2").getStatus());
 			assertEquals(1, tournament.findMatch("W1-2").getRounds().size());
 			assertEquals("independent", tournament.findMatch("W1-2").getRounds().get(0).getReport().getId());
 			assertNull(tournament.findMatch("W2-1"));
@@ -157,13 +157,13 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void roundRobinCycleUsesSeedOrderAndKofAdvances() {
-		BattleNext_TournamentModel roundRobin = tournament(3, BracketType.ROUND_ROBIN, 1);
+		BattleNext_TournamentModel roundRobin = tournament(3, TournamentBracketType.ROUND_ROBIN, 1);
 		engine.start(roundRobin);
 		engine.recordRound(roundRobin, "RR-0-1", "F1", report());
 		engine.recordRound(roundRobin, "RR-0-2", "F3", report());
 		engine.recordRound(roundRobin, "RR-1-2", "F2", report());
 		assertEquals("F1", roundRobin.getChampionFleetId());
-		BattleNext_TournamentModel kof = tournament(5, BracketType.KING_OF_THE_HILL, 1);
+		BattleNext_TournamentModel kof = tournament(5, TournamentBracketType.KING_OF_THE_HILL, 1);
 		engine.start(kof);
 		assertEquals(4, finishByPlayer(kof));
 		assertTrue(kof.isCompleted());
@@ -171,13 +171,13 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void seededPairingsAndHeadToHeadRanking() {
-		BattleNext_TournamentModel seeded = tournament(8, BracketType.SINGLE_ELIMINATION, 1);
+		BattleNext_TournamentModel seeded = tournament(8, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		engine.start(seeded);
 		assertEquals("F1", seeded.findMatch("W1-1").getPlayer());
 		assertEquals("F8", seeded.findMatch("W1-1").getEnemy());
 		assertEquals("F4", seeded.findMatch("W1-2").getPlayer());
 		assertEquals("F5", seeded.findMatch("W1-2").getEnemy());
-		BattleNext_TournamentModel roundRobin = tournament(4, BracketType.ROUND_ROBIN, 1);
+		BattleNext_TournamentModel roundRobin = tournament(4, TournamentBracketType.ROUND_ROBIN, 1);
 		engine.start(roundRobin);
 		engine.recordRound(roundRobin, "RR-0-1", "F2", report());
 		engine.recordRound(roundRobin, "RR-0-2", "F1", report());
@@ -190,7 +190,7 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void fleetLimitRejectsExcessParticipants() {
-		BattleNext_TournamentModel tournament = tournament(5, BracketType.SINGLE_ELIMINATION, 1);
+		BattleNext_TournamentModel tournament = tournament(5, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		tournament.setMaxFleet(4);
 		assertThrows(IllegalArgumentException.class, () -> engine.start(tournament));
 	}
@@ -206,7 +206,7 @@ class BattleNext_TournamentEngineTest {
 	@Test
 	void rawCommentEditDoesNotDuplicateCommentPrefix() {
 		BattleNext_QuickBattleModel comment = BattleNext_QuickBattleModel.parseLine("# 文本", false);
-		assertEquals(BattleNext_QuickBattleModel.RowType.RAW, comment.getRowType());
+		assertEquals(BattleNext_QuickBattleModel.QuickBattleRowType.RAW, comment.getRowType());
 		assertEquals("# 文本", comment.getRawContent());
 		comment.promoteRaw("# 文本1");
 		assertEquals("# 文本1", comment.toSourceLine());
@@ -214,7 +214,7 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void nestedEnumsRejectUnknownValues() throws Exception {
-		BattleNext_TournamentModel tournament = tournament(2, BracketType.SINGLE_ELIMINATION, 1);
+		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		engine.start(tournament);
 		BattleNext_Match match = engine.getNextMatch(tournament);
 		engine.recordRound(tournament, match.getId(), match.getPlayer(), report());
@@ -229,7 +229,7 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void jsonRoundTripKeepsProgressAndDependencies() throws Exception {
-		BattleNext_TournamentModel tournament = tournament(5, BracketType.DOUBLE_ELIMINATION, 1);
+		BattleNext_TournamentModel tournament = tournament(5, TournamentBracketType.DOUBLE_ELIMINATION, 1);
 		engine.start(tournament);
 		BattleNext_Match first = engine.getNextMatch(tournament);
 		engine.recordRound(tournament, first.getId(), first.getPlayer(), report());
@@ -240,7 +240,7 @@ class BattleNext_TournamentEngineTest {
 		assertTrue(restored.isCompleted());
 	}
 
-	private BattleNext_TournamentModel tournament(int count, BracketType type, int boCount) {
+	private BattleNext_TournamentModel tournament(int count, TournamentBracketType type, int boCount) {
 		BattleNext_TournamentModel result = new BattleNext_TournamentModel("test", "Test", type, boCount, count);
 		List<String> fleets = new ArrayList<>();
 		for (int index = 1; index <= count; index++) fleets.add("F" + index);
@@ -264,7 +264,7 @@ class BattleNext_TournamentEngineTest {
 		return new BattleNext_BattleReportModel();
 	}
 
-	private void assertEliminationLosses(BattleNext_TournamentModel tournament, BracketType type, int count) {
+	private void assertEliminationLosses(BattleNext_TournamentModel tournament, TournamentBracketType type, int count) {
 		Map<String, Integer> losses = new HashMap<>();
 		for (BattleNext_Match match : tournament.getMatches()) {
 			if (!match.getLoserFleetId().isEmpty()) {
@@ -273,7 +273,7 @@ class BattleNext_TournamentEngineTest {
 		}
 		for (String fleet : tournament.getFleetIds()) {
 			if (!fleet.equals(tournament.getChampionFleetId())) {
-				assertEquals(type == BracketType.DOUBLE_ELIMINATION ? 2 : 1,
+				assertEquals(type == TournamentBracketType.DOUBLE_ELIMINATION ? 2 : 1,
 						losses.getOrDefault(fleet, 0), type + " losses for " + count + " fleets: " + fleet);
 			}
 		}

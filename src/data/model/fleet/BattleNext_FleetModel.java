@@ -1,7 +1,7 @@
 package data.model.fleet;
 
 import data.model.BattleNext_JsonModel;
-import data.scripts.fleet.BattleNext_VariantAdapter;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -21,7 +21,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 	private List<BattleNext_MemberModel> members;
 	private String author;
 	private String description;
-	private final Map<String, BattleNext_VariantAdapter> variants = new LinkedHashMap<>();
+	private final Map<String, BattleNext_VariantBuilder> variants = new LinkedHashMap<>();
 	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
@@ -152,15 +152,15 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		this.description = normalize(description);
 	}
 
-	public void putVariant(BattleNext_VariantAdapter variant) {
+	public void putVariant(BattleNext_VariantBuilder variant) {
 		if (variant != null && !variant.getId().isEmpty()) variants.put(variant.getId(), variant);
 	}
 
-	public BattleNext_VariantAdapter getVariant(String variantId) {
+	public BattleNext_VariantBuilder getVariant(String variantId) {
 		return variants.get(variantId);
 	}
 
-	public List<BattleNext_VariantAdapter> getVariants() {
+	public List<BattleNext_VariantBuilder> getVariants() {
 		return List.copyOf(variants.values());
 	}
 

@@ -13,18 +13,18 @@ import java.util.List;
 
 public final class BattleNext_DropdownField {
 
-	public static final class Option {
+	public static final class DropdownChoice {
 
 		private final String id;
 		private final String label;
 		private final boolean enabled;
 		private final String disabledReason;
 
-		public Option(String id, String label) {
+		public DropdownChoice(String id, String label) {
 			this(id, label, true, "");
 		}
 
-		public Option(String id, String label, boolean enabled, String disabledReason) {
+		public DropdownChoice(String id, String label, boolean enabled, String disabledReason) {
 			this.id = id == null ? "" : id;
 			this.label = label == null ? "" : label;
 			this.enabled = enabled;
@@ -32,17 +32,17 @@ public final class BattleNext_DropdownField {
 		}
 	}
 
-	public interface Listener {
+	public interface DropdownSelectionListener {
 		void onSelected(String id);
 	}
 
-	private enum Action { TOGGLE }
+	private enum DropdownAction { TOGGLE }
 
 	private final CustomPanelAPI host;
 	private final CustomUIPanelPlugin inputOwner;
 	private final float width;
-	private final Listener listener;
-	private final List<Option> options = new ArrayList<>();
+	private final DropdownSelectionListener listener;
+	private final List<DropdownChoice> options = new ArrayList<>();
 	private UIRect rect;
 	private CustomPanelAPI row;
 	private ButtonAPI button;
@@ -51,7 +51,7 @@ public final class BattleNext_DropdownField {
 	private boolean enabled = true;
 
 	public BattleNext_DropdownField(CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
-			float width, Listener listener) {
+			float width, DropdownSelectionListener listener) {
 		this.host = host;
 		this.inputOwner = inputOwner;
 		this.width = width;
@@ -61,9 +61,9 @@ public final class BattleNext_DropdownField {
 	public void attach(TooltipMakerAPI parent, UIRect rect) {
 		if (row != null) host.removeComponent(row);
 		this.rect = rect;
-		row = host.createCustomPanel(rect.getWidth(), rect.getHeight(), new ButtonPlugin());
+		row = host.createCustomPanel(rect.getWidth(), rect.getHeight(), new DropdownButtonPlugin());
 		button = BattleNext_PageLayout.fixedButton(row,
-				new UIRect(0f, 0f, rect.getWidth(), rect.getHeight()), "", Action.TOGGLE, CutStyle.ALL, false);
+				new UIRect(0f, 0f, rect.getWidth(), rect.getHeight()), "", DropdownAction.TOGGLE, CutStyle.ALL, false);
 		host.addComponent(row).inTL(rect.getX(), rect.getY());
 		refreshLabel();
 	}
@@ -77,7 +77,7 @@ public final class BattleNext_DropdownField {
 		return value;
 	}
 
-	public void setOptions(List<Option> values) {
+	public void setOptions(List<DropdownChoice> values) {
 		options.clear();
 		if (values != null) options.addAll(values);
 		if (popup != null) openPopup();
@@ -93,7 +93,7 @@ public final class BattleNext_DropdownField {
 	public void refreshLabel() {
 		if (button == null) return;
 		String label = value;
-		for (Option option : options) {
+		for (DropdownChoice option : options) {
 			if (option.id.equals(value)) {
 				label = option.label;
 				break;
@@ -107,10 +107,10 @@ public final class BattleNext_DropdownField {
 		popup = null;
 	}
 
-	private final class ButtonPlugin extends BaseCustomUIPanelPlugin {
+	private final class DropdownButtonPlugin extends BaseCustomUIPanelPlugin {
 		@Override
 		public void buttonPressed(Object buttonId) {
-			if (buttonId != Action.TOGGLE) return;
+			if (buttonId != DropdownAction.TOGGLE) return;
 			if (popup == null) openPopup();
 			else close();
 		}
@@ -159,13 +159,13 @@ public final class BattleNext_DropdownField {
 		float available = Math.max(35f, above ? aboveSpace : belowSpace);
 		float height = Math.min(desiredHeight, available);
 		float y = above ? rect.getY() - height - 2f : dropdownY;
-		popup = host.createCustomPanel(width, height, new PopupPlugin());
+		popup = host.createCustomPanel(width, height, new DropdownPopupPlugin());
 		TooltipMakerAPI list = popup.createUIElement(width - 5f, height, true);
 		list.setButtonFontOrbitron20();
 		if (options.isEmpty()) {
 			list.addPara("", 0f, BattleNext_UiTheme.MUTED);
 		} else {
-			for (Option option : options) {
+			for (DropdownChoice option : options) {
 				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option, width - 15f);
 				item.setEnabled(option.enabled);
 			}
@@ -174,11 +174,11 @@ public final class BattleNext_DropdownField {
 		host.addComponent(popup).inTL(rect.getX(), Math.max(8f, y));
 	}
 
-	private final class PopupPlugin extends BaseCustomUIPanelPlugin {
+	private final class DropdownPopupPlugin extends BaseCustomUIPanelPlugin {
 		@Override
 		public void buttonPressed(Object buttonId) {
-			if (!(buttonId instanceof Option)) return;
-			Option option = (Option) buttonId;
+			if (!(buttonId instanceof DropdownChoice)) return;
+			DropdownChoice option = (DropdownChoice) buttonId;
 			if (!option.enabled) return;
 			value = option.id;
 			close();

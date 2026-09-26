@@ -23,16 +23,16 @@ import java.util.Set;
 
 public class BattleNext_OptionField {
 
-	public enum Mode {
+	public enum OptionSelectionMode {
 		SINGLE, MULTIPLE
 	}
 
-	public static class Option {
+	public static class OptionFieldChoice {
 
 		private final String id;
 		private final String label;
 
-		public Option(String id, String label) {
+		public OptionFieldChoice(String id, String label) {
 			this.id = id;
 			this.label = label;
 		}
@@ -46,18 +46,18 @@ public class BattleNext_OptionField {
 		}
 	}
 
-	public interface Source {
+	public interface OptionFieldChoiceSource {
 
-		List<Option> getOptions();
+		List<OptionFieldChoice> getOptions();
 
 		int getMaxCount(String id);
 
 		String getIconPath(String id);
 
-		void createTooltip(TooltipMakerAPI tooltip, Option option);
+		void createTooltip(TooltipMakerAPI tooltip, OptionFieldChoice option);
 	}
 
-	private enum Action {
+	private enum OptionFieldAction {
 		TOGGLE, CONFIRM, CANCEL
 	}
 
@@ -76,11 +76,11 @@ public class BattleNext_OptionField {
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final CustomPanelAPI overlayHost;
-	private final Source source;
-	private final Mode mode;
+	private final OptionFieldChoiceSource source;
+	private final OptionSelectionMode mode;
 	private final Map<String, Integer> selection = new LinkedHashMap<>();
 
-	private List<Option> options = List.of();
+	private List<OptionFieldChoice> options = List.of();
 	private TooltipMakerAPI fieldHost;
 	private CustomPanelAPI row;
 	private ButtonAPI toggle;
@@ -90,10 +90,10 @@ public class BattleNext_OptionField {
 	private CustomPanelAPI hoverPanel;
 	private TextFieldAPI search;
 	private String lastSearch = "";
-	private Option hoveredOption;
-	private final List<HoverTarget> hoverTargets = new ArrayList<>();
+	private OptionFieldChoice hoveredOption;
+	private final List<OptionTileHoverTarget> hoverTargets = new ArrayList<>();
 
-	public BattleNext_OptionField(CustomPanelAPI overlayHost, Source source, Mode mode) {
+	public BattleNext_OptionField(CustomPanelAPI overlayHost, OptionFieldChoiceSource source, OptionSelectionMode mode) {
 		this.overlayHost = overlayHost;
 		this.source = source;
 		this.mode = mode;
@@ -102,7 +102,7 @@ public class BattleNext_OptionField {
 	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value) {
 
 		fieldHost = host;
-		row = owner.createCustomPanel(width, FIELD_HEIGHT, new FieldPlugin());
+		row = owner.createCustomPanel(width, FIELD_HEIGHT, new OptionFieldPanelPlugin());
 		TooltipMakerAPI input = row.createUIElement(width - BUTTON_WIDTH, FIELD_HEIGHT, false);
 		field = BattleNext_TextField.addTo(input, row, width - BUTTON_WIDTH, FIELD_HEIGHT,
 				value == null ? "" : value);
@@ -113,7 +113,7 @@ public class BattleNext_OptionField {
 		row.addUIElement(input).inTL(0f, 0f);
 		toggle = BattleNext_PageLayout.fixedButton(row,
 				new UIRect(width - BUTTON_WIDTH, 0f, BUTTON_WIDTH, FIELD_HEIGHT),
-				"...", Action.TOGGLE, CutStyle.ALL, false);
+				"...", OptionFieldAction.TOGGLE, CutStyle.ALL, false);
 		host.addCustom(row, 2f);
 		return field;
 	}
@@ -163,7 +163,7 @@ public class BattleNext_OptionField {
 		BattleNext_TextField.releaseFocusedField();
 		options = new ArrayList<>(source.getOptions());
 		Set<String> known = new HashSet<>();
-		for (Option option : options) {
+		for (OptionFieldChoice option : options) {
 			known.add(option.id);
 		}
 		selection.clear();
@@ -185,17 +185,17 @@ public class BattleNext_OptionField {
 		float x = Math.max(PADDING, Math.min(row.getPosition().getX() - overlayHost.getPosition().getX(),
 				hostWidth - width - PADDING));
 
-		popup = overlayHost.createCustomPanel(width, height, new PopupPlugin());
+		popup = overlayHost.createCustomPanel(width, height, new OptionFieldPopupPlugin());
 		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, 2f);
 		popup.addUIElement(searchElement(width)).inTL(PADDING, PADDING);
 		float buttonWidth = Math.min(120f, (width - 3f * PADDING) * 0.5f);
 		float buttonY = height - 38f;
 		BattleNext_PageLayout.fixedButton(popup,
 				new UIRect(width - 2f * buttonWidth - 2f * PADDING, buttonY, buttonWidth, 30f),
-				strings.get("picker_confirm"), Action.CONFIRM, CutStyle.ALL, false);
+				strings.get("picker_confirm"), OptionFieldAction.CONFIRM, CutStyle.ALL, false);
 		BattleNext_PageLayout.fixedButton(popup,
 				new UIRect(width - buttonWidth - PADDING, buttonY, buttonWidth, 30f),
-				strings.get("picker_cancel"), Action.CANCEL, CutStyle.ALL, false);
+				strings.get("picker_cancel"), OptionFieldAction.CANCEL, CutStyle.ALL, false);
 		overlayHost.addComponent(popup).inTL(x, y);
 		overlayHost.bringComponentToTop(popup);
 		lastSearch = "";
@@ -226,8 +226,8 @@ public class BattleNext_OptionField {
 		gridPanel = popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI grid = gridPanel.createUIElement(width, height, true);
 		String query = search.getText().trim().toLowerCase(Locale.ROOT);
-		List<Option> visible = new ArrayList<>();
-		for (Option option : options) {
+		List<OptionFieldChoice> visible = new ArrayList<>();
+		for (OptionFieldChoice option : options) {
 			if (query.isEmpty() || option.id.toLowerCase(Locale.ROOT).contains(query)
 					|| option.label.toLowerCase(Locale.ROOT).contains(query)) {
 				visible.add(option);
@@ -238,12 +238,12 @@ public class BattleNext_OptionField {
 		} else {
 			int columns = Math.max(1, (int) ((width - 2f * PADDING + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
 			for (int index = 0; index < visible.size(); index++) {
-				Option option = visible.get(index);
-				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, new TilePlugin(option));
+				OptionFieldChoice option = visible.get(index);
+				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, new OptionFieldTilePlugin(option));
 				addIcon(tile, option);
 				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(PADDING + index % columns * (TILE_SIZE + TILE_GAP),
 						PADDING + index / columns * (TILE_SIZE + TILE_GAP));
-				hoverTargets.add(new HoverTarget(option, tile));
+				hoverTargets.add(new OptionTileHoverTarget(option, tile));
 			}
 			int rows = (visible.size() + columns - 1) / columns;
 			grid.setHeightSoFar(2f * PADDING + rows * (TILE_SIZE + TILE_GAP));
@@ -252,7 +252,7 @@ public class BattleNext_OptionField {
 		popup.addComponent(gridPanel).inTL(PADDING, 44f);
 	}
 
-	private void addIcon(CustomPanelAPI tile, Option option) {
+	private void addIcon(CustomPanelAPI tile, OptionFieldChoice option) {
 
 		String icon = source.getIconPath(option.id);
 		if (icon != null && !icon.isBlank()) {
@@ -278,10 +278,10 @@ public class BattleNext_OptionField {
 
 		Map<String, Integer> previous = parse(field.getText());
 		Set<String> known = new HashSet<>();
-		for (Option option : options) {
+		for (OptionFieldChoice option : options) {
 			known.add(option.id);
 		}
-		if (mode == Mode.SINGLE) {
+		if (mode == OptionSelectionMode.SINGLE) {
 			if (!selection.isEmpty()) {
 				field.setText(selection.keySet().iterator().next());
 			} else if (!previous.isEmpty() && known.contains(previous.keySet().iterator().next())) {
@@ -298,7 +298,7 @@ public class BattleNext_OptionField {
 				result.put(entry.getKey(), selection.get(entry.getKey()));
 			}
 		}
-		for (Option option : options) {
+		for (OptionFieldChoice option : options) {
 			if (selection.containsKey(option.id) && !result.containsKey(option.id)) {
 				result.put(option.id, selection.get(option.id));
 			}
@@ -322,7 +322,7 @@ public class BattleNext_OptionField {
 
 		Map<String, Integer> counts = new LinkedHashMap<>();
 		if (value == null || value.isBlank()) return counts;
-		if (mode == Mode.SINGLE) {
+		if (mode == OptionSelectionMode.SINGLE) {
 			counts.put(value.trim(), 1);
 			return counts;
 		}
@@ -347,8 +347,8 @@ public class BattleNext_OptionField {
 
 	private void updateHover(float x, float y) {
 
-		HoverTarget target = null;
-		for (HoverTarget candidate : hoverTargets) {
+		OptionTileHoverTarget target = null;
+		for (OptionTileHoverTarget candidate : hoverTargets) {
 			PositionAPI position = candidate.tile.getPosition();
 			if (x >= position.getX() && x < position.getX() + position.getWidth()
 					&& y >= position.getY() && y < position.getY() + position.getHeight()) {
@@ -364,12 +364,12 @@ public class BattleNext_OptionField {
 		showHover(target);
 	}
 
-	private void showHover(HoverTarget target) {
+	private void showHover(OptionTileHoverTarget target) {
 
 		removeHover();
 		float width = Math.min(300f, popup.getPosition().getWidth() - 16f);
 		float height = Math.min(180f, popup.getPosition().getHeight() - 16f);
-		hoverPanel = popup.createCustomPanel(width, height, new HoverPlugin(target.option));
+		hoverPanel = popup.createCustomPanel(width, height, new OptionFieldHoverPlugin(target.option));
 		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, 2f);
 		hoveredOption = target.option;
 		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - 12f, height - 12f, false);
@@ -394,17 +394,17 @@ public class BattleNext_OptionField {
 		hoveredOption = null;
 	}
 
-	private class FieldPlugin extends BaseCustomUIPanelPlugin {
+	private class OptionFieldPanelPlugin extends BaseCustomUIPanelPlugin {
 
 		@Override
 		public void buttonPressed(Object buttonId) {
-			if (buttonId != Action.TOGGLE) return;
+			if (buttonId != OptionFieldAction.TOGGLE) return;
 			if (popup == null) open();
 			else close();
 		}
 	}
 
-	private class PopupPlugin extends BaseCustomUIPanelPlugin {
+	private class OptionFieldPopupPlugin extends BaseCustomUIPanelPlugin {
 
 		@Override
 		public void renderBelow(float alphaMult) {
@@ -439,17 +439,17 @@ public class BattleNext_OptionField {
 
 		@Override
 		public void buttonPressed(Object buttonId) {
-			if (buttonId == Action.CONFIRM) confirm();
-			if (buttonId == Action.CANCEL) close();
+			if (buttonId == OptionFieldAction.CONFIRM) confirm();
+			if (buttonId == OptionFieldAction.CANCEL) close();
 		}
 	}
 
-	private class TilePlugin extends BaseCustomUIPanelPlugin {
+	private class OptionFieldTilePlugin extends BaseCustomUIPanelPlugin {
 
-		private final Option option;
+		private final OptionFieldChoice option;
 		private PositionAPI position;
 
-		private TilePlugin(Option option) {
+		private OptionFieldTilePlugin(OptionFieldChoice option) {
 			this.option = option;
 		}
 
@@ -493,7 +493,7 @@ public class BattleNext_OptionField {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
-				if (mode == Mode.SINGLE) selection.clear();
+				if (mode == OptionSelectionMode.SINGLE) selection.clear();
 				int max = maxCount(option.id);
 				int next = selection.getOrDefault(option.id, 0) + 1;
 				if (next > max) {
@@ -506,11 +506,11 @@ public class BattleNext_OptionField {
 		}
 	}
 
-	private class HoverPlugin extends BaseCustomUIPanelPlugin {
+	private class OptionFieldHoverPlugin extends BaseCustomUIPanelPlugin {
 
-		private final Option option;
+		private final OptionFieldChoice option;
 
-		private HoverPlugin(Option option) {
+		private OptionFieldHoverPlugin(OptionFieldChoice option) {
 			this.option = option;
 		}
 
@@ -521,12 +521,12 @@ public class BattleNext_OptionField {
 		}
 	}
 
-	private static class HoverTarget {
+	private static class OptionTileHoverTarget {
 
-		private final Option option;
+		private final OptionFieldChoice option;
 		private final CustomPanelAPI tile;
 
-		private HoverTarget(Option option, CustomPanelAPI tile) {
+		private OptionTileHoverTarget(OptionFieldChoice option, CustomPanelAPI tile) {
 			this.option = option;
 			this.tile = tile;
 		}

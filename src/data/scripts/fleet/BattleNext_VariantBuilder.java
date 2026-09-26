@@ -9,22 +9,22 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class BattleNext_VariantAdapter {
+public class BattleNext_VariantBuilder {
 
 	private final String id;
 	private final JSONObject json;
 
-	private BattleNext_VariantAdapter(String id, JSONObject json) {
+	private BattleNext_VariantBuilder(String id, JSONObject json) {
 		this.id = id;
 		this.json = json;
 	}
 
-	public static BattleNext_VariantAdapter fromJson(JSONObject json, String fallbackId) {
+	public static BattleNext_VariantBuilder fromJson(JSONObject json, String fallbackId) {
 		String id = json.optString("variantId", fallbackId);
-		return new BattleNext_VariantAdapter(id, json);
+		return new BattleNext_VariantBuilder(id, json);
 	}
 
-	public static BattleNext_VariantAdapter fromRegistered(String id) throws JSONException {
+	public static BattleNext_VariantBuilder fromRegistered(String id) throws JSONException {
 		ShipVariantAPI variant = Global.getSettings().getVariant(id);
 		if (variant == null) {
 			throw new IllegalArgumentException("Unknown variant: " + id);

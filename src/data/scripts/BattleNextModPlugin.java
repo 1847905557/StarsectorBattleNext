@@ -3,8 +3,8 @@ package data.scripts;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
-import data.automation.BattleNext_OrderRegistry;
-import data.scripts.battlesnext.util.BattleNext_FontData;
+import data.order.BattleNext_OrderRegistry;
+import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 public class BattleNextModPlugin extends BaseModPlugin {
@@ -13,17 +13,19 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 	public static final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_");
 
+	private boolean afterApplicationLoad = true;
+	private boolean afterNewGameLoad = true;
+
 	@Override
 	public void onApplicationLoad() {
 
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
 			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 AI Battles Next");
 		}
-		try {
-			BattleNext_FontData.init();
-			BattleNext_OrderRegistry.loadFromSettings();
-		} catch (RuntimeException ignored) {
-		}
+
+		afterApplicationLoad = false;
+		onDevModeF8Reload();
+		afterApplicationLoad = true;
 	}
 
 	@Override
@@ -35,8 +37,6 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		onGameLoad(true);
 		afterNewGameLoad = true;
 	}
-
-	private boolean afterNewGameLoad = true;
 
 	@Override
 	public void onGameLoad(boolean newGame) {
@@ -69,6 +69,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 	@Override
 	public void onDevModeF8Reload() {
-
+		BattleNext_OrderRegistry.loadFromSettings();
+		BattleNext_RestrictionRegistry.loadFromSettings();
 	}
 }

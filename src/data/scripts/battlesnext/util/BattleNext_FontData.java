@@ -19,24 +19,23 @@ public final class BattleNext_FontData {
 	private static final float TEXT_FIELD_SIZE = 8192f;
 	private static final Vector2f COMPATIBLE_ORIGIN = new Vector2f();
 
-	private static final FontStore fonts = new FontStore();
-
-	public static void init() {
-		fonts.orbitronNormal = loadFont("graphics/fonts/orbitron20aa.fnt");
-		fonts.orbitronBold = loadFont("graphics/fonts/orbitron20aabold.fnt");
-		fonts.insigniaNormal = loadFont("graphics/fonts/insignia21LTaa.fnt");
-	}
+	private static FontMapData orbitronNormal = null;
+	private static FontMapData orbitronBold = null;
+	private static FontMapData insigniaNormal = null;
 
 	public static TextObject getOrbitronNormal() {
-		return new TextObject(fonts.orbitronNormal);
+		if (orbitronNormal == null) orbitronNormal = loadFont("graphics/fonts/orbitron20aa.fnt");
+		return new TextObject(orbitronNormal);
 	}
 
 	public static TextObject getOrbitronBold() {
-		return new TextObject(fonts.orbitronBold);
+		if (orbitronBold == null) orbitronBold = loadFont("graphics/fonts/orbitron20aabold.fnt");
+		return new TextObject(orbitronBold);
 	}
 
 	public static TextObject getInsigniaNormal() {
-		return new TextObject(fonts.insigniaNormal);
+		if (insigniaNormal == null) insigniaNormal = loadFont("graphics/fonts/insignia21LTaa.fnt");
+		return new TextObject(insigniaNormal);
 	}
 
 	private static FontMapData loadFont(String path) {
@@ -195,11 +194,5 @@ public final class BattleNext_FontData {
 			if (entity != null) entity.setShouldRenderingCharCount(count);
 			else compatible.setShouldRenderingCharCount(count);
 		}
-	}
-
-	private static final class FontStore {
-		private FontMapData orbitronNormal;
-		private FontMapData orbitronBold;
-		private FontMapData insigniaNormal;
 	}
 }

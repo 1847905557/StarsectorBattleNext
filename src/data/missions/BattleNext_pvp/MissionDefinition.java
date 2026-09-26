@@ -14,16 +14,18 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.combat.*;
-import data.scripts.fleet.BattleNext_FleetAssembler;
-import data.scripts.fleet.BattleNext_FleetAssembly;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.tools.BattleNext_BattleSignals;
 
 import java.util.List;
 
 public class MissionDefinition implements MissionDefinitionPlugin {
 
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
-	private final BattleNext_FleetAssembler assembler = new BattleNext_FleetAssembler();
+	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 
 	private static int quickBattleCurrentIndex = 0;
@@ -35,12 +37,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		if (matches.isEmpty()) {
 			String message = provider.getActiveTournament() == null
 					? strings.get("no_valid_battle") : strings.get("no_pending_match");
-			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
-			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
-			api.setFleetTagline(FleetSide.PLAYER, message);
-			api.setFleetTagline(FleetSide.ENEMY, message);
-			api.addBriefingItem(message);
-			BattleNext_BattleMap.apply(api, 0, 1f);
+			showBlocked(api, message, provider.getWarnings());
 			return;
 		}
 
@@ -61,37 +58,44 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		} else {
 			match = matches.get(0);
 			progress = progress(tournament, match);
+			if (!provider.getRuleWarnings().isEmpty()
+					&& !BattleNext_BattleSignals.consumeAuthorization(tournament.getId(), match.getId())) {
+				showBlocked(api, strings.get("rules_blocked"), provider.getRuleWarnings());
+				api.addBriefingItem(progress);
+				return;
+			}
+			BattleNext_BattleSignals.clearAuthorization();
 		}
 
 		BattleNext_FleetStore fleets = provider.getFleetStore();
-		BattleNext_FleetAssembly player = assembler.assemble(fleets.get(match.getPlayer()));
-		BattleNext_FleetAssembly enemy = assembler.assemble(fleets.get(match.getEnemy()));
-		if (!player.isComplete() || !enemy.isComplete()) {
+		BattleNext_AssembledFleet assembledPlayerFleet = fleetBuilder.build(fleets.get(match.getPlayer()));
+		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(fleets.get(match.getEnemy()));
+		if (!assembledPlayerFleet.isComplete() || !assembledEnemyFleet.isComplete()) {
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
-			api.setFleetTagline(FleetSide.PLAYER, player.isComplete()
-					? player.getDefinition().getName() : strings.get("invalid_player"));
-			api.setFleetTagline(FleetSide.ENEMY, enemy.isComplete()
-					? enemy.getDefinition().getName() : strings.get("invalid_enemy"));
+			api.setFleetTagline(FleetSide.PLAYER, assembledPlayerFleet.isComplete()
+					? assembledPlayerFleet.getDefinition().getName() : strings.get("invalid_player"));
+			api.setFleetTagline(FleetSide.ENEMY, assembledEnemyFleet.isComplete()
+					? assembledEnemyFleet.getDefinition().getName() : strings.get("invalid_enemy"));
 			api.addBriefingItem(strings.get("invalid_battle_assembly"));
 			api.addBriefingItem(progress);
 			BattleNext_BattleMap.apply(api, 0, 1f);
 			return;
 		}
 
-		configureFleet(api, FleetSide.PLAYER, player);
-		configureFleet(api, FleetSide.ENEMY, enemy);
+		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet);
+		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet);
 		api.addBriefingItem("Map " + match.getMap() + ", map scale " + match.getMapScale());
 		api.addBriefingItem(progress);
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
 		api.addPlugin(new BattleNext_Deployment());
 		api.addPlugin(new BattleNext_MissionPlugin());
-		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(player, enemy);
+		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
-		api.addPlugin(new BattleNext_FleetBehavior(BattleNext_FleetBehavior.fromTags(player.getDefinition().getTags()),
-				BattleNext_FleetBehavior.fromTags(enemy.getDefinition().getTags()), player.getDefinition(), enemy.getDefinition()));
-		api.addPlugin(new BattleNext_FreeCameraPlugin(player.getDefinition().getName(), enemy.getDefinition().getName()));
+		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
+				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
+		api.addPlugin(new BattleNext_FreeCameraPlugin(assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName()));
 		api.addPlugin(new BattleNext_PostReport(scorekeeper));
 	}
 
@@ -99,11 +103,21 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		return BattleNext_MatchProgress.tournament(tournament, match).format(strings);
 	}
 
-	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_FleetAssembly assembly) {
-		BattleNext_FleetModel definition = assembly.getDefinition();
+	private void showBlocked(MissionDefinitionAPI api, String message, List<String> reasons) {
+		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
+		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
+		api.setFleetTagline(FleetSide.PLAYER, message);
+		api.setFleetTagline(FleetSide.ENEMY, message);
+		api.addBriefingItem(message);
+		for (String reason : reasons) api.addBriefingItem(reason);
+		BattleNext_BattleMap.apply(api, 0, 1f);
+	}
+
+	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet assembledFleet) {
+		BattleNext_FleetModel definition = assembledFleet.getDefinition();
 		api.initFleet(side, "", FleetGoal.ATTACK, definition.getTags().contains("default_ai"), 1);
 		api.setFleetTagline(side, definition.getName());
-		for (FleetMemberAPI member : assembly.getMembers()) {
+		for (FleetMemberAPI member : assembledFleet.getMembers()) {
 			api.addFleetMember(side, member);
 		}
 	}

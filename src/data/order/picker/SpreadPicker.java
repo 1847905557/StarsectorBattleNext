@@ -1,4 +1,4 @@
-package data.automation.picker;
+package data.order.picker;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
@@ -7,7 +7,7 @@ import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.automation.BattleNext_OrderUtils;
+import data.order.BattleNext_OrderUtils;
 import org.lazywizard.lazylib.CollectionUtils;
 import java.util.List;
 
@@ -22,7 +22,8 @@ public class SpreadPicker extends NearestPicker {
 					? engine.getFleetManager(target.getOwner()).getDeployedFleetMember((ShipAPI)target)
 					: (AssignmentTargetAPI)target;
 			AssignmentInfo current = tasks.getAssignmentFor(source);
-			if (current != null && current.getTarget() == assignmentTarget && BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) <= 1) {
+			if (current != null && current.getTarget() == assignmentTarget && current.getType() == type
+					&& BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) <= 1) {
 				return assignmentTarget;
 			}
 			if (BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) == 0) {

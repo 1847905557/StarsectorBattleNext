@@ -7,10 +7,9 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetCatalog;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.scripts.fleet.BattleNext_VariantAdapter;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
@@ -30,9 +29,8 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private static final float FIELD_HEIGHT = 28f;
 
 	private final BattleNext_FleetStore store;
-	private final BattleNext_FleetCatalog catalog = new BattleNext_FleetCatalog();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
-	private final List<MemberFields> memberFields = new ArrayList<>();
+	private final List<FleetMemberEditorFields> memberFields = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private CustomPanelAPI overlayHost;
 	private BattleNext_OptionField skillsPicker;
@@ -54,7 +52,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public BattleNext_FleetEditor(BattleNext_FleetStore store) {
 		this.store = store;
-		catalog.refresh();
 	}
 
 	public void open(BattleNext_FleetModel source, boolean clone) {
@@ -161,7 +158,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width);
 		metaContent.addPara(text("fleet_skills"), 5f, BattleNext_UiTheme.MUTED);
-		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.Mode.MULTIPLE);
+		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 		skills = skillsPicker.addTo(metaContent, panel, Math.max(72f, width - 24f),
 				String.join(",", draft.getSkills()));
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width);
@@ -181,19 +178,19 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		memberContent.addSectionHeading(text("member") + " " + (index + 1),
 				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
 				com.fs.starfarer.api.ui.Alignment.MID, 8f);
-		MemberFields fields = new MemberFields();
+		FleetMemberEditorFields fields = new FleetMemberEditorFields();
 		fields.variant = field(memberContent, text("variant"), member.getVariantId(), width);
 		fields.name = field(memberContent, text("member_name"), member.getName(), width);
 		fields.personality = field(memberContent, text("personality"), member.getPersonality(), width);
 		memberContent.addPara(text("member_skills"), 5f, BattleNext_UiTheme.MUTED);
 		BattleNext_OptionField memberSkills = new BattleNext_OptionField(overlayHost,
-				new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.Mode.MULTIPLE);
+				new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 		fields.skills = memberSkills.addTo(memberContent, panel, Math.max(72f, width - 24f),
 				String.join(",", member.getSkills()));
 		memberPickers.add(memberSkills);
 		memberContent.addPara(text("portrait"), 5f, BattleNext_UiTheme.MUTED);
 		BattleNext_OptionField portraitPicker = new BattleNext_OptionField(overlayHost,
-				new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.Mode.SINGLE);
+				new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
 		fields.portrait = portraitPicker.addTo(memberContent, panel, Math.max(72f, width - 24f), member.getPortrait());
 		memberPickers.add(portraitPicker);
 		fields.orders = field(memberContent, text("orders"), member.getOrders(), width);
@@ -240,7 +237,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		for (TextFieldAPI field : new TextFieldAPI[]{id, folderName, name, author, description, skills, tags}) {
 			value.append(field.getText().length()).append(':').append(field.getText());
 		}
-		for (MemberFields member : memberFields) {
+		for (FleetMemberEditorFields member : memberFields) {
 			for (TextFieldAPI field : new TextFieldAPI[]{member.variant, member.name, member.personality,
 					member.skills, member.portrait, member.orders, member.tags}) {
 				value.append(field.getText().length()).append(':').append(field.getText());
@@ -272,7 +269,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		draft.setSkills(split(skills.getText()));
 		draft.setTags(split(tags.getText()));
 		List<BattleNext_MemberModel> members = new ArrayList<>();
-		for (MemberFields fields : memberFields) {
+		for (FleetMemberEditorFields fields : memberFields) {
 			String variantId = fields.variant.getText().trim();
 			if (validate && variantId.isEmpty()) {
 				setStatus(text("invalid_variant"));
@@ -280,7 +277,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			}
 			if (!variantId.isEmpty()) {
 				try {
-					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantAdapter.fromRegistered(variantId));
+					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantBuilder.fromRegistered(variantId));
 				} catch (Exception exception) {
 					if (validate) {
 						setStatus(text("invalid_variant"));
@@ -302,7 +299,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				source.getSkills(), source.getTags(), source.getMembers());
 		result.setAuthor(source.getAuthor());
 		result.setDescription(source.getDescription());
-		for (BattleNext_VariantAdapter variant : source.getVariants()) {
+		for (BattleNext_VariantBuilder variant : source.getVariants()) {
 			result.putVariant(variant);
 		}
 		result.setSourceType(clone ? data.model.BattleNext_LoadSource.CREATED : source.getSourceType());
@@ -325,7 +322,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		return strings.get(key);
 	}
 
-	private static final class MemberFields {
+	private static final class FleetMemberEditorFields {
 		private TextFieldAPI variant;
 		private TextFieldAPI name;
 		private TextFieldAPI personality;

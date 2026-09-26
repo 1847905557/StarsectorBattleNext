@@ -1,4 +1,4 @@
-package data.order;
+package data.scripts.order;
 
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
@@ -24,7 +24,7 @@ public class BattleNext_OrderField {
 	public static final String KEY_PREFIX = "BattleNext_OrderField_";
 	private final CombatFleetManagerAPI manager;
 	private final CombatTaskManagerAPI tasks;
-	private final Map<ShipAPI, OrderInfo> automation = new HashMap<>();
+	private final Map<ShipAPI, AutomatedAssignmentInfo> automation = new HashMap<>();
 	private final List<AssignmentInfo> generated = new ArrayList<>();
 	private final Set<ShipAPI> visited = new HashSet<>();
 
@@ -46,13 +46,13 @@ public class BattleNext_OrderField {
 	public boolean hasPlayerForcedAssignment(ShipAPI ship) {
 		AssignmentInfo current = tasks.getAssignmentFor(ship);
 		if (current == null) return false;
-		OrderInfo generatedInfo = automation.get(ship);
+		AutomatedAssignmentInfo generatedInfo = automation.get(ship);
 		if (generatedInfo == null) return true;
 		return !sameAssignment(generatedInfo.assignment, current);
 	}
 
 	public void reconcileShip(ShipAPI ship) {
-		OrderInfo generatedInfo = automation.get(ship);
+		AutomatedAssignmentInfo generatedInfo = automation.get(ship);
 		if (generatedInfo != null && !sameAssignment(generatedInfo.assignment, tasks.getAssignmentFor(ship))) {
 			automation.remove(ship);
 		}
@@ -71,8 +71,8 @@ public class BattleNext_OrderField {
 		return null;
 	}
 
-	public OrderInfo getOneAutomationInfoOnTarget(AssignmentTargetAPI target) {
-		for (OrderInfo info : automation.values()) {
+	public AutomatedAssignmentInfo getOneAutomationInfoOnTarget(AssignmentTargetAPI target) {
+		for (AutomatedAssignmentInfo info : automation.values()) {
 			if (info.assignment.getTarget() == target) {
 				return info;
 			}
@@ -96,10 +96,10 @@ public class BattleNext_OrderField {
 			tasks.giveAssignment(manager.getDeployedFleetMember(ship), info, false);
 		}
 		generated.add(info);
-		automation.put(ship, new OrderInfo(info, priority));
+		automation.put(ship, new AutomatedAssignmentInfo(info, priority));
 	}
 
-	public void assignToAutomationInfo(ShipAPI ship, OrderInfo info) {
+	public void assignToAutomationInfo(ShipAPI ship, AutomatedAssignmentInfo info) {
 		tasks.giveAssignment(manager.getDeployedFleetMember(ship), info.assignment, false);
 		automation.put(ship, info);
 	}
@@ -111,9 +111,9 @@ public class BattleNext_OrderField {
 			return true;
 		}
 		if (target == null) return false;
-		OrderInfo own = automation.get(ship);
+		AutomatedAssignmentInfo own = automation.get(ship);
 		if (own != null && own.assignment.getType() == type && own.assignment.getTarget() == target) {
-			automation.put(ship, new OrderInfo(own.assignment, priority));
+			automation.put(ship, new AutomatedAssignmentInfo(own.assignment, priority));
 			return true;
 		}
 		CombatAssignmentType existingType = getAssignmentTypeOnTarget(target);
@@ -121,7 +121,7 @@ public class BattleNext_OrderField {
 			assignToAutomationInfo(ship, type, target, priority);
 			return true;
 		}
-		OrderInfo existingAutomation = getOneAutomationInfoOnTarget(target);
+		AutomatedAssignmentInfo existingAutomation = getOneAutomationInfoOnTarget(target);
 		if (existingAutomation == null) {
 			if (ship.getOwner() != Misc.OWNER_PLAYER) {
 				assignToAutomationInfo(ship, type, target, priority);
@@ -142,9 +142,9 @@ public class BattleNext_OrderField {
 	}
 
 	public void clearAllAutomationInfoOnTarget(AssignmentTargetAPI target) {
-		Iterator<Map.Entry<ShipAPI, OrderInfo>> iterator = automation.entrySet().iterator();
+		Iterator<Map.Entry<ShipAPI, AutomatedAssignmentInfo>> iterator = automation.entrySet().iterator();
 		while (iterator.hasNext()) {
-			Map.Entry<ShipAPI, OrderInfo> entry = iterator.next();
+			Map.Entry<ShipAPI, AutomatedAssignmentInfo> entry = iterator.next();
 			if (entry.getValue().assignment.getTarget() == target) {
 				tasks.orderSearchAndDestroy(manager.getDeployedFleetMember(entry.getKey()), false);
 				iterator.remove();
@@ -182,12 +182,12 @@ public class BattleNext_OrderField {
 		return first.getType() == second.getType() && first.getTarget() == second.getTarget();
 	}
 
-	public static class OrderInfo {
+	public static class AutomatedAssignmentInfo {
 
 		private final AssignmentInfo assignment;
 		private final float priority;
 
-		public OrderInfo(AssignmentInfo assignment, float priority) {
+		public AutomatedAssignmentInfo(AssignmentInfo assignment, float priority) {
 			this.assignment = assignment;
 			this.priority = priority;
 		}

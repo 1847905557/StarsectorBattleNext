@@ -36,7 +36,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
-	private final List<Row> rows = new ArrayList<>();
+	private final List<QuickBattleEditorRow> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private UIRect rowsArea;
 	private UIRect rowsRect;
@@ -216,11 +216,11 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
 		UIRect[] cells = columns(width, ROW_HEIGHT);
-		Row row = new Row();
+		QuickBattleEditorRow row = new QuickBattleEditorRow();
 		row.id = entry.getId();
 		row.model = entry;
 		addLabel(card, cells[0], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
-		if (entry.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+		if (entry.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			float rawWidth = cells[4].getX() + cells[4].getWidth() - cells[1].getX();
 			row.raw = addField(new UIRect(cells[1].getX(), 0f, rawWidth, ROW_HEIGHT), card,
 					entry.getRawContent());
@@ -268,7 +268,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		row.enabled = enabledHost.addCheckbox(enabledRect.getWidth(), ROW_HEIGHT, "",
 				"enabled:" + index, ButtonAPI.UICheckboxSize.SMALL, 0f);
 		row.enabled.setChecked(entry.isEnabled());
-		row.enabled.setEnabled(entry.getRowType() != BattleNext_QuickBattleModel.RowType.RAW);
+		row.enabled.setEnabled(entry.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW);
 		enabledHost.setHeightSoFar(ROW_HEIGHT);
 		card.addUIElement(enabledHost).inTL(enabledRect.getX(), enabledRect.getY());
 
@@ -319,8 +319,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (promoteEditedRawRows()) {
 			return;
 		}
-		for (Row row : rows) {
-			if (row.model.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+		for (QuickBattleEditorRow row : rows) {
+			if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				row.status.setText(text("raw_row"));
 				row.status.setColor(BattleNext_UiTheme.MUTED);
 				continue;
@@ -335,13 +335,13 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	}
 
 	private boolean promoteEditedRawRows() {
-		for (Row row : rows) {
-			if (row.model.getRowType() != BattleNext_QuickBattleModel.RowType.RAW || row.raw.hasFocus()) {
+		for (QuickBattleEditorRow row : rows) {
+			if (row.model.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW || row.raw.hasFocus()) {
 				continue;
 			}
 			BattleNext_QuickBattleModel parsed = BattleNext_QuickBattleModel.parseLine(
 					row.raw.getText(), row.model.usesLegacyIds());
-			if (parsed != null && parsed.getRowType() != BattleNext_QuickBattleModel.RowType.RAW) {
+			if (parsed != null && parsed.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				row.model.promoteRaw(row.raw.getText());
 				refreshContent();
 				return true;
@@ -350,9 +350,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		return false;
 	}
 
-	private List<String> validationErrors(Row row) {
+	private List<String> validationErrors(QuickBattleEditorRow row) {
 		List<String> errors = new ArrayList<>();
-		if (row.model.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+		if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			return errors;
 		}
 		if (fleetStore.get(row.player.getText().trim()) == null) errors.add(text("invalid_player"));
@@ -386,9 +386,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			if (index == skipIndex) {
 				continue;
 			}
-			Row row = rows.get(index);
+			QuickBattleEditorRow row = rows.get(index);
 			BattleNext_QuickBattleModel model = row.model;
-			if (model.getRowType() == BattleNext_QuickBattleModel.RowType.RAW) {
+			if (model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				model.promoteRaw(row.raw.getText());
 				continue;
 			}
@@ -405,7 +405,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				model.setMap(map);
 				model.setMapScale(mapScale);
 				model.setEnabled(row.enabled.isChecked());
-				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.RowType.BATTLE
+				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE
 						: model.getRowType());
 			} catch (NumberFormatException exception) {
 				setStatus(text("invalid_map_scale_combined"));
@@ -448,7 +448,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public String serializeState() {
 		StringBuilder value = new StringBuilder();
-		for (Row row : rows) {
+		for (QuickBattleEditorRow row : rows) {
 			value.append(row.model.getRowType()).append(row.enabled != null && row.enabled.isChecked());
 			for (TextFieldAPI field : new TextFieldAPI[]{row.player, row.enemy, row.map, row.mapScale, row.raw}) {
 				if (field != null) {
@@ -470,7 +470,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		return strings.get(key);
 	}
 
-	private static final class Row {
+	private static final class QuickBattleEditorRow {
 
 		private String id = "";
 		private BattleNext_QuickBattleModel model;
@@ -483,7 +483,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		private LabelAPI status;
 		private TooltipMakerAPI statusContent;
 
-		private Row() {
+		private QuickBattleEditorRow() {
 		}
 	}
 }

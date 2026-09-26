@@ -10,15 +10,15 @@ import data.scripts.member.BattleNext_MemberBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_FleetAssembler {
+public class BattleNext_FleetBuilder {
 
 	private final BattleNext_MemberBuilder memberBuilder;
 
-	public BattleNext_FleetAssembler() {
+	public BattleNext_FleetBuilder() {
 		memberBuilder = new BattleNext_MemberBuilder();
 	}
 
-	public BattleNext_FleetAssembly assemble(BattleNext_FleetModel definition) {
+	public BattleNext_AssembledFleet build(BattleNext_FleetModel definition) {
 		if (definition == null) {
 			throw new IllegalArgumentException("Fleet definition is required");
 		}
@@ -28,7 +28,7 @@ public class BattleNext_FleetAssembler {
 		for (int index = 0; index < definition.getMembers().size(); index++) {
 			try {
 				String variantId = definition.getMembers().get(index).getVariantId();
-				BattleNext_VariantAdapter localVariant = definition.getVariant(variantId);
+				BattleNext_VariantBuilder localVariant = definition.getVariant(variantId);
 				if (definition.hasLocalVariants()) {
 					if (localVariant == null) throw new IllegalArgumentException("Missing local variant: " + variantId);
 					ShipVariantAPI variant = localVariant.build();
@@ -40,11 +40,11 @@ public class BattleNext_FleetAssembler {
 				errors.add("member[" + index + "]: " + exception.getMessage());
 			}
 		}
-		return new BattleNext_FleetAssembly(definition, commander, members, errors);
+		return new BattleNext_AssembledFleet(definition, commander, members, errors);
 	}
 
-	public BattleNext_FleetAssembly forceSync(BattleNext_FleetAssembly current, BattleNext_FleetModel definition) {
-		return assemble(definition);
+	public BattleNext_AssembledFleet rebuild(BattleNext_AssembledFleet currentFleet, BattleNext_FleetModel definition) {
+		return build(definition);
 	}
 
 	private PersonAPI createCommander(BattleNext_FleetModel definition) {

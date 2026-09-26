@@ -6,6 +6,6 @@ public class BattleNext_OfficerSkillSourceProvider extends BattleNext_SkillSourc
 
 	@Override
 	public boolean isSkillBanned(SkillSpecAPI spec) {
-		return spec.isAdminSkill();
+		return !spec.isCombatOfficerSkill();
 	}
 }

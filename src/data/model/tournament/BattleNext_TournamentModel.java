@@ -13,19 +13,19 @@ import java.util.List;
 
 public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
-	public enum BracketType { SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN, KING_OF_THE_HILL }
+	public enum TournamentBracketType { SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN, KING_OF_THE_HILL }
 
 	public static final int FORMAT_VERSION = 1;
 	public static final int META_FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;
-	private BracketType bracketType;
+	private TournamentBracketType bracketType;
 	private int boCount;
 	private int maxFleet;
 	private final List<String> fleetIds = new ArrayList<>();
 	private final List<BattleNext_Match> matches = new ArrayList<>();
-	private String rulesId = "";
+	private String ruleId = "";
 	private int mapId = -1;
 	private boolean started;
 	private boolean completed;
@@ -33,10 +33,10 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 	private String pendingMatchId = "";
 
 	public BattleNext_TournamentModel() {
-		this("", "", BracketType.SINGLE_ELIMINATION, 1, 2);
+		this("", "", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 	}
 
-	public BattleNext_TournamentModel(String id, String name, BracketType bracketType, int boCount, int maxFleet) {
+	public BattleNext_TournamentModel(String id, String name, TournamentBracketType bracketType, int boCount, int maxFleet) {
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
 		this.bracketType = bracketType;
@@ -51,14 +51,14 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		setId(json.optString("id", ""));
 		setName(json.optString("name", ""));
 		try {
-			bracketType = BracketType.valueOf(json.getString("bracketType"));
+			bracketType = TournamentBracketType.valueOf(json.getString("bracketType"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid tournament.bracketType: " + json.getString("bracketType"), exception);
 		}
 		boCount = json.getInt("boCount");
 		maxFleet = json.getInt("maxFleet");
 		if (boCount < 1 || maxFleet < 2 || maxFleet > 32) throw new IllegalArgumentException("Invalid tournament limits");
-		rulesId = json.optString("rulesId", "");
+		ruleId = json.optString("ruleId", "");
 		mapId = json.optInt("mapId", -1);
 		started = json.optBoolean("started", false);
 		completed = json.optBoolean("completed", false);
@@ -96,7 +96,7 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 			matchArray.put(match.toJson());
 		}
 		json.put("matches", matchArray);
-		json.put("rulesId", rulesId);
+		json.put("ruleId", ruleId);
 		json.put("mapId", mapId);
 		json.put("started", started);
 		json.put("completed", completed);
@@ -122,11 +122,11 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		this.name = name == null ? "" : name.trim();
 	}
 
-	public BracketType getBracketType() {
+	public TournamentBracketType getBracketType() {
 		return bracketType;
 	}
 
-	public void setBracketType(BracketType bracketType) {
+	public void setBracketType(TournamentBracketType bracketType) {
 		this.bracketType = bracketType;
 	}
 
@@ -150,12 +150,12 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		this.maxFleet = maxFleet;
 	}
 
-	public String getRulesId() {
-		return rulesId;
+	public String getRuleId() {
+		return ruleId;
 	}
 
-	public void setRulesId(String rulesId) {
-		this.rulesId = rulesId == null ? "" : rulesId.trim();
+	public void setRuleId(String ruleId) {
+		this.ruleId = ruleId == null ? "" : ruleId.trim();
 	}
 
 	public int getMapId() {
@@ -240,8 +240,8 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public int getPlayableMatchTotal() {
 		int fleetCount = fleetIds.size();
-		if (bracketType == BracketType.ROUND_ROBIN) return fleetCount * (fleetCount - 1) / 2;
-		if (bracketType == BracketType.DOUBLE_ELIMINATION) {
+		if (bracketType == TournamentBracketType.ROUND_ROBIN) return fleetCount * (fleetCount - 1) / 2;
+		if (bracketType == TournamentBracketType.DOUBLE_ELIMINATION) {
 			return 2 * fleetCount - 2 + (findMatch("GF_RESET") == null ? 0 : 1);
 		}
 		return Math.max(0, fleetCount - 1);

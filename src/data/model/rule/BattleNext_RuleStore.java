@@ -1,28 +1,28 @@
-package data.model.rules;
+package data.model.rule;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
-import data.model.rules.io.BattleNext_RulesSaver;
-import data.model.rules.io.BattleNext_RulesStandardLoader;
+import data.model.rule.io.BattleNext_RuleSaver;
+import data.model.rule.io.BattleNext_RuleStandardLoader;
 
 import java.util.List;
 
-public class BattleNext_RulesStore extends BattleNext_BaseStore<BattleNext_RulesModel> {
+public class BattleNext_RuleStore extends BattleNext_BaseStore<BattleNext_RuleModel> {
 
-	private final BattleNext_RulesStandardLoader standardLoader = new BattleNext_RulesStandardLoader();
-	private final BattleNext_RulesSaver saver = new BattleNext_RulesSaver();
+	private final BattleNext_RuleStandardLoader standardLoader = new BattleNext_RuleStandardLoader();
+	private final BattleNext_RuleSaver saver = new BattleNext_RuleSaver();
 
-	public BattleNext_RulesStore() {
+	public BattleNext_RuleStore() {
 		super("Rules catalog has not been loaded");
 	}
 
 	@Override
-	protected BattleNext_RulesSaver saver() {
+	protected BattleNext_RuleSaver saver() {
 		return saver;
 	}
 
 	@Override
-	protected List<BattleNext_BaseLoader<BattleNext_RulesModel>> sources() {
+	protected List<BattleNext_BaseLoader<BattleNext_RuleModel>> sources() {
 		return List.of(standardLoader);
 	}
 }

@@ -12,7 +12,7 @@ import org.boxutil.units.standard.misc.UIBorderObject;
 
 public class BattleNext_ConfirmationDialog {
 
-	public interface Host {
+	public interface ConfirmationDialogHost {
 
 		boolean saveCurrentPage();
 
@@ -21,7 +21,7 @@ public class BattleNext_ConfirmationDialog {
 		void discardCurrentPage();
 	}
 
-	private final Host host;
+	private final ConfirmationDialogHost host;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI parent;
 	private CustomPanelAPI confirmation;
@@ -30,7 +30,7 @@ public class BattleNext_ConfirmationDialog {
 	private Runnable onConfirm;
 	private String deleteDescription;
 
-	public BattleNext_ConfirmationDialog(Host host) {
+	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host) {
 		this.host = host;
 	}
 
@@ -96,7 +96,7 @@ public class BattleNext_ConfirmationDialog {
 	private void showConfirmation() {
 		if (confirmation != null) return;
 		float width = Math.min(520f, parent.getPosition().getWidth() - 40f);
-		confirmation = Global.getSettings().createCustom(width, 160f, new ConfirmationPlugin(width));
+		confirmation = Global.getSettings().createCustom(width, 160f, new ConfirmationDialogPlugin(width));
 		UIRect dialogRect = new UIRect(12f, 8f, width - 24f, 75f);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
 		BattleNext_UiTheme.configure(dialog);
@@ -122,13 +122,13 @@ public class BattleNext_ConfirmationDialog {
 		parent.addComponent(confirmation).inMid();
 	}
 
-	private class ConfirmationPlugin extends BaseCustomUIPanelPlugin {
+	private class ConfirmationDialogPlugin extends BaseCustomUIPanelPlugin {
 
 		private final UIBorderObject border = new UIBorderObject(false, true);
 		private final float borderX;
 		private final float borderY;
 
-		private ConfirmationPlugin(float width) {
+		private ConfirmationDialogPlugin(float width) {
 			border.setSize(width + 16f, 176f);
 			borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - 8f;
 			borderY = (ShaderCore.getScreenHeight() - 160f) * 0.5f - 8f;

@@ -1,0 +1,23 @@
+id,type,script,desc
+fleetMaxShips,number,data.restriction.numeric.FleetMaxShips,Maximum ships
+fleetMaxDp,number,data.restriction.numeric.FleetMaxDp,Maximum deployment points
+fleetMaxSameHull,number,data.restriction.numeric.FleetMaxSameHull,Maximum ships of one hull
+fleetHullSizeLimitFrigate,number,data.restriction.numeric.FleetHullSizeLimitFrigate,Maximum frigates
+fleetHullSizeLimitDestroyer,number,data.restriction.numeric.FleetHullSizeLimitDestroyer,Maximum destroyers
+fleetHullSizeLimitCruiser,number,data.restriction.numeric.FleetHullSizeLimitCruiser,Maximum cruisers
+fleetHullSizeLimitCapitalShip,number,data.restriction.numeric.FleetHullSizeLimitCapitalShip,Maximum capital ships
+refitMaxDecks,number,data.restriction.numeric.RefitMaxDecks,Maximum fitted fighter wings
+refitSmods,number,data.restriction.numeric.RefitSmods,Maximum S-mods
+officerMaxCount,number,data.restriction.numeric.OfficerMaxCount,Maximum officers
+officerMaxLevel,number,data.restriction.numeric.OfficerMaxLevel,Maximum skills per officer
+officerMaxElite,number,data.restriction.numeric.OfficerMaxElite,Maximum elite skills per officer
+fleetSkillMaxCount,number,data.restriction.numeric.FleetSkillMaxCount,Maximum fleet skills
+filterAllowMods,list,data.restriction.filter.FilterAllowMods,Allowed source mods
+filterBlackWeapon,list,data.restriction.filter.FilterBlackWeapon,Blocked weapons
+filterWhiteWeapon,list,data.restriction.filter.FilterWhiteWeapon,Allowed weapons
+filterBlackWing,list,data.restriction.filter.FilterBlackWing,Blocked fighter wings
+filterWhiteWing,list,data.restriction.filter.FilterWhiteWing,Allowed fighter wings
+filterBlackHullmod,list,data.restriction.filter.FilterBlackHullmod,Blocked hullmods
+filterWhiteHullmod,list,data.restriction.filter.FilterWhiteHullmod,Allowed hullmods
+filterBlackHull,list,data.restriction.filter.FilterBlackHull,Blocked hulls
+filterWhiteHull,list,data.restriction.filter.FilterWhiteHull,Allowed hulls

@@ -1,10 +1,10 @@
-package data.automation.filter;
+package data.order.filter;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.automation.BattleNext_OrderUtils;
-import data.automation.OrderFilter;
+import data.order.BattleNext_OrderUtils;
+import data.order.OrderFilter;
 import java.util.List;
 
 public class SelfFluxFilter implements OrderFilter {

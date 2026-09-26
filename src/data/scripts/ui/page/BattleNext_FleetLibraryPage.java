@@ -1,26 +1,22 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.tools.BattleNext_EntryId;
+import com.fs.starfarer.api.ui.*;
 import data.model.BattleNext_LoadSource;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
+import org.json.JSONException;
 
 import java.io.IOException;
-import org.json.JSONException;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
@@ -183,7 +179,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 				8f, BattleNext_UiTheme.MUTED);
 		if (store.getAll().isEmpty()) listContent.addPara(text("no_fleets"), 10f, BattleNext_UiTheme.MUTED);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName() + " [" + fleet.getId() + "]",
+			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName(),
 					"fleet:" + fleet.getId(), Math.max(80f, listRect.getWidth() - 30f));
 		}
 	}
