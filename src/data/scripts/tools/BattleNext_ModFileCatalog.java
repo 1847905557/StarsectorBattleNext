@@ -13,26 +13,21 @@ import java.util.List;
 public final class BattleNext_FileCatalog {
 
 	private static final String MOD_ID = "AI_Battles_Next";
-	private static final String SAVES_PROPERTY = "com.fs.starfarer.settings.paths.saves";
 
 	private BattleNext_FileCatalog() {
 
 	}
 
+	public static List<String> resourceFiles(String directory) {
+		return resources(directory, false).stream().filter(path -> path.endsWith(".json")).toList();
+	}
+
 	public static List<String> resources(String directory, boolean recursive) {
 		String root = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
-		return list(root, directory, recursive, false);
+		return list(root, directory, recursive);
 	}
 
-	public static List<String> common(String directory, boolean recursive) {
-		String saves = System.getProperty(SAVES_PROPERTY);
-		if (saves == null || saves.isBlank()) {
-			throw new IllegalStateException("Unable to locate common data: missing " + SAVES_PROPERTY);
-		}
-		return list(saves + "/common", directory, recursive, true);
-	}
-
-	private static List<String> list(String root, String directory, boolean recursive, boolean optional) {
+	private static List<String> list(String root, String directory, boolean recursive) {
 		String path = root + "/" + directory;
 		try {
 			Class<?> fileType = Class.forName("java.io.File", false, null);
@@ -45,7 +40,6 @@ public final class BattleNext_FileCatalog {
 			MethodHandle children = lookup.findVirtual(fileType, "listFiles", MethodType.methodType(fileType.arrayType()));
 			Object folder = construct.invoke(path);
 			if (!(boolean) exists.invoke(folder)) {
-				if (optional) return List.of();
 				throw new IllegalStateException("Resource directory is missing: " + path);
 			}
 			if (!(boolean) directoryCheck.invoke(folder)) throw new IllegalStateException("Not a directory: " + path);

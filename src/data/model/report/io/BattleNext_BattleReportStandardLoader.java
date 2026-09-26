@@ -36,7 +36,7 @@ public class BattleNext_BattleReportCommonLoader extends BattleNext_CatalogLoade
 
 	@Override
 	protected BattleNext_LoadSource source() {
-		return BattleNext_LoadSource.COMMON;
+		return BattleNext_LoadSource.STANDARD;
 	}
 
 	@Override
