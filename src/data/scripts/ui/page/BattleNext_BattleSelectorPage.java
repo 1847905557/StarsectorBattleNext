@@ -1,4 +1,4 @@
-package data.scripts.ui.page;
+package data.ui.page;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -7,15 +7,15 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_TournamentModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rules.BattleNext_RulesStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_DropdownField;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.editor.BattleNext_QuickBattleEditor;
+import data.ui.BattleNext_UiTheme;
+import data.ui.widget.BattleNext_DropdownField;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -280,7 +280,8 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		}
 		BattleNext_TournamentModel tournament;
 		try {
-			tournament = BattleNext_TournamentModel.fromJson(source.toJson());
+			tournament = new BattleNext_TournamentModel();
+			tournament.fromJson(source.toJson());
 		} catch (Exception exception) {
 			loadError = exception.getMessage();
 			refreshContent();

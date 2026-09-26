@@ -1,4 +1,4 @@
-package data.scripts.ui.editor;
+package data.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -8,17 +8,17 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_FleetCatalog;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.fleet.BattleNext_VariantModel;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.scripts.fleet.BattleNext_VariantAdapter;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.BattleNext_TextField;
-import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
-import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
+import data.ui.widget.BattleNext_OptionField;
+import data.ui.widget.BattleNext_TextField;
+import data.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
+import data.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -259,7 +259,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			}
 			if (!variantId.isEmpty()) {
 				try {
-					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantModel.fromRegistered(variantId));
+					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantAdapter.fromRegistered(variantId));
 				} catch (Exception exception) {
 					if (validate) {
 						setStatus(text("invalid_variant"));
@@ -279,7 +279,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				source.getSkills(), source.getTags(), source.getMembers());
 		result.setAuthor(source.getAuthor());
 		result.setDescription(source.getDescription());
-		for (BattleNext_VariantModel variant : source.getVariants()) {
+		for (BattleNext_VariantAdapter variant : source.getVariants()) {
 			result.putVariant(variant);
 		}
 		if (clone) result.setId(source.getId() + "_copy");

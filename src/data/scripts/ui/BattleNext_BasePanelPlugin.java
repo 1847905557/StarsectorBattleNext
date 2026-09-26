@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.ui;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;

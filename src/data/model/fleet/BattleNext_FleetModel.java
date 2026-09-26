@@ -1,7 +1,7 @@
 package data.scripts.fleet;
 
+import data.model.BattleNext_BaseModel;
 import data.scripts.member.BattleNext_MemberModel;
-import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BattleNext_FleetModel {
+public class BattleNext_FleetModel extends BattleNext_BaseModel {
 
 	public static final int FORMAT_VERSION = 1;
 
@@ -23,8 +23,6 @@ public class BattleNext_FleetModel {
 	private List<BattleNext_MemberModel> members;
 	private String author;
 	private String description;
-	private String sourceType;
-	private String sourcePath;
 	private final Map<String, BattleNext_VariantModel> variants = new LinkedHashMap<>();
 	private final List<String> loadErrors = new ArrayList<>();
 
@@ -41,11 +39,10 @@ public class BattleNext_FleetModel {
 		this.members = copyMembers(members);
 		this.author = "";
 		this.description = "";
-		this.sourceType = BattleNext_LoadSource.NATIVE;
-		this.sourcePath = "";
 	}
 
-	public static BattleNext_FleetModel fromJson(JSONObject json, String fallbackId) {
+	@Override
+	public void fromJson(JSONObject json) throws JSONException {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported fleet formatVersion: " + version);
 		List<BattleNext_MemberModel> members = new ArrayList<>();
@@ -59,14 +56,16 @@ public class BattleNext_FleetModel {
 			}
 		}
 
-		String id = json.optString("id", fallbackId);
-		BattleNext_FleetModel result = new BattleNext_FleetModel(id, json.optString("name", ""),
-				readStrings(json.optJSONArray("skills")), readStrings(json.optJSONArray("tags")), members);
-		result.author = json.optString("author", "");
-		result.description = json.optString("description", "");
-		return result;
+		setId(json.optString("id", ""));
+		setName(json.optString("name", ""));
+		setSkills(readStrings(json.optJSONArray("skills")));
+		setTags(readStrings(json.optJSONArray("tags")));
+		setMembers(members);
+		author = json.optString("author", "");
+		description = json.optString("description", "");
 	}
 
+	@Override
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
@@ -84,6 +83,7 @@ public class BattleNext_FleetModel {
 		return json;
 	}
 
+	@Override
 	public String getId() {
 		return id;
 	}
@@ -138,22 +138,6 @@ public class BattleNext_FleetModel {
 
 	public void setDescription(String description) {
 		this.description = normalize(description);
-	}
-
-	public String getSourceType() {
-		return sourceType;
-	}
-
-	public void setSourceType(String sourceType) {
-		this.sourceType = normalize(sourceType);
-	}
-
-	public String getSourcePath() {
-		return sourcePath;
-	}
-
-	public void setSourcePath(String sourcePath) {
-		this.sourcePath = normalize(sourcePath);
 	}
 
 	public void putVariant(BattleNext_VariantModel variant) {

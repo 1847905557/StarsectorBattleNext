@@ -1,6 +1,6 @@
-package data.scripts.ui.editor;
+package data.ui.editor;
 
-import data.scripts.ui.page.BattleNext_PageView;
+import data.ui.page.BattleNext_PageView;
 
 public interface BattleNext_EditorView extends BattleNext_PageView {
 

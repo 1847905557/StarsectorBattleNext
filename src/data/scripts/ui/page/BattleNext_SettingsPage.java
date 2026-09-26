@@ -1,11 +1,11 @@
-package data.scripts.ui.page;
+package data.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
 
 public class BattleNext_SettingsPage implements BattleNext_PageView {
 

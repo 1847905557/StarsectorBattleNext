@@ -1,4 +1,4 @@
-package data.scripts.ui.widget;
+package data.ui.widget;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;

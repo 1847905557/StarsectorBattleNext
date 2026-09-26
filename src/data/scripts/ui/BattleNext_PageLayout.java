@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.ui;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;

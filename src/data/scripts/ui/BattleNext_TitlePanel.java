@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.ui;
 
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;

@@ -1,9 +1,10 @@
 package data.scripts.fleet.io;
 
 import com.fs.starfarer.api.Global;
+import data.model.BattleNext_BaseLoader;
+import data.model.BattleNext_LoadSource;
 import data.scripts.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantModel;
-import data.scripts.tools.BattleNext_LoadSource;
 import data.scripts.tools.BattleNext_FileCatalog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,11 +13,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_FleetCommonLoader {
+public class BattleNext_FleetCommonLoader extends BattleNext_BaseLoader<BattleNext_FleetModel> {
 
-	private static final String MOD_ID = "AI_Battles_Next";
-
-	public List<BattleNext_FleetModel> load() {
+	@Override
+	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
 		List<String> paths = BattleNext_FileCatalog.common(MOD_ID, true);
 		List<String> dataPaths = paths.stream().filter(path -> path.endsWith("/fleet_data.json.data"))
@@ -26,8 +26,7 @@ public class BattleNext_FleetCommonLoader {
 		for (String path : dataPaths) {
 			if (!path.endsWith("/fleet_data.json")) continue;
 			try {
-				JSONObject json = Global.getSettings().readJSONFromCommon(stripDataSuffix(path), false);
-				result.add(read(json, path, variantPaths));
+				result.add(read(path, variantPaths));
 			} catch (IOException | JSONException exception) {
 				throw new IllegalStateException("Unable to load common fleet: " + path, exception);
 			}
@@ -35,21 +34,22 @@ public class BattleNext_FleetCommonLoader {
 		return result;
 	}
 
-	private BattleNext_FleetModel read(JSONObject json, String path, List<String> variantPaths) {
+	private BattleNext_FleetModel read(String path, List<String> variantPaths) throws IOException, JSONException {
+		JSONObject json = Global.getSettings().readJSONFromCommon(path, false);
 		String normalizedPath = path.replace("\\", "/");
 		String folderId = normalizedPath.substring(0, normalizedPath.lastIndexOf("/fleet_data.json"));
 		folderId = folderId.substring(folderId.lastIndexOf('/') + 1);
-		BattleNext_FleetModel fleet = BattleNext_FleetModel.fromJson(json, folderId);
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel();
+		fleet.fromJson(json);
 		fleet.setId(folderId);
-		fleet.setSourceType(BattleNext_LoadSource.COMMON);
-		fleet.setSourcePath(path);
+		markSource(fleet, path);
 		String folderPrefix = normalizedPath.substring(0, normalizedPath.lastIndexOf('/') + 1);
 		for (String variantPath : variantPaths) {
 			String normalizedVariant = variantPath.replace("\\", "/");
 			if (!normalizedVariant.startsWith(folderPrefix) || !normalizedVariant.endsWith(".variant")) continue;
 			String variantId = normalizedVariant.substring(folderPrefix.length(), normalizedVariant.length() - ".variant".length());
 			try {
-				String text = Global.getSettings().readTextFileFromCommon(stripDataSuffix(variantPath));
+				String text = Global.getSettings().readTextFileFromCommon(variantPath);
 				fleet.putVariant(BattleNext_VariantModel.fromJson(new JSONObject(text), variantId));
 			} catch (IOException | JSONException exception) {
 				throw new IllegalStateException("Unable to load variant " + variantPath + ": " + exception.getMessage(), exception);
@@ -61,6 +61,11 @@ public class BattleNext_FleetCommonLoader {
 			}
 		}
 		return fleet;
+	}
+
+	@Override
+	protected BattleNext_LoadSource source() {
+		return BattleNext_LoadSource.COMMON;
 	}
 
 	private String stripDataSuffix(String path) {

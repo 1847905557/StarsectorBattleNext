@@ -1,4 +1,4 @@
-package data.scripts.ui.editor;
+package data.ui.editor;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
@@ -6,14 +6,14 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_TournamentModel;
-import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_TextField;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rules.BattleNext_RulesStore;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
+import data.ui.widget.BattleNext_TextField;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -51,9 +51,13 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 	public boolean open(BattleNext_TournamentModel source) {
 		try {
-			BattleNext_TournamentModel next = source == null
-					? new BattleNext_TournamentModel("", "", "single_elim", "BO1", 0)
-					: BattleNext_TournamentModel.fromJson(source.toJson());
+			BattleNext_TournamentModel next;
+			if (source == null) {
+				next = new BattleNext_TournamentModel("", "", "single_elim", "BO1", 0);
+			} else {
+				next = new BattleNext_TournamentModel();
+				next.fromJson(source.toJson());
+			}
 			baseline = source;
 			draft = next;
 			teams.clear();
@@ -205,7 +209,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		draft.setMapId(map);
 		draft.setTeams(new ArrayList<>(teams));
 		try {
-			BattleNext_TournamentModel nextBaseline = BattleNext_TournamentModel.fromJson(draft.toJson());
+			BattleNext_TournamentModel nextBaseline = new BattleNext_TournamentModel();
+			nextBaseline.fromJson(draft.toJson());
 			store.save(draft);
 			baseline = nextBaseline;
 			savedSnapshot = serializeState();

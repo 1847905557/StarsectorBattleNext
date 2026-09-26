@@ -1,4 +1,4 @@
-package data.scripts.ui.widget.provider;
+package data.ui.widget.provider;
 
 import com.fs.starfarer.api.characters.SkillSpecAPI;
 

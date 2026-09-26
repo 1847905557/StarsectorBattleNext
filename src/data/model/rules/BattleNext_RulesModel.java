@@ -1,6 +1,6 @@
 package data.scripts.rules;
 
-import data.scripts.tools.BattleNext_LoadSource;
+import data.model.BattleNext_BaseModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,40 +9,47 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_RulesModel {
+public class BattleNext_RulesModel extends BattleNext_BaseModel {
 
 	public static final int FORMAT_VERSION = 1;
 
 	private String id;
 	private String name;
-	private String sourceType = BattleNext_LoadSource.NATIVE;
-	private String sourcePath = "";
 	private final List<BattleNext_RulesModel> children = new ArrayList<>();
 	private boolean enabled;
 	private double value;
+
+	public BattleNext_RulesModel() {
+		this("", "");
+	}
 
 	public BattleNext_RulesModel(String id, String name) {
 		this.id = id == null ? "" : id.trim();
 		this.name = name == null ? "" : name.trim();
 	}
 
-	public static BattleNext_RulesModel fromJson(JSONObject json) {
+	@Override
+	public void fromJson(JSONObject json) throws JSONException {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported rules formatVersion: " + version);
-		BattleNext_RulesModel model = new BattleNext_RulesModel(json.optString("id", ""), json.optString("name", ""));
-		model.enabled = json.optBoolean("enabled", false);
-		model.value = json.optDouble("value", 0d);
-		JSONArray children = json.optJSONArray("children");
-		if (children != null) {
-			for (int index = 0; index < children.length(); index++) {
-				if (children.optJSONObject(index) != null) {
-					model.children.add(fromJson(children.optJSONObject(index)));
+		id = json.optString("id", "").trim();
+		name = json.optString("name", "").trim();
+		enabled = json.optBoolean("enabled", false);
+		value = json.optDouble("value", 0d);
+		JSONArray childValues = json.optJSONArray("children");
+		if (childValues != null) {
+			for (int index = 0; index < childValues.length(); index++) {
+				JSONObject childJson = childValues.optJSONObject(index);
+				if (childJson != null) {
+					BattleNext_RulesModel child = new BattleNext_RulesModel();
+					child.fromJson(childJson);
+					children.add(child);
 				}
 			}
 		}
-		return model;
 	}
 
+	@Override
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
@@ -58,6 +65,7 @@ public class BattleNext_RulesModel {
 		return json;
 	}
 
+	@Override
 	public String getId() {
 		return id;
 	}
@@ -80,22 +88,6 @@ public class BattleNext_RulesModel {
 
 	public void setValue(double value) {
 		this.value = value;
-	}
-
-	public String getSourceType() {
-		return sourceType;
-	}
-
-	public void setSourceType(String sourceType) {
-		this.sourceType = sourceType;
-	}
-
-	public String getSourcePath() {
-		return sourcePath;
-	}
-
-	public void setSourcePath(String sourcePath) {
-		this.sourcePath = sourcePath;
 	}
 
 	public List<BattleNext_RulesModel> getChildren() {

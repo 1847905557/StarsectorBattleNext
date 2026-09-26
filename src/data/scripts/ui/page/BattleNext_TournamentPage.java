@@ -1,17 +1,19 @@
-package data.scripts.ui.page;
+package data.ui.page;
 
 import com.fs.starfarer.api.ui.*;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.rules.BattleNext_RulesStore;
-import data.scripts.tournament.BattleNext_TournamentModel;
-import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rules.BattleNext_RulesStore;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
+import data.ui.editor.BattleNext_TournamentEditor;
+import org.json.JSONException;
 
+import java.io.IOException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -49,7 +51,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		status = "";
 		try {
 			fleetStore.reload();
-		} catch (RuntimeException exception) {
+		} catch (IOException | JSONException | RuntimeException exception) {
 			status = exception.getMessage();
 		}
 		try {

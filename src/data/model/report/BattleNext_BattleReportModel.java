@@ -1,15 +1,17 @@
 package data.scripts.report;
 
-import data.scripts.tools.BattleNext_LoadSource;
-import org.json.JSONException;
+import data.model.BattleNext_BaseModel;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_BattleReportModel {
+public class BattleNext_BattleReportModel extends BattleNext_BaseModel {
+
+	public static final int FORMAT_VERSION = 1;
 
 	private String id = "";
 	private String winner = "draw";
@@ -17,22 +19,23 @@ public class BattleNext_BattleReportModel {
 	private long createdAt = 0L;
 	private List<BattleNext_MemberReport> playerMembers = new ArrayList<>();
 	private List<BattleNext_MemberReport> enemyMembers = new ArrayList<>();
-	private String sourceType = BattleNext_LoadSource.COMMON;
-	private String sourcePath = "";
 
-	public static BattleNext_BattleReportModel fromJson(JSONObject json) {
-		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
-		report.id = json.optString("id", "");
-		report.winner = json.optString("winner", "draw");
-		report.durationMillis = json.optLong("durationMillis", 0L);
-		report.createdAt = json.optLong("createdAt", 0L);
-		parseMembers(json.optJSONArray("playerMembers"), report.playerMembers);
-		parseMembers(json.optJSONArray("enemyMembers"), report.enemyMembers);
-		return report;
+	@Override
+	public void fromJson(JSONObject json) throws JSONException {
+		int version = json.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
+		id = json.optString("id", "");
+		winner = json.optString("winner", "draw");
+		durationMillis = json.optLong("durationMillis", 0L);
+		createdAt = json.optLong("createdAt", 0L);
+		parseMembers(json.optJSONArray("playerMembers"), playerMembers);
+		parseMembers(json.optJSONArray("enemyMembers"), enemyMembers);
 	}
 
+	@Override
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
+		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
@@ -42,6 +45,7 @@ public class BattleNext_BattleReportModel {
 		return json;
 	}
 
+	@Override
 	public String getId() {
 		return id;
 	}
@@ -80,22 +84,6 @@ public class BattleNext_BattleReportModel {
 
 	public List<BattleNext_MemberReport> getEnemyMembers() {
 		return Collections.unmodifiableList(enemyMembers);
-	}
-
-	public String getSourceType() {
-		return sourceType;
-	}
-
-	public void setSourceType(String sourceType) {
-		this.sourceType = sourceType;
-	}
-
-	public String getSourcePath() {
-		return sourcePath;
-	}
-
-	public void setSourcePath(String sourcePath) {
-		this.sourcePath = sourcePath;
 	}
 
 	public void addPlayerMember(BattleNext_MemberReport member) {

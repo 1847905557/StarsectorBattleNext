@@ -1,4 +1,4 @@
-package data.scripts.ui.page;
+package data.ui.page;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
@@ -8,15 +8,16 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.tools.BattleNext_LoadSource;
+import data.model.BattleNext_LoadSource;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.editor.BattleNext_FleetEditor;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
+import data.ui.editor.BattleNext_FleetEditor;
 
 import java.io.IOException;
+import org.json.JSONException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.BiConsumer;
@@ -55,7 +56,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		this.panel = panel;
 		try {
 			store.reload();
-		} catch (RuntimeException exception) {
+		} catch (IOException | JSONException | RuntimeException exception) {
 			status = text("load_failed") + ": " + exception.getMessage();
 		}
 		selectedId = "";
@@ -124,7 +125,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
 					text("delete"), "delete", CutStyle.ALL, true);
-			boolean managed = BattleNext_LoadSource.COMMON.equals(selected.getSourceType());
+			boolean managed = selected.getSourceType() == BattleNext_LoadSource.COMMON;
 			delete.setEnabled(managed && store.isLoaded());
 			if (!managed) {
 				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
@@ -155,15 +156,15 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_FleetModel selected = store.get(selectedId);
-			if (selected != null && BattleNext_LoadSource.COMMON.equals(selected.getSourceType())) {
+			if (selected != null && selected.getSourceType() == BattleNext_LoadSource.COMMON) {
 				deletion.accept(selected.getName() + " [" + selected.getId() + "]", () -> {
 					try {
-						store.delete(selected);
+						store.delete(selected.getId());
 						selectedId = "";
 						draftOpen = false;
 						status = text("deleted");
 						refreshContent();
-					} catch (IOException | RuntimeException exception) {
+					} catch (IOException | JSONException | RuntimeException exception) {
 						setStatus(text("save_failed") + ": " + exception.getMessage());
 					}
 				});
@@ -210,8 +211,8 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 			}
 		}
 		BattleNext_FleetModel original = selectedId.isEmpty() ? null : store.get(selectedId);
-		if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
-				&& !BattleNext_LoadSource.COMMON.equals(original.getSourceType())) {
+			if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
+					&& original.getSourceType() != BattleNext_LoadSource.COMMON) {
 			setStatus(text("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) {
@@ -220,7 +221,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		}
 		try {
 			store.reload();
-		} catch (RuntimeException exception) {
+		} catch (IOException | JSONException | RuntimeException exception) {
 			setStatus(text("load_failed") + ": " + exception.getMessage());
 			return false;
 		}

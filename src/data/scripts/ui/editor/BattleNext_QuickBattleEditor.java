@@ -1,4 +1,4 @@
-package data.scripts.ui.editor;
+package data.ui.editor;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
@@ -9,10 +9,11 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_FleetStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_TextField;
+import data.model.fleet.BattleNext_FleetStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
+import data.ui.widget.BattleNext_TextField;
+import org.json.JSONException;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -114,7 +115,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		loadError = "";
 		try {
 			fleetStore.reload();
-		} catch (RuntimeException exception) {
+		} catch (IOException | JSONException | RuntimeException exception) {
 			loadError = text("load_failed") + ": " + exception.getMessage();
 		}
 		store.replaceAll(List.of());

@@ -1,7 +1,8 @@
 package data.scripts.tournament;
 
+import data.model.BattleNext_BaseModel;
+import data.model.BattleNext_LoadSource;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.tools.BattleNext_LoadSource;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class BattleNext_TournamentModel {
+public class BattleNext_TournamentModel extends BattleNext_BaseModel {
 
 	public static final int FORMAT_VERSION = 1;
 	public static final int META_FORMAT_VERSION = 1;
@@ -29,8 +30,10 @@ public class BattleNext_TournamentModel {
 	private String champion = "";
 	private String pendingMatchId = "";
 	private int kofNextIndex;
-	private String sourceType = BattleNext_LoadSource.NATIVE;
-	private String sourcePath = "";
+
+	public BattleNext_TournamentModel() {
+		this("", "", "single_elim", "BO1", 2);
+	}
 
 	public BattleNext_TournamentModel(String id, String name, String bracketType, String matchFormat, int size) {
 		this.id = id == null ? "" : id.trim();
@@ -40,34 +43,39 @@ public class BattleNext_TournamentModel {
 		this.size = size;
 	}
 
-	public static BattleNext_TournamentModel fromJson(JSONObject json) {
+	@Override
+	public void fromJson(JSONObject json) throws JSONException {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
-		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel(json.optString("id", ""), json.optString("name", ""), json.optString("bracketType", "single_elim"), json.optString("matchFormat", "BO1"), json.optInt("size", 2));
-		tournament.rulesId = json.optString("rulesId", "");
-		tournament.mapId = json.optInt("mapId", -1);
-		tournament.started = json.optBoolean("started", false);
-		tournament.completed = json.optBoolean("completed", false);
-		tournament.champion = json.optString("champion", "");
-		tournament.pendingMatchId = json.optString("pendingMatchId", "");
-		tournament.kofNextIndex = Math.max(0, json.optInt("kofNextIndex", 0));
-		JSONArray teams = json.optJSONArray("teams");
-		if (teams != null) {
-			for (int index = 0; index < teams.length(); index++) {
-				tournament.teams.add(teams.optString(index, ""));
+		setId(json.optString("id", ""));
+		setName(json.optString("name", ""));
+		setBracketType(json.optString("bracketType", "single_elim"));
+		setMatchFormat(json.optString("matchFormat", "BO1"));
+		size = json.optInt("size", 2);
+		rulesId = json.optString("rulesId", "");
+		mapId = json.optInt("mapId", -1);
+		started = json.optBoolean("started", false);
+		completed = json.optBoolean("completed", false);
+		champion = json.optString("champion", "");
+		pendingMatchId = json.optString("pendingMatchId", "");
+		kofNextIndex = Math.max(0, json.optInt("kofNextIndex", 0));
+		JSONArray teamValues = json.optJSONArray("teams");
+		if (teamValues != null) {
+			for (int index = 0; index < teamValues.length(); index++) {
+				teams.add(teamValues.optString(index, ""));
 			}
 		}
-		JSONArray matches = json.optJSONArray("matches");
-		if (matches != null) {
-			for (int index = 0; index < matches.length(); index++) {
-				if (matches.optJSONObject(index) != null) {
-					tournament.matches.add(BattleNext_Match.fromJson(matches.optJSONObject(index)));
+		JSONArray matchValues = json.optJSONArray("matches");
+		if (matchValues != null) {
+			for (int index = 0; index < matchValues.length(); index++) {
+				if (matchValues.optJSONObject(index) != null) {
+					matches.add(BattleNext_Match.fromJson(matchValues.optJSONObject(index)));
 				}
 			}
 		}
-		return tournament;
 	}
 
+	@Override
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
@@ -92,6 +100,7 @@ public class BattleNext_TournamentModel {
 		return json;
 	}
 
+	@Override
 	public String getId() {
 		return id;
 	}
@@ -188,20 +197,20 @@ public class BattleNext_TournamentModel {
 		this.kofNextIndex = Math.max(0, kofNextIndex);
 	}
 
-	public String getSourceType() {
-		return sourceType;
+	@Override
+	public void setSourceType(BattleNext_LoadSource sourceType) {
+		super.setSourceType(sourceType);
+		for (BattleNext_Match match : matches) {
+			match.setSourceType(sourceType);
+		}
 	}
 
-	public void setSourceType(String sourceType) {
-		this.sourceType = sourceType;
-	}
-
-	public String getSourcePath() {
-		return sourcePath;
-	}
-
+	@Override
 	public void setSourcePath(String sourcePath) {
-		this.sourcePath = sourcePath;
+		super.setSourcePath(sourcePath);
+		for (BattleNext_Match match : matches) {
+			match.setSourcePath(sourcePath);
+		}
 	}
 
 	public List<String> getTeams() {

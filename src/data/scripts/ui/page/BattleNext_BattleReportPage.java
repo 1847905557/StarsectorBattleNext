@@ -1,4 +1,4 @@
-package data.scripts.ui.page;
+package data.ui.page;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -9,13 +9,13 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.report.BattleNext_BattleReportModel;
-import data.scripts.report.BattleNext_BattleReportStore;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
 import data.scripts.report.BattleNext_MemberReport;
-import data.scripts.tournament.BattleNext_TournamentModel;
-import data.scripts.tournament.BattleNext_TournamentStore;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.ui.BattleNext_PageLayout;
+import data.ui.BattleNext_UiTheme;
 import org.json.JSONException;
 
 import java.io.IOException;
