@@ -1,12 +1,11 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
 
 import java.awt.Color;
 import java.awt.HeadlessException;
@@ -24,12 +23,10 @@ import java.util.List;
  */
 public final class BattleNext_TextField implements TextFieldAPI {
 
-	private static final FocusState FOCUS = new FocusState();
-	private static final DragState DRAG = new DragState();
-
 	private static final Color DEFAULT_TEXT_COLOR = Color.WHITE;
 	private static final Color DEFAULT_BACKGROUND = new Color(20, 48, 57, 210);
 	private static final Color DEFAULT_BORDER = new Color(35, 105, 123, 220);
+	private static final Color SELECTION_COLOR = new Color(0.35f, 0.75f, 0.9f, 0.35f);
 	private static final float CARET_WIDTH = 2f;
 	public static final int RECOMMENDED_MAX_CHARS = 200;
 	public static final float AUTO_SCROLL_START_SPEED = 40f;
@@ -49,10 +46,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private float pad = 3f;
 	private float scroll;
 	private float blink;
-	private float dragMouseX;
-	private float dragMouseY;
 	private boolean showCursor = true;
-	private boolean dragging;
 	private boolean limitByStringWidth;
 	private boolean undoOnEscape = true;
 	private boolean handleCtrlV = true;
@@ -61,14 +55,6 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private Color textColor = DEFAULT_TEXT_COLOR;
 	private Color background = DEFAULT_BACKGROUND;
 	private Color border = DEFAULT_BORDER;
-
-	private static final class FocusState {
-		private BattleNext_TextField current;
-	}
-
-	private static final class DragState {
-		private BattleNext_TextField current;
-	}
 
 	private BattleNext_TextField(CustomPanelAPI panel, float width, float height) {
 		this.panel = panel;
@@ -91,6 +77,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		FieldPlugin plugin = new FieldPlugin();
 		CustomPanelAPI panel = owner.createCustomPanel(width, height, plugin);
 		BattleNext_TextField field = new BattleNext_TextField(panel, width, height);
+		BattleNext_TextFieldSession.register(field);
 		plugin.field = field;
 		field.setText(value == null ? "" : value);
 		host.addCustom(panel, 0f);
@@ -103,40 +90,15 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	public static void releaseFocusedField() {
-		clearDragOwner();
-		if (FOCUS.current != null) FOCUS.current.dragging = false;
-		FOCUS.current = null;
+		BattleNext_TextFieldSession.finish(true);
 	}
 
-	private static void clearDragOwner() {
-		if (DRAG.current != null) DRAG.current.dragging = false;
-		DRAG.current = null;
-	}
-
-	private static void takeDragOwnership(BattleNext_TextField field) {
-		if (DRAG.current != field) clearDragOwner();
-		DRAG.current = field;
-		field.dragging = true;
+	public static void clearRegisteredFields() {
+		BattleNext_TextFieldSession.clearRegisteredFields();
 	}
 
 	public static boolean handleGlobalInput(List<InputEventAPI> events) {
-		BattleNext_TextField field = DRAG.current;
-		if (field == null || !field.dragging) return false;
-		for (InputEventAPI event : events) {
-			if (event.isConsumed()) continue;
-			if (event.isMouseMoveEvent()) {
-				field.updateDragFromPointer(event.getX(), event.getY(), true);
-				event.consume();
-				continue;
-			}
-			if (event.isLMBUpEvent()) {
-				field.updateDragFromPointer(event.getX(), event.getY(), true);
-				clearDragOwner();
-				event.consume();
-				return true;
-			}
-		}
-		return true;
+		return BattleNext_TextFieldSession.handleGlobalInput(events);
 	}
 
 	private boolean hasSelection() {
@@ -269,7 +231,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		}
 	}
 
-	private void processKeyboard(InputEventAPI event) {
+	void processKeyboard(InputEventAPI event) {
 		int key = event.getEventValue();
 		boolean extend = event.isShiftDown();
 		if (event.isCtrlDown() && key == Keyboard.KEY_A) {
@@ -338,9 +300,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		return best;
 	}
 
-	private boolean updateDragFromPointer(float mouseX, float mouseY, boolean preserveAnchor) {
-		dragMouseX = mouseX;
-		dragMouseY = mouseY;
+	boolean updateDragFromPointer(float mouseX, float mouseY, boolean preserveAnchor) {
 		float left = getPosition().getX() + pad;
 		float right = getPosition().getX() + width - pad;
 		float projectedX = Math.max(left, Math.min(mouseX, right));
@@ -355,114 +315,86 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		return changed;
 	}
 
-	private void processMouseDown(InputEventAPI event) {
-		if (!event.isLMBDownEvent() || !getPosition().containsEvent(event)) return;
-		dragMouseX = event.getX();
-		dragMouseY = event.getY();
-		if (FOCUS.current != this) grabFocus(true);
-		updateDragFromPointer(event.getX(), event.getY(), event.isShiftDown());
-		takeDragOwnership(this);
-		event.consume();
+	void beginPointer(float mouseX, float mouseY, boolean extend) {
+		updateDragFromPointer(mouseX, mouseY, extend);
+	}
+
+	void endPointer(boolean clearSelection) {
+		if (clearSelection) anchor = cursor;
+		resetBlink();
+	}
+
+	void endFocus(boolean clearSelection) {
+		if (clearSelection) anchor = cursor;
+		resetBlink();
+	}
+
+	boolean isUsableForInput() {
+		PositionAPI position = getPosition();
+		return position.getWidth() > 0f && position.getHeight() > 0f;
+	}
+
+	void onFocusGained() {
+		undoText = text;
+		resetBlink();
 	}
 
 	private void releaseFocus() {
-		if (FOCUS.current == this) FOCUS.current = null;
-		if (DRAG.current == this) clearDragOwner();
-		else dragging = false;
-	}
-
-	private void drawRect(PositionAPI position, Color color, float alpha) {
-		GL11.glColor4f(color.getRed() / 255f, color.getGreen() / 255f,
-				color.getBlue() / 255f, color.getAlpha() / 255f * alpha);
-		GL11.glBegin(GL11.GL_QUADS);
-		GL11.glVertex2f(position.getX(), position.getY());
-		GL11.glVertex2f(position.getX() + position.getWidth(), position.getY());
-		GL11.glVertex2f(position.getX() + position.getWidth(), position.getY() + position.getHeight());
-		GL11.glVertex2f(position.getX(), position.getY() + position.getHeight());
-		GL11.glEnd();
-	}
-
-	private void pushTextScissor() {
-		float xScale = Global.getSettings().getScreenWidthPixels()
-				/ Math.max(1f, Global.getSettings().getScreenWidth());
-		float yScale = Global.getSettings().getScreenHeightPixels()
-				/ Math.max(1f, Global.getSettings().getScreenHeight());
-		PositionAPI position = panel.getPosition();
-		GL11.glEnable(GL11.GL_SCISSOR_TEST);
-		GL11.glScissor(
-				(int) ((position.getX() + pad) * xScale),
-				(int) (position.getY() * yScale),
-				(int) (Math.max(1f, position.getWidth() - pad * 2f) * xScale),
-				(int) (position.getHeight() * yScale));
+		BattleNext_TextFieldSession.finish(true);
 	}
 
 	private static final class FieldPlugin extends BaseCustomUIPanelPlugin {
 		private BattleNext_TextField field;
+		private BattleNext_GeometryRenderer.ClipState clipState;
 
 		@Override
 		public void renderBelow(float alphaMult) {
 			if (field == null) return;
-			GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_SCISSOR_BIT);
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			GL11.glEnable(GL11.GL_BLEND);
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-			field.drawRect(field.panel.getPosition(), field.background, alphaMult);
-			field.pushTextScissor();
+			BattleNext_GeometryRenderer.fillRect(field.panel.getPosition(), field.background, alphaMult);
+			PositionAPI position = field.panel.getPosition();
+			clipState = BattleNext_GeometryRenderer.pushClip(position.getX() + field.pad, position.getY(),
+					Math.max(1f, position.getWidth() - field.pad * 2f), position.getHeight());
 			if (field.hasSelection()) {
 				float start = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionStart()));
 				float end = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionEnd()));
-				GL11.glColor4f(0.35f, 0.75f, 0.9f, 0.35f * alphaMult);
-				GL11.glBegin(GL11.GL_QUADS);
-				GL11.glVertex2f(field.panel.getPosition().getX() + field.pad + start - field.scroll, field.panel.getPosition().getY() + 3f);
-				GL11.glVertex2f(field.panel.getPosition().getX() + field.pad + end - field.scroll, field.panel.getPosition().getY() + 3f);
-				GL11.glVertex2f(field.panel.getPosition().getX() + field.pad + end - field.scroll, field.panel.getPosition().getY() + field.height - 3f);
-				GL11.glVertex2f(field.panel.getPosition().getX() + field.pad + start - field.scroll, field.panel.getPosition().getY() + field.height - 3f);
-				GL11.glEnd();
+				BattleNext_GeometryRenderer.fillRect(field.panel.getPosition().getX() + field.pad + start - field.scroll,
+						field.panel.getPosition().getY() + 3f, end - start, field.height - 6f,
+						SELECTION_COLOR, alphaMult);
 			}
 		}
 
 		@Override
 		public void render(float alphaMult) {
 			if (field == null) return;
-			if (FOCUS.current == field && field.showCursor && ((int) (field.blink * 2f) % 2 == 0)) {
-				GL11.glDisable(GL11.GL_TEXTURE_2D);
-				GL11.glEnable(GL11.GL_BLEND);
-				GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-				field.pushTextScissor();
+			if (BattleNext_TextFieldSession.isFocused(field) && field.showCursor
+					&& ((int) (field.blink * 2f) % 2 == 0)) {
 				float x = field.panel.getPosition().getX() + field.pad
 						+ field.textLabel.computeTextWidth(field.text.substring(0, field.cursor)) - field.scroll;
-				GL11.glColor4f(field.textColor.getRed() / 255f, field.textColor.getGreen() / 255f,
-						field.textColor.getBlue() / 255f, alphaMult);
-				GL11.glBegin(GL11.GL_QUADS);
-				GL11.glVertex2f(x, field.panel.getPosition().getY() + 4f);
-				GL11.glVertex2f(x + CARET_WIDTH, field.panel.getPosition().getY() + 4f);
-				GL11.glVertex2f(x + CARET_WIDTH, field.panel.getPosition().getY() + field.height - 4f);
-				GL11.glVertex2f(x, field.panel.getPosition().getY() + field.height - 4f);
-				GL11.glEnd();
+				BattleNext_GeometryRenderer.fillRect(x, field.panel.getPosition().getY() + 4f, CARET_WIDTH,
+						field.height - 8f, field.textColor, alphaMult);
 			}
-			GL11.glEnable(GL11.GL_TEXTURE_2D);
-			GL11.glDisable(GL11.GL_SCISSOR_TEST);
-			GL11.glColor4f(field.border.getRed() / 255f, field.border.getGreen() / 255f,
-					field.border.getBlue() / 255f, field.border.getAlpha() / 255f * alphaMult);
-			GL11.glLineWidth(1f);
-			GL11.glBegin(GL11.GL_LINE_LOOP);
-			GL11.glVertex2f(field.panel.getPosition().getX(), field.panel.getPosition().getY());
-			GL11.glVertex2f(field.panel.getPosition().getX() + field.width, field.panel.getPosition().getY());
-			GL11.glVertex2f(field.panel.getPosition().getX() + field.width, field.panel.getPosition().getY() + field.height);
-			GL11.glVertex2f(field.panel.getPosition().getX(), field.panel.getPosition().getY() + field.height);
-			GL11.glEnd();
-			GL11.glPopAttrib();
+			if (clipState != null) {
+				BattleNext_GeometryRenderer.popClip(clipState);
+				clipState = null;
+			}
+			BattleNext_GeometryRenderer.lineLoop(new float[]{
+					field.panel.getPosition().getX(), field.panel.getPosition().getY(),
+					field.panel.getPosition().getX() + field.width, field.panel.getPosition().getY(),
+					field.panel.getPosition().getX() + field.width,
+					field.panel.getPosition().getY() + field.height,
+					field.panel.getPosition().getX(), field.panel.getPosition().getY() + field.height
+			}, field.border, alphaMult, 1f);
 		}
 
 		@Override
 		public void advance(float amount) {
-			if (FOCUS.current == field) {
+			if (BattleNext_TextFieldSession.isFocused(field)) {
 				field.blink += amount;
 				if (field.blink > 2f) field.blink = 0f;
 			}
-			if (field.dragging) {
-				float mouseX = field.dragMouseX;
-				float mouseY = field.dragMouseY;
+			if (BattleNext_TextFieldSession.isDragging(field)) {
+				float mouseX = BattleNext_TextFieldSession.getPointerX();
+				float mouseY = BattleNext_TextFieldSession.getPointerY();
 				float left = field.getPosition().getX() + field.pad;
 				float right = field.getPosition().getX() + field.width - field.pad;
 				float overshoot = 0f;
@@ -497,16 +429,9 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		public void processInput(List<InputEventAPI> events) {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
-				if (event.isMouseDownEvent()) {
-					if (field.getPosition().containsEvent(event)) {
-						field.processMouseDown(event);
-					} else if (FOCUS.current == field) {
-						field.releaseFocus();
-					}
-				} else if (FOCUS.current == field && event.isKeyboardEvent()
-						&& (event.isKeyDownEvent() || event.isRepeat())) {
-					field.processKeyboard(event);
-					event.consume();
+				if (event.isMouseDownEvent() && !field.getPosition().containsEvent(event)
+						&& BattleNext_TextFieldSession.isFocused(field)) {
+					field.releaseFocus();
 				}
 			}
 		}
@@ -639,13 +564,13 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 	@Override
 	public void grabFocus(boolean playSound) {
-		FOCUS.current = this;
+		BattleNext_TextFieldSession.focus(this);
 		undoText = text;
 		resetBlink();
 	}
 	@Override
 	public boolean hasFocus() {
-		return FOCUS.current == this;
+		return BattleNext_TextFieldSession.isFocused(this);
 	}
 	@Override
 	public boolean isUndoOnEscape() {

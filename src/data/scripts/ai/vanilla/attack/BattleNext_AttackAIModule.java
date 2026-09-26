@@ -1,40 +1,23 @@
 package data.scripts.ai.vanilla.attack;
 
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.FogOfWarAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShieldAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipSystemSpecAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.loading.ProjectileSpecAPI;
 import com.fs.starfarer.api.loading.WeaponGroupType;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import org.lwjgl.opengl.GL11;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.awt.Color;
+import java.util.*;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.attack.AttackAIModule.
@@ -2088,12 +2071,8 @@ public class BattleNext_AttackAIModule {
 
 	public void renderAimLine() {
 		if (this.aimPoint != null) {
-			GL11.glPointSize(20.0F);
-			GL11.glColor3f(1.0F, 0.0F, 0.0F);
-			GL11.glDisable(3553);
-			GL11.glBegin(0);
-			GL11.glVertex2f(this.aimPoint.x - this.ship.getLocation().x, this.aimPoint.y - this.ship.getLocation().y);
-			GL11.glEnd();
+			BattleNext_GeometryRenderer.drawPoint(this.aimPoint.x - this.ship.getLocation().x,
+					this.aimPoint.y - this.ship.getLocation().y, 20.0F, Color.RED, 1f);
 		}
 	}
 

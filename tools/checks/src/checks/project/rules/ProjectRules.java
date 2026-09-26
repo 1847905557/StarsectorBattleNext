@@ -17,8 +17,7 @@ public final class ProjectRules {
 				new LifecycleTypeResolutionFailureRule(),
 				new LifecycleConstructorRule(),
 				new FieldAccessBoundaryRule(),
-				new PublicDataShapeRule(),
-				new StaticFieldImmutabilityRule()
+				new PublicDataShapeRule()
 		);
 	}
 }

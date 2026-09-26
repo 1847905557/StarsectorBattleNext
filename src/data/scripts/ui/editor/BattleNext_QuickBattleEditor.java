@@ -24,7 +24,7 @@ import java.util.List;
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private static final float HEADER_HEIGHT = 34f;
-	private static final float ROW_HEIGHT = 48f;
+	private static final float ROW_HEIGHT = 38f;
 	private static final float FIELD_HEIGHT = 28f;
 	private static final float COLUMN_GAP = 8f;
 	private static final float SIDE_MARGIN = 12f;
@@ -194,8 +194,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public void refreshContent() {
 		if (panel == null) return;
+		BattleNext_TextField.clearRegisteredFields();
 		if (rowsRect != null) rowsRect.removeLatestSubPanel();
 		rows.clear();
+
 		if (entries.isEmpty()) return;
 		float visibleHeight = Math.min(rowsArea.getHeight(), entries.size() * ROW_HEIGHT + 10f);
 		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
@@ -205,6 +207,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			addRow(index, entries.get(index), content);
 		}
 		contentPanel.addUIElement(content).inTL(0f, 0f);
+
 		refreshRowStatuses();
 	}
 

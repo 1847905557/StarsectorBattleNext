@@ -8,9 +8,9 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
-import org.lwjgl.opengl.GL11;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -72,6 +72,7 @@ public class BattleNext_OptionField {
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
+	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final CustomPanelAPI overlayHost;
@@ -342,23 +343,6 @@ public class BattleNext_OptionField {
 				&& y >= position.getY() && y < position.getY() + position.getHeight();
 	}
 
-	private void drawRect(PositionAPI position, Color color, float alphaMult) {
-
-		GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_COLOR_BUFFER_BIT);
-		GL11.glDisable(GL11.GL_TEXTURE_2D);
-		GL11.glEnable(GL11.GL_BLEND);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-		GL11.glColor4f(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f,
-				color.getAlpha() / 255f * alphaMult);
-		GL11.glBegin(GL11.GL_QUADS);
-		GL11.glVertex2f(position.getX(), position.getY());
-		GL11.glVertex2f(position.getX() + position.getWidth(), position.getY());
-		GL11.glVertex2f(position.getX() + position.getWidth(), position.getY() + position.getHeight());
-		GL11.glVertex2f(position.getX(), position.getY() + position.getHeight());
-		GL11.glEnd();
-		GL11.glPopAttrib();
-	}
-
 	private void updateHover(float x, float y) {
 
 		HoverTarget target = null;
@@ -423,7 +407,7 @@ public class BattleNext_OptionField {
 		@Override
 		public void renderBelow(float alphaMult) {
 			if (popup == null) return;
-			drawRect(popup.getPosition(), POPUP_BACKGROUND, alphaMult);
+			BattleNext_GeometryRenderer.fillRect(popup.getPosition(), POPUP_BACKGROUND, alphaMult);
 		}
 
 		@Override
@@ -474,41 +458,32 @@ public class BattleNext_OptionField {
 
 		@Override
 		public void renderBelow(float alphaMult) {
-			drawRect(position, selection.getOrDefault(option.id, 0) > 0 ? TILE_SELECTED : TILE_NORMAL, alphaMult);
+			BattleNext_GeometryRenderer.fillRect(position,
+					selection.getOrDefault(option.id, 0) > 0 ? TILE_SELECTED : TILE_NORMAL, alphaMult);
 		}
 
 		@Override
 		public void render(float alphaMult) {
 			int count = selection.getOrDefault(option.id, 0);
 			if (count == 0) return;
-			GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_LINE_BIT);
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			GL11.glColor4f(0.5f, 0.9f, 1f, alphaMult);
-			GL11.glLineWidth(1f);
-			GL11.glBegin(GL11.GL_LINE_LOOP);
-			GL11.glVertex2f(position.getX() + 1f, position.getY() + 1f);
-			GL11.glVertex2f(position.getX() + TILE_SIZE - 1f, position.getY() + 1f);
-			GL11.glVertex2f(position.getX() + TILE_SIZE - 1f, position.getY() + TILE_SIZE - 1f);
-			GL11.glVertex2f(position.getX() + 1f, position.getY() + TILE_SIZE - 1f);
-			GL11.glEnd();
-			GL11.glBegin(GL11.GL_LINE_STRIP);
-			GL11.glVertex2f(position.getX() + 46f, position.getY() + 51f);
-			GL11.glVertex2f(position.getX() + 51f, position.getY() + 46f);
-			GL11.glVertex2f(position.getX() + 60f, position.getY() + 59f);
-			GL11.glEnd();
+			BattleNext_GeometryRenderer.lineLoop(new float[]{
+					position.getX() + 1f, position.getY() + 1f,
+					position.getX() + TILE_SIZE - 1f, position.getY() + 1f,
+					position.getX() + TILE_SIZE - 1f, position.getY() + TILE_SIZE - 1f,
+					position.getX() + 1f, position.getY() + TILE_SIZE - 1f
+			}, CHECK_COLOR, alphaMult, 1f);
+			BattleNext_GeometryRenderer.lineStrip(new float[]{
+					position.getX() + 46f, position.getY() + 51f,
+					position.getX() + 51f, position.getY() + 46f,
+					position.getX() + 60f, position.getY() + 59f
+			}, CHECK_COLOR, alphaMult, 1f);
 			if (count > 1) {
-				GL11.glBegin(GL11.GL_QUADS);
 				for (int index = 0; index < count - 1; index++) {
 					float pipX = position.getX() + TILE_SIZE - 10f - index * 7f;
 					float pipY = position.getY() + 4f;
-					GL11.glVertex2f(pipX, pipY);
-					GL11.glVertex2f(pipX + 5f, pipY);
-					GL11.glVertex2f(pipX + 5f, pipY + 5f);
-					GL11.glVertex2f(pipX, pipY + 5f);
+					BattleNext_GeometryRenderer.fillRect(pipX, pipY, 5f, 5f, CHECK_COLOR, alphaMult);
 				}
-				GL11.glEnd();
 			}
-			GL11.glPopAttrib();
 		}
 
 		@Override
@@ -540,7 +515,7 @@ public class BattleNext_OptionField {
 		@Override
 		public void renderBelow(float alphaMult) {
 			if (hoverPanel == null) return;
-			drawRect(hoverPanel.getPosition(), HOVER_BACKGROUND, alphaMult);
+			BattleNext_GeometryRenderer.fillRect(hoverPanel.getPosition(), HOVER_BACKGROUND, alphaMult);
 		}
 	}
 

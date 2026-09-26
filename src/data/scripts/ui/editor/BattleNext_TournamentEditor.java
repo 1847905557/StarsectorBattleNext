@@ -94,6 +94,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		BattleNext_TextField.clearRegisteredFields();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);

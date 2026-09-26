@@ -4,9 +4,9 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
-import org.lwjgl.opengl.GL11;
 
 import java.util.List;
 
@@ -52,32 +52,8 @@ public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 	public void renderBelow(float alphaMult) {
 		if (panel != null) {
 			if (backdropTexture != 0) {
-				GL11.glPushAttrib(GL11.GL_TRANSFORM_BIT | GL11.GL_VIEWPORT_BIT | GL11.GL_ENABLE_BIT);
-				GL11.glViewport(0, 0, ShaderCore.getScreenScaleWidth(), ShaderCore.getScreenScaleHeight());
-				GL11.glMatrixMode(GL11.GL_PROJECTION);
-				GL11.glPushMatrix();
-				GL11.glLoadIdentity();
-				GL11.glMatrixMode(GL11.GL_MODELVIEW);
-				GL11.glPushMatrix();
-				GL11.glLoadIdentity();
-				GL11.glDisable(GL11.GL_BLEND);
-				GL11.glEnable(GL11.GL_TEXTURE_2D);
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, backdropTexture);
-				GL11.glColor4f(0.5f, 0.5f, 0.5f, 1f);
-				GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
-				GL11.glTexCoord2f(0f, 0f);
-				GL11.glVertex2f(-1f, -1f);
-				GL11.glTexCoord2f(0f, backdropV);
-				GL11.glVertex2f(-1f, 1f);
-				GL11.glTexCoord2f(backdropU, 0f);
-				GL11.glVertex2f(1f, -1f);
-				GL11.glTexCoord2f(backdropU, backdropV);
-				GL11.glVertex2f(1f, 1f);
-				GL11.glEnd();
-				GL11.glPopMatrix();
-				GL11.glMatrixMode(GL11.GL_PROJECTION);
-				GL11.glPopMatrix();
-				GL11.glPopAttrib();
+				BattleNext_GeometryRenderer.texturedFullscreen(backdropTexture, backdropU, backdropV,
+						ShaderCore.getScreenScaleWidth(), ShaderCore.getScreenScaleHeight());
 			}
 			border.setAlpha(alphaMult);
 			border.render(borderX, borderY);

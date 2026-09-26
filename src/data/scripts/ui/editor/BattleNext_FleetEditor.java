@@ -136,6 +136,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		BattleNext_TextField.clearRegisteredFields();
 		closePicker();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();

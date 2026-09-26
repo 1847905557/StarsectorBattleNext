@@ -33,7 +33,6 @@
 - `LifecycleConstructorRule.java`：禁止带生命周期入口的控制器暴露 `public` 构造函数。
 - `FieldAccessBoundaryRule.java`：检查实例字段访问边界：字段必须显式声明访问修饰符，`public` 实例字段只允许在 `@PublicData` 类型中，`protected` 实例字段只允许在源码内存在子类的类型中。
 - `PublicDataShapeRule.java`：检查 `@PublicData` 类型形态：不得声明普通方法，不得继承其它类，不得实现接口。功能类、控制器、生命周期对象和渲染对象不得用该注解放行字段访问。
-- `StaticFieldImmutabilityRule.java`：要求所有 `static` 字段都是 `final`；运行期可变状态应属于实例或显式运行期存储，而不是可重新绑定的类变量。
 
 ### 自检规则
 

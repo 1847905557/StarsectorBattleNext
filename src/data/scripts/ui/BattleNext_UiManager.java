@@ -181,6 +181,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void showPage() {
 		if (panel == null) return;
+		BattleNext_TextField.clearRegisteredFields();
 		if (fleetPage != null) fleetPage.closePicker();
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(Page.values()[index] != currentPage);
@@ -241,6 +242,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void requestClose() {
+		BattleNext_TextField.releaseFocusedField();
 		if (fleetPage != null) fleetPage.closePicker();
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(closeAction);

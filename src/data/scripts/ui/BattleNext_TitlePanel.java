@@ -10,6 +10,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Pair;
 import com.fs.state.AppDriver;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.config.BoxConfigGUI;
@@ -216,20 +217,8 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		float y = hovered ? ENTRY_BOTTOM + 12f : ENTRY_BOTTOM + BORDER_WIDTH;
 		float width = hovered ? 88f : ENTRY_WIDTH;
 		float height = hovered ? 88f : ENTRY_HEIGHT;
-		GL11.glColor4f(1f, 1f, 1f, 1f);
-		GL11.glEnable(GL11.GL_TEXTURE_2D);
-		GL11.glBindTexture(GL11.GL_TEXTURE_2D, iconTextures[hovered ? 1 : 0]);
-		GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
-		GL11.glTexCoord2f(0f, 0f);
-		GL11.glVertex2f(x, y);
-		GL11.glTexCoord2f(1f, 0f);
-		GL11.glVertex2f(x + width, y);
-		GL11.glTexCoord2f(0f, 1f);
-		GL11.glVertex2f(x, y + height);
-		GL11.glTexCoord2f(1f, 1f);
-		GL11.glVertex2f(x + width, y + height);
-		GL11.glEnd();
-		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+		BattleNext_GeometryRenderer.texturedQuad(iconTextures[hovered ? 1 : 0], x, y, width, height,
+				1f, 1f, 1f, 1f, 1f, 1f);
 	}
 
 	private void updateEntryInput() {
