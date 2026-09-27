@@ -62,14 +62,14 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
 		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
 		UIRect footer = regions[2];
-		String[] actions = {"add", "save", "copy", "delete", "back"};
-		float width = Math.min(120f, (footer.getWidth() - 40f) / actions.length);
+		String[] actions = {"add", "save", "back"};
+		float width = Math.min(160f, (footer.getWidth() - 20f) / 3f);
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(panel,
 					new UIRect(footer.getX() + index * (width + 10f), footer.getY(), width, 30f),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
 		}
-		float statusX = actions.length * (width + 10f);
+		float statusX = 3f * width + 30f;
 		if (footer.getWidth() - statusX >= 60f) {
 			TooltipMakerAPI footerStatus = panel.createUIElement(footer.getWidth() - statusX, 30f, false);
 			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
@@ -101,9 +101,15 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		CustomPanelAPI detail = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (draftOpen) {
 			CustomPanelAPI editorPanel = detail.createCustomPanel(detailRect.getWidth() - 16f,
-					detailRect.getHeight() - 16f, detail.getPlugin());
+					detailRect.getHeight() - 50f, detail.getPlugin());
 			detail.addComponent(editorPanel).inTL(8f, 8f);
 			editor.attach(editorPanel);
+			if (!selectedId.isEmpty()) {
+				ButtonAPI delete = BattleNext_PageLayout.fixedButton(detail,
+						new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+						text("delete"), "delete", CutStyle.ALL, true);
+				delete.setEnabled(store.isLoaded() && store.get(selectedId) != null);
+			}
 			return;
 		}
 		TooltipMakerAPI prompt = detail.createUIElement(detailRect.getWidth() - 18f,
@@ -115,6 +121,7 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 	@Override
 	public void buttonPressed(Object buttonId) {
 		if (!(buttonId instanceof String action)) return;
+		editor.closePicker();
 		if (action.startsWith("rules:select:")) {
 			navigation.accept(() -> open(action.substring("rules:select:".length())));
 			return;
@@ -123,32 +130,13 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 			navigation.accept(() -> open(""));
 			return;
 		}
-		if ("copy".equals(action) && draftOpen && !selectedId.isEmpty()) {
-			navigation.accept(() -> {
-				try {
-					BattleNext_RuleModel source = store.get(selectedId);
-					BattleNext_RuleModel copy = new BattleNext_RuleModel();
-					copy.fromJson(source.toJson());
-					String id = source.getId() + "_copy";
-					for (int number = 2; store.get(id) != null; number++) {
-						id = source.getId() + "_copy" + number;
-					}
-					copy.setId(id);
-					selectedId = "";
-					editor.open(copy);
-					refreshContent();
-				} catch (Exception exception) {
-					setStatus(text("load_failed") + ": " + exception.getMessage());
-				}
-			});
-			return;
-		}
 		if ("save".equals(action)) {
 			save();
 			return;
 		}
-		if ("delete".equals(action) && draftOpen && !selectedId.isEmpty()) {
+		if ("delete".equals(action) && draftOpen && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_RuleModel selected = store.get(selectedId);
+			if (selected == null) return;
 			deletion.accept(selected.getName() + " [" + selectedId + "]", () -> {
 				try {
 					store.delete(selectedId);
