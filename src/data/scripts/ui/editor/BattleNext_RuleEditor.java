@@ -12,7 +12,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
 import org.json.JSONException;
 
@@ -42,8 +42,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private TextFieldAPI idField;
 	private TextFieldAPI nameField;
 	private LabelAPI statusLabel;
-	private BattleNext_OptionField restrictionPicker;
-	private TextFieldAPI restrictionField;
+	private BattleNext_OptionPicker restrictionPicker;
 	private String savedSnapshot = "";
 	private String status = "";
 	private UIRect rowsArea;
@@ -137,11 +136,9 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		for (int index = 0; index < draft.getRestrictions().size(); index++) {
 			addRestrictionRow(index, draft.getRestrictions().get(index), rows, tableWidth);
 		}
-		restrictionPicker = new BattleNext_OptionField(panel, new RestrictionChoiceSource(),
-				BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
-		restrictionField = restrictionPicker.addTo(rows, panel, Math.min(300f, tableWidth), "");
-		BattleNext_PageLayout.button(rows, text("rules_add_restriction"), "rule:add",
-				Math.min(190f, tableWidth));
+		restrictionPicker = new BattleNext_OptionPicker(panel, new RestrictionChoiceSource(),
+				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
+		restrictionPicker.addTo(rows, panel, Math.min(190f, tableWidth), text("rules_add_restriction"));
 		rowsPanel.addUIElement(rows).inTL(0f, 0f);
 	}
 
@@ -224,15 +221,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	@Override
 	public void buttonPressed(Object buttonId) {
 		if (!(buttonId instanceof String action)) return;
-		if ("rule:add".equals(action)) {
-			try {
-				captureInputs(true);
-				addRestrictions(parseRestrictionIds(restrictionField.getText()));
-			} catch (RuntimeException exception) {
-				setStatus(exception.getMessage());
-			}
-			return;
-		}
 		if (!action.startsWith("rule:up:") && !action.startsWith("rule:down:")
 				&& !action.startsWith("rule:remove:")) return;
 		try {
@@ -255,6 +243,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	}
 
 	private void addRestrictions(List<String> ids) {
+		if (ids.isEmpty()) return;
 		try {
 			captureInputs(true);
 		} catch (RuntimeException exception) {
@@ -271,15 +260,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		}
 		draft.setRestrictions(restrictions);
 		refreshContent();
-	}
-
-	private List<String> parseRestrictionIds(String value) {
-		List<String> ids = new ArrayList<>();
-		for (String item : value.split(",")) {
-			String id = item.trim();
-			if (!id.isEmpty() && !ids.contains(id)) ids.add(id);
-		}
-		return ids;
 	}
 
 	private void captureInputs(boolean validate) {
@@ -423,14 +403,14 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		if (statusLabel != null) statusLabel.setText(value);
 	}
 
-	private class RestrictionChoiceSource implements BattleNext_OptionField.OptionFieldChoiceSource {
+	private class RestrictionChoiceSource implements BattleNext_OptionPicker.OptionChoiceSource {
 
 		@Override
-		public List<BattleNext_OptionField.OptionFieldChoice> getOptions() {
-			List<BattleNext_OptionField.OptionFieldChoice> options = new ArrayList<>();
+		public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
+			List<BattleNext_OptionPicker.OptionChoice> options = new ArrayList<>();
 			for (BattleNext_RestrictionSpec spec : BattleNext_RestrictionRegistry.getInstance().getAll()) {
 				if (draft.getRestriction(spec.getId()) == null) {
-					options.add(new BattleNext_OptionField.OptionFieldChoice(spec.getId(), spec.getDescription()));
+					options.add(new BattleNext_OptionPicker.OptionChoice(spec.getId(), spec.getDescription()));
 				}
 			}
 			return options;
@@ -447,7 +427,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		}
 
 		@Override
-		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionField.OptionFieldChoice option) {
+		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
 			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f, BattleNext_UiTheme.TEXT);
 		}
 	}

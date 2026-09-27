@@ -7,13 +7,13 @@ import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.BattleNext_OptionField.OptionFieldChoice;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.OptionFieldChoiceSource {
+public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
 
 	@Override
 	public int getMaxCount(String id) {
@@ -35,23 +35,23 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.Op
 	}
 
 	@Override
-	public List<OptionFieldChoice> getOptions() {
+	public List<OptionChoice> getOptions() {
 
-		List<OptionFieldChoice> options = new ArrayList<>();
+		List<OptionChoice> options = new ArrayList<>();
 		for (String id : Global.getSettings().getSortedSkillIds()) {
 			SkillSpecAPI spec = Global.getSettings().getSkillSpec(id);
 			if (spec == null) continue;
 			if (spec.isAptitudeEffect()) continue;
 
 			if (spec.hasTag("BattleNext_forceAllowed")) {
-				options.add(new OptionFieldChoice(id, spec.getName()));
+				options.add(new OptionChoice(id, spec.getName()));
 				continue;
 			}
 
 			if (isSkillBanned(spec)) continue;
 			if (spec.hasTag(Skills.TAG_DEPRECATED)) continue;
 			if (spec.hasTag(Skills.TAG_NPC_ONLY) && spec.hasTag(Skills.TAG_PLAYER_ONLY)) continue;
-			options.add(new OptionFieldChoice(id, spec.getName()));
+			options.add(new OptionChoice(id, spec.getName()));
 		}
 
 		return options;
@@ -68,7 +68,7 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionField.Op
 	}
 
 	@Override
-	public void createTooltip(TooltipMakerAPI tooltip, OptionFieldChoice option) {
+	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		tooltip.addTitle(option.getLabel());
 		tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);

@@ -20,6 +20,8 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
@@ -350,12 +352,12 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		return strings.get(key);
 	}
 
-	private class TournamentFleetOptionSource implements BattleNext_OptionField.OptionFieldChoiceSource {
+	private class TournamentFleetOptionSource implements BattleNext_OptionPicker.OptionChoiceSource {
 		@Override
-		public List<BattleNext_OptionField.OptionFieldChoice> getOptions() {
-			List<BattleNext_OptionField.OptionFieldChoice> options = new ArrayList<>();
+		public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
+			List<BattleNext_OptionPicker.OptionChoice> options = new ArrayList<>();
 			for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
-				options.add(new BattleNext_OptionField.OptionFieldChoice(fleet.getId(), fleet.getName()));
+				options.add(new BattleNext_OptionPicker.OptionChoice(fleet.getId(), fleet.getName()));
 			}
 			return options;
 		}
@@ -371,7 +373,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		}
 
 		@Override
-		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionField.OptionFieldChoice option) {
+		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
 			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f, BattleNext_UiTheme.TEXT);
 		}
 	}
