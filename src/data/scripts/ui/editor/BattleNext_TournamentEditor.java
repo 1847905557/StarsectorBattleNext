@@ -150,8 +150,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 	private void addDetails(TooltipMakerAPI content) {
 		content.addTitle(isReadOnly() ? text("tournament_locked") : text("tournament_editable"));
-		idField = field(content, text("tournament_id"), draft.getId());
-		nameField = field(content, text("tournament_name"), draft.getName());
+		idField = field(content, text("tournament_id"), draft.getId(), content);
+		nameField = field(content, text("tournament_name"), draft.getName(), content);
 		content.addPara(text("tournament_bracket"), 8f, BattleNext_UiTheme.MUTED);
 		bracketGroup = new CheckBoxGroup();
 		if (isReadOnly()) {
@@ -165,17 +165,17 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			bracketGroup.tryCheckValue(draft.getBracketType());
 			bracketGroup.updateCheck();
 		}
-		boField = field(content, text("tournament_bo"), Integer.toString(draft.getBoCount()));
-		maxFleetField = field(content, text("tournament_max_fleet"), Integer.toString(draft.getMaxFleet()));
-		ruleField = field(content, text("tournament_rules"), draft.getRuleId());
-		mapField = field(content, text("battle_map"), Integer.toString(draft.getMapId()));
+		boField = field(content, text("tournament_bo"), Integer.toString(draft.getBoCount()), content);
+		maxFleetField = field(content, text("tournament_max_fleet"), Integer.toString(draft.getMaxFleet()), content);
+		ruleField = field(content, text("tournament_rules"), draft.getRuleId(), content);
+		mapField = field(content, text("battle_map"), Integer.toString(draft.getMapId()), content);
 		content.addPara(text("fleet_ids"), 10f, BattleNext_UiTheme.ACCENT);
 		if (isReadOnly()) {
 			for (String fleet : draft.getFleetIds()) content.addPara(fleet, 5f, BattleNext_UiTheme.TEXT);
 		} else {
 			fleetPicker = new BattleNext_OptionField(panel, new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 			fleetField = fleetPicker.addTo(content, panel, Math.min(360f, contentRect.getWidth() - 18f),
-					String.join(",", draft.getFleetIds()));
+					String.join(",", draft.getFleetIds()), content);
 			fleetField.setMaxChars(8192);
 			BattleNext_PageLayout.button(content, text("apply_fleet_selection"), "fleet:apply", 180f);
 			for (int index = 0; index < draft.getFleetIds().size(); index++) {
@@ -242,14 +242,14 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		return text("bracket_" + type.name().toLowerCase(java.util.Locale.ROOT));
 	}
 
-	private TextFieldAPI field(TooltipMakerAPI host, String label, String value) {
+	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, TooltipMakerAPI... viewports) {
 		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
 		if (isReadOnly()) {
 			host.addPara(value, 2f, BattleNext_UiTheme.TEXT);
 			return null;
 		}
 		TextFieldAPI result = BattleNext_TextField.addTo(host, panel,
-				Math.min(360f, contentRect.getWidth() - 18f), FIELD_HEIGHT, value);
+				Math.min(360f, contentRect.getWidth() - 18f), FIELD_HEIGHT, value, viewports);
 		result.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		return result;
 	}

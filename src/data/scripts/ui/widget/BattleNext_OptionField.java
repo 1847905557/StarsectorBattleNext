@@ -32,10 +32,15 @@ public class BattleNext_OptionField {
 	}
 
 	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value) {
+		return addTo(host, owner, width, value, new TooltipMakerAPI[0]);
+	}
+
+	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value,
+			TooltipMakerAPI... viewports) {
 		CustomPanelAPI row = owner.createCustomPanel(width, FIELD_HEIGHT, owner.getPlugin());
 		TooltipMakerAPI input = row.createUIElement(width - BUTTON_WIDTH, FIELD_HEIGHT, false);
 		field = BattleNext_TextField.addTo(input, row, width - BUTTON_WIDTH, FIELD_HEIGHT,
-				value == null ? "" : value);
+				value == null ? "" : value, viewports);
 		field.getPosition().inTL(0f, 0f);
 		field.setLimitByStringWidth(false);
 		field.setVerticalCursor(true);
@@ -43,7 +48,7 @@ public class BattleNext_OptionField {
 		row.addUIElement(input).inTL(0f, 0f);
 		picker = new BattleNext_OptionPicker(overlayHost, source,
 				toPickerMode(mode), () -> parse(field.getText()), ids -> field.setText(expand(ids)));
-		picker.addButton(row, new UIRect(width - BUTTON_WIDTH, 0f, BUTTON_WIDTH, FIELD_HEIGHT), "...");
+		picker.addButton(row, new UIRect(width - BUTTON_WIDTH, 0f, BUTTON_WIDTH, FIELD_HEIGHT), "...", viewports);
 		host.addCustom(row, 2f);
 		return field;
 	}

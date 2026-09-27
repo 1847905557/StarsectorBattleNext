@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -74,6 +75,7 @@ public class BattleNext_OptionPicker {
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
+	private static BattleNext_OptionPicker activePicker;
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final CustomPanelAPI overlayHost;
@@ -81,6 +83,7 @@ public class BattleNext_OptionPicker {
 	private final OptionSelectionMode mode;
 	private final Supplier<List<String>> initialSelection;
 	private final Consumer<List<String>> onConfirmed;
+	private List<TooltipMakerAPI> viewports = List.of();
 	private final Map<String, Integer> selection = new LinkedHashMap<>();
 
 	private List<OptionChoice> options = List.of();
@@ -89,6 +92,7 @@ public class BattleNext_OptionPicker {
 	private ButtonAPI toggle;
 	private CustomPanelAPI popup;
 	private CustomPanelAPI gridPanel;
+	private ScrollPanelAPI gridScroller;
 	private CustomPanelAPI hoverPanel;
 	private TextFieldAPI search;
 	private String lastSearch = "";
@@ -106,6 +110,12 @@ public class BattleNext_OptionPicker {
 	}
 
 	public void addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String label) {
+		addTo(host, owner, width, label, new TooltipMakerAPI[0]);
+	}
+
+	public void addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String label,
+			TooltipMakerAPI... viewports) {
+		setViewports(viewports);
 		row = owner.createCustomPanel(width, FIELD_HEIGHT, new OptionPickerPanelPlugin());
 		toggle = BattleNext_PageLayout.fixedButton(row,
 				new UIRect(0f, 0f, width, FIELD_HEIGHT), label,
@@ -114,6 +124,12 @@ public class BattleNext_OptionPicker {
 	}
 
 	public void addButton(CustomPanelAPI owner, UIRect rect, String label) {
+		addButton(owner, rect, label, new TooltipMakerAPI[0]);
+	}
+
+	public void addButton(CustomPanelAPI owner, UIRect rect, String label,
+			TooltipMakerAPI... viewports) {
+		setViewports(viewports);
 		row = owner.createCustomPanel(rect.getWidth(), rect.getHeight(), new OptionPickerPanelPlugin());
 		toggle = BattleNext_PageLayout.fixedButton(row,
 				new UIRect(0f, 0f, rect.getWidth(), rect.getHeight()), label,
@@ -123,9 +139,12 @@ public class BattleNext_OptionPicker {
 
 	public void close() {
 		BattleNext_TextField.releaseFocusedField();
+		if (activePicker == this) activePicker = null;
+		if (popup != null) BattleNext_TextFieldSession.clearModalRegion(popup.getPosition());
 		if (popup != null) overlayHost.removeComponent(popup);
 		popup = null;
 		gridPanel = null;
+		gridScroller = null;
 		hoverPanel = null;
 		search = null;
 		hoveredOption = null;
@@ -146,15 +165,16 @@ public class BattleNext_OptionPicker {
 				return true;
 			}
 			if (!event.isMouseDownEvent() && !event.isMouseScrollEvent()) continue;
-			float scale = Global.getSettings().getScreenScaleMult();
-			float x = Mouse.getX() / scale;
-			float y = Mouse.getY() / scale;
-			if (event.isMouseScrollEvent() && row != null && contains(row, x, y) && !contains(popup, x, y)) {
+			if (event.isMouseScrollEvent() && row != null && contains(row, event)
+					&& !contains(popup, event)) {
 				close();
+				event.consume();
 				continue;
 			}
-			if (event.isMouseDownEvent() && !contains(popup, x, y) && !contains(toggle, x, y)) {
+			if (event.isMouseDownEvent() && !contains(popup, event) && !contains(toggle, event)) {
 				close();
+				event.consume();
+				return true;
 			}
 		}
 		return false;
@@ -163,6 +183,7 @@ public class BattleNext_OptionPicker {
 	private void open() {
 
 		if (popup != null) return;
+		if (activePicker != null && activePicker != this) activePicker.close();
 		BattleNext_TextField.releaseFocusedField();
 		options = new ArrayList<>(source.getOptions());
 		Set<String> known = new HashSet<>();
@@ -202,6 +223,8 @@ public class BattleNext_OptionPicker {
 				strings.get("picker_cancel"), OptionPickerAction.CANCEL, CutStyle.ALL, false);
 		overlayHost.addComponent(popup).inTL(x, y);
 		overlayHost.bringComponentToTop(popup);
+		activePicker = this;
+		BattleNext_TextFieldSession.setModalRegion(popup.getPosition());
 		lastSearch = "";
 		rebuildGrid();
 	}
@@ -225,6 +248,7 @@ public class BattleNext_OptionPicker {
 		removeHover();
 		hoverTargets.clear();
 		if (gridPanel != null) popup.removeComponent(gridPanel);
+		gridScroller = null;
 		float width = popup.getPosition().getWidth() - 2f * PADDING;
 		float height = popup.getPosition().getHeight() - 90f;
 		gridPanel = popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin());
@@ -253,6 +277,7 @@ public class BattleNext_OptionPicker {
 			grid.setHeightSoFar(2f * PADDING + rows * (TILE_SIZE + TILE_GAP));
 		}
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
+		gridScroller = grid.getExternalScroller();
 		popup.addComponent(gridPanel).inTL(PADDING, 44f);
 	}
 
@@ -344,20 +369,57 @@ public class BattleNext_OptionPicker {
 		return Math.max(1, source.getMaxCount(id));
 	}
 
-	private boolean contains(UIComponentAPI component, float x, float y) {
+	private boolean contains(UIComponentAPI component, InputEventAPI event) {
+		return component != null && component.getPosition().containsEvent(event);
+	}
 
-		PositionAPI position = component.getPosition();
-		return x >= position.getX() && x < position.getX() + position.getWidth()
+	private boolean contains(PositionAPI position, float x, float y) {
+		return position != null && x >= position.getX() && x < position.getX() + position.getWidth()
 				&& y >= position.getY() && y < position.getY() + position.getHeight();
 	}
 
+	private void setViewports(TooltipMakerAPI... hosts) {
+		viewports = hosts == null ? List.of() : Arrays.stream(hosts)
+				.filter(host -> host != null).toList();
+	}
+
+	private boolean isInsideViewports(InputEventAPI event) {
+		for (TooltipMakerAPI host : viewports) {
+			ScrollPanelAPI scroller = host.getExternalScroller();
+			PositionAPI position = scroller == null ? host.getPosition() : scroller.getPosition();
+			if (!position.containsEvent(event)) return false;
+		}
+		return true;
+	}
+
+	private boolean isRowVisible() {
+		if (row == null) return false;
+		PositionAPI rowPosition = row.getPosition();
+		for (TooltipMakerAPI host : viewports) {
+			ScrollPanelAPI scroller = host.getExternalScroller();
+			PositionAPI viewport = scroller == null ? host.getPosition() : scroller.getPosition();
+			if (rowPosition.getX() + rowPosition.getWidth() <= viewport.getX()
+					|| viewport.getX() + viewport.getWidth() <= rowPosition.getX()
+					|| rowPosition.getY() + rowPosition.getHeight() <= viewport.getY()
+					|| viewport.getY() + viewport.getHeight() <= rowPosition.getY()) return false;
+		}
+		return true;
+	}
+
 	private void updateHover(float x, float y) {
+		PositionAPI gridViewport = gridScroller == null
+				? gridPanel == null ? null : gridPanel.getPosition()
+				: gridScroller.getPosition();
+		if (popup == null || !contains(popup.getPosition(), x, y)
+				|| !contains(gridViewport, x, y)) {
+			removeHover();
+			return;
+		}
 
 		OptionTileHoverTarget target = null;
 		for (OptionTileHoverTarget candidate : hoverTargets) {
 			PositionAPI position = candidate.tile.getPosition();
-			if (x >= position.getX() && x < position.getX() + position.getWidth()
-					&& y >= position.getY() && y < position.getY() + position.getHeight()) {
+			if (contains(position, x, y)) {
 				target = candidate;
 				break;
 			}
@@ -403,6 +465,26 @@ public class BattleNext_OptionPicker {
 	private class OptionPickerPanelPlugin extends BaseCustomUIPanelPlugin {
 
 		@Override
+		public void advance(float amount) {
+			if (toggle == null) return;
+			toggle.setEnabled(isRowVisible()
+					&& (activePicker == null || activePicker == BattleNext_OptionPicker.this));
+		}
+
+		@Override
+		public void processInput(List<InputEventAPI> events) {
+			for (InputEventAPI event : events) {
+				if (event.isConsumed() || !event.isMouseDownEvent()) continue;
+				if (activePicker != null && activePicker != BattleNext_OptionPicker.this
+						&& contains(row, event)) {
+					event.consume();
+					continue;
+				}
+				if (contains(row, event) && !isInsideViewports(event)) event.consume();
+			}
+		}
+
+		@Override
 		public void buttonPressed(Object buttonId) {
 			if (buttonId != OptionPickerAction.TOGGLE) return;
 			if (popup == null) open();
@@ -421,6 +503,10 @@ public class BattleNext_OptionPicker {
 		@Override
 		public void advance(float amount) {
 			if (search == null || popup == null) return;
+			if (!isRowVisible()) {
+				close();
+				return;
+			}
 			float hostWidth = overlayHost.getPosition().getWidth();
 			float hostHeight = overlayHost.getPosition().getHeight();
 			float rowTop = overlayHost.getPosition().getY() + hostHeight

@@ -98,8 +98,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		TooltipMakerAPI details = contentPanel.createUIElement(leftWidth, contentRect.getHeight(), true);
 		details.addTitle(text("rules_editable"));
 		statusLabel = details.addPara(status, 4f, BattleNext_UiTheme.MUTED);
-		idField = field(details, panel, text("rules_id"), draft.getId(), leftWidth - 12f);
-		nameField = field(details, panel, text("rules_name"), draft.getName(), leftWidth - 12f);
+		idField = field(details, panel, text("rules_id"), draft.getId(), leftWidth - 12f, details);
+		nameField = field(details, panel, text("rules_name"), draft.getName(), leftWidth - 12f, details);
 		contentPanel.addUIElement(details).inTL(0f, 0f);
 
 		TooltipMakerAPI restrictions = contentPanel.createUIElement(rightWidth, contentRect.getHeight(), true);
@@ -134,16 +134,16 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		CustomPanelAPI rowsPanel = rowsRect.createSubPanel(tablePanel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI rows = rowsPanel.createUIElement(tableWidth, visibleHeight, true);
 		for (int index = 0; index < draft.getRestrictions().size(); index++) {
-			addRestrictionRow(index, draft.getRestrictions().get(index), rows, tableWidth);
+			addRestrictionRow(index, draft.getRestrictions().get(index), rows, tableWidth, restrictions);
 		}
 		restrictionPicker = new BattleNext_OptionPicker(panel, new RestrictionChoiceSource(),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
-		restrictionPicker.addTo(rows, panel, Math.min(190f, tableWidth), text("rules_add_restriction"));
+		restrictionPicker.addTo(rows, panel, Math.min(190f, tableWidth), text("rules_add_restriction"), rows, restrictions);
 		rowsPanel.addUIElement(rows).inTL(0f, 0f);
 	}
 
 	private void addRestrictionRow(int index, BattleNext_RuleRestriction restriction,
-			TooltipMakerAPI content, float tableWidth) {
+			TooltipMakerAPI content, float tableWidth, TooltipMakerAPI restrictions) {
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
 		String description = spec == null ? text("rules_missing_restriction") : spec.getDescription();
 		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth, ROW_HEIGHT, panel.getPlugin());
@@ -166,7 +166,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 					0f, BattleNext_UiTheme.MUTED);
 			row.addUIElement(missing).inTL(cells[1].getX() + 3f, 0f);
 		} else {
-			addField(cells[1], row, displayValue(restriction), restriction.getId());
+			addField(cells[1], row, displayValue(restriction), restriction.getId(), content, restrictions);
 			TooltipMakerAPI enabledHost = row.createUIElement(cells[2].getWidth(), ROW_HEIGHT, false);
 			ButtonAPI enabled = enabledHost.addCheckbox(cells[2].getWidth(), ROW_HEIGHT, "",
 					"rule:enabled:" + index, ButtonAPI.UICheckboxSize.SMALL, 0f);
@@ -186,10 +186,11 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		content.addCustom(row, 0f);
 	}
 
-	private TextFieldAPI addField(UIRect rect, CustomPanelAPI owner, String value, String key) {
+	private TextFieldAPI addField(UIRect rect, CustomPanelAPI owner, String value, String key,
+			TooltipMakerAPI... viewports) {
 		float width = Math.max(40f, rect.getWidth() - 10f);
 		TooltipMakerAPI maker = owner.createUIElement(width, FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, owner, width, FIELD_HEIGHT, value);
+		TextFieldAPI field = BattleNext_TextField.addTo(maker, owner, width, FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(FIELD_HEIGHT);
 		owner.addUIElement(maker).inTL(rect.getX() + 3f, rect.getY() + (rect.getHeight() - FIELD_HEIGHT) * 0.5f);
@@ -348,9 +349,10 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		return status;
 	}
 
-	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width) {
+	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width,
+			TooltipMakerAPI... viewports) {
 		host.addPara(label, 6f, BattleNext_UiTheme.MUTED);
-		return BattleNext_TextField.addTo(host, owner, Math.max(90f, width), 28f, value);
+		return BattleNext_TextField.addTo(host, owner, Math.max(90f, width), 28f, value, viewports);
 	}
 
 	private String displayValue(BattleNext_RuleRestriction restriction) {

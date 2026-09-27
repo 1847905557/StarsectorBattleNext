@@ -222,12 +222,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (entry.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			float rawWidth = cells[4].getX() + cells[4].getWidth() - cells[1].getX();
 			row.raw = addField(new UIRect(cells[1].getX(), 0f, rawWidth, ROW_HEIGHT), card,
-					entry.getRawContent());
+					entry.getRawContent(), content);
 		} else {
-			row.player = addField(cells[1], card, entry.getPlayer());
-			row.enemy = addField(cells[2], card, entry.getEnemy());
-			row.map = addField(cells[3], card, Integer.toString(entry.getMap()));
-			row.mapScale = addField(cells[4], card, Float.toString(entry.getMapScale()));
+			row.player = addField(cells[1], card, entry.getPlayer(), content);
+			row.enemy = addField(cells[2], card, entry.getEnemy(), content);
+			row.map = addField(cells[3], card, Integer.toString(entry.getMap()), content);
+			row.mapScale = addField(cells[4], card, Float.toString(entry.getMapScale()), content);
 		}
 
 		UIRect statusRect = cells[5];
@@ -282,10 +282,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		rows.add(row);
 	}
 
-	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value) {
+	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value, TooltipMakerAPI... viewports) {
 		float width = rect.getWidth() - 10f;
 		TooltipMakerAPI maker = card.createUIElement(width, FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width, FIELD_HEIGHT, value);
+		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width, FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(FIELD_HEIGHT);
 		card.addUIElement(maker).inTL(rect.getX() + 3f, rect.getY() + (rect.getHeight() - FIELD_HEIGHT) * 0.5f);

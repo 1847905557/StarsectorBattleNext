@@ -74,10 +74,15 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
 			float width, float height, String value) {
+		return addTo(host, owner, width, height, value, new TooltipMakerAPI[0]);
+	}
+
+	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
+			float width, float height, String value, TooltipMakerAPI... viewports) {
 		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
 		CustomPanelAPI panel = owner.createCustomPanel(width, height, plugin);
 		BattleNext_TextField field = new BattleNext_TextField(panel, width, height);
-		BattleNext_TextFieldSession.register(field);
+		BattleNext_TextFieldSession.register(field, viewports);
 		plugin.field = field;
 		field.setText(value == null ? "" : value);
 		host.addCustom(panel, 0f);
@@ -441,22 +446,27 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	public PositionAPI getPosition() {
 		return panel.getPosition();
 	}
+
 	@Override
 	public void render(float alphaMult) {
 		panel.render(alphaMult);
 	}
+
 	@Override
 	public void processInput(List<InputEventAPI> events) {
 		panel.processInput(events);
 	}
+
 	@Override
 	public void advance(float amount) {
 		panel.advance(amount);
 	}
+
 	@Override
 	public void setOpacity(float opacity) {
 		panel.setOpacity(opacity);
 	}
+
 	@Override
 	public float getOpacity() {
 		return panel.getOpacity();
@@ -467,28 +477,34 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		this.pad = Math.max(0f, pad);
 		refreshVisual();
 	}
+
 	@Override
 	public LabelAPI getTextLabelAPI() {
 		return textLabel;
 	}
+
 	@Override
 	public void setMidAlignment() {
 		textLabel.setAlignment(Alignment.LMID);
 		refreshVisual();
 	}
+
 	@Override
 	public void setColor(Color color) {
 		textColor = color;
 		textLabel.setColor(color);
 	}
+
 	@Override
 	public void setBgColor(Color color) {
 		background = color;
 	}
+
 	@Override
 	public String getText() {
 		return text;
 	}
+
 	@Override
 	public void setText(String value) {
 		text = value == null ? "" : value;
@@ -498,22 +514,27 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		undoText = text;
 		notifyChanged();
 	}
+
 	@Override
 	public boolean isValidChar(char c) {
 		return c != 0 && c != '%' && c != '$';
 	}
+
 	@Override
 	public boolean isLimitByStringWidth() {
 		return limitByStringWidth;
 	}
+
 	@Override
 	public void setLimitByStringWidth(boolean value) {
 		limitByStringWidth = value;
 	}
+
 	@Override
 	public boolean appendCharIfPossible(char c) {
 		return appendCharIfPossible(c, true);
 	}
+
 	@Override
 	public boolean appendCharIfPossible(char c, boolean withSound) {
 		if (!isValidChar(c) || (maxChars >= 0 && !hasSelection() && text.length() >= maxChars)) return false;
@@ -521,18 +542,22 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		insert(c);
 		return oldCursor != cursor;
 	}
+
 	@Override
 	public int getMaxChars() {
 		return maxChars;
 	}
+
 	@Override
 	public void setMaxChars(int maxChars) {
 		this.maxChars = maxChars;
 	}
+
 	@Override
 	public void deleteAll() {
 		deleteAll(true);
 	}
+
 	@Override
 	public void deleteAll(boolean withSound) {
 		text = "";
@@ -540,6 +565,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		anchor = 0;
 		notifyChanged();
 	}
+
 	@Override
 	public void deleteLastWord() {
 		if (hasSelection()) {
@@ -558,56 +584,69 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		anchor = end;
 		notifyChanged();
 	}
+
 	@Override
 	public void grabFocus() {
 		grabFocus(true);
 	}
+
 	@Override
 	public void grabFocus(boolean playSound) {
 		BattleNext_TextFieldSession.focus(this);
 		undoText = text;
 		resetBlink();
 	}
+
 	@Override
 	public boolean hasFocus() {
 		return BattleNext_TextFieldSession.isFocused(this);
 	}
+
 	@Override
 	public boolean isUndoOnEscape() {
 		return undoOnEscape;
 	}
+
 	@Override
 	public void setUndoOnEscape(boolean value) {
 		undoOnEscape = value;
 	}
+
 	@Override
 	public boolean isHandleCtrlV() {
 		return handleCtrlV;
 	}
+
 	@Override
 	public void setHandleCtrlV(boolean value) {
 		handleCtrlV = value;
 	}
+
 	@Override
 	public Color getBorderColor() {
 		return border;
 	}
+
 	@Override
 	public void setBorderColor(Color color) {
 		border = color;
 	}
+
 	@Override
 	public boolean isVerticalCursor() {
 		return verticalCursor;
 	}
+
 	@Override
 	public void setVerticalCursor(boolean value) {
 		verticalCursor = value;
 	}
+
 	@Override
 	public void hideCursor() {
 		showCursor = false;
 	}
+
 	@Override
 	public void showCursor() {
 		showCursor = true;
