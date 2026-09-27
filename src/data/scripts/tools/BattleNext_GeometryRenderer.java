@@ -96,9 +96,20 @@ public class BattleNext_GeometryRenderer {
 		GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
 		GeometryClipState state = new GeometryClipState(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1),
 				box.get(2), box.get(3));
+		int clipX = Math.round(x * xScale);
+		int clipY = Math.round(y * yScale);
+		int clipWidth = Math.max(0, Math.round(width * xScale));
+		int clipHeight = Math.max(0, Math.round(height * yScale));
+		if (state.enabled) {
+			int right = Math.min(clipX + clipWidth, state.x + state.width);
+			int top = Math.min(clipY + clipHeight, state.y + state.height);
+			clipX = Math.max(clipX, state.x);
+			clipY = Math.max(clipY, state.y);
+			clipWidth = Math.max(0, right - clipX);
+			clipHeight = Math.max(0, top - clipY);
+		}
 		GL11.glEnable(GL11.GL_SCISSOR_TEST);
-		GL11.glScissor((int) (x * xScale), (int) (y * yScale),
-				(int) (width * xScale), (int) (height * yScale));
+		GL11.glScissor(clipX, clipY, clipWidth, clipHeight);
 		return state;
 	}
 
