@@ -188,7 +188,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		if (selectedId.isEmpty()) return text("quick_battle");
 		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null) return text("tournament_missing") + " [" + selectedId + "]";
-		return tournament.getName() + " [" + selectedId + "]";
+		return tournament.getName();
 	}
 
 	private List<BattleNext_DropdownField.DropdownChoice> sourceOptions() {
@@ -196,7 +196,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		options.add(new BattleNext_DropdownField.DropdownChoice("", text("quick_battle")));
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			options.add(new BattleNext_DropdownField.DropdownChoice(tournament.getId(),
-					tournament.getName() + " [" + tournament.getId() + "]"));
+					tournament.getName()));
 		}
 		return options;
 	}

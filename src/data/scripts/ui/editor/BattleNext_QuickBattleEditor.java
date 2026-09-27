@@ -27,8 +27,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private static final float FIELD_HEIGHT = 28f;
 	private static final float COLUMN_GAP = 8f;
 	private static final float SIDE_MARGIN = 12f;
-	private static final float SCROLLBAR_WIDTH = 16f;
-	private static final float[] COLUMN_SHARES = {0.02f, 0.29f, 0.29f, 0.05f, 0.08f, 0.1f, 0.07f, 0.1f};
+	private static final float[] COLUMN_SHARES = {0.025f, 0.29f, 0.29f, 0.05f, 0.08f, 0.095f, 0.07f, 0.1f};
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
@@ -144,9 +143,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
 				.splitVertically(HEADER_HEIGHT);
-		float tableWidth = table[0].getWidth() - SIDE_MARGIN * 2f - SCROLLBAR_WIDTH;
+		float tableWidth = table[0].getWidth() - SIDE_MARGIN;
 		rowsArea = new UIRect(SIDE_MARGIN - 5f, table[1].getY(),
-				tableWidth + SCROLLBAR_WIDTH, table[1].getHeight());
+			tableWidth, table[1].getHeight());
 
 		UIRect tableHeader = new UIRect(SIDE_MARGIN, table[0].getY(), tableWidth, HEADER_HEIGHT);
 		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth, HEADER_HEIGHT, false);
@@ -201,7 +200,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		float visibleHeight = Math.min(rowsArea.getHeight(), entries.size() * ROW_HEIGHT + 10f);
 		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
 		CustomPanelAPI contentPanel = rowsRect.createSubPanel(panel, inputOwner).getPanel();
-		TooltipMakerAPI content = contentPanel.createUIElement(rowsRect.getWidth() - 10f, visibleHeight, true);
+		TooltipMakerAPI content = contentPanel.createUIElement(rowsRect.getWidth(), visibleHeight, true);
 		for (int index = 0; index < entries.size(); index++) {
 			addRow(index, entries.get(index), content);
 		}
@@ -212,7 +211,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private void addRow(int index, BattleNext_QuickBattleModel entry, TooltipMakerAPI content) {
 
-		float width = rowsRect.getWidth() - SCROLLBAR_WIDTH;
+		float width = rowsRect.getWidth();
 		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
 		UIRect[] cells = columns(width, ROW_HEIGHT);

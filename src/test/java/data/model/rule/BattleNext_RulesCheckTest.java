@@ -66,6 +66,28 @@ class BattleNext_RulesCheckTest {
 	}
 
 	@Test
+	void editorRestrictionOrderAndValuesRoundTrip() throws Exception {
+		BattleNext_RuleModel rule = new BattleNext_RuleModel("draft", "Draft");
+		BattleNext_RuleRestriction numeric = new BattleNext_RuleRestriction("fleetMaxShips", "number");
+		numeric.setEnabled(true);
+		BattleNext_RuleRestriction filter = new BattleNext_RuleRestriction("filterWhiteWeapon", "list");
+		filter.setEnabled(true);
+		rule.setRestrictions(List.of(filter, numeric));
+		assertThrows(IllegalArgumentException.class, () -> rule.setRestrictions(List.of(filter, numeric, filter)));
+		assertEquals(List.of("filterWhiteWeapon", "fleetMaxShips"),
+				rule.getRestrictions().stream().map(BattleNext_RuleRestriction::getId).toList());
+		BattleNext_RuleModel saved = new BattleNext_RuleModel();
+		saved.fromJson(rule.toJson());
+		assertTrue(saved.getRestriction("filterWhiteWeapon").isEnabled());
+		assertTrue(saved.getRestriction("filterWhiteWeapon").getItems().isEmpty());
+		assertEquals(0d, saved.getRestriction("fleetMaxShips").getValue());
+		assertEquals("filterWhiteWeapon", saved.getRestrictions().get(0).getId());
+		saved.setId("draft_copy");
+		assertEquals("draft", rule.getId());
+		assertEquals("draft_copy", saved.getId());
+	}
+
+	@Test
 	void registeredRestrictionsHaveExpectedTypes() {
 		List<BattleNext_RestrictionSpec> entries = BattleNext_RestrictionRegistry.getInstance().getAll();
 		assertEquals(22, entries.size());

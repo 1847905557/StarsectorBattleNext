@@ -25,4 +25,9 @@ public class BattleNext_RuleStore extends BattleNext_BaseStore<BattleNext_RuleMo
 	protected List<BattleNext_BaseLoader<BattleNext_RuleModel>> sources() {
 		return List.of(standardLoader);
 	}
+
+	@Override
+	protected boolean isManaged(BattleNext_RuleModel model) {
+		return model != null;
+	}
 }

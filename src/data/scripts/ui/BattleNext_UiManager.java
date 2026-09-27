@@ -134,6 +134,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 					reportPage.buttonPressed("back");
 				} else if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null) {
 					tournamentPage.buttonPressed("back");
+				} else if (currentPage == BattleManagementPage.RULES && rulesPage != null) {
+					rulesPage.buttonPressed("back");
 				} else {
 					requestClose();
 				}
@@ -227,7 +229,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			return tournamentPage;
 		}
 		if (page == BattleManagementPage.RULES) {
-			if (rulesPage == null) rulesPage = new BattleNext_RulesPage(this::confirmNavigation, this::confirmDelete);
+			if (rulesPage == null) rulesPage = new BattleNext_RulesPage(this::returnToBattleSelector,
+					this::confirmNavigation, this::confirmDelete);
 			return rulesPage;
 		}
 		if (settingsPage == null) settingsPage = new BattleNext_SettingsPage();
