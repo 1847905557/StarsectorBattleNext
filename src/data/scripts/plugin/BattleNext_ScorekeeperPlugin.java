@@ -24,6 +24,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	private final List<ScoreTrackedFleetMember> trackedMembers = new ArrayList<>();
 	private final Map<FleetMemberAPI, ScoreTrackedFleetMember> membersByFleetMember = new IdentityHashMap<>();
+
 	private CombatEngineAPI engine;
 	private BattleNext_BattleReportModel frozenReport;
 	private boolean battleStarted;

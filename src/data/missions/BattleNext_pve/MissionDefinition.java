@@ -5,6 +5,8 @@ import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
+import data.scripts.plugin.BattleNext_BattleClockPlugin;
+import data.scripts.plugin.BattleNext_MissionPlugin;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
@@ -12,6 +14,7 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.tools.BattleNext_Settings;
 
 import java.util.List;
 
@@ -34,8 +37,11 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, true);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet, false);
+		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
+		api.addPlugin(new BattleNext_MissionPlugin(timeLimit));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet.getMembers(), assembledEnemyFleet.getMembers());
 		api.addPlugin(scorekeeper);
+		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
 				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null));
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);

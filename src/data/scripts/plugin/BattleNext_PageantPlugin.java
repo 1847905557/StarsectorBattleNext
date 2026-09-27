@@ -27,7 +27,7 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final float PLATE_WIDTH = 360f;
 	private static final float PLATE_HEIGHT = 80f;
-	private static final float END_DURATION = 11.5f;
+	private static final float END_DURATION = 11.25f;
 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private final String playerName;
@@ -45,6 +45,7 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 	private boolean visualsInitialized;
 	private boolean versusSoundPlayed;
 	private boolean endingSoundPlayed;
+	private boolean endingComplete;
 	private float endingStart = -1f;
 	private String endingKey = "";
 	private boolean playerWon;
@@ -90,7 +91,14 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
 
-		if (engine == null || !graphicEnabled) return;
+		if (engine == null || endingComplete) return;
+		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
+		if (!graphicEnabled) {
+			if (report != null) {
+				completeEnding();
+			}
+			return;
+		}
 		if (!visualsInitialized) initVisuals();
 
 		float elapsed = engine.getTotalElapsedTime(false);
@@ -99,7 +107,6 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			Global.getSoundPlayer().playUISound("BattleNext_versus", 1f, 1f);
 		}
 
-		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		if (report == null) return;
 		if (endingStart < 0f) {
 			endingStart = elapsed;
@@ -112,11 +119,17 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			Global.getSoundPlayer().playUISound("shame".equals(endingKey)
 					? "BattleNext_shame" : "BattleNext_victory", 1f, 1f);
 		}
+		if (elapsed - endingStart >= END_DURATION) completeEnding();
 	}
 
 	public boolean isEndingComplete() {
-		if (!graphicEnabled) return true;
-		return endingStart >= 0f && engine.getTotalElapsedTime(false) - endingStart >= END_DURATION;
+		return endingComplete;
+	}
+
+	private void completeEnding() {
+		endingComplete = true;
+		cleanup();
+		engine.removePlugin(this);
 	}
 
 	public void cleanup() {
@@ -149,12 +162,14 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 		}
 
 		renderOpening(elapsed, width, height);
-		if (elapsed >= 4.4f) {
-			drawPlate("plateSidebarPlayer", 100f, height * 0.5f + 40f, 180f, 40f, 1f);
-			drawPlate("plateSidebarEnemy", 100f, height * 0.5f - 40f, 180f, 40f, 1f);
-			drawName(playerSidebarText, 100f, height * 0.5f + 40f, 1f);
-			drawName(enemySidebarText, 100f, height * 0.5f - 40f, 1f);
-		}
+		if (elapsed >= 4.4f) drawSidebar(height, 1f);
+	}
+
+	private void drawSidebar(float height, float alpha) {
+		drawPlate("plateSidebarPlayer", 100f, height * 0.5f + 40f, 180f, 40f, alpha);
+		drawPlate("plateSidebarEnemy", 100f, height * 0.5f - 40f, 180f, 40f, alpha);
+		drawName(playerSidebarText, 100f, height * 0.5f + 40f, alpha);
+		drawName(enemySidebarText, 100f, height * 0.5f - 40f, alpha);
 	}
 
 	private void renderOpening(float elapsed, float width, float height) {
@@ -181,32 +196,32 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
 	private void renderEnding(float time, float width, float height) {
 		if (time >= END_DURATION) return;
+		if (endingStart >= 4.4f && time < 1.5f) {
+			float sidebarAlpha = time <= 0.5f ? 1f : 1.5f - time;
+			drawSidebar(height, sidebarAlpha);
+		}
 		if ("draw".equals(endingKey)) {
-			if (time < 11.25f) drawText(drawText, width * 0.5f, height * 0.5f,
-					fade(time, 0.25f, 10f, 1f));
+			drawText(drawText, width * 0.5f, height * 0.5f, fade(time, 0.25f, 5f, 0.5f));
 			return;
 		}
 		BattleNext_FontData.TextObject winnerText = playerWon
 				? playerText : enemyText;
-		if (time < 11.25f) {
-			float centerY = height * 0.5f - 50f + time * 5f;
-			float alpha = fade(time, 0.25f, 10f, 1f);
-			drawPlate("plateWinner", width * 0.5f, centerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
-			drawName(winnerText, width * 0.5f, centerY, alpha);
-		}
-		if (time < 0.5f) return;
-		float bannerTime = time - 0.5f;
+		float winnerY = height * 0.5f - 50f + time * 5f;
+		float alpha = fade(time, 0.25f, 5f, 1f);
+		drawPlate("plateWinner", width * 0.5f, winnerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+		drawName(winnerText, width * 0.5f, winnerY, alpha);
+		float bannerTime = time;
 		String key = "shame".equals(endingKey) ? "BattleNext_shame" : "BattleNext_win";
 		float centerY = height * 0.5f + ("shame".equals(endingKey) ? 0f : 120f - bannerTime * 3f);
 		drawSprite(key, width * 0.5f, centerY,
 				"shame".equals(endingKey) ? 764f : 440f,
 				"shame".equals(endingKey) ? 629f : 220f,
-				fade(bannerTime, 0f, 10f, 1f));
+				fade(bannerTime, 0.25f, 5f, 0.5f));
 		if (bannerTime < 0.5f) {
 			drawSprite(key + "Flash", width * 0.5f, centerY,
 					"shame".equals(endingKey) ? 764f : 440f,
 					"shame".equals(endingKey) ? 629f : 220f,
-					1f - bannerTime / 0.5f);
+					fade(bannerTime, 0.25f, 5f, 0.5f) * (1f - bannerTime / 0.5f));
 		}
 	}
 

@@ -20,6 +20,7 @@ import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tools.BattleNext_Settings;
 
 import java.util.List;
 
@@ -89,10 +90,12 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addBriefingItem(strings.format("map_briefing", match.getMap(), match.getMapScale()));
 		api.addBriefingItem(progress);
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
+		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
 		api.addPlugin(new BattleNext_DeploymentPlugin());
-		api.addPlugin(new BattleNext_MissionPlugin());
+		api.addPlugin(new BattleNext_MissionPlugin(timeLimit));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
+		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
