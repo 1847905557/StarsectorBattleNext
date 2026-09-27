@@ -13,7 +13,7 @@ public class BattleNext_I18nSection {
 	private final String keyPrefix;
 
 	public BattleNext_I18nSection(String category, String keyPrefix) {
-		this.category = category;
+		this.category = "Misc".equals(category) && "BattleNext_ui_".equals(keyPrefix) ? "UI" : category;
 		this.keyPrefix = Objects.requireNonNullElse(keyPrefix, "");
 
 		sections.add(this);
@@ -59,6 +59,7 @@ public class BattleNext_I18nSection {
 
 	private static final List<BattleNext_I18nSection> sections = new ArrayList<>();
 	public static BattleNext_I18nSection getInstance(String category, String keyPrefix) {
+		if ("Misc".equals(category) && "BattleNext_ui_".equals(keyPrefix)) category = "UI";
 		for (BattleNext_I18nSection section : sections) {
 			if (section.category.contentEquals(category) && section.keyPrefix.contentEquals(keyPrefix)) {
 				return section;

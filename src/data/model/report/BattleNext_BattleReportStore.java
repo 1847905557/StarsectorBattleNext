@@ -25,4 +25,9 @@ public class BattleNext_BattleReportStore extends BattleNext_BaseStore<BattleNex
 	protected List<BattleNext_BaseLoader<BattleNext_BattleReportModel>> sources() {
 		return List.of(standardLoader);
 	}
+
+	@Override
+	protected boolean isManaged(BattleNext_BattleReportModel model) {
+		return model != null;
+	}
 }

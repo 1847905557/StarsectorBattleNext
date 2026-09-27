@@ -1,4 +1,4 @@
-package data.scripts.combat;
+package data.scripts.plugin;
 
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
@@ -16,11 +16,11 @@ public class BattleNext_PostReportPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final int MESSAGE_PRIORITY = 0;
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
-	private final BattleNext_Pageant pageant;
+	private final BattleNext_PageantPlugin pageant;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private CombatEngineAPI engine;
 	private boolean shown;
-	public BattleNext_PostReportPlugin(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_Pageant pageant) {
+	public BattleNext_PostReportPlugin(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_PageantPlugin pageant) {
 		this.scorekeeper = scorekeeper;
 		this.pageant = pageant;
 	}

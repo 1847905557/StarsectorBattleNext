@@ -1,5 +1,43 @@
 {
-	"Misc": {
+	"Combat": {
+		"BattleNext_combat_versus": "%s  VS  %s",
+		"BattleNext_combat_draw": "DRAW",
+		"BattleNext_combat_time_multiplier": "Time multiplier: %sx",
+		"BattleNext_combat_camera_enabled": "Free camera enabled: WASD move, wheel zoom",
+		"BattleNext_combat_camera_disabled": "Free camera disabled"
+	},
+	"Briefing": {
+		"BattleNext_briefing_battle_source": "Battle Source",
+		"BattleNext_briefing_next_match": "Next Match",
+		"BattleNext_ui_no_valid_battle": "No valid battle is available.",
+		"BattleNext_ui_no_pending_match": "No pending match",
+		"BattleNext_ui_rules_blocked": "Tournament rule violations prevent this match from starting.",
+		"BattleNext_ui_invalid_player": "Invalid player fleet reference",
+		"BattleNext_ui_invalid_enemy": "Invalid enemy fleet reference",
+		"BattleNext_ui_invalid_battle_assembly": "Selected battle has an invalid fleet assembly.",
+		"BattleNext_ui_match_progress": "Match %d / %d",
+		"BattleNext_ui_round_progress": "Round %d / %d",
+		"BattleNext_ui_bo": "BO%d",
+		"BattleNext_ui_map_briefing": "Map %d, map scale %s"
+	},
+	"Report": {
+		"BattleNext_report_damage_dealt": "Damage Dealt",
+		"BattleNext_report_damage_taken": "Damage Taken",
+		"BattleNext_report_duration": "Duration",
+		"BattleNext_report_winner": "Winner",
+		"BattleNext_report_status": "Status",
+		"BattleNext_report_hull": "Hull damage",
+		"BattleNext_report_shield": "Shield damage",
+		"BattleNext_report_emp": "EMP damage",
+		"BattleNext_report_final_hull": "Final hull",
+		"BattleNext_report_final_cr": "Final CR",
+		"BattleNext_report_battle_report": "Battle report: %s",
+		"BattleNext_report_duration_seconds": "Duration: %s seconds",
+		"BattleNext_report_member_state": "%s %s hull=%s cr=%s",
+		"BattleNext_report_member_damage": "%s %s hull=%s shields=%s emp=%s",
+		"BattleNext_report_exit_hint": "Press ESC to exit the battle report."
+	},
+	"UI": {
 		"BattleNext_title_open": "AI Battles Next",
 		"BattleNext_title_panel": "AI Battles Next",
 		"BattleNext_title_panel_hint": "Management interface",
@@ -222,6 +260,12 @@
 		"BattleNext_ui_rule_filterBlackHull": "Blocked hulls",
 		"BattleNext_ui_rule_filterWhiteHull": "Allowed hulls",
 		"BattleNext_ui_settings_heading": "Settings management",
-		"BattleNext_ui_settings_description": "Interface and battle settings will be managed here."
+		"BattleNext_ui_settings_description": "Interface and battle settings.",
+		"BattleNext_ui_settings_full_graphic_effect": "Full graphic effects",
+		"BattleNext_ui_settings_battle_time_limit": "Battle time limit (seconds)",
+		"BattleNext_ui_settings_default_time_mult": "Default time multiplier",
+		"BattleNext_ui_settings_boost_time_mult": "Boost time multiplier",
+		"BattleNext_ui_settings_report_keep_count": "Reports to keep",
+		"BattleNext_ui_settings_invalid_number": "Enter a valid nonnegative limit or count and positive time multipliers"
 	}
 }

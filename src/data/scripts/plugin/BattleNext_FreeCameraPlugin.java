@@ -1,9 +1,11 @@
-package data.scripts.combat;
+package data.scripts.plugin;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Settings;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
@@ -13,6 +15,7 @@ import java.util.List;
 public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final String ID = "BattleNext_FreeCameraPlugin";
+	private static final BattleNext_I18nSection STRINGS = BattleNext_I18nSection.getInstance("Combat", "BattleNext_combat_");
 
 	// Movement speed in visible viewport fractions per second; held keys accelerate toward the cap.
 	private static final float CAMERA_BASE_SPEED = 0.3f;
@@ -25,8 +28,11 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float CAMERA_MAX_ZOOM = 10f;
 
 	private CombatEngineAPI engine;
+
 	private boolean cameraToggle;
 	private boolean externalCamera;
+	private boolean boostActive;
+
 	private float moveHoldTime;
 	private float viewportWidth;
 	private float viewportHeight;
@@ -42,6 +48,12 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
+
+		if (engine == null || engine.isCombatOver()) return;
+
+		if (isPlayerPlaying(engine)) {
+			return;
+		}
 
 		// events here
 		for (InputEventAPI event : events) {
@@ -73,8 +85,24 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 		if (engine == null || engine.isCombatOver()) return;
 
-		if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) engine.getTimeMult().modifyMult(ID, BattleNext_Settings.getBoostTimeMult());
-		else engine.getTimeMult().modifyMult(ID, BattleNext_Settings.getDefaultTimeMult());
+		if (isPlayerPlaying(engine)) {
+			if (externalCamera) {
+				externalCamera = false;
+				engine.getViewport().setExternalControl(externalCamera);
+			}
+
+			// forced 1f here
+			engine.getTimeMult().modifyMult(ID, 1f);
+			return;
+		}
+
+		boolean boosting = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
+		float timeMult = boosting ? BattleNext_Settings.getBoostTimeMult() : BattleNext_Settings.getDefaultTimeMult();
+		engine.getTimeMult().modifyMult(ID, timeMult);
+		if (boosting != boostActive) {
+			boostActive = boosting;
+			engine.getCombatUI().addMessage(0, STRINGS.format("time_multiplier", BattleNext_I18nSection.buildFactor(timeMult)));
+		}
 
 		if (Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)) cameraToggle = true;
 		else if (cameraToggle) {
@@ -85,7 +113,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 				viewportHeight = engine.getViewport().getVisibleHeight();
 			}
 			engine.getViewport().setExternalControl(externalCamera);
-			engine.getCombatUI().addMessage(0, externalCamera ? "Free camera: WASD move, wheel zoom, Alt exit" : "Free camera disabled");
+			engine.getCombatUI().addMessage(0, STRINGS.get(externalCamera ? "camera_enabled" : "camera_disabled"));
 		}
 
 		if (externalCamera) {
@@ -111,5 +139,10 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 			engine.getViewport().set(engine.getViewport().getLLX(), engine.getViewport().getLLY(), viewportWidth, viewportHeight);
 			engine.getViewport().setCenter(center);
 		}
+	}
+
+	private static boolean isPlayerPlaying(CombatEngineAPI engine) {
+		ShipAPI player = engine.getPlayerShip();
+		return player.isAlive() && !player.isShuttlePod();
 	}
 }

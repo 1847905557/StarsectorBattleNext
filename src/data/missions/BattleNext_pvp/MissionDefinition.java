@@ -5,6 +5,7 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
+import data.missions.BattleNext_BattleMap;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -13,7 +14,7 @@ import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.combat.*;
+import data.scripts.plugin.*;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
@@ -26,7 +27,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Briefing", "BattleNext_ui_");
 
 	private static int quickBattleCurrentIndex = 0;
 
@@ -85,18 +86,21 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet);
-		api.addBriefingItem("Map " + match.getMap() + ", map scale " + match.getMapScale());
+		api.addBriefingItem(strings.format("map_briefing", match.getMap(), match.getMapScale()));
 		api.addBriefingItem(progress);
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
-		api.addPlugin(new BattleNext_Deployment());
+		api.addPlugin(new BattleNext_DeploymentPlugin());
 		api.addPlugin(new BattleNext_MissionPlugin());
-		BattleNext_Scorekeeper scorekeeper = new BattleNext_Scorekeeper(assembledPlayerFleet, assembledEnemyFleet);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
-		api.addPlugin(new BattleNext_FreeCameraPlugin(assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName()));
-		api.addPlugin(new BattleNext_PostReport(scorekeeper));
+		api.addPlugin(new BattleNext_FreeCameraPlugin());
+		BattleNext_PageantPlugin pageant = new BattleNext_PageantPlugin(scorekeeper,
+				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
+		api.addPlugin(pageant);
+		api.addPlugin(new BattleNext_PostReportPlugin(scorekeeper, pageant));
 	}
 
 	private String progress(BattleNext_TournamentModel tournament, BattleNext_Match match) {

@@ -36,6 +36,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private CustomPanelAPI panel;
 	private UIRect listRect;
 	private UIRect detailRect;
@@ -270,6 +271,9 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	}
 
 	private String text(String key) {
+		if (key.equals("damage_dealt") || key.equals("damage_taken") || key.equals("winner")
+				|| key.equals("duration") || key.equals("status") || key.equals("hull") || key.equals("shield")
+				|| key.equals("emp") || key.equals("final_hull") || key.equals("final_cr")) return reportStrings.get(key);
 		return strings.get(key);
 	}
 

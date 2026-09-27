@@ -33,7 +33,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private final Runnable closeAction;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this);
 	private final BattleNext_StatusBar statusBar = new BattleNext_StatusBar();

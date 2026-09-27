@@ -1,4 +1,4 @@
-package data.scripts.combat;
+package data.scripts.plugin;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;

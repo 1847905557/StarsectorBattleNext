@@ -1,5 +1,19 @@
 {
 	"plugins": {
 		"BattleNextTitlePanel": "data.scripts.ui.BattleNext_TitlePanel"
+	},
+	"graphics": {
+		"misc": {
+			"BattleNext_versus": "graphics/ui/BattleNext/BattleNext_versus.png",
+			"BattleNext_versusFlash": "graphics/ui/BattleNext/BattleNext_versusFlash.png",
+			"BattleNext_win": "graphics/ui/BattleNext/BattleNext_win.png",
+			"BattleNext_winFlash": "graphics/ui/BattleNext/BattleNext_winFlash.png",
+			"BattleNext_end": "graphics/ui/BattleNext/BattleNext_end.png",
+			"BattleNext_endFlash": "graphics/ui/BattleNext/BattleNext_endFlash.png",
+			"BattleNext_shame": "graphics/ui/BattleNext/BattleNext_shame.png",
+			"BattleNext_shameFlash": "graphics/ui/BattleNext/BattleNext_shameFlash.png",
+			"BattleNext_timeout": "graphics/ui/BattleNext/BattleNext_timeout.png",
+			"BattleNext_nameplate": "graphics/ui/BattleNext/BattleNext_nameplate.png"
+		}
 	}
 }

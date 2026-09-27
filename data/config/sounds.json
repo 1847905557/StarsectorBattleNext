@@ -1,0 +1,11 @@
+{
+	"BattleNext_versus": [
+		{"file":"sounds/BattleNext_versusStereo.ogg","pitch":1,"volume":1}
+	],
+	"BattleNext_victory": [
+		{"file":"sounds/BattleNext_victoryStereo.ogg","pitch":1,"volume":1}
+	],
+	"BattleNext_shame": [
+		{"file":"sounds/BattleNext_shameStereo.ogg","pitch":1,"volume":1}
+	]
+}

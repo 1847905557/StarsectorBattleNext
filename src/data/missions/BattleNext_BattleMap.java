@@ -1,4 +1,4 @@
-package data.scripts.combat;
+package data.missions;
 
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 
