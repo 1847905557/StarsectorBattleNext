@@ -5,21 +5,24 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
+public class BattleNext_PostReportPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final int MESSAGE_PRIORITY = 0;
-	private final BattleNext_Scorekeeper scorekeeper;
+	private final BattleNext_ScorekeeperPlugin scorekeeper;
+	private final BattleNext_Pageant pageant;
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private CombatEngineAPI engine;
 	private boolean shown;
-
-	public BattleNext_PostReport(BattleNext_Scorekeeper scorekeeper) {
+	public BattleNext_PostReportPlugin(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_Pageant pageant) {
 		this.scorekeeper = scorekeeper;
+		this.pageant = pageant;
 	}
 
 	@Override
@@ -34,29 +37,29 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 		if (report == null) return;
 		engine.setDoNotEndCombat(true);
 		lockCamera();
-		if (!shown) {
+		if (!shown && pageant.isEndingComplete()) {
 			shown = true;
 			showReport(report);
 		}
 		if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE)) {
+			pageant.cleanup();
 			engine.setDoNotEndCombat(false);
 			engine.removePlugin(this);
 		}
 	}
 
 	private void showReport(BattleNext_BattleReportModel report) {
-		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Battle report: " + report.getWinner());
-		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Duration: " + report.getDurationMillis() / 1000f + " seconds");
+		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.format("battle_report", report.getWinner()));
+		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.format("duration_seconds", report.getDurationMillis() / 1000f));
 		List<BattleNext_MemberReport> members = new ArrayList<>(report.getPlayerMembers());
 		members.addAll(report.getEnemyMembers());
-		showLeaderboard("Damage Dealt", members, true);
-		showLeaderboard("Damage Taken", members, false);
+		showLeaderboard(strings.get("damage_dealt"), members, true);
+		showLeaderboard(strings.get("damage_taken"), members, false);
 		for (BattleNext_MemberReport member : members) {
-			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getVariantId() + " " + member.getStatus()
-					+ " hull=" + member.getFinalHullFraction()
-					+ " cr=" + member.getFinalCr());
+			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.format("member_state", member.getVariantId(),
+					member.getStatus(), member.getFinalHullFraction(), member.getFinalCr()));
 		}
-		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, "Press ESC to exit the battle report.");
+		engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.get("exit_hint"));
 	}
 
 	private void showLeaderboard(String title, List<BattleNext_MemberReport> source, boolean dealt) {
@@ -68,8 +71,8 @@ public class BattleNext_PostReport extends BaseEveryFrameCombatPlugin {
 			double hull = dealt ? member.getHullDamageDealt() : member.getHullDamageTaken();
 			double shields = dealt ? member.getShieldDamageDealt() : member.getShieldDamageTaken();
 			double emp = dealt ? member.getEmpDamageDealt() : member.getEmpDamageTaken();
-			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, member.getVariantId() + " " + value
-					+ " hull=" + hull + " shields=" + shields + " emp=" + emp);
+			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.format("member_damage", member.getVariantId(),
+					value, hull, shields, emp));
 		}
 	}
 

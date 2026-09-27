@@ -9,7 +9,7 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
 
-public class BattleNext_Deployment extends BaseEveryFrameCombatPlugin {
+public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final int FIXED_LAYOUT_SHIP_LIMIT = 30;
 	private static final int MIN_COLUMNS = 7;

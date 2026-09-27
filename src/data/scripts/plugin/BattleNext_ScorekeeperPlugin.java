@@ -20,7 +20,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implements DamageListener {
+public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin implements DamageListener {
 
 	private final List<ScoreTrackedFleetMember> trackedMembers = new ArrayList<>();
 	private final Map<FleetMemberAPI, ScoreTrackedFleetMember> membersByFleetMember = new IdentityHashMap<>();
@@ -28,12 +28,12 @@ public class BattleNext_Scorekeeper extends BaseEveryFrameCombatPlugin implement
 	private BattleNext_BattleReportModel frozenReport;
 	private boolean battleStarted;
 
-	public BattleNext_Scorekeeper(BattleNext_AssembledFleet assembledPlayerFleet, BattleNext_AssembledFleet assembledEnemyFleet) {
+	public BattleNext_ScorekeeperPlugin(BattleNext_AssembledFleet assembledPlayerFleet, BattleNext_AssembledFleet assembledEnemyFleet) {
 		registerMembers(assembledPlayerFleet, true);
 		registerMembers(assembledEnemyFleet, false);
 	}
 
-	public BattleNext_Scorekeeper(List<FleetMemberAPI> playerMembers, List<FleetMemberAPI> enemyMembers) {
+	public BattleNext_ScorekeeperPlugin(List<FleetMemberAPI> playerMembers, List<FleetMemberAPI> enemyMembers) {
 		registerMembers(playerMembers, true);
 		registerMembers(enemyMembers, false);
 	}

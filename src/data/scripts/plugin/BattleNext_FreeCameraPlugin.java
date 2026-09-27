@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
+import data.scripts.tools.BattleNext_Settings;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
 
@@ -12,10 +13,6 @@ import java.util.List;
 public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final String ID = "BattleNext_FreeCameraPlugin";
-	private static final float DEFAULT_TIME_MULT = 1.5f;
-	private static final float BOOST_TIME_MULT = 4f;
-	private static final float NORMAL_TIME_MULT = 1f;
-	private static final float VERSUS_DELAY = 0.5f;
 
 	// Movement speed in visible viewport fractions per second; held keys accelerate toward the cap.
 	private static final float CAMERA_BASE_SPEED = 0.3f;
@@ -27,10 +24,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float CAMERA_MIN_ZOOM = 0.5f;
 	private static final float CAMERA_MAX_ZOOM = 10f;
 
-	private final String playerName;
-	private final String enemyName;
 	private CombatEngineAPI engine;
-	private boolean versusShown;
 	private boolean cameraToggle;
 	private boolean externalCamera;
 	private float moveHoldTime;
@@ -38,11 +32,6 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private float viewportHeight;
 	private float screenWidth;
 	private float screenHeight;
-
-	public BattleNext_FreeCameraPlugin(String playerName, String enemyName) {
-		this.playerName = playerName;
-		this.enemyName = enemyName;
-	}
 
 	@Override
 	public void init(CombatEngineAPI engine) {
@@ -83,14 +72,9 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	public void advance(float amount, List<InputEventAPI> events) {
 
 		if (engine == null || engine.isCombatOver()) return;
-		if (!versusShown && engine.getTotalElapsedTime(false) >= VERSUS_DELAY) {
-			versusShown = true;
-			engine.getCombatUI().addMessage(0, playerName + "  VS  " + enemyName);
-		}
 
-		if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) engine.getTimeMult().modifyMult(ID, BOOST_TIME_MULT);
-		else if (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL)) engine.getTimeMult().modifyMult(ID, NORMAL_TIME_MULT);
-		else engine.getTimeMult().modifyMult(ID, DEFAULT_TIME_MULT);
+		if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) engine.getTimeMult().modifyMult(ID, BattleNext_Settings.getBoostTimeMult());
+		else engine.getTimeMult().modifyMult(ID, BattleNext_Settings.getDefaultTimeMult());
 
 		if (Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)) cameraToggle = true;
 		else if (cameraToggle) {

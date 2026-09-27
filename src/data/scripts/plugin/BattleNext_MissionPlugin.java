@@ -8,12 +8,12 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Personalities;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
+import data.scripts.tools.BattleNext_Settings;
 
 import java.util.List;
 
 public class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 
-	private static final float DEFAULT_TIME_LIMIT = 500f;
 	private static final int MAX_FLEET_POINTS = 999;
 	private static final float COMMAND_POINTS = 999f;
 	private static final float FOG_REVEAL_RADIUS = 90000f;
@@ -25,7 +25,7 @@ public class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 	private int elapsedSecond = -1;
 
 	public BattleNext_MissionPlugin() {
-		this(DEFAULT_TIME_LIMIT);
+		this(BattleNext_Settings.getBattleTimeLimit());
 	}
 
 	public BattleNext_MissionPlugin(float timeLimit) {
