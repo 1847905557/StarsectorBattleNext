@@ -1,0 +1,188 @@
+package data.model.fleet.io;
+
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_VariantBuilder;
+import org.json.JSONObject;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class BattleNext_FleetSaverTest {
+
+	@Test
+	void saveRemovesStaleVariantsAndPreservesBackup() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/stale.variant", "stale");
+		files.put("tournament/alpha/keep.txt", "keep");
+		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
+
+		new BattleNext_FleetSaver(files).save(fleet);
+
+		assertFalse(files.contains("tournament/alpha/stale.variant"));
+		assertTrue(files.contains("tournament/alpha/keep.txt"));
+		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json.bak"));
+		assertTrue(files.contains("tournament/alpha/current.variant"));
+	}
+
+	@Test
+	void saveMovesRenamedFleetAndRemovesOldDirectory() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/old/fleet_data.json", "old");
+		files.put("tournament/old/old.variant", "old variant");
+		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
+		fleet.setSourcePath("tournament/old/fleet_data.json");
+
+		new BattleNext_FleetSaver(files).save(fleet);
+
+		assertFalse(files.contains("tournament/old/fleet_data.json"));
+		assertFalse(files.contains("tournament/old/old.variant"));
+		assertTrue(files.contains("tournament/new/fleet_data.json"));
+	}
+
+	@Test
+	void writeFailureRestoresTargetAndOldDirectory() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/old/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/old/old.variant", "old variant");
+		files.put("tournament/new/fleet_data.json", "{\"id\":\"new\"}");
+		files.put("tournament/new/stale.variant", "stale");
+		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
+		fleet.setSourcePath("tournament/old/fleet_data.json");
+		files.failWritePath = "tournament/new/current.variant";
+
+		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+
+		assertEquals("{\"id\":\"new\"}", files.text("tournament/new/fleet_data.json"));
+		assertEquals("stale", files.text("tournament/new/stale.variant"));
+		assertEquals("{\"id\":\"old\"}", files.text("tournament/old/fleet_data.json"));
+		assertEquals("old variant", files.text("tournament/old/old.variant"));
+	}
+
+	@Test
+	void staleVariantDeleteFailureRestoresTarget() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/stale.variant", "stale");
+		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
+		files.failDeletePath = "tournament/alpha/stale.variant";
+
+		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+
+		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json"));
+		assertEquals("stale", files.text("tournament/alpha/stale.variant"));
+		assertFalse(files.contains("tournament/alpha/current.variant"));
+	}
+
+	@Test
+	void invalidVariantIsRejectedBeforeAnyMutation() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel("id", "alpha", "name", List.of(), List.of(), List.of());
+		fleet.putVariant(BattleNext_VariantBuilder.fromJson(new JSONObject("{\"variantId\":\"bad/id\"}"), "bad/id"));
+
+		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+
+		assertEquals(1, files.size());
+		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json"));
+	}
+
+	@Test
+	void rollbackFailureIsSuppressedOnOriginalFailure() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
+		files.failWritePath = "tournament/alpha/current.variant";
+		files.failDeleteDirectory = "tournament/alpha";
+
+		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+
+		assertTrue(failure.getMessage().contains("Injected write failure"));
+		assertTrue(failure.getSuppressed().length > 0);
+	}
+
+	private BattleNext_FleetModel fleet(String id, String folder, String variantId) throws Exception {
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel(id, folder, "name", List.of(), List.of(), List.of());
+		fleet.putVariant(BattleNext_VariantBuilder.fromJson(
+				new JSONObject("{\"variantId\":\"" + variantId + "\",\"hullId\":\"hull\"}"), variantId));
+		return fleet;
+	}
+
+	private static class MemoryFiles implements BattleNext_FleetSaver.FileOperations {
+
+		private final Map<String, byte[]> files = new LinkedHashMap<>();
+		private String failWritePath;
+		private String failDeletePath;
+		private String failDeleteDirectory;
+
+		void put(String path, String text) {
+			files.put(path, text.getBytes(StandardCharsets.UTF_8));
+		}
+
+		String text(String path) {
+			return new String(files.get(path), StandardCharsets.UTF_8);
+		}
+
+		boolean contains(String path) {
+			return files.containsKey(path);
+		}
+
+		int size() {
+			return files.size();
+		}
+
+		@Override
+		public boolean exists(String path) {
+			if (files.containsKey(path)) return true;
+			String prefix = path.endsWith("/") ? path : path + "/";
+			return files.keySet().stream().anyMatch(item -> item.startsWith(prefix));
+		}
+
+		@Override
+		public List<String> list(String directory, boolean recursive) {
+			String prefix = directory.endsWith("/") ? directory : directory + "/";
+			List<String> result = new ArrayList<>();
+			for (String path : files.keySet()) {
+				if (!path.startsWith(prefix)) continue;
+				String relative = path.substring(prefix.length());
+				if (recursive || !relative.contains("/")) result.add(path);
+			}
+			return result;
+		}
+
+		@Override
+		public byte[] readBytes(String path) throws IOException {
+			if (!files.containsKey(path)) throw new IOException("Missing: " + path);
+			return files.get(path).clone();
+		}
+
+		@Override
+		public void writeBytes(String path, byte[] data) throws IOException {
+			if (path.equals(failWritePath)) throw new IOException("Injected write failure: " + path);
+			files.put(path, data.clone());
+		}
+
+		@Override
+		public void delete(String path) throws IOException {
+			if (path.equals(failDeletePath)) throw new IOException("Injected delete failure: " + path);
+			files.remove(path);
+		}
+
+		@Override
+		public void deleteRecursively(String path) throws IOException {
+			if (path.equals(failDeleteDirectory)) throw new IOException("Injected delete failure: " + path);
+			String prefix = path.endsWith("/") ? path : path + "/";
+			files.keySet().removeIf(item -> item.equals(path) || item.startsWith(prefix));
+		}
+	}
+}
