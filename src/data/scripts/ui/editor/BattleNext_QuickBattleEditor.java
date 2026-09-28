@@ -13,6 +13,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.widget.BattleNext_TextField;
 import org.json.JSONException;
 
@@ -57,8 +58,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
 	private final List<QuickBattleEditorRow> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
-	private UIRect rowsArea;
-	private UIRect rowsRect;
+	private BattleNext_TableWidget tableWidget;
 	private LabelAPI status;
 	private TooltipMakerAPI statusContent;
 	private String statusText = "";
@@ -163,31 +163,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
 				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		float tableWidth = table[0].getWidth() - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
-		rowsArea = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
-				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, table[1].getY(),
-				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, table[1].getHeight());
-
-		UIRect tableHeader = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN,
-				table[0].getY(), tableWidth, BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth,
-				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
-		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID,
-				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
-		headerStrip.getPosition().inTL(0f, 0f);
-		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		panel.addUIElement(headerBackground).inTL(tableHeader.getX(), tableHeader.getY());
-		float stripHeight = Math.min(BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
-				headerStrip.getPosition().getHeight());
-		UIRect[] headings = columns(tableHeader.getWidth(), stripHeight);
 		String[] labels = {"#", text("battle_player_short"), text("battle_enemy_short"), text("battle_map_short"),
 				text("battle_map_scale_short"), text("status"), text("enabled"), text("actions")};
-		for (int index = 0; index < headings.length; index++) {
-			UIRect cell = headings[index];
-			addLabel(panel, new UIRect(tableHeader.getX() + cell.getX(), tableHeader.getY(),
-					cell.getWidth(), cell.getHeight()), labels[index], BattleNext_UiTheme.TEXT, true);
-		}
+		tableWidget = new BattleNext_TableWidget(panel, inputOwner, labels, COLUMN_SHARES,
+				entries.size(), this::addRow);
+		tableWidget.attach(new UIRect(0f, table[0].getY(), table[0].getWidth(),
+				table[0].getHeight() + table[1].getHeight()));
 
 		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
 		float buttonWidth = Math.min(FOOTER_BUTTON_MAX_WIDTH,
@@ -222,31 +203,19 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	public void refreshContent() {
 		if (panel == null) return;
 		BattleNext_TextField.clearRegisteredFields();
-		if (rowsRect != null) rowsRect.removeLatestSubPanel();
 		rows.clear();
-
-		if (entries.isEmpty()) return;
-		float visibleHeight = Math.min(rowsArea.getHeight(),
-				entries.size() * BattleNext_PageLayout.TABLE_ROW_HEIGHT
-						+ BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING);
-		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
-		CustomPanelAPI contentPanel = rowsRect.createSubPanel(panel, inputOwner).getPanel();
-		TooltipMakerAPI content = contentPanel.createUIElement(rowsRect.getWidth(), visibleHeight, true);
-		for (int index = 0; index < entries.size(); index++) {
-			addRow(index, entries.get(index), content);
-		}
-		contentPanel.addUIElement(content).inTL(0f, 0f);
+		tableWidget.setRowCount(entries.size());
+		tableWidget.refresh();
 
 		refreshRowStatuses();
 	}
 
-	private void addRow(int index, BattleNext_QuickBattleModel entry, TooltipMakerAPI content) {
+	private void addRow(int index, float width, UIRect[] cells, TooltipMakerAPI content) {
 
-		float width = rowsRect.getWidth() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
+		BattleNext_QuickBattleModel entry = entries.get(index);
 		CustomPanelAPI card = Global.getSettings().createCustom(width, BattleNext_PageLayout.TABLE_ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(card,
 				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
-		UIRect[] cells = columns(width, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
 		QuickBattleEditorRow row = new QuickBattleEditorRow();
 		row.id = entry.getId();
 		row.model = entry;
@@ -327,6 +296,22 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		rows.add(row);
 	}
 
+	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color,
+			boolean compactFont) {
+		float labelWidth = rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f;
+		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
+		if (compactFont) maker.setParaSmallInsignia();
+		LabelAPI label = maker.addPara(maker.shortenString(value,
+				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING), 0f, color);
+		label.setAlignment(Alignment.MID);
+		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
+		label.getPosition().inTL(0f, Math.max(0f,
+				(rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
+		maker.setHeightSoFar(rect.getHeight());
+		host.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
+				rect.getY());
+	}
+
 	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value, TooltipMakerAPI... viewports) {
 		float width = rect.getWidth() - BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET
 				- BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET;
@@ -338,33 +323,6 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		card.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET,
 				rect.getY() + (rect.getHeight() - BattleNext_PageLayout.FORM_FIELD_HEIGHT) * 0.5f);
 		return field;
-	}
-
-	private UIRect[] columns(float width, float height) {
-		float available = width - BattleNext_PageLayout.TABLE_COLUMN_GAP * (COLUMN_SHARES.length - 1);
-		UIRect[] result = new UIRect[COLUMN_SHARES.length];
-		float x = 0f;
-		for (int index = 0; index < COLUMN_SHARES.length; index++) {
-			float nextX = index == COLUMN_SHARES.length - 1 ? width : x + available * COLUMN_SHARES[index];
-			result[index] = new UIRect(x, 0f, nextX - x, height);
-			x = nextX + BattleNext_PageLayout.TABLE_COLUMN_GAP;
-		}
-		return result;
-	}
-
-	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color,
-			boolean compactFont) {
-		float labelWidth = rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f;
-		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
-		if (compactFont) maker.setParaSmallInsignia();
-		LabelAPI label = maker.addPara(maker.shortenString(value,
-				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING), 0f, color);
-		label.setAlignment(Alignment.MID);
-		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
-		label.getPosition().inTL(0f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
-		maker.setHeightSoFar(rect.getHeight());
-		host.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
-				rect.getY());
 	}
 
 	public void refreshRowStatuses() {

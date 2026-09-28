@@ -13,10 +13,10 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.widget.BattleNext_TextField;
 import org.json.JSONException;
 
-import java.awt.Color;
 import java.io.IOException;
 import java.util.*;
 
@@ -60,8 +60,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private BattleNext_OptionPicker restrictionPicker;
 	private String savedSnapshot = "";
 	private String status = "";
-	private UIRect rowsArea;
-	private UIRect rowsRect;
+	private BattleNext_TableWidget tableWidget;
 
 	public BattleNext_RuleEditor(BattleNext_RuleStore store) {
 		this.store = store;
@@ -122,59 +121,33 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		TooltipMakerAPI restrictions = contentPanel.createUIElement(rightWidth, contentRect.getHeight(), true);
 		restrictions.addTitle(text("rules_restrictions"));
 		contentPanel.addUIElement(restrictions).inTL(leftWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, 0f);
-		float tableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
-				(float) Math.floor(rightWidth) - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f);
 		float tableY = RESTRICTION_TITLE_HEIGHT;
 		float tableHeight = Math.max(1f, contentRect.getHeight() - tableY);
 		CustomPanelAPI tablePanel = panel.createCustomPanel(rightWidth, tableHeight, panel.getPlugin());
 		restrictions.addComponent(tablePanel).inTL(0f, tableY);
-		TooltipMakerAPI headerBackground = tablePanel.createUIElement(tableWidth,
-				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
-		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID,
-				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
-		headerStrip.getPosition().inTL(0f, 0f);
-		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		tablePanel.addUIElement(headerBackground).inTL(BattleNext_PageLayout.TABLE_SIDE_MARGIN, 0f);
-		UIRect[] headings = columns(tableWidth, BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		String[] labels = {text("rules_restriction"), text("rules_value_items"), text("enabled"), text("actions")};
-		for (int index = 0; index < headings.length; index++) {
-			UIRect cell = headings[index];
-			addLabel(tablePanel, new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN + cell.getX(), 0f,
-					cell.getWidth(), cell.getHeight()), labels[index], BattleNext_UiTheme.TEXT, true);
-		}
-
 		enabledFields.clear();
 		valueFields.clear();
-		float contentHeight = (draft.getRestrictions().size() + 1) * BattleNext_PageLayout.TABLE_ROW_HEIGHT
-				+ BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING;
-		float availableHeight = Math.max(1f, tableHeight - BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		float visibleHeight = Math.min(availableHeight, contentHeight);
-		rowsArea = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
-				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
-				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
-		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
-		CustomPanelAPI rowsPanel = rowsRect.createSubPanel(tablePanel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI rows = rowsPanel.createUIElement(rowsRect.getWidth(), visibleHeight, true);
-		for (int index = 0; index < draft.getRestrictions().size(); index++) {
-			addRestrictionRow(index, draft.getRestrictions().get(index), rows, tableWidth, restrictions);
-		}
+		tableWidget = new BattleNext_TableWidget(tablePanel, panel.getPlugin(), labels, COLUMN_SHARES,
+				draft.getRestrictions().size(),
+				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions));
+		tableWidget.attach(new UIRect(0f, 0f, rightWidth, tableHeight));
 		restrictionPicker = new BattleNext_OptionPicker(panel, new RestrictionChoiceSource(),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
-		restrictionPicker.addTo(rows, panel, Math.min(RULE_PICKER_MAX_WIDTH, tableWidth),
-				text("rules_add_restriction"), rows, restrictions);
-		rowsPanel.addUIElement(rows).inTL(0f, 0f);
+		float tableWidth = rightWidth - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
+		restrictionPicker.addTo(tableWidget.getContent(), panel, Math.min(RULE_PICKER_MAX_WIDTH, tableWidth),
+				text("rules_add_restriction"), tableWidget.getContent(), restrictions);
 	}
 
-	private void addRestrictionRow(int index, BattleNext_RuleRestriction restriction,
-			TooltipMakerAPI content, float tableWidth, TooltipMakerAPI restrictions) {
+	private void addRestrictionRow(int index, float tableWidth, UIRect[] cells,
+			TooltipMakerAPI content, TooltipMakerAPI restrictions) {
+		BattleNext_RuleRestriction restriction = draft.getRestrictions().get(index);
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
 		String description = spec == null ? text("rules_missing_restriction") : spec.getDescription();
 		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth,
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
 		new UIRect(0f, 0f, tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(row,
 				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
-		UIRect[] cells = columns(tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
 		float descriptionWidth = Math.max(1f,
 				cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
 		TooltipMakerAPI descriptionHost = row.createUIElement(descriptionWidth,
@@ -259,36 +232,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		return field;
 	}
 
-	private UIRect[] columns(float width, float height) {
-		float available = width - BattleNext_PageLayout.TABLE_COLUMN_GAP * (COLUMN_SHARES.length - 1);
-		float actionsWidth = Math.min(available,
-				Math.max(ACTION_BUTTON_MIN_WIDTH * ACTION_BUTTON_COUNT, available * COLUMN_SHARES[ACTIONS_COLUMN]));
-		float otherWidth = available - actionsWidth;
-		UIRect[] result = new UIRect[COLUMN_SHARES.length];
-		float x = 0f;
-		for (int index = 0; index < COLUMN_SHARES.length; index++) {
-			float nextX = index == COLUMN_SHARES.length - 1 ? width
-					: x + otherWidth * COLUMN_SHARES[index] / (1f - COLUMN_SHARES[ACTIONS_COLUMN]);
-			result[index] = new UIRect(x, 0f, nextX - x, height);
-			x = nextX + BattleNext_PageLayout.TABLE_COLUMN_GAP;
-		}
-		return result;
-	}
-
-	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color, boolean compactFont) {
-		float labelWidth = Math.max(1f,
-				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
-		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
-		if (compactFont) maker.setParaSmallInsignia();
-		LabelAPI label = maker.addPara(maker.shortenString(value,
-				Math.max(1f, rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f, color);
-		label.setAlignment(Alignment.MID);
-		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
-		label.getPosition().inTL(0f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
-		maker.setHeightSoFar(rect.getHeight());
-		host.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
-				rect.getY());
-	}
 
 	@Override
 	public void buttonPressed(Object buttonId) {
