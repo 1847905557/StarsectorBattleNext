@@ -22,14 +22,29 @@ import java.util.*;
 
 public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
-	private static final float TITLE_HEIGHT = 24f;
+	private static final float RESTRICTION_TITLE_HEIGHT = 24f;
+	private static final float DETAILS_FIELD_RIGHT_INSET = 12f;
+	private static final float STATUS_LINE_GAP = 4f;
 
-	private static final float HEADER_HEIGHT = 18f;
-	private static final float ROW_HEIGHT = 38f;
-	private static final float FIELD_HEIGHT = 28f;
-	private static final float COLUMN_GAP = 8f;
-	private static final float SIDE_MARGIN = 12f;
 	private static final float[] COLUMN_SHARES = {0.3f, 0.34f, 0.16f, 0.2f};
+	private static final int DESCRIPTION_COLUMN = 0;
+	private static final int VALUE_COLUMN = 1;
+	private static final int ENABLED_COLUMN = 2;
+	private static final int ACTIONS_COLUMN = 3;
+
+	private static final float RULE_PICKER_MAX_WIDTH = 190f;
+	private static final float MISSING_VALUE_TRUNCATION_PADDING = 12f;
+
+	private static final float FIELD_MIN_WIDTH = 40f;
+	private static final float DETAILS_FIELD_MIN_WIDTH = 90f;
+	private static final float DETAILS_FIELD_LABEL_GAP = 6f;
+
+	private static final int ACTION_BUTTON_COUNT = 3;
+	private static final float ACTION_BUTTON_MIN_WIDTH = 22f;
+	private static final float ACTION_BUTTON_SIDE_PADDING = 8f;
+
+	private static final float RESTRICTION_TOOLTIP_WIDTH = 320f;
+	private static final float RESTRICTION_TOOLTIP_META_GAP = 5f;
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final BattleNext_RuleStore store;
@@ -91,54 +106,63 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		BattleNext_TextField.clearRegisteredFields();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		float gap = 10f;
-		float usableWidth = Math.max(2f, contentRect.getWidth() - gap);
-		float leftWidth = (float) Math.floor(usableWidth * 0.45f);
+		float usableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
+				contentRect.getWidth() - BattleNext_PageLayout.EDITOR_COLUMN_GAP);
+		float leftWidth = (float) Math.floor(usableWidth * BattleNext_PageLayout.EDITOR_LEFT_COLUMN_SHARE);
 		float rightWidth = usableWidth - leftWidth;
 		TooltipMakerAPI details = contentPanel.createUIElement(leftWidth, contentRect.getHeight(), true);
 		details.addTitle(text("rules_editable"));
-		statusLabel = details.addPara(status, 4f, BattleNext_UiTheme.MUTED);
-		idField = field(details, panel, text("rules_id"), draft.getId(), leftWidth - 12f, details);
-		nameField = field(details, panel, text("rules_name"), draft.getName(), leftWidth - 12f, details);
+		statusLabel = details.addPara(status, STATUS_LINE_GAP, BattleNext_UiTheme.MUTED);
+		idField = field(details, panel, text("rules_id"), draft.getId(),
+				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
+		nameField = field(details, panel, text("rules_name"), draft.getName(),
+				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
 		contentPanel.addUIElement(details).inTL(0f, 0f);
 
 		TooltipMakerAPI restrictions = contentPanel.createUIElement(rightWidth, contentRect.getHeight(), true);
 		restrictions.addTitle(text("rules_restrictions"));
-		contentPanel.addUIElement(restrictions).inTL(leftWidth + gap, 0f);
-		float tableWidth = Math.max(2f, rightWidth - SIDE_MARGIN);
-		float tableY = TITLE_HEIGHT;
+		contentPanel.addUIElement(restrictions).inTL(leftWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, 0f);
+		float tableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
+				(float) Math.floor(rightWidth) - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f);
+		float tableY = RESTRICTION_TITLE_HEIGHT;
 		float tableHeight = Math.max(1f, contentRect.getHeight() - tableY);
 		CustomPanelAPI tablePanel = panel.createCustomPanel(rightWidth, tableHeight, panel.getPlugin());
 		restrictions.addComponent(tablePanel).inTL(0f, tableY);
-		TooltipMakerAPI headerBackground = tablePanel.createUIElement(tableWidth, HEADER_HEIGHT, false);
+		TooltipMakerAPI headerBackground = tablePanel.createUIElement(tableWidth,
+				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
 		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID, tableWidth, 0f);
+				BattleNext_UiTheme.HEADER, Alignment.MID,
+				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
 		headerStrip.getPosition().inTL(0f, 0f);
-		headerBackground.setHeightSoFar(HEADER_HEIGHT);
-		tablePanel.addUIElement(headerBackground).inTL(SIDE_MARGIN, 0f);
-		UIRect[] headings = columns(tableWidth, HEADER_HEIGHT);
+		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
+		tablePanel.addUIElement(headerBackground).inTL(BattleNext_PageLayout.TABLE_SIDE_MARGIN, 0f);
+		UIRect[] headings = columns(tableWidth, BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		String[] labels = {text("rules_restriction"), text("rules_value_items"), text("enabled"), text("actions")};
 		for (int index = 0; index < headings.length; index++) {
 			UIRect cell = headings[index];
-			addLabel(tablePanel, new UIRect(SIDE_MARGIN + cell.getX(), 0f,
+			addLabel(tablePanel, new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN + cell.getX(), 0f,
 					cell.getWidth(), cell.getHeight()), labels[index], BattleNext_UiTheme.TEXT, true);
 		}
 
 		enabledFields.clear();
 		valueFields.clear();
-		float contentHeight = (draft.getRestrictions().size() + 1) * ROW_HEIGHT + 10f;
-		float availableHeight = Math.max(1f, tableHeight - HEADER_HEIGHT);
+		float contentHeight = (draft.getRestrictions().size() + 1) * BattleNext_PageLayout.TABLE_ROW_HEIGHT
+				+ BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING;
+		float availableHeight = Math.max(1f, tableHeight - BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		float visibleHeight = Math.min(availableHeight, contentHeight);
-		rowsArea = new UIRect(SIDE_MARGIN - 5f, HEADER_HEIGHT, tableWidth, availableHeight);
+		rowsArea = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
+				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
+				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
 		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
 		CustomPanelAPI rowsPanel = rowsRect.createSubPanel(tablePanel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI rows = rowsPanel.createUIElement(tableWidth, visibleHeight, true);
+		TooltipMakerAPI rows = rowsPanel.createUIElement(rowsRect.getWidth(), visibleHeight, true);
 		for (int index = 0; index < draft.getRestrictions().size(); index++) {
 			addRestrictionRow(index, draft.getRestrictions().get(index), rows, tableWidth, restrictions);
 		}
 		restrictionPicker = new BattleNext_OptionPicker(panel, new RestrictionChoiceSource(),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
-		restrictionPicker.addTo(rows, panel, Math.min(190f, tableWidth), text("rules_add_restriction"), rows, restrictions);
+		restrictionPicker.addTo(rows, panel, Math.min(RULE_PICKER_MAX_WIDTH, tableWidth),
+				text("rules_add_restriction"), rows, restrictions);
 		rowsPanel.addUIElement(rows).inTL(0f, 0f);
 	}
 
@@ -146,77 +170,124 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			TooltipMakerAPI content, float tableWidth, TooltipMakerAPI restrictions) {
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
 		String description = spec == null ? text("rules_missing_restriction") : spec.getDescription();
-		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth, ROW_HEIGHT, panel.getPlugin());
-		new UIRect(0f, 0f, tableWidth, ROW_HEIGHT).addBoarder(row, BattleNext_UiTheme.HEADER, 2f);
-		UIRect[] cells = columns(tableWidth, ROW_HEIGHT);
-		TooltipMakerAPI descriptionHost = row.createUIElement(Math.max(1f, cells[0].getWidth() - 4f),
-				ROW_HEIGHT, false);
+		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth,
+				BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
+		new UIRect(0f, 0f, tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(row,
+				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
+		UIRect[] cells = columns(tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+		float descriptionWidth = Math.max(1f,
+				cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
+		TooltipMakerAPI descriptionHost = row.createUIElement(descriptionWidth,
+				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 		LabelAPI descriptionLabel = descriptionHost.addPara(
-				descriptionHost.shortenString(description, Math.max(1f, cells[0].getWidth() - 10f)), 0f,
+				descriptionHost.shortenString(description, Math.max(1f,
+						cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f,
 				spec == null ? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT);
-		descriptionLabel.getPosition().inTL(3f,
-				Math.max(0f, (ROW_HEIGHT - descriptionLabel.getPosition().getHeight()) * 0.5f));
+		descriptionLabel.setAlignment(Alignment.MID);
+		descriptionLabel.getPosition().setSize(descriptionWidth,
+				descriptionLabel.getPosition().getHeight());
+		descriptionLabel.getPosition().inTL(0f,
+				Math.max(0f, (BattleNext_PageLayout.TABLE_ROW_HEIGHT
+						- descriptionLabel.getPosition().getHeight()) * 0.5f));
 		descriptionHost.addTooltipToPrevious(new RestrictionTooltip(restriction.getId(), restriction.getType(), description),
 				TooltipMakerAPI.TooltipLocation.RIGHT);
-		descriptionHost.setHeightSoFar(ROW_HEIGHT);
-		row.addUIElement(descriptionHost).inTL(cells[0].getX(), cells[0].getY());
+		descriptionHost.setHeightSoFar(BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+		row.addUIElement(descriptionHost).inTL(cells[DESCRIPTION_COLUMN].getX()
+				+ BattleNext_PageLayout.CELL_LABEL_SIDE_INSET, cells[DESCRIPTION_COLUMN].getY());
 		if (spec == null) {
-			TooltipMakerAPI missing = row.createUIElement(cells[1].getWidth() - 8f, ROW_HEIGHT, false);
-			missing.addPara(missing.shortenString(displayValue(restriction), cells[1].getWidth() - 12f),
-					0f, BattleNext_UiTheme.MUTED);
-			row.addUIElement(missing).inTL(cells[1].getX() + 3f, 0f);
+			float missingWidth = Math.max(1f,
+					cells[VALUE_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
+			TooltipMakerAPI missing = row.createUIElement(missingWidth,
+					BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
+			LabelAPI missingLabel = missing.addPara(missing.shortenString(displayValue(restriction),
+					cells[VALUE_COLUMN].getWidth() - MISSING_VALUE_TRUNCATION_PADDING), 0f, BattleNext_UiTheme.MUTED);
+			missingLabel.setAlignment(Alignment.MID);
+			missingLabel.getPosition().setSize(missingWidth,
+					missingLabel.getPosition().getHeight());
+			missingLabel.getPosition().inTL(0f,
+					Math.max(0f, (BattleNext_PageLayout.TABLE_ROW_HEIGHT
+							- missingLabel.getPosition().getHeight()) * 0.5f));
+			missing.setHeightSoFar(BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+			row.addUIElement(missing).inTL(cells[VALUE_COLUMN].getX()
+					+ BattleNext_PageLayout.CELL_LABEL_SIDE_INSET, 0f);
 		} else {
-			addField(cells[1], row, displayValue(restriction), restriction.getId(), content, restrictions);
-			TooltipMakerAPI enabledHost = row.createUIElement(cells[2].getWidth(), ROW_HEIGHT, false);
-			ButtonAPI enabled = enabledHost.addCheckbox(cells[2].getWidth(), ROW_HEIGHT, "",
+			addField(cells[VALUE_COLUMN], row, displayValue(restriction), restriction.getId(), content, restrictions);
+			float checkboxWidth = Math.min(BattleNext_PageLayout.TABLE_CHECKBOX_MAX_WIDTH,
+					cells[ENABLED_COLUMN].getWidth());
+			TooltipMakerAPI enabledHost = row.createUIElement(checkboxWidth,
+					BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
+			ButtonAPI enabled = enabledHost.addCheckbox(checkboxWidth,
+					BattleNext_PageLayout.TABLE_ROW_HEIGHT, "",
 					"rule:enabled:" + index, ButtonAPI.UICheckboxSize.SMALL, 0f);
 			enabled.setChecked(restriction.isEnabled());
 			enabledFields.put(restriction.getId(), enabled);
-			enabledHost.setHeightSoFar(ROW_HEIGHT);
-			row.addUIElement(enabledHost).inTL(cells[2].getX(), 0f);
+			enabledHost.setHeightSoFar(BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+			row.addUIElement(enabledHost).inTL(cells[ENABLED_COLUMN].getX()
+					+ (cells[ENABLED_COLUMN].getWidth() - checkboxWidth) * 0.5f, 0f);
 		}
-		float buttonWidth = Math.max(22f, (cells[3].getWidth() - 8f) / 3f);
-		BattleNext_PageLayout.fixedButton(row, new UIRect(cells[3].getX(), 5f, buttonWidth, 28f),
+		float buttonWidth = Math.max(ACTION_BUTTON_MIN_WIDTH,
+				(cells[ACTIONS_COLUMN].getWidth() - ACTION_BUTTON_SIDE_PADDING) / ACTION_BUTTON_COUNT);
+		float buttonsX = cells[ACTIONS_COLUMN].getX()
+				+ (cells[ACTIONS_COLUMN].getWidth() - buttonWidth * ACTION_BUTTON_COUNT) * 0.5f;
+		float buttonY = (BattleNext_PageLayout.TABLE_ROW_HEIGHT
+				- BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT) * 0.5f;
+		BattleNext_PageLayout.fixedButton(row, new UIRect(buttonsX, buttonY,
+				buttonWidth, BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT),
 				"^", "rule:up:" + index, CutStyle.ALL, false).setEnabled(index > 0);
-		BattleNext_PageLayout.fixedButton(row, new UIRect(cells[3].getX() + buttonWidth, 5f,
-				buttonWidth, 28f), "V", "rule:down:" + index, CutStyle.ALL, false)
+		BattleNext_PageLayout.fixedButton(row, new UIRect(buttonsX + buttonWidth, buttonY,
+				buttonWidth, BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT),
+				"V", "rule:down:" + index, CutStyle.ALL, false)
 				.setEnabled(index + 1 < draft.getRestrictions().size());
-		BattleNext_PageLayout.fixedButton(row, new UIRect(cells[3].getX() + buttonWidth * 2f, 5f,
-				buttonWidth, 28f), "X", "rule:remove:" + index, CutStyle.ALL, false);
+		BattleNext_PageLayout.fixedButton(row, new UIRect(buttonsX + buttonWidth * (ACTION_BUTTON_COUNT - 1),
+				buttonY, buttonWidth, BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT),
+				"X", "rule:remove:" + index, CutStyle.ALL, false);
 		content.addCustom(row, 0f);
 	}
 
 	private TextFieldAPI addField(UIRect rect, CustomPanelAPI owner, String value, String key,
 			TooltipMakerAPI... viewports) {
-		float width = Math.max(40f, rect.getWidth() - 10f);
-		TooltipMakerAPI maker = owner.createUIElement(width, FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, owner, width, FIELD_HEIGHT, value, viewports);
+		float width = Math.max(FIELD_MIN_WIDTH, rect.getWidth()
+				- BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET - BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET);
+		TooltipMakerAPI maker = owner.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		TextFieldAPI field = BattleNext_TextField.addTo(maker, owner, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
-		maker.setHeightSoFar(FIELD_HEIGHT);
-		owner.addUIElement(maker).inTL(rect.getX() + 3f, rect.getY() + (rect.getHeight() - FIELD_HEIGHT) * 0.5f);
+		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		owner.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET,
+				rect.getY() + (rect.getHeight() - BattleNext_PageLayout.FORM_FIELD_HEIGHT) * 0.5f);
 		valueFields.put(key, field);
 		return field;
 	}
 
 	private UIRect[] columns(float width, float height) {
-		float available = width - COLUMN_GAP * (COLUMN_SHARES.length - 1);
+		float available = width - BattleNext_PageLayout.TABLE_COLUMN_GAP * (COLUMN_SHARES.length - 1);
+		float actionsWidth = Math.min(available,
+				Math.max(ACTION_BUTTON_MIN_WIDTH * ACTION_BUTTON_COUNT, available * COLUMN_SHARES[ACTIONS_COLUMN]));
+		float otherWidth = available - actionsWidth;
 		UIRect[] result = new UIRect[COLUMN_SHARES.length];
 		float x = 0f;
 		for (int index = 0; index < COLUMN_SHARES.length; index++) {
-			float nextX = index == COLUMN_SHARES.length - 1 ? width : x + available * COLUMN_SHARES[index];
+			float nextX = index == COLUMN_SHARES.length - 1 ? width
+					: x + otherWidth * COLUMN_SHARES[index] / (1f - COLUMN_SHARES[ACTIONS_COLUMN]);
 			result[index] = new UIRect(x, 0f, nextX - x, height);
-			x = nextX + COLUMN_GAP;
+			x = nextX + BattleNext_PageLayout.TABLE_COLUMN_GAP;
 		}
 		return result;
 	}
 
 	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color, boolean compactFont) {
-		TooltipMakerAPI maker = host.createUIElement(Math.max(1f, rect.getWidth() - 4f), rect.getHeight(), false);
+		float labelWidth = Math.max(1f,
+				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
+		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
 		if (compactFont) maker.setParaSmallInsignia();
-		LabelAPI label = maker.addPara(maker.shortenString(value, Math.max(1f, rect.getWidth() - 10f)), 0f, color);
-		label.getPosition().inTL(3f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
+		LabelAPI label = maker.addPara(maker.shortenString(value,
+				Math.max(1f, rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f, color);
+		label.setAlignment(Alignment.MID);
+		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
+		label.getPosition().inTL(0f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
 		maker.setHeightSoFar(rect.getHeight());
-		host.addUIElement(maker).inTL(rect.getX(), rect.getY());
+		host.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
+				rect.getY());
 	}
 
 	@Override
@@ -351,8 +422,10 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width,
 			TooltipMakerAPI... viewports) {
-		host.addPara(label, 6f, BattleNext_UiTheme.MUTED);
-		return BattleNext_TextField.addTo(host, owner, Math.max(90f, width), 28f, value, viewports);
+		host.addPara(label, DETAILS_FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
+		return BattleNext_TextField.addTo(host, owner,
+				Math.max(DETAILS_FIELD_MIN_WIDTH, width),
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 	}
 
 	private String displayValue(BattleNext_RuleRestriction restriction) {
@@ -390,13 +463,13 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 		@Override
 		public float getTooltipWidth(Object ignored) {
-			return 320f;
+			return RESTRICTION_TOOLTIP_WIDTH;
 		}
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 			tooltip.addPara(description, 0f, BattleNext_UiTheme.TEXT);
-			tooltip.addPara(id + "  [" + type + "]", 5f, BattleNext_UiTheme.MUTED);
+			tooltip.addPara(id + "  [" + type + "]", RESTRICTION_TOOLTIP_META_GAP, BattleNext_UiTheme.MUTED);
 		}
 	}
 

@@ -13,6 +13,13 @@ import java.util.List;
 
 public final class BattleNext_DropdownField {
 
+	private static final float POPUP_ROW_GAP = 2f;
+	private static final float POPUP_SCREEN_MARGIN = 8f;
+	private static final float POPUP_MAX_HEIGHT = 240f;
+	private static final float POPUP_OPTION_HEIGHT = 35f;
+	private static final float POPUP_SCROLLBAR_RESERVE = 5f;
+	private static final float POPUP_BUTTON_WIDTH_RESERVE = 15f;
+
 	public static final class DropdownChoice {
 
 		private final String id;
@@ -150,28 +157,29 @@ public final class BattleNext_DropdownField {
 		close();
 		if (!enabled || rect == null) return;
 		float hostHeight = host.getPosition().getHeight();
-		float dropdownY = rect.getY() + rect.getHeight() + 2f;
-		float belowSpace = hostHeight - dropdownY - 8f;
-		float aboveSpace = rect.getY() - 8f;
+		float dropdownY = rect.getY() + rect.getHeight() + POPUP_ROW_GAP;
+		float belowSpace = hostHeight - dropdownY - POPUP_SCREEN_MARGIN;
+		float aboveSpace = rect.getY() - POPUP_SCREEN_MARGIN;
 		int optionCount = Math.max(1, options.size());
-		float desiredHeight = Math.min(240f, optionCount * 35f);
+		float desiredHeight = Math.min(POPUP_MAX_HEIGHT, optionCount * POPUP_OPTION_HEIGHT);
 		boolean above = belowSpace < desiredHeight && aboveSpace > belowSpace;
-		float available = Math.max(35f, above ? aboveSpace : belowSpace);
+		float available = Math.max(POPUP_OPTION_HEIGHT, above ? aboveSpace : belowSpace);
 		float height = Math.min(desiredHeight, available);
-		float y = above ? rect.getY() - height - 2f : dropdownY;
+		float y = above ? rect.getY() - height - POPUP_ROW_GAP : dropdownY;
 		popup = host.createCustomPanel(width, height, new DropdownPopupPlugin());
-		TooltipMakerAPI list = popup.createUIElement(width - 5f, height, true);
+		TooltipMakerAPI list = popup.createUIElement(width - POPUP_SCROLLBAR_RESERVE, height, true);
 		list.setButtonFontOrbitron20();
 		if (options.isEmpty()) {
 			list.addPara("", 0f, BattleNext_UiTheme.MUTED);
 		} else {
 			for (DropdownChoice option : options) {
-				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option, width - 15f);
+				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option,
+						width - POPUP_BUTTON_WIDTH_RESERVE);
 				item.setEnabled(option.enabled);
 			}
 		}
 		popup.addUIElement(list).inTL(0f, 0f);
-		host.addComponent(popup).inTL(rect.getX(), Math.max(8f, y));
+		host.addComponent(popup).inTL(rect.getX(), Math.max(POPUP_SCREEN_MARGIN, y));
 	}
 
 	private final class DropdownPopupPlugin extends BaseCustomUIPanelPlugin {

@@ -14,7 +14,19 @@ import data.scripts.ui.widget.BattleNext_TextField;
 
 public class BattleNext_SettingsPage implements BattleNext_PageView {
 
+	private static final float DESCRIPTION_TOP_GAP = 10f;
+	private static final float GRAPHICS_CHECKBOX_WIDTH_RESERVE = 20f;
+	private static final float GRAPHICS_CHECKBOX_HEIGHT = 30f;
+	private static final float GRAPHICS_CHECKBOX_TOP_GAP = 6f;
+	private static final float SETTINGS_FOOTER_BOTTOM_INSET = 4f;
+	private static final float STATUS_TOP_GAP = 8f;
+	private static final float FIELD_LABEL_TOP_GAP = 6f;
+	private static final float FIELD_MAX_WIDTH = 260f;
+	private static final float FIELD_WIDTH_RESERVE = 20f;
+	private static final int FIELD_MAX_CHARS = 16;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+
 	private CustomPanelAPI panel;
 	private ButtonAPI fullGraphicEffect;
 	private TextFieldAPI battleTimeLimit;
@@ -43,26 +55,31 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 		UIRect contentRect = rest[1];
 		TooltipMakerAPI content = BattleNext_PageLayout.column(contentRect, panel);
 		content.addTitle(strings.get("settings_heading"));
-		content.addPara(strings.get("settings_description"), 10f, BattleNext_UiTheme.TEXT);
-		fullGraphicEffect = content.addCheckbox(contentRect.getWidth() - 20f, 30f,
-				strings.get("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL, 6f);
+		content.addPara(strings.get("settings_description"), DESCRIPTION_TOP_GAP, BattleNext_UiTheme.TEXT);
+		fullGraphicEffect = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
+				GRAPHICS_CHECKBOX_HEIGHT,
+				strings.get("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
+				GRAPHICS_CHECKBOX_TOP_GAP);
 		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
 		battleTimeLimit = field(content, "settings_battle_time_limit", Float.toString(BattleNext_Settings.getBattleTimeLimit()));
 		defaultTimeMult = field(content, "settings_default_time_mult", Float.toString(BattleNext_Settings.getDefaultTimeMult()));
 		boostTimeMult = field(content, "settings_boost_time_mult", Float.toString(BattleNext_Settings.getBoostTimeMult()));
 		reportKeepCount = field(content, "settings_report_keep_count", Integer.toString(BattleNext_Settings.getReportKeepCount()));
-		UIRect footer = new UIRect(contentRect.getX(), contentRect.getY() + contentRect.getHeight() - 34f,
-				contentRect.getWidth(), 30f);
+		UIRect footer = new UIRect(contentRect.getX(),
+				contentRect.getY() + contentRect.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT
+						- SETTINGS_FOOTER_BOTTOM_INSET,
+				contentRect.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT);
 		BattleNext_PageLayout.fixedButton(panel, footer, strings.get("save"), "settings_save",
 				com.fs.starfarer.api.ui.CutStyle.ALL, true);
-		statusLabel = content.addPara(status, 8f, BattleNext_UiTheme.MUTED);
+		statusLabel = content.addPara(status, STATUS_TOP_GAP, BattleNext_UiTheme.MUTED);
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
-		content.addPara(strings.get(labelKey), 6f, BattleNext_UiTheme.TEXT);
+		content.addPara(strings.get(labelKey), FIELD_LABEL_TOP_GAP, BattleNext_UiTheme.TEXT);
 		TextFieldAPI field = BattleNext_TextField.addTo(content, panel,
-				Math.min(260f, content.getPosition().getWidth() - 20f), 28f, value, content);
-		field.setMaxChars(16);
+				Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE),
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, content);
+		field.setMaxChars(FIELD_MAX_CHARS);
 		return field;
 	}
 

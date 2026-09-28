@@ -41,6 +41,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	private final BattleNext_RuleStore ruleStore = new BattleNext_RuleStore();
 	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+
 	private CustomPanelAPI panel;
 	private UIRect listRect;
 	private UIRect detailRect;
@@ -83,32 +84,34 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 
 	@Override
 	public void createContents() {
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), 30f),
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
 				panel, text("page_tournaments"));
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footerRect = regions[2];
 		String[] actions = {"add", "save", "back"};
-		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / 3f);
+		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, actions.length);
 		for (int index = 0; index < actions.length; index++) {
 			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
-					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
 			if (index == 1) {
 				saveButton = button;
 				saveButton.setEnabled(tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded());
 			}
 		}
-		float statusX = 3f * buttonWidth + 30f;
-		if (footerRect.getWidth() - statusX >= 60f) {
-			TooltipMakerAPI footerStatus = panel.createUIElement(footerRect.getWidth() - statusX, 30f, false);
+		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
+		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
+			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
-			statusLabel.getPosition().inTL(0f, 5f);
-			footerStatus.setHeightSoFar(30f);
-			panel.addUIElement(footerStatus).inTL(footerRect.getX() + statusX, footerRect.getY());
+			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
+			footerStatus.setHeightSoFar(statusRect.getHeight());
+			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
 		}
 
 		refreshContent();
@@ -118,33 +121,41 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	public void refreshContent() {
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
+		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
+		TooltipMakerAPI listContent = listPanel.createUIElement(listContentRect.getWidth(), listContentRect.getHeight(), true);
 		addList(listContent);
-		listPanel.addUIElement(listContent).inTL(8f, 8f);
+		listPanel.addUIElement(listContent).inTL(listContentRect.getX() - listRect.getX(),
+				listContentRect.getY() - listRect.getY());
 
 		detailRect.removeLatestSubPanel();
 		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!draftOpen) {
-			TooltipMakerAPI prompt = detailPanel.createUIElement(detailRect.getWidth() - 18f, detailRect.getHeight() - 16f, false);
+			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
+			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
 			prompt.addTitle(text("select_tournament"));
-			detailPanel.addUIElement(prompt).inTL(8f, 8f);
+			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
+					promptRect.getY() - detailRect.getY());
 			return;
 		}
 		BattleNext_TournamentModel selected = selectedId.isEmpty() ? null : tournamentStore.get(selectedId);
-		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f,
-				detailRect.getHeight() - 50f, detailPanel.getPlugin());
-		detailPanel.addComponent(editorPanel).inTL(8f, 8f);
+		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
+		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(editorRect.getWidth(),
+				editorRect.getHeight(), detailPanel.getPlugin());
+		detailPanel.addComponent(editorPanel).inTL(editorRect.getX() - detailRect.getX(),
+				editorRect.getY() - detailRect.getY());
 		editor.attach(editorPanel);
 		if (selected != null) {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 					text("delete"), "delete", CutStyle.ALL, true);
 			delete.setEnabled(tournamentStore.isManaged(selectedId) && tournamentStore.isLoaded());
 			if (!tournamentStore.isManaged(selectedId)) {
-				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
-				note.addPara(note.shortenString(text("source_unavailable_short"), detailRect.getWidth() - 180f),
+				UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(detailRect);
+				TooltipMakerAPI note = detailPanel.createUIElement(noteRect.getWidth(), noteRect.getHeight(), false);
+				note.addPara(note.shortenString(text("source_unavailable_short"),
+						detailRect.getWidth() - BattleNext_PageLayout.MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE),
 						0f, BattleNext_UiTheme.MUTED);
-				detailPanel.addUIElement(note).inTL(165f, detailRect.getHeight() - 34f);
+				detailPanel.addUIElement(note).inTL(noteRect.getX(), noteRect.getY());
 			}
 		}
 	}
@@ -199,11 +210,14 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_tournaments"));
 		if (!tournamentStore.isLoaded()) listContent.addPara(text("load_failed") + ": "
-				+ tournamentStore.getLoadError(), 8f, BattleNext_UiTheme.MUTED);
-		if (tournamentStore.getAll().isEmpty()) listContent.addPara(text("no_tournaments"), 10f, BattleNext_UiTheme.MUTED);
+				+ tournamentStore.getLoadError(), BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP,
+				BattleNext_UiTheme.MUTED);
+		if (tournamentStore.getAll().isEmpty()) listContent.addPara(text("no_tournaments"),
+				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(listContent, tournament.getName(),
-					"tournament:select:" + tournament.getId(), Math.max(80f, listRect.getWidth() - 30f));
+					"tournament:select:" + tournament.getId(),
+					BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
 	}
 

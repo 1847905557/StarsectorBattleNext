@@ -3,6 +3,7 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
+import data.missions.BattleNext_BattleMap;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
@@ -25,6 +26,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
+
+	private static final float SOURCE_HEADER_HEIGHT = 88f;
+	private static final float SOURCE_LABEL_MAX_WIDTH = 175f;
+	private static final float SOURCE_LABEL_WIDTH_SHARE = 0.25f;
+	private static final float SOURCE_BUTTON_MAX_WIDTH = 420f;
+	private static final float SOURCE_BUTTON_WIDTH_SHARE = 0.45f;
+	private static final float SOURCE_CONTROL_GAP = 12f;
+	private static final float SOURCE_CONTROL_TOP = 44f;
+	private static final float SOURCE_CONTROL_HEIGHT = 30f;
+	private static final float SOURCE_LABEL_TEXT_TOP_INSET = 5f;
+	private static final float TOURNAMENT_DETAIL_TITLE_GAP = 10f;
+	private static final float TOURNAMENT_DETAIL_COLUMN_GAP = 10f;
+	private static final float TOURNAMENT_ACTION_BUTTON_WIDTH = 220f;
+	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = 8f;
+	private static final float TOURNAMENT_SUMMARY_STATUS_GAP = 8f;
+	private static final float TOURNAMENT_SUMMARY_DETAIL_GAP = 6f;
+	private static final float TOURNAMENT_SUMMARY_SECTION_GAP = 10f;
+	private static final float TOURNAMENT_SUMMARY_FLEET_GAP = 5f;
+	private static final float TOURNAMENT_SCHEDULE_ENTRY_GAP = 5f;
+	private static final float TOURNAMENT_SCHEDULE_WARNING_GAP = 4f;
+	private static final float TOURNAMENT_SCHEDULE_SECTION_GAP = 12f;
+	private static final float TOURNAMENT_SCHEDULE_MATCH_GAP = 8f;
+
+	private static final int RANDOM_MAP_ID = -1;
+	private static final int LAST_MAP_ID = BattleNext_BattleMap.MAP_COUNT - 1;
 
 	public static final class BattleSourceSelectionRequest {
 		private final String id;
@@ -70,22 +96,24 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	public void createContents() {
 		if (sourceDropdown != null) sourceDropdown.close();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] sections = root.splitVertically(88f);
+		UIRect[] sections = root.splitVertically(SOURCE_HEADER_HEIGHT);
 		contentRect = sections[1];
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), 30f), panel,
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel,
 				text("page_battle_selector"));
 
-		float labelWidth = Math.min(175f, root.getWidth() * 0.25f);
-		float buttonWidth = Math.min(420f, root.getWidth() * 0.45f);
-		float groupX = (root.getWidth() - labelWidth - 12f - buttonWidth) * 0.5f;
-		UIRect labelRect = new UIRect(groupX, 44f, labelWidth, 30f);
+		float labelWidth = Math.min(SOURCE_LABEL_MAX_WIDTH, root.getWidth() * SOURCE_LABEL_WIDTH_SHARE);
+		float buttonWidth = Math.min(SOURCE_BUTTON_MAX_WIDTH, root.getWidth() * SOURCE_BUTTON_WIDTH_SHARE);
+		float groupX = (root.getWidth() - labelWidth - SOURCE_CONTROL_GAP - buttonWidth) * 0.5f;
+		UIRect labelRect = new UIRect(groupX, SOURCE_CONTROL_TOP,
+				labelWidth, SOURCE_CONTROL_HEIGHT);
 		TooltipMakerAPI sourceLabel = labelRect.beginTooltip(panel, false);
 		sourceLabel.setParaOrbitronLarge();
 		sourceLabel.addPara(text("battle_source"), 0f, BattleNext_UiTheme.ACCENT)
-				.getPosition().inTL(0f, 5f);
+				.getPosition().inTL(0f, SOURCE_LABEL_TEXT_TOP_INSET);
 		sourceLabel.setHeightSoFar(labelRect.getHeight());
 		labelRect.addTooltip();
-		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + 12f, 44f, buttonWidth, 30f);
+		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + SOURCE_CONTROL_GAP,
+				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
 		sourceDropdown = new BattleNext_DropdownField(panel, inputOwner, buttonWidth,
 				id -> {
 					inputOwner.buttonPressed(new BattleSourceSelectionRequest(id));
@@ -209,15 +237,16 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
 			BattleNext_UiTheme.configure(message);
 			message.addTitle(text("tournament_missing"));
-			message.addPara(text("tournament_missing_detail"), 8f, BattleNext_UiTheme.MUTED);
+			message.addPara(text("tournament_missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP,
+					BattleNext_UiTheme.MUTED);
 			messageRect.addTooltip();
 			return;
 		}
 		UIRect[] rows = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight())
-				.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + 10f);
+				.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + TOURNAMENT_DETAIL_TITLE_GAP);
 		BattleNext_PageLayout.heading(rows[0], detailPanel, tournament.getName());
 		float listWidth = BattleNext_PageLayout.listWidth(detailPanel);
-		UIRect[] columns = rows[1].splitHorizontally(listWidth + 10f);
+		UIRect[] columns = rows[1].splitHorizontally(listWidth + TOURNAMENT_DETAIL_COLUMN_GAP);
 
 		listRectSetup(columns[0], detailPanel, tournament);
 		scheduleSetup(columns[1], detailPanel, tournament);
@@ -229,21 +258,25 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		TooltipMakerAPI summary = summaryPanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
 		if (!loadError.isEmpty()) summary.addPara(loadError, 0f, BattleNext_UiTheme.MUTED);
 		summary.addTitle(text("tournament_summary"));
-		summary.addPara(text("status") + ": " + tournamentStatus(tournament), 8f, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("status") + ": " + tournamentStatus(tournament),
+				TOURNAMENT_SUMMARY_STATUS_GAP, BattleNext_UiTheme.TEXT);
 		summary.addPara(text("tournament_format") + ": " + bracketLabel(tournament)
-				+ " / " + strings.format("bo", tournament.getBoCount()), 6f, BattleNext_UiTheme.TEXT);
-		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(), 6f, BattleNext_UiTheme.TEXT);
+				+ " / " + strings.format("bo", tournament.getBoCount()), TOURNAMENT_SUMMARY_DETAIL_GAP,
+				BattleNext_UiTheme.TEXT);
+		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(),
+				TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
 		if (tournament.isCompleted()) {
-			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(), 6f, BattleNext_UiTheme.TEXT);
+			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(),
+					TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
 		}
 		summary.addPara(text("tournament_rules") + ": "
 				+ (tournament.getRuleId().isEmpty() ? text("rules_unbound")
 						: ruleStore.get(tournament.getRuleId()) == null
 						? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
-				6f, BattleNext_UiTheme.TEXT);
-		summary.addPara(text("fleet_ids"), 10f, BattleNext_UiTheme.ACCENT);
+				TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("fleet_ids"), TOURNAMENT_SUMMARY_SECTION_GAP, BattleNext_UiTheme.ACCENT);
 		for (String fleet : tournament.getFleetIds()) {
-			summary.addPara(fleet, 5f, BattleNext_UiTheme.TEXT);
+			summary.addPara(fleet, TOURNAMENT_SUMMARY_FLEET_GAP, BattleNext_UiTheme.TEXT);
 		}
 		summaryPanel.addUIElement(summary).inTL(0f, 0f);
 	}
@@ -255,37 +288,42 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		BattleNext_Match next = nextMatch(tournament);
 		schedule.addTitle(text("next_match"));
 		if (next == null) {
-			schedule.addPara(text("no_pending_match"), 5f, BattleNext_UiTheme.MUTED);
+			schedule.addPara(text("no_pending_match"), TOURNAMENT_SCHEDULE_ENTRY_GAP, BattleNext_UiTheme.MUTED);
 		} else {
 			schedule.addPara(next.getId() + ": " + next.getPlayer() + " / " + next.getEnemy(),
-					5f, BattleNext_UiTheme.TEXT);
+					TOURNAMENT_SCHEDULE_ENTRY_GAP, BattleNext_UiTheme.TEXT);
 			if (selectedId.equals(tournamentStore.getActiveId())) {
 				provider.load();
-				for (String reason : provider.getWarnings()) schedule.addPara(reason, 4f, BattleNext_UiTheme.MUTED);
-				for (String reason : provider.getRuleWarnings()) schedule.addPara(reason, 4f, BattleNext_UiTheme.MUTED);
+				for (String reason : provider.getWarnings()) schedule.addPara(reason,
+						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
+				for (String reason : provider.getRuleWarnings()) schedule.addPara(reason,
+						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
 				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
-					BattleNext_PageLayout.button(schedule, text("rules_force_start"), "tournament:authorize", 220f);
+					BattleNext_PageLayout.button(schedule, text("rules_force_start"), "tournament:authorize",
+							TOURNAMENT_ACTION_BUTTON_WIDTH);
 				}
 			}
 		}
-		schedule.addPara(text("matches"), 12f, BattleNext_UiTheme.ACCENT);
+		schedule.addPara(text("matches"), TOURNAMENT_SCHEDULE_SECTION_GAP, BattleNext_UiTheme.ACCENT);
 		for (BattleNext_Match match : tournament.getMatches()) {
 			String matchLabel = match.getEnemy().isEmpty() ? text("stage_bye")
 					: BattleNext_MatchProgress.tournament(tournament, match).format(strings);
 			schedule.addPara(matchLabel + " / " + match.getId() + ": " + match.getPlayer()
 					+ " / " + match.getEnemy() + " [" + enumLabel("stage_", match.getStage())
 					+ " / " + enumLabel("match_status_", match.getStatus()) + "]",
-					8f, BattleNext_UiTheme.TEXT);
+					TOURNAMENT_SCHEDULE_MATCH_GAP, BattleNext_UiTheme.TEXT);
 			for (int index = 0; index < match.getRounds().size(); index++) {
 				BattleNext_Round round = match.getRounds().get(index);
 				String outcome = enumLabel("round_status_", round.getStatus());
 				if (round.getStatus() != BattleNext_Round.RoundStatus.DRAW) outcome += " (" + round.getWinnerFleetId() + ")";
 				schedule.addPara(strings.format("round_progress", index + 1, tournament.getBoCount())
-						+ " / " + text("status") + ": " + outcome, 4f, BattleNext_UiTheme.MUTED);
+						+ " / " + text("status") + ": " + outcome,
+						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
 			}
 		}
 		if (!tournament.isStarted()) {
-			ButtonAPI start = BattleNext_PageLayout.button(schedule, text("tournament_start"), "tournament:start", 220f);
+			ButtonAPI start = BattleNext_PageLayout.button(schedule, text("tournament_start"),
+					"tournament:start", TOURNAMENT_ACTION_BUTTON_WIDTH);
 			start.setEnabled(tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded());
 		}
 		schedulePanel.addUIElement(schedule).inTL(0f, 0f);
@@ -301,13 +339,15 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		BattleNext_TournamentModel source = tournamentStore.get(selectedId);
 		if (source == null || source.isStarted()) return;
 		if (source.getBracketType() == null || source.getBoCount() < 1
-				|| source.getMaxFleet() < 2 || source.getMaxFleet() > 32
-				|| source.getMapId() < -1 || source.getMapId() > 11) {
+				|| source.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+				|| source.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
+				|| source.getMapId() < RANDOM_MAP_ID || source.getMapId() > LAST_MAP_ID) {
 			loadError = text("invalid_tournament_format");
 			refreshContent();
 			return;
 		}
-		if (source.getFleetIds().size() < 2 || source.getFleetIds().size() > source.getMaxFleet()) {
+		if (source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+				|| source.getFleetIds().size() > source.getMaxFleet()) {
 			loadError = text("tournament_need_fleets");
 			refreshContent();
 			return;

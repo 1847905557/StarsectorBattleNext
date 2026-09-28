@@ -17,6 +17,16 @@ import java.util.List;
 
 public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
 
+	private static final float SHELL_OUTER_INSET = 8f;
+	private static final float SHELL_TABS_TOP = 46f;
+	private static final float SHELL_TAB_HEIGHT = 30f;
+	private static final float SHELL_BODY_TOP = 86f;
+	private static final float SHELL_BODY_BOTTOM_RESERVE = 48f;
+	private static final float SHELL_TAB_GAP = 5f;
+	private static final float SHELL_CLOSE_MAX_WIDTH = 180f;
+	private static final float SHELL_CLOSE_WIDTH_SHARE = 0.3f;
+	private static final float SHELL_STATUS_CLOSE_GAP = 10f;
+
 	private enum BattleManagementPage {
 		BATTLE_SELECTOR("page_battle_selector"),
 		FLEETS("page_fleets"),
@@ -40,7 +50,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private CustomPanelAPI panel;
 	private UIRect bodyRect;
-	private final ButtonAPI[] tabButtons = new ButtonAPI[6];
+	private final ButtonAPI[] tabButtons = new ButtonAPI[BattleManagementPage.values().length];
 	private BattleManagementPage currentPage = BattleManagementPage.BATTLE_SELECTOR;
 	private String activeTournamentId = "";
 	private boolean pendingResult;
@@ -165,26 +175,34 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void buildShell() {
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
-		UIRect headingRect = new UIRect(8f, 8f, width - 16f, BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect tabsRect = new UIRect(8f, 46f, width - 16f, 30f);
-		bodyRect = new UIRect(8f, 86f, width - 16f, height - 134f);
-		UIRect footerRect = new UIRect(8f, height - 38f, width - 16f, 30f);
+		float shellWidth = width - SHELL_OUTER_INSET * 2f;
+		UIRect headingRect = new UIRect(SHELL_OUTER_INSET, SHELL_OUTER_INSET,
+				shellWidth, BattleNext_PageLayout.HEADER_HEIGHT);
+		UIRect tabsRect = new UIRect(SHELL_OUTER_INSET, SHELL_TABS_TOP,
+				shellWidth, SHELL_TAB_HEIGHT);
+		bodyRect = new UIRect(SHELL_OUTER_INSET, SHELL_BODY_TOP,
+				shellWidth, height - SHELL_BODY_TOP - SHELL_BODY_BOTTOM_RESERVE);
+		UIRect footerRect = new UIRect(SHELL_OUTER_INSET,
+				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
+				shellWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
 
 		BattleNext_PageLayout.heading(headingRect, panel, text("panel_heading"));
 
-		float tabWidth = (tabsRect.getWidth() - 25f) / tabButtons.length;
-		for (int index = 0; index < 6; index++) {
+		float tabWidth = (tabsRect.getWidth() - SHELL_TAB_GAP * (tabButtons.length - 1)) / tabButtons.length;
+		for (int index = 0; index < tabButtons.length; index++) {
 			BattleManagementPage page = BattleManagementPage.values()[index];
-			UIRect tabRect = new UIRect(tabsRect.getX() + index * (tabWidth + 5f), tabsRect.getY(), tabWidth, 30f);
+			UIRect tabRect = new UIRect(tabsRect.getX() + index * (tabWidth + SHELL_TAB_GAP),
+					tabsRect.getY(), tabWidth, tabsRect.getHeight());
 			tabButtons[index] = BattleNext_PageLayout.fixedButton(panel, tabRect,
 					text(page.titleKey), page, CutStyle.TOP, false);
 		}
 
-		float closeWidth = Math.min(180f, footerRect.getWidth() * 0.3f);
+		float closeWidth = Math.min(SHELL_CLOSE_MAX_WIDTH, footerRect.getWidth() * SHELL_CLOSE_WIDTH_SHARE);
 		statusBar.attach(panel, new UIRect(footerRect.getX(), footerRect.getY(),
-				footerRect.getWidth() - closeWidth - 10f, footerRect.getHeight()));
+				footerRect.getWidth() - closeWidth - SHELL_STATUS_CLOSE_GAP, footerRect.getHeight()));
 		BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth, footerRect.getY(), closeWidth, 30f),
+				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth,
+						footerRect.getY(), closeWidth, footerRect.getHeight()),
 				text("close"), "close", CutStyle.BOTTOM, false);
 	}
 

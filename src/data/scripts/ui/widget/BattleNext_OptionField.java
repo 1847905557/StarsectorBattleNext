@@ -5,6 +5,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.ui.BattleNext_PageLayout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,8 @@ public class BattleNext_OptionField {
 		SINGLE, MULTIPLE
 	}
 
-	private static final float FIELD_HEIGHT = 28f;
-	private static final float BUTTON_WIDTH = 32f;
+	private static final float PICKER_BUTTON_WIDTH = 32f;
+	private static final float PICKER_ROW_TOP_GAP = 2f;
 
 	private final CustomPanelAPI overlayHost;
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
@@ -37,9 +38,11 @@ public class BattleNext_OptionField {
 
 	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value,
 			TooltipMakerAPI... viewports) {
-		CustomPanelAPI row = owner.createCustomPanel(width, FIELD_HEIGHT, owner.getPlugin());
-		TooltipMakerAPI input = row.createUIElement(width - BUTTON_WIDTH, FIELD_HEIGHT, false);
-		field = BattleNext_TextField.addTo(input, row, width - BUTTON_WIDTH, FIELD_HEIGHT,
+		float inputWidth = width - PICKER_BUTTON_WIDTH;
+		CustomPanelAPI row = owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+				owner.getPlugin());
+		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		field = BattleNext_TextField.addTo(input, row, inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
 				value == null ? "" : value, viewports);
 		field.getPosition().inTL(0f, 0f);
 		field.setLimitByStringWidth(false);
@@ -48,8 +51,9 @@ public class BattleNext_OptionField {
 		row.addUIElement(input).inTL(0f, 0f);
 		picker = new BattleNext_OptionPicker(overlayHost, source,
 				toPickerMode(mode), () -> parse(field.getText()), ids -> field.setText(expand(ids)));
-		picker.addButton(row, new UIRect(width - BUTTON_WIDTH, 0f, BUTTON_WIDTH, FIELD_HEIGHT), "...", viewports);
-		host.addCustom(row, 2f);
+		picker.addButton(row, new UIRect(inputWidth, 0f, PICKER_BUTTON_WIDTH,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT), "...", viewports);
+		host.addCustom(row, PICKER_ROW_TOP_GAP);
 		return field;
 	}
 

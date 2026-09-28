@@ -9,6 +9,9 @@ import data.scripts.ui.BattleNext_UiTheme;
 
 public class BattleNext_StatusBar {
 
+	private static final float STATUS_TEXT_RIGHT_RESERVE = 10f;
+	private static final float STATUS_TEXT_TOP_INSET = 5f;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private TooltipMakerAPI content;
 	private LabelAPI statusLabel;
@@ -16,9 +19,9 @@ public class BattleNext_StatusBar {
 
 	public void attach(CustomPanelAPI panel, UIRect rect) {
 		content = rect.beginTooltip(panel, false);
-		textWidth = rect.getWidth() - 10f;
+		textWidth = rect.getWidth() - STATUS_TEXT_RIGHT_RESERVE;
 		statusLabel = content.addPara(strings.get("ready"), 0f, BattleNext_UiTheme.MUTED);
-		statusLabel.getPosition().inTL(0f, 5f);
+		statusLabel.getPosition().inTL(0f, STATUS_TEXT_TOP_INSET);
 		content.setHeightSoFar(rect.getHeight());
 		rect.addTooltip();
 	}

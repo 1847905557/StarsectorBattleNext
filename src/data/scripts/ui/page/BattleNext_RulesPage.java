@@ -18,12 +18,16 @@ import java.util.function.Consumer;
 
 public class BattleNext_RulesPage implements BattleNext_PageView {
 
+	private static final float RULE_LIST_ERROR_TOP_GAP = 5f;
+	private static final float RULE_LIST_EMPTY_TOP_GAP = 8f;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_RuleStore store = new BattleNext_RuleStore();
 	private final BattleNext_RuleEditor editor = new BattleNext_RuleEditor(store);
+
 	private CustomPanelAPI panel;
 	private UIRect listRect;
 	private UIRect detailRect;
@@ -54,28 +58,30 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 
 	@Override
 	public void createContents() {
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), 30f),
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
 				panel, text("page_rules"));
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footer = regions[2];
 		String[] actions = {"add", "save", "back"};
-		float width = Math.min(160f, (footer.getWidth() - 20f) / 3f);
+		float width = BattleNext_PageLayout.managementFooterButtonWidth(footer, actions.length);
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(panel,
-					new UIRect(footer.getX() + index * (width + 10f), footer.getY(), width, 30f),
+					BattleNext_PageLayout.managementFooterButtonRect(footer, width, index),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
 		}
-		float statusX = 3f * width + 30f;
-		if (footer.getWidth() - statusX >= 60f) {
-			TooltipMakerAPI footerStatus = panel.createUIElement(footer.getWidth() - statusX, 30f, false);
+		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footer, width, actions.length);
+		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
+			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
-			statusLabel.getPosition().inTL(0f, 5f);
-			footerStatus.setHeightSoFar(30f);
-			panel.addUIElement(footerStatus).inTL(footer.getX() + statusX, footer.getY());
+			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
+			footerStatus.setHeightSoFar(statusRect.getHeight());
+			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
 		}
 		refreshContent();
 	}
@@ -86,36 +92,42 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		BattleNext_TextField.clearRegisteredFields();
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI list = listPanel.createUIElement(listRect.getWidth() - 18f,
-				listRect.getHeight() - 16f, true);
+		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
+		TooltipMakerAPI list = listPanel.createUIElement(listContentRect.getWidth(),
+				listContentRect.getHeight(), true);
 		list.addTitle(text("rules_heading"));
 		if (!store.isLoaded()) list.addPara(text("load_failed") + ": " + store.getLoadError(),
-				5f, BattleNext_UiTheme.MUTED);
+				RULE_LIST_ERROR_TOP_GAP, BattleNext_UiTheme.MUTED);
 		for (BattleNext_RuleModel rule : store.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(list, rule.getName(),
-					"rules:select:" + rule.getId(), Math.max(80f, listRect.getWidth() - 30f));
+					"rules:select:" + rule.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
-		if (store.getAll().isEmpty()) list.addPara(text("rules_empty"), 8f, BattleNext_UiTheme.MUTED);
-		listPanel.addUIElement(list).inTL(8f, 8f);
+		if (store.getAll().isEmpty()) list.addPara(text("rules_empty"),
+				RULE_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
+		listPanel.addUIElement(list).inTL(listContentRect.getX() - listRect.getX(),
+				listContentRect.getY() - listRect.getY());
 		detailRect.removeLatestSubPanel();
 		CustomPanelAPI detail = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (draftOpen) {
-			CustomPanelAPI editorPanel = detail.createCustomPanel(detailRect.getWidth() - 16f,
-					detailRect.getHeight() - 50f, detail.getPlugin());
-			detail.addComponent(editorPanel).inTL(8f, 8f);
+			UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
+			CustomPanelAPI editorPanel = detail.createCustomPanel(editorRect.getWidth(),
+					editorRect.getHeight(), detail.getPlugin());
+			detail.addComponent(editorPanel).inTL(editorRect.getX() - detailRect.getX(),
+					editorRect.getY() - detailRect.getY());
 			editor.attach(editorPanel);
 			if (!selectedId.isEmpty()) {
 				ButtonAPI delete = BattleNext_PageLayout.fixedButton(detail,
-						new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+						BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 						text("delete"), "delete", CutStyle.ALL, true);
 				delete.setEnabled(store.isLoaded() && store.get(selectedId) != null);
 			}
 			return;
 		}
-		TooltipMakerAPI prompt = detail.createUIElement(detailRect.getWidth() - 18f,
-				detailRect.getHeight() - 16f, false);
+		UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
+		TooltipMakerAPI prompt = detail.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
 		prompt.addTitle(text("rules_select"));
-		detail.addUIElement(prompt).inTL(8f, 8f);
+		detail.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
+				promptRect.getY() - detailRect.getY());
 	}
 
 	@Override

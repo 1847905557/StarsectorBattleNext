@@ -5,6 +5,7 @@ import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
+import data.missions.BattleNext_BattleMap;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -22,12 +23,31 @@ import java.util.List;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
-	private static final float HEADER_HEIGHT = 18f;
-	private static final float ROW_HEIGHT = 38f;
-	private static final float FIELD_HEIGHT = 28f;
-	private static final float COLUMN_GAP = 8f;
-	private static final float SIDE_MARGIN = 12f;
 	private static final float[] COLUMN_SHARES = {0.025f, 0.29f, 0.29f, 0.05f, 0.08f, 0.095f, 0.07f, 0.1f};
+	private static final int ROW_NUMBER_COLUMN = 0;
+	private static final int PLAYER_COLUMN = 1;
+	private static final int ENEMY_COLUMN = 2;
+	private static final int MAP_COLUMN = 3;
+	private static final int MAP_SCALE_COLUMN = 4;
+	private static final int STATUS_COLUMN = 5;
+	private static final int ENABLED_COLUMN = 6;
+	private static final int ACTIONS_COLUMN = 7;
+
+	private static final float ACTION_BUTTON_MAX_WIDTH = 120f;
+	private static final float ACTION_BUTTON_SIDE_PADDING = 8f;
+
+	private static final int FOOTER_BUTTON_COUNT = 3;
+	private static final float FOOTER_BUTTON_GAP = 10f;
+	private static final float FOOTER_BUTTON_MAX_WIDTH = 150f;
+
+	private static final float STATUS_CONTENT_WIDTH_RESERVE = 10f;
+	private static final float STATUS_INITIAL_TEXT_RESERVE = 15f;
+	private static final float STATUS_TOP_INSET = 5f;
+	private static final float STATUS_TOOLTIP_WIDTH = 260f;
+	private static final float STATUS_TOOLTIP_LINE_GAP = 4f;
+
+	private static final int RANDOM_MAP_ID = -1;
+	private static final int LAST_MAP_ID = BattleNext_BattleMap.MAP_COUNT - 1;
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
@@ -142,19 +162,24 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
-				.splitVertically(HEADER_HEIGHT);
-		float tableWidth = table[0].getWidth() - SIDE_MARGIN;
-		rowsArea = new UIRect(SIDE_MARGIN - 5f, table[1].getY(),
-			tableWidth, table[1].getHeight());
+				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
+		float tableWidth = table[0].getWidth() - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
+		rowsArea = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
+				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, table[1].getY(),
+				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, table[1].getHeight());
 
-		UIRect tableHeader = new UIRect(SIDE_MARGIN, table[0].getY(), tableWidth, HEADER_HEIGHT);
-		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth, HEADER_HEIGHT, false);
+		UIRect tableHeader = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN,
+				table[0].getY(), tableWidth, BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
+		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth,
+				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
 		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID, tableWidth, 0f);
+				BattleNext_UiTheme.HEADER, Alignment.MID,
+				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
 		headerStrip.getPosition().inTL(0f, 0f);
-		headerBackground.setHeightSoFar(HEADER_HEIGHT);
+		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		panel.addUIElement(headerBackground).inTL(tableHeader.getX(), tableHeader.getY());
-		float stripHeight = Math.min(HEADER_HEIGHT, headerStrip.getPosition().getHeight());
+		float stripHeight = Math.min(BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
+				headerStrip.getPosition().getHeight());
 		UIRect[] headings = columns(tableHeader.getWidth(), stripHeight);
 		String[] labels = {"#", text("battle_player_short"), text("battle_enemy_short"), text("battle_map_short"),
 				text("battle_map_scale_short"), text("status"), text("enabled"), text("actions")};
@@ -165,25 +190,29 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		}
 
 		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
-		float buttonWidth = Math.min(150f, (footerRect.getWidth() - 20f) / 3f);
+		float buttonWidth = Math.min(FOOTER_BUTTON_MAX_WIDTH,
+				(footerRect.getWidth() - FOOTER_BUTTON_GAP * (FOOTER_BUTTON_COUNT - 1)) / FOOTER_BUTTON_COUNT);
 		BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(footerRect.getX(), footerRect.getY(), buttonWidth, 30f),
+				new UIRect(footerRect.getX(), footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
 				text("add"), "add", CutStyle.ALL, true);
 		ButtonAPI saveButton = BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(footerRect.getX() + buttonWidth + 10f, footerRect.getY(), buttonWidth, 30f),
+				new UIRect(footerRect.getX() + buttonWidth + FOOTER_BUTTON_GAP,
+						footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
 				text("save"), "save", CutStyle.ALL, true);
 		saveButton.setEnabled(fleetStore.isLoaded());
 		BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(footerRect.getX() + 2f * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+				new UIRect(footerRect.getX() + 2f * (buttonWidth + FOOTER_BUTTON_GAP),
+						footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
 				text("back"), "back", CutStyle.ALL, true);
-		float statusX = footerRect.getX() + 3f * buttonWidth + 30f;
+		float statusX = footerRect.getX() + FOOTER_BUTTON_COUNT * (buttonWidth + FOOTER_BUTTON_GAP);
 		float statusWidth = footerRect.getWidth() - (statusX - footerRect.getX());
-		statusContent = panel.createUIElement(statusWidth - 10f, 30f, false);
+		statusContent = panel.createUIElement(statusWidth - STATUS_CONTENT_WIDTH_RESERVE,
+				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		status = statusContent.addPara(statusContent.shortenString(
-				loadError.isEmpty() ? text("ready") : loadError, statusWidth - 15f),
+				loadError.isEmpty() ? text("ready") : loadError, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
 				0f, BattleNext_UiTheme.MUTED);
-		status.getPosition().inTL(0f, 5f);
-		statusContent.setHeightSoFar(30f);
+		status.getPosition().inTL(0f, STATUS_TOP_INSET);
+		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
 		panel.addUIElement(statusContent).inTL(statusX, footerRect.getY());
 
 		refreshContent();
@@ -197,7 +226,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		rows.clear();
 
 		if (entries.isEmpty()) return;
-		float visibleHeight = Math.min(rowsArea.getHeight(), entries.size() * ROW_HEIGHT + 10f);
+		float visibleHeight = Math.min(rowsArea.getHeight(),
+				entries.size() * BattleNext_PageLayout.TABLE_ROW_HEIGHT
+						+ BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING);
 		rowsRect = new UIRect(rowsArea.getX(), rowsArea.getY(), rowsArea.getWidth(), visibleHeight);
 		CustomPanelAPI contentPanel = rowsRect.createSubPanel(panel, inputOwner).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(rowsRect.getWidth(), visibleHeight, true);
@@ -211,31 +242,39 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private void addRow(int index, BattleNext_QuickBattleModel entry, TooltipMakerAPI content) {
 
-		float width = rowsRect.getWidth();
-		CustomPanelAPI card = Global.getSettings().createCustom(width, ROW_HEIGHT, inputOwner);
-		new UIRect(0f, 0f, width, ROW_HEIGHT).addBoarder(card, BattleNext_UiTheme.HEADER, 2f);
-		UIRect[] cells = columns(width, ROW_HEIGHT);
+		float width = rowsRect.getWidth() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
+		CustomPanelAPI card = Global.getSettings().createCustom(width, BattleNext_PageLayout.TABLE_ROW_HEIGHT, inputOwner);
+		new UIRect(0f, 0f, width, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(card,
+				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
+		UIRect[] cells = columns(width, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
 		QuickBattleEditorRow row = new QuickBattleEditorRow();
 		row.id = entry.getId();
 		row.model = entry;
-		addLabel(card, cells[0], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
+		addLabel(card, cells[ROW_NUMBER_COLUMN], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
 		if (entry.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-			float rawWidth = cells[4].getX() + cells[4].getWidth() - cells[1].getX();
-			row.raw = addField(new UIRect(cells[1].getX(), 0f, rawWidth, ROW_HEIGHT), card,
+			float rawWidth = cells[MAP_SCALE_COLUMN].getX() + cells[MAP_SCALE_COLUMN].getWidth()
+					- cells[PLAYER_COLUMN].getX();
+			row.raw = addField(new UIRect(cells[PLAYER_COLUMN].getX(), 0f, rawWidth,
+					BattleNext_PageLayout.TABLE_ROW_HEIGHT), card,
 					entry.getRawContent(), content);
 		} else {
-			row.player = addField(cells[1], card, entry.getPlayer(), content);
-			row.enemy = addField(cells[2], card, entry.getEnemy(), content);
-			row.map = addField(cells[3], card, Integer.toString(entry.getMap()), content);
-			row.mapScale = addField(cells[4], card, Float.toString(entry.getMapScale()), content);
+			row.player = addField(cells[PLAYER_COLUMN], card, entry.getPlayer(), content);
+			row.enemy = addField(cells[ENEMY_COLUMN], card, entry.getEnemy(), content);
+			row.map = addField(cells[MAP_COLUMN], card, Integer.toString(entry.getMap()), content);
+			row.mapScale = addField(cells[MAP_SCALE_COLUMN], card, Float.toString(entry.getMapScale()), content);
 		}
 
-		UIRect statusRect = cells[5];
-		TooltipMakerAPI state = card.createUIElement(statusRect.getWidth() - 4f, ROW_HEIGHT, false);
+		UIRect statusRect = cells[STATUS_COLUMN];
+		float statusLabelWidth = statusRect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f;
+		TooltipMakerAPI state = card.createUIElement(statusLabelWidth,
+				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 		state.setParaSmallInsignia();
 		row.statusContent = state;
 		row.status = state.addPara(text("unavailable"), 0f, BattleNext_UiTheme.MUTED);
-		row.status.getPosition().inTL(3f, Math.max(0f, (ROW_HEIGHT - row.status.getPosition().getHeight()) * 0.5f));
+		row.status.setAlignment(Alignment.MID);
+		row.status.getPosition().setSize(statusLabelWidth, row.status.getPosition().getHeight());
+		row.status.getPosition().inTL(0f, Math.max(0f,
+				(BattleNext_PageLayout.TABLE_ROW_HEIGHT - row.status.getPosition().getHeight()) * 0.5f));
 		state.addTooltipTo(new TooltipCreator() {
 			@Override
 			public boolean isTooltipExpandable(Object tooltipParam) {
@@ -244,7 +283,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 			@Override
 			public float getTooltipWidth(Object tooltipParam) {
-				return 260f;
+				return STATUS_TOOLTIP_WIDTH;
 			}
 
 			@Override
@@ -254,28 +293,34 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 					tooltip.addPara(text("available"), 0f, BattleNext_UiTheme.TEXT);
 				} else {
 					for (String error : errors) {
-						tooltip.addPara(error, 4f, BattleNext_UiTheme.MUTED);
+						tooltip.addPara(error, STATUS_TOOLTIP_LINE_GAP, BattleNext_UiTheme.MUTED);
 					}
 				}
 			}
 		}, state.getPrev(), TooltipLocation.LEFT, true);
-		state.setHeightSoFar(ROW_HEIGHT);
-		card.addUIElement(state).inTL(statusRect.getX(), statusRect.getY());
+		state.setHeightSoFar(BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+		card.addUIElement(state).inTL(statusRect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
+				statusRect.getY());
 
-		UIRect enabledRect = cells[6];
-		TooltipMakerAPI enabledHost = card.createUIElement(enabledRect.getWidth(), ROW_HEIGHT, false);
-		row.enabled = enabledHost.addCheckbox(enabledRect.getWidth(), ROW_HEIGHT, "",
+		UIRect enabledRect = cells[ENABLED_COLUMN];
+		float checkboxWidth = Math.min(BattleNext_PageLayout.TABLE_CHECKBOX_MAX_WIDTH, enabledRect.getWidth());
+		TooltipMakerAPI enabledHost = card.createUIElement(checkboxWidth,
+				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
+		row.enabled = enabledHost.addCheckbox(checkboxWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, "",
 				"enabled:" + index, ButtonAPI.UICheckboxSize.SMALL, 0f);
 		row.enabled.setChecked(entry.isEnabled());
 		row.enabled.setEnabled(entry.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW);
-		enabledHost.setHeightSoFar(ROW_HEIGHT);
-		card.addUIElement(enabledHost).inTL(enabledRect.getX(), enabledRect.getY());
+		enabledHost.setHeightSoFar(BattleNext_PageLayout.TABLE_ROW_HEIGHT);
+		card.addUIElement(enabledHost).inTL(enabledRect.getX() + (enabledRect.getWidth() - checkboxWidth) * 0.5f,
+				enabledRect.getY());
 
-		UIRect actionsRect = cells[7];
-		float buttonWidth = Math.min(120f, actionsRect.getWidth() - 8f);
+		UIRect actionsRect = cells[ACTIONS_COLUMN];
+		float buttonWidth = Math.min(ACTION_BUTTON_MAX_WIDTH,
+				actionsRect.getWidth() - ACTION_BUTTON_SIDE_PADDING);
 		BattleNext_PageLayout.fixedButton(card,
 				new UIRect(actionsRect.getX() + (actionsRect.getWidth() - buttonWidth) * 0.5f,
-						(ROW_HEIGHT - 28f) * 0.5f, buttonWidth, 28f),
+						(BattleNext_PageLayout.TABLE_ROW_HEIGHT - BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT) * 0.5f,
+						buttonWidth, BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT),
 				text("delete"), "delete:" + index, CutStyle.ALL, true);
 
 		content.addCustom(card, 0f);
@@ -283,35 +328,43 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	}
 
 	private TextFieldAPI addField(UIRect rect, CustomPanelAPI card, String value, TooltipMakerAPI... viewports) {
-		float width = rect.getWidth() - 10f;
-		TooltipMakerAPI maker = card.createUIElement(width, FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width, FIELD_HEIGHT, value, viewports);
+		float width = rect.getWidth() - BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET
+				- BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET;
+		TooltipMakerAPI maker = card.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
-		maker.setHeightSoFar(FIELD_HEIGHT);
-		card.addUIElement(maker).inTL(rect.getX() + 3f, rect.getY() + (rect.getHeight() - FIELD_HEIGHT) * 0.5f);
+		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		card.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET,
+				rect.getY() + (rect.getHeight() - BattleNext_PageLayout.FORM_FIELD_HEIGHT) * 0.5f);
 		return field;
 	}
 
 	private UIRect[] columns(float width, float height) {
-		float available = width - COLUMN_GAP * (COLUMN_SHARES.length - 1);
+		float available = width - BattleNext_PageLayout.TABLE_COLUMN_GAP * (COLUMN_SHARES.length - 1);
 		UIRect[] result = new UIRect[COLUMN_SHARES.length];
 		float x = 0f;
 		for (int index = 0; index < COLUMN_SHARES.length; index++) {
 			float nextX = index == COLUMN_SHARES.length - 1 ? width : x + available * COLUMN_SHARES[index];
 			result[index] = new UIRect(x, 0f, nextX - x, height);
-			x = nextX + COLUMN_GAP;
+			x = nextX + BattleNext_PageLayout.TABLE_COLUMN_GAP;
 		}
 		return result;
 	}
 
 	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color,
 			boolean compactFont) {
-		TooltipMakerAPI maker = host.createUIElement(rect.getWidth() - 4f, rect.getHeight(), false);
+		float labelWidth = rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f;
+		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
 		if (compactFont) maker.setParaSmallInsignia();
-		LabelAPI label = maker.addPara(maker.shortenString(value, rect.getWidth() - 10f), 0f, color);
-		label.getPosition().inTL(3f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
+		LabelAPI label = maker.addPara(maker.shortenString(value,
+				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING), 0f, color);
+		label.setAlignment(Alignment.MID);
+		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
+		label.getPosition().inTL(0f, Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
 		maker.setHeightSoFar(rect.getHeight());
-		host.addUIElement(maker).inTL(rect.getX(), rect.getY());
+		host.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
+				rect.getY());
 	}
 
 	public void refreshRowStatuses() {
@@ -358,7 +411,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (fleetStore.get(row.enemy.getText().trim()) == null) errors.add(text("invalid_enemy"));
 		try {
 			int map = Integer.parseInt(row.map.getText().trim());
-			if (map < -1 || map > 11) errors.add(text("invalid_map"));
+			if (map < RANDOM_MAP_ID || map > LAST_MAP_ID) errors.add(text("invalid_map"));
 		} catch (NumberFormatException exception) {
 			errors.add(text("invalid_map"));
 		}
@@ -395,7 +448,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				int map = Integer.parseInt(row.map.getText().trim());
 				float mapScale = Float.parseFloat(row.mapScale.getText().trim());
 				if (row.player.getText().trim().isEmpty() || row.enemy.getText().trim().isEmpty()
-						|| map < -1 || map > 11 || !Float.isFinite(mapScale) || mapScale <= 0f) {
+						|| map < RANDOM_MAP_ID || map > LAST_MAP_ID || !Float.isFinite(mapScale) || mapScale <= 0f) {
 					setStatus(text("invalid_map_scale_combined"));
 					return false;
 				}
@@ -461,7 +514,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private void setStatus(String value) {
 		statusText = value;
 		if (status != null) {
-			status.setText(statusContent.shortenString(value, statusContent.getPosition().getWidth() - 10f));
+			status.setText(statusContent.shortenString(value,
+					statusContent.getPosition().getWidth() - STATUS_CONTENT_WIDTH_RESERVE));
 		}
 	}
 

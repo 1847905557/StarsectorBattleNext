@@ -17,6 +17,8 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public static final int FORMAT_VERSION = 1;
 	public static final int META_FORMAT_VERSION = 1;
+	public static final int MIN_FLEET_COUNT = 2;
+	public static final int MAX_FLEET_COUNT = 32;
 
 	private String id;
 	private String name;
@@ -33,7 +35,7 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 	private String pendingMatchId = "";
 
 	public BattleNext_TournamentModel() {
-		this("", "", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		this("", "", TournamentBracketType.SINGLE_ELIMINATION, 1, MIN_FLEET_COUNT);
 	}
 
 	public BattleNext_TournamentModel(String id, String name, TournamentBracketType bracketType, int boCount, int maxFleet) {
@@ -57,7 +59,9 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		}
 		boCount = json.getInt("boCount");
 		maxFleet = json.getInt("maxFleet");
-		if (boCount < 1 || maxFleet < 2 || maxFleet > 32) throw new IllegalArgumentException("Invalid tournament limits");
+		if (boCount < 1 || maxFleet < MIN_FLEET_COUNT || maxFleet > MAX_FLEET_COUNT) {
+			throw new IllegalArgumentException("Invalid tournament limits");
+		}
 		ruleId = json.optString("ruleId", "");
 		mapId = json.optInt("mapId", -1);
 		started = json.optBoolean("started", false);
@@ -258,7 +262,7 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 	}
 
 	public void addFleetId(String fleetId) {
-		if (!started && fleetIds.size() < 32) {
+		if (!started && fleetIds.size() < MAX_FLEET_COUNT) {
 			fleetIds.add(fleetId == null ? "" : fleetId.trim());
 		}
 	}

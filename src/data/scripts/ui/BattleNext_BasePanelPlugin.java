@@ -12,6 +12,8 @@ import java.util.List;
 
 public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 
+	private static final float PANEL_BORDER_INSET = 8f;
+
 	private final BattleNext_UiManager uiManager;
 	private final UIBorderObject border = new UIBorderObject(false, true);
 
@@ -28,9 +30,9 @@ public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 
 	public void init(CustomPanelAPI panel, float width, float height) {
 		this.panel = panel;
-		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - 8f;
-		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - 8f;
-		border.setSize(width + 16f, height + 16f);
+		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - PANEL_BORDER_INSET;
+		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - PANEL_BORDER_INSET;
+		border.setSize(width + PANEL_BORDER_INSET * 2f, height + PANEL_BORDER_INSET * 2f);
 		uiManager.attach(panel);
 	}
 

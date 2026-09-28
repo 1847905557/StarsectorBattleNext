@@ -86,8 +86,10 @@ public class BattleNext_TournamentEngine {
 	private void validate(BattleNext_TournamentModel tournament) {
 		List<String> fleets = tournament.getFleetIds();
 		if (tournament.getBracketType() == null || tournament.getBoCount() < 1
-				|| tournament.getMaxFleet() < 2 || tournament.getMaxFleet() > 32
-				|| fleets.size() < 2 || fleets.size() > tournament.getMaxFleet()) {
+				|| tournament.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+				|| tournament.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
+				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+				|| fleets.size() > tournament.getMaxFleet()) {
 			throw new IllegalArgumentException("Invalid tournament configuration");
 		}
 		Set<String> seen = new HashSet<>();

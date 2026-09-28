@@ -26,7 +26,14 @@ import java.util.List;
 
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
-	private static final float FIELD_HEIGHT = 28f;
+	private static final float FIELD_SIDE_RESERVE = 24f;
+	private static final float FIELD_MIN_WIDTH = 40f;
+	private static final float PICKER_MIN_WIDTH = 72f;
+	private static final float MEMBER_BUTTON_MAX_WIDTH = 150f;
+	private static final float MEMBER_BUTTON_SIDE_RESERVE = 20f;
+	private static final float MEMBER_HEADING_GAP = 8f;
+	private static final float FIELD_LABEL_GAP = 5f;
+	private static final float EDITOR_STATUS_GAP = 6f;
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
@@ -137,36 +144,37 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		closePicker();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		float gap = 10f;
-		float usableWidth = Math.max(2f, contentRect.getWidth() - gap);
-		float metaWidth = (float) Math.floor(usableWidth * 0.45f);
+		float usableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
+				contentRect.getWidth() - BattleNext_PageLayout.EDITOR_COLUMN_GAP);
+		float metaWidth = (float) Math.floor(usableWidth * BattleNext_PageLayout.EDITOR_LEFT_COLUMN_SHARE);
 		float memberWidth = usableWidth - metaWidth;
 		TooltipMakerAPI meta = contentPanel.createUIElement(metaWidth, contentRect.getHeight(), true);
 		fillMeta(meta, metaWidth);
 		contentPanel.addUIElement(meta).inTL(0f, 0f);
 		TooltipMakerAPI members = contentPanel.createUIElement(memberWidth, contentRect.getHeight(), true);
 		fillMembers(members, memberWidth);
-		contentPanel.addUIElement(members).inTL(metaWidth + gap, 0f);
+		contentPanel.addUIElement(members).inTL(metaWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, 0f);
 	}
 
 	private void fillMeta(TooltipMakerAPI metaContent, float width) {
 		metaContent.addTitle(text("fleet_section_details"));
-		status = metaContent.addPara(text("ready"), 6f, BattleNext_UiTheme.MUTED);
+		status = metaContent.addPara(text("ready"), EDITOR_STATUS_GAP, BattleNext_UiTheme.MUTED);
 		id = field(metaContent, text("fleet_id"), draft.getId(), width, metaContent);
 		folderName = field(metaContent, text("fleet_folder_name"), draft.getFolderName(), width, metaContent);
 		name = field(metaContent, text("fleet_name"), draft.getName(), width, metaContent);
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width, metaContent);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width, metaContent);
-		metaContent.addPara(text("fleet_skills"), 5f, BattleNext_UiTheme.MUTED);
+		metaContent.addPara(text("fleet_skills"), FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
 		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
-		skills = skillsPicker.addTo(metaContent, panel, Math.max(72f, width - 24f),
+		skills = skillsPicker.addTo(metaContent, panel, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
 				String.join(",", draft.getSkills()), metaContent);
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width, metaContent);
 	}
 
 	private void fillMembers(TooltipMakerAPI memberContent, float width) {
 		memberContent.addTitle(text("fleet_section_members"));
-		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member", Math.min(150f, width - 20f));
+		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member",
+				Math.min(MEMBER_BUTTON_MAX_WIDTH, width - MEMBER_BUTTON_SIDE_RESERVE));
 		memberFields.clear();
 		memberPickers.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
@@ -177,32 +185,36 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private void addMember(int index, BattleNext_MemberModel member, TooltipMakerAPI memberContent, float width) {
 		memberContent.addSectionHeading(text("member") + " " + (index + 1),
 				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER,
-				com.fs.starfarer.api.ui.Alignment.MID, 8f);
+				com.fs.starfarer.api.ui.Alignment.MID, MEMBER_HEADING_GAP);
 		FleetMemberEditorFields fields = new FleetMemberEditorFields();
 		fields.variant = field(memberContent, text("variant"), member.getVariantId(), width, memberContent);
 		fields.name = field(memberContent, text("member_name"), member.getName(), width, memberContent);
 		fields.personality = field(memberContent, text("personality"), member.getPersonality(), width, memberContent);
-		memberContent.addPara(text("member_skills"), 5f, BattleNext_UiTheme.MUTED);
+		memberContent.addPara(text("member_skills"), FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
 		BattleNext_OptionField memberSkills = new BattleNext_OptionField(overlayHost,
 				new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
-		fields.skills = memberSkills.addTo(memberContent, panel, Math.max(72f, width - 24f),
+		fields.skills = memberSkills.addTo(memberContent, panel, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
 				String.join(",", member.getSkills()), memberContent);
 		memberPickers.add(memberSkills);
-		memberContent.addPara(text("portrait"), 5f, BattleNext_UiTheme.MUTED);
+		memberContent.addPara(text("portrait"), FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
 		BattleNext_OptionField portraitPicker = new BattleNext_OptionField(overlayHost,
 				new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
-		fields.portrait = portraitPicker.addTo(memberContent, panel, Math.max(72f, width - 24f), member.getPortrait(), memberContent);
+		fields.portrait = portraitPicker.addTo(memberContent, panel,
+				Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE), member.getPortrait(), memberContent);
 		memberPickers.add(portraitPicker);
 		fields.orders = field(memberContent, text("orders"), member.getOrders(), width, memberContent);
 		fields.tags = field(memberContent, text("member_tags"), String.join(",", member.getTags()), width, memberContent);
-		BattleNext_PageLayout.button(memberContent, text("remove_member"), "remove_member:" + index, Math.min(150f, width - 20f));
+		BattleNext_PageLayout.button(memberContent, text("remove_member"), "remove_member:" + index,
+				Math.min(MEMBER_BUTTON_MAX_WIDTH, width - MEMBER_BUTTON_SIDE_RESERVE));
 		memberFields.add(fields);
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, float sectionWidth,
 			TooltipMakerAPI... viewports) {
-		host.addPara(label, 5f, BattleNext_UiTheme.MUTED);
-		TextFieldAPI field = BattleNext_TextField.addTo(host, panel, Math.max(40f, sectionWidth - 24f), FIELD_HEIGHT, value,
+		host.addPara(label, FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
+		TextFieldAPI field = BattleNext_TextField.addTo(host, panel,
+				Math.max(FIELD_MIN_WIDTH, sectionWidth - FIELD_SIDE_RESERVE),
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value,
 				viewports);
 		field.setVerticalCursor(true);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);

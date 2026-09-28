@@ -64,11 +64,39 @@ public class BattleNext_OptionPicker {
 		TOGGLE, CONFIRM, CANCEL
 	}
 
-	private static final float FIELD_HEIGHT = 28f;
 	private static final float SEARCH_HEIGHT = 32f;
 	private static final float TILE_SIZE = 64f;
 	private static final float TILE_GAP = 8f;
-	private static final float PADDING = 8f;
+	private static final float POPUP_INSET = 8f;
+	private static final float POPUP_MAX_WIDTH = 540f;
+	private static final float POPUP_MAX_HEIGHT = 420f;
+	private static final float POPUP_ROW_GAP = 2f;
+	private static final float POPUP_BORDER_THICKNESS = 2f;
+	private static final float POPUP_ACTION_MAX_WIDTH = 120f;
+	private static final float POPUP_ACTION_BUTTON_HEIGHT = 30f;
+	private static final float POPUP_ACTION_BOTTOM_RESERVE = 38f;
+	private static final float POPUP_GRID_TOP = 44f;
+	private static final float POPUP_GRID_HEIGHT_RESERVE = 90f;
+	private static final float SEARCH_LABEL_TOP_INSET = 6f;
+	private static final float SEARCH_LABEL_WIDTH = 80f;
+	private static final float SEARCH_FIELD_WIDTH_RESERVE = 96f;
+	private static final float TILE_CONTENT_INSET = 2f;
+	private static final float TILE_ICON_SIZE = 60f;
+	private static final float TILE_LABEL_TRUNCATION_WIDTH = 54f;
+	private static final float TILE_SELECTION_OUTLINE_INSET = 1f;
+	private static final float TILE_CHECK_START_X = 46f;
+	private static final float TILE_CHECK_START_Y = 51f;
+	private static final float TILE_CHECK_MIDDLE_X = 51f;
+	private static final float TILE_CHECK_MIDDLE_Y = 46f;
+	private static final float TILE_CHECK_END_X = 60f;
+	private static final float TILE_CHECK_END_Y = 59f;
+	private static final float TILE_COUNT_PIP_RIGHT_INSET = 10f;
+	private static final float TILE_COUNT_PIP_TOP_INSET = 4f;
+	private static final float TILE_COUNT_PIP_SPACING = 7f;
+	private static final float TILE_COUNT_PIP_SIZE = 5f;
+	private static final float HOVER_MAX_WIDTH = 300f;
+	private static final float HOVER_MAX_HEIGHT = 180f;
+	private static final float HOVER_CONTENT_INSET = 6f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.HEADER;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
@@ -116,11 +144,12 @@ public class BattleNext_OptionPicker {
 	public void addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String label,
 			TooltipMakerAPI... viewports) {
 		setViewports(viewports);
-		row = owner.createCustomPanel(width, FIELD_HEIGHT, new OptionPickerPanelPlugin());
+		row = owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+				new OptionPickerPanelPlugin());
 		toggle = BattleNext_PageLayout.fixedButton(row,
-				new UIRect(0f, 0f, width, FIELD_HEIGHT), label,
+				new UIRect(0f, 0f, width, BattleNext_PageLayout.FORM_FIELD_HEIGHT), label,
 				OptionPickerAction.TOGGLE, CutStyle.ALL, false);
-		host.addCustom(row, 2f);
+		host.addCustom(row, POPUP_ROW_GAP);
 	}
 
 	public void addButton(CustomPanelAPI owner, UIRect rect, String label) {
@@ -198,28 +227,30 @@ public class BattleNext_OptionPicker {
 
 		float hostWidth = overlayHost.getPosition().getWidth();
 		float hostHeight = overlayHost.getPosition().getHeight();
-		float width = Math.min(540f, hostWidth - 16f);
+		float width = Math.min(POPUP_MAX_WIDTH, hostWidth - POPUP_INSET * 2f);
 		float rowTop = overlayHost.getPosition().getY() + hostHeight
 				- row.getPosition().getY() - row.getPosition().getHeight();
-		float belowY = rowTop + FIELD_HEIGHT + 2f;
-		float belowSpace = hostHeight - belowY - PADDING;
-		float aboveSpace = rowTop - PADDING - 2f;
-		boolean above = belowSpace < 420f && aboveSpace > belowSpace;
-		float height = Math.min(420f, above ? aboveSpace : belowSpace);
-		float y = above ? rowTop - height - 2f : belowY;
-		float x = Math.max(PADDING, Math.min(row.getPosition().getX() - overlayHost.getPosition().getX(),
-				hostWidth - width - PADDING));
+		float belowY = rowTop + BattleNext_PageLayout.FORM_FIELD_HEIGHT + POPUP_ROW_GAP;
+		float belowSpace = hostHeight - belowY - POPUP_INSET;
+		float aboveSpace = rowTop - POPUP_INSET - POPUP_ROW_GAP;
+		boolean above = belowSpace < POPUP_MAX_HEIGHT && aboveSpace > belowSpace;
+		float height = Math.min(POPUP_MAX_HEIGHT, above ? aboveSpace : belowSpace);
+		float y = above ? rowTop - height - POPUP_ROW_GAP : belowY;
+		float x = Math.max(POPUP_INSET, Math.min(row.getPosition().getX() - overlayHost.getPosition().getX(),
+				hostWidth - width - POPUP_INSET));
 
 		popup = overlayHost.createCustomPanel(width, height, new OptionPickerPopupPlugin());
-		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, 2f);
-		popup.addUIElement(searchElement(width)).inTL(PADDING, PADDING);
-		float buttonWidth = Math.min(120f, (width - 3f * PADDING) * 0.5f);
-		float buttonY = height - 38f;
+		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, POPUP_BORDER_THICKNESS);
+		popup.addUIElement(searchElement(width)).inTL(POPUP_INSET, POPUP_INSET);
+		float buttonWidth = Math.min(POPUP_ACTION_MAX_WIDTH, (width - 3f * POPUP_INSET) * 0.5f);
+		float buttonY = height - POPUP_ACTION_BOTTOM_RESERVE;
 		BattleNext_PageLayout.fixedButton(popup,
-				new UIRect(width - 2f * buttonWidth - 2f * PADDING, buttonY, buttonWidth, 30f),
+				new UIRect(width - 2f * buttonWidth - 2f * POPUP_INSET, buttonY,
+						buttonWidth, POPUP_ACTION_BUTTON_HEIGHT),
 				strings.get("picker_confirm"), OptionPickerAction.CONFIRM, CutStyle.ALL, false);
 		BattleNext_PageLayout.fixedButton(popup,
-				new UIRect(width - buttonWidth - PADDING, buttonY, buttonWidth, 30f),
+				new UIRect(width - buttonWidth - POPUP_INSET, buttonY,
+						buttonWidth, POPUP_ACTION_BUTTON_HEIGHT),
 				strings.get("picker_cancel"), OptionPickerAction.CANCEL, CutStyle.ALL, false);
 		overlayHost.addComponent(popup).inTL(x, y);
 		overlayHost.bringComponentToTop(popup);
@@ -231,14 +262,16 @@ public class BattleNext_OptionPicker {
 
 	private TooltipMakerAPI searchElement(float width) {
 
-		TooltipMakerAPI searchBar = popup.createUIElement(width - 2f * PADDING, SEARCH_HEIGHT, false);
+		TooltipMakerAPI searchBar = popup.createUIElement(width - 2f * POPUP_INSET, SEARCH_HEIGHT, false);
 		searchBar.addPara(strings.get("picker_search"), 0f, BattleNext_UiTheme.MUTED)
-				.getPosition().inTL(0f, 6f);
-		TooltipMakerAPI fieldHost = popup.createUIElement(width - 96f, SEARCH_HEIGHT, false);
-		search = BattleNext_TextField.addTo(fieldHost, popup, width - 96f, FIELD_HEIGHT, "");
+				.getPosition().inTL(0f, SEARCH_LABEL_TOP_INSET);
+		TooltipMakerAPI fieldHost = popup.createUIElement(width - SEARCH_FIELD_WIDTH_RESERVE, SEARCH_HEIGHT, false);
+		search = BattleNext_TextField.addTo(fieldHost, popup,
+				width - SEARCH_FIELD_WIDTH_RESERVE, BattleNext_PageLayout.FORM_FIELD_HEIGHT, "");
 		search.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
-		fieldHost.setHeightSoFar(FIELD_HEIGHT);
-		popup.addUIElement(fieldHost).inTL(PADDING + 80f, PADDING + (SEARCH_HEIGHT - FIELD_HEIGHT) * 0.5f);
+		fieldHost.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		popup.addUIElement(fieldHost).inTL(POPUP_INSET + SEARCH_LABEL_WIDTH,
+				POPUP_INSET + (SEARCH_HEIGHT - BattleNext_PageLayout.FORM_FIELD_HEIGHT) * 0.5f);
 		searchBar.setHeightSoFar(SEARCH_HEIGHT);
 		return searchBar;
 	}
@@ -249,8 +282,8 @@ public class BattleNext_OptionPicker {
 		hoverTargets.clear();
 		if (gridPanel != null) popup.removeComponent(gridPanel);
 		gridScroller = null;
-		float width = popup.getPosition().getWidth() - 2f * PADDING;
-		float height = popup.getPosition().getHeight() - 90f;
+		float width = popup.getPosition().getWidth() - 2f * POPUP_INSET;
+		float height = popup.getPosition().getHeight() - POPUP_GRID_HEIGHT_RESERVE;
 		gridPanel = popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI grid = gridPanel.createUIElement(width, height, true);
 		String query = search.getText().trim().toLowerCase(Locale.ROOT);
@@ -262,23 +295,23 @@ public class BattleNext_OptionPicker {
 			}
 		}
 		if (visible.isEmpty()) {
-			grid.addPara(strings.get("picker_no_options"), PADDING, BattleNext_UiTheme.MUTED);
+			grid.addPara(strings.get("picker_no_options"), POPUP_INSET, BattleNext_UiTheme.MUTED);
 		} else {
-			int columns = Math.max(1, (int) ((width - 2f * PADDING + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
+			int columns = Math.max(1, (int) ((width - 2f * POPUP_INSET + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
 			for (int index = 0; index < visible.size(); index++) {
 				OptionChoice option = visible.get(index);
 				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, new OptionPickerTilePlugin(option));
 				addIcon(tile, option);
-				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(PADDING + index % columns * (TILE_SIZE + TILE_GAP),
-						PADDING + index / columns * (TILE_SIZE + TILE_GAP));
+				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP),
+						POPUP_INSET + index / columns * (TILE_SIZE + TILE_GAP));
 				hoverTargets.add(new OptionTileHoverTarget(option, tile));
 			}
 			int rows = (visible.size() + columns - 1) / columns;
-			grid.setHeightSoFar(2f * PADDING + rows * (TILE_SIZE + TILE_GAP));
+			grid.setHeightSoFar(2f * POPUP_INSET + rows * (TILE_SIZE + TILE_GAP));
 		}
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
 		gridScroller = grid.getExternalScroller();
-		popup.addComponent(gridPanel).inTL(PADDING, 44f);
+		popup.addComponent(gridPanel).inTL(POPUP_INSET, POPUP_GRID_TOP);
 	}
 
 	private void addIcon(CustomPanelAPI tile, OptionChoice option) {
@@ -287,20 +320,21 @@ public class BattleNext_OptionPicker {
 		if (icon != null && !icon.isBlank()) {
 			try {
 				Global.getSettings().getSprite(icon);
-				TooltipMakerAPI image = tile.createUIElement(60f, 60f, false);
-				image.addImage(icon, 60f, 60f, 0f);
+				TooltipMakerAPI image = tile.createUIElement(TILE_ICON_SIZE, TILE_ICON_SIZE, false);
+				image.addImage(icon, TILE_ICON_SIZE, TILE_ICON_SIZE, 0f);
 				image.getPrev().getPosition().inTL(0f, 0f);
-				tile.addUIElement(image).inTL(2f, 2f);
+				tile.addUIElement(image).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
 				return;
 			} catch (RuntimeException exception) {
 				// A missing optional sprite leaves the option selectable.
 			}
 		}
-		TooltipMakerAPI fallback = tile.createUIElement(60f, 60f, false);
+		TooltipMakerAPI fallback = tile.createUIElement(TILE_ICON_SIZE, TILE_ICON_SIZE, false);
 		fallback.setParaSmallInsignia();
-		fallback.addPara(fallback.shortenString(option.label, 54f), 0f, BattleNext_UiTheme.MUTED)
+		fallback.addPara(fallback.shortenString(option.label, TILE_LABEL_TRUNCATION_WIDTH),
+				0f, BattleNext_UiTheme.MUTED)
 				.getPosition().inMid();
-		tile.addUIElement(fallback).inTL(2f, 2f);
+		tile.addUIElement(fallback).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
 	}
 
 	private void confirm() {
@@ -435,22 +469,23 @@ public class BattleNext_OptionPicker {
 	private void showHover(OptionTileHoverTarget target) {
 
 		removeHover();
-		float width = Math.min(300f, popup.getPosition().getWidth() - 16f);
-		float height = Math.min(180f, popup.getPosition().getHeight() - 16f);
+		float width = Math.min(HOVER_MAX_WIDTH, popup.getPosition().getWidth() - POPUP_INSET * 2f);
+		float height = Math.min(HOVER_MAX_HEIGHT, popup.getPosition().getHeight() - POPUP_INSET * 2f);
 		hoverPanel = popup.createCustomPanel(width, height, new OptionPickerHoverPlugin(target.option));
-		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, 2f);
+		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, POPUP_BORDER_THICKNESS);
 		hoveredOption = target.option;
-		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - 12f, height - 12f, false);
+		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - HOVER_CONTENT_INSET * 2f,
+				height - HOVER_CONTENT_INSET * 2f, false);
 		BattleNext_UiTheme.configure(tooltip);
 		source.createTooltip(tooltip, target.option);
-		hoverPanel.addUIElement(tooltip).inTL(6f, 6f);
+		hoverPanel.addUIElement(tooltip).inTL(HOVER_CONTENT_INSET, HOVER_CONTENT_INSET);
 		PositionAPI tile = target.tile.getPosition();
 		float localX = tile.getX() - popup.getPosition().getX();
 		float localY = tile.getY() - popup.getPosition().getY();
-		float x = localX + TILE_SIZE + 6f;
-		if (x + width > popup.getPosition().getWidth() - PADDING) x = localX - width - 6f;
-		float y = Math.max(PADDING, Math.min(localY, popup.getPosition().getHeight() - height - PADDING));
-		if (x < PADDING) x = PADDING;
+		float x = localX + TILE_SIZE + HOVER_CONTENT_INSET;
+		if (x + width > popup.getPosition().getWidth() - POPUP_INSET) x = localX - width - HOVER_CONTENT_INSET;
+		float y = Math.max(POPUP_INSET, Math.min(localY, popup.getPosition().getHeight() - height - POPUP_INSET));
+		if (x < POPUP_INSET) x = POPUP_INSET;
 		popup.addComponent(hoverPanel).inTL(x, y);
 		popup.bringComponentToTop(hoverPanel);
 	}
@@ -511,14 +546,15 @@ public class BattleNext_OptionPicker {
 			float hostHeight = overlayHost.getPosition().getHeight();
 			float rowTop = overlayHost.getPosition().getY() + hostHeight
 					- row.getPosition().getY() - row.getPosition().getHeight();
-			float belowY = rowTop + FIELD_HEIGHT + 2f;
+			float belowY = rowTop + BattleNext_PageLayout.FORM_FIELD_HEIGHT + POPUP_ROW_GAP;
 			float popupHeight = popup.getPosition().getHeight();
-			boolean above = hostHeight - belowY - PADDING < popupHeight
-					&& rowTop - PADDING - 2f > hostHeight - belowY - PADDING;
-			float y = above ? rowTop - popupHeight - 2f : belowY;
-			float x = Math.max(PADDING, Math.min(row.getPosition().getX() - overlayHost.getPosition().getX(),
-					hostWidth - popup.getPosition().getWidth() - PADDING));
-			popup.getPosition().inTL(x, Math.max(PADDING, Math.min(y, hostHeight - popupHeight - PADDING)));
+			boolean above = hostHeight - belowY - POPUP_INSET < popupHeight
+					&& rowTop - POPUP_INSET - POPUP_ROW_GAP > hostHeight - belowY - POPUP_INSET;
+			float y = above ? rowTop - popupHeight - POPUP_ROW_GAP : belowY;
+			float x = Math.max(POPUP_INSET, Math.min(row.getPosition().getX() - overlayHost.getPosition().getX(),
+					hostWidth - popup.getPosition().getWidth() - POPUP_INSET));
+			popup.getPosition().inTL(x,
+					Math.max(POPUP_INSET, Math.min(y, hostHeight - popupHeight - POPUP_INSET)));
 			String current = search.getText();
 			if (!current.equals(lastSearch)) {
 				lastSearch = current;
@@ -561,21 +597,26 @@ public class BattleNext_OptionPicker {
 			int count = selection.getOrDefault(option.id, 0);
 			if (count == 0) return;
 			BattleNext_GeometryRenderer.lineLoop(new float[]{
-					position.getX() + 1f, position.getY() + 1f,
-					position.getX() + TILE_SIZE - 1f, position.getY() + 1f,
-					position.getX() + TILE_SIZE - 1f, position.getY() + TILE_SIZE - 1f,
-					position.getX() + 1f, position.getY() + TILE_SIZE - 1f
+					position.getX() + TILE_SELECTION_OUTLINE_INSET, position.getY() + TILE_SELECTION_OUTLINE_INSET,
+					position.getX() + TILE_SIZE - TILE_SELECTION_OUTLINE_INSET,
+					position.getY() + TILE_SELECTION_OUTLINE_INSET,
+					position.getX() + TILE_SIZE - TILE_SELECTION_OUTLINE_INSET,
+					position.getY() + TILE_SIZE - TILE_SELECTION_OUTLINE_INSET,
+					position.getX() + TILE_SELECTION_OUTLINE_INSET,
+					position.getY() + TILE_SIZE - TILE_SELECTION_OUTLINE_INSET
 			}, CHECK_COLOR, alphaMult, 1f);
 			BattleNext_GeometryRenderer.lineStrip(new float[]{
-					position.getX() + 46f, position.getY() + 51f,
-					position.getX() + 51f, position.getY() + 46f,
-					position.getX() + 60f, position.getY() + 59f
+					position.getX() + TILE_CHECK_START_X, position.getY() + TILE_CHECK_START_Y,
+					position.getX() + TILE_CHECK_MIDDLE_X, position.getY() + TILE_CHECK_MIDDLE_Y,
+					position.getX() + TILE_CHECK_END_X, position.getY() + TILE_CHECK_END_Y
 			}, CHECK_COLOR, alphaMult, 1f);
 			if (count > 1) {
 				for (int index = 0; index < count - 1; index++) {
-					float pipX = position.getX() + TILE_SIZE - 10f - index * 7f;
-					float pipY = position.getY() + 4f;
-					BattleNext_GeometryRenderer.fillRect(pipX, pipY, 5f, 5f, CHECK_COLOR, alphaMult);
+					float pipX = position.getX() + TILE_SIZE - TILE_COUNT_PIP_RIGHT_INSET
+							- index * TILE_COUNT_PIP_SPACING;
+					float pipY = position.getY() + TILE_COUNT_PIP_TOP_INSET;
+					BattleNext_GeometryRenderer.fillRect(pipX, pipY,
+							TILE_COUNT_PIP_SIZE, TILE_COUNT_PIP_SIZE, CHECK_COLOR, alphaMult);
 				}
 			}
 		}

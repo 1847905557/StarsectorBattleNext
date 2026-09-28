@@ -26,6 +26,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+
 	private CustomPanelAPI panel;
 	private CustomPanelAPI overlayHost;
 	private UIRect listRect;
@@ -63,31 +64,34 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	@Override
 	public void createContents() {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), 30f), panel, text("page_fleets"));
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
+				panel, text("page_fleets"));
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footerRect = regions[2];
-		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / 3f);
-		for (int index = 0; index < 3; index++) {
-			String[] actions = {"add", "save", "back"};
+		String[] actions = {"add", "save", "back"};
+		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, actions.length);
+		for (int index = 0; index < actions.length; index++) {
 			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
-					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
 			if (index == 1) {
 				saveButton = button;
 				saveButton.setEnabled(store.isLoaded());
 			}
 		}
-		float statusX = 3f * buttonWidth + 30f;
-		if (footerRect.getWidth() - statusX >= 60f) {
-			TooltipMakerAPI footerStatus = panel.createUIElement(footerRect.getWidth() - statusX, 30f, false);
+		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
+		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
+			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
-			statusLabel.getPosition().inTL(0f, 5f);
-			footerStatus.setHeightSoFar(30f);
-			panel.addUIElement(footerStatus).inTL(footerRect.getX() + statusX, footerRect.getY());
+			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
+			footerStatus.setHeightSoFar(statusRect.getHeight());
+			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
 		}
 
 		refreshContent();
@@ -98,36 +102,44 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		editor.closePicker();
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
+		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
+		TooltipMakerAPI listContent = listPanel.createUIElement(listContentRect.getWidth(), listContentRect.getHeight(), true);
 		addList(listContent);
-		listPanel.addUIElement(listContent).inTL(8f, 8f);
+		listPanel.addUIElement(listContent).inTL(listContentRect.getX() - listRect.getX(),
+				listContentRect.getY() - listRect.getY());
 
 		detailRect.removeLatestSubPanel();
 		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!draftOpen) {
-			TooltipMakerAPI prompt = detailPanel.createUIElement(detailRect.getWidth() - 18f, detailRect.getHeight() - 16f, false);
+			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
+			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
 			prompt.addTitle(text("select_fleet"));
-			detailPanel.addUIElement(prompt).inTL(8f, 8f);
+			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
+					promptRect.getY() - detailRect.getY());
 			return;
 		}
 		BattleNext_FleetModel selected = selectedId.isEmpty() ? null : store.get(selectedId);
 		editor.open(selected, false);
 		editor.setOverlayHost(overlayHost);
-		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f,
+		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
+		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(editorRect.getWidth(), editorRect.getHeight(),
 				detailPanel.getPlugin());
-		detailPanel.addComponent(editorPanel).inTL(8f, 8f);
+		detailPanel.addComponent(editorPanel).inTL(editorRect.getX() - detailRect.getX(),
+				editorRect.getY() - detailRect.getY());
 		editor.attach(editorPanel);
 		if (selected != null) {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-					new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 					text("delete"), "delete", CutStyle.ALL, true);
 			boolean managed = store.isManaged(selected.getId());
 			delete.setEnabled(managed && store.isLoaded());
 			if (!managed) {
-				TooltipMakerAPI note = detailPanel.createUIElement(detailRect.getWidth() - 170f, 28f, false);
-				note.addPara(note.shortenString(text("source_unavailable_short"), detailRect.getWidth() - 180f),
+				UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(detailRect);
+				TooltipMakerAPI note = detailPanel.createUIElement(noteRect.getWidth(), noteRect.getHeight(), false);
+				note.addPara(note.shortenString(text("source_unavailable_short"),
+						detailRect.getWidth() - BattleNext_PageLayout.MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE),
 						0f, BattleNext_UiTheme.MUTED);
-				detailPanel.addUIElement(note).inTL(165f, detailRect.getHeight() - 34f);
+				detailPanel.addUIElement(note).inTL(noteRect.getX(), noteRect.getY());
 			}
 		}
 	}
@@ -176,11 +188,12 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_fleets"));
 		if (!store.isLoaded()) listContent.addPara(text("load_failed") + ": " + store.getLoadError(),
-				8f, BattleNext_UiTheme.MUTED);
-		if (store.getAll().isEmpty()) listContent.addPara(text("no_fleets"), 10f, BattleNext_UiTheme.MUTED);
+				BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP, BattleNext_UiTheme.MUTED);
+		if (store.getAll().isEmpty()) listContent.addPara(text("no_fleets"),
+				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName(),
-					"fleet:" + fleet.getId(), Math.max(80f, listRect.getWidth() - 30f));
+					"fleet:" + fleet.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
 	}
 

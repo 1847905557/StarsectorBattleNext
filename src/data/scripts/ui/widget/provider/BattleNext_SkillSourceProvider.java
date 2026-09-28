@@ -14,6 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+	private static final float ADVANCED_SKILL_LEVEL_THRESHOLD = 1f;
+	private static final int ADVANCED_SKILL_MAX_COUNT = 2;
+	private static final int BASIC_SKILL_MAX_COUNT = 1;
+	private static final float SKILL_ID_TOOLTIP_GAP = 5f;
+	private static final float SKILL_DESCRIPTION_TOOLTIP_GAP = 8f;
 
 	@Override
 	public int getMaxCount(String id) {
@@ -26,12 +31,12 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.O
 			if (effect.getType() == SkillEffectType.HULLMOD_UNLOCK) continue;
 			if (effect.getType() == SkillEffectType.DESCRIPTION) continue;
 
-			if (effect.getRequiredSkillLevel() > 1f) {
-				return 2;
+			if (effect.getRequiredSkillLevel() > ADVANCED_SKILL_LEVEL_THRESHOLD) {
+				return ADVANCED_SKILL_MAX_COUNT;
 			}
 		}
 
-		return 1;
+		return BASIC_SKILL_MAX_COUNT;
 	}
 
 	@Override
@@ -71,9 +76,9 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.O
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), SKILL_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
 		if (spec != null && spec.getDescription() != null && !spec.getDescription().isBlank()) {
-			tooltip.addPara(spec.getDescription(), 8f, BattleNext_UiTheme.TEXT);
+			tooltip.addPara(spec.getDescription(), SKILL_DESCRIPTION_TOOLTIP_GAP, BattleNext_UiTheme.TEXT);
 		}
 	}
 }

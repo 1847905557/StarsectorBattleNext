@@ -27,14 +27,20 @@ import java.util.List;
 
 public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
-	private static final float SIMPLE_PADDING = 5f;
-	private static final float BORDER_WIDTH = 8f;
+	private static final float ENTRY_LEFT_INSET = 5f;
+	private static final float ENTRY_BORDER_WIDTH = 8f;
 	private static final float ENTRY_WIDTH = 48f;
 	private static final float ENTRY_HEIGHT = 24f;
-	private static final float ENTRY_BOTTOM = 133f;
-	private static final float EXPANDED_SIZE = 112f;
-	private static final float PANEL_SCALE = 0.8f;
-	private static final float PANEL_MARGIN = 0.1f;
+	private static final float ENTRY_BOTTOM_OFFSET = 133f;
+	private static final float HOVER_ICON_INSET = 12f;
+	private static final float HOVER_ICON_SIZE = 88f;
+	private static final float HOVER_BORDER_SIZE = 112f;
+	private static final float MANAGEMENT_PANEL_SCREEN_SHARE = 0.8f;
+	private static final float MANAGEMENT_PANEL_EDGE_SHARE = 0.1f;
+	private static final float ENTRY_CLICK_COOLDOWN = 0.1f;
+	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
+
+	private static final int ICON_PIXEL_CHANNEL_COUNT = 4;
 
 	private CombatEngineAPI engine;
 	private CustomPanelAPI mainPanel;
@@ -60,7 +66,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		loadIcons();
 		loadBackdrop();
 		entryBorder = new UIBorderObject(false, true);
-		entryBorder.setSize(ENTRY_WIDTH + BORDER_WIDTH * 2f, ENTRY_HEIGHT + BORDER_WIDTH * 2f);
+		entryBorder.setSize(ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f, ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
 		createMainPanel();
 	}
 
@@ -74,7 +80,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			}
 			return;
 		}
-		panelCooldown = Math.min(0.5f, panelCooldown + amount);
+		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
 	}
 
 	@Override
@@ -125,7 +131,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		for (int index = 0; index < paths.length; index++) {
 			int texture = GL11.glGenTextures();
 			if (texture == 0) continue;
-			Pair<int[], ByteBuffer> data = CommonUtil.getRawPixels(paths[index], 4);
+			Pair<int[], ByteBuffer> data = CommonUtil.getRawPixels(paths[index], ICON_PIXEL_CHANNEL_COUNT);
 			GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
 			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
 					data.one[0], data.one[1], 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, data.two);
@@ -180,12 +186,13 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		if (screenPanel == null) {
 			return;
 		}
-		float width = ShaderCore.getScreenWidth() * PANEL_SCALE;
-		float height = ShaderCore.getScreenHeight() * PANEL_SCALE;
+		float width = ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_SCREEN_SHARE;
+		float height = ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_SCREEN_SHARE;
 		mainPlugin = new BattleNext_BasePanelPlugin(this::closePanel);
 		mainPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
 		mainPanel = Global.getSettings().createCustom(width, height, mainPlugin);
-		mainPanel.getPosition().inBL(ShaderCore.getScreenWidth() * PANEL_MARGIN, ShaderCore.getScreenHeight() * PANEL_MARGIN);
+		mainPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
+				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
 		mainPlugin.init(mainPanel, width, height);
 	}
 
@@ -212,11 +219,11 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void renderEntry() {
-		entryBorder.render(SIMPLE_PADDING, ENTRY_BOTTOM);
-		float x = hovered ? SIMPLE_PADDING + 12f : SIMPLE_PADDING + BORDER_WIDTH;
-		float y = hovered ? ENTRY_BOTTOM + 12f : ENTRY_BOTTOM + BORDER_WIDTH;
-		float width = hovered ? 88f : ENTRY_WIDTH;
-		float height = hovered ? 88f : ENTRY_HEIGHT;
+		entryBorder.render(ENTRY_LEFT_INSET, ENTRY_BOTTOM_OFFSET);
+		float x = hovered ? ENTRY_LEFT_INSET + HOVER_ICON_INSET : ENTRY_LEFT_INSET + ENTRY_BORDER_WIDTH;
+		float y = hovered ? ENTRY_BOTTOM_OFFSET + HOVER_ICON_INSET : ENTRY_BOTTOM_OFFSET + ENTRY_BORDER_WIDTH;
+		float width = hovered ? HOVER_ICON_SIZE : ENTRY_WIDTH;
+		float height = hovered ? HOVER_ICON_SIZE : ENTRY_HEIGHT;
 		BattleNext_GeometryRenderer.texturedQuad(iconTextures[hovered ? 1 : 0], x, y, width, height,
 				1f, 1f, 1f, 1f, 1f, 1f);
 	}
@@ -225,19 +232,19 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		float scale = Global.getSettings().getScreenScaleMult();
 		float mouseX = Mouse.getX() / scale;
 		float mouseY = Mouse.getY() / scale;
-		float x = SIMPLE_PADDING;
-		float y = ENTRY_BOTTOM;
-		float sizeX = hovered ? EXPANDED_SIZE : ENTRY_WIDTH + BORDER_WIDTH * 2f;
-		float sizeY = hovered ? EXPANDED_SIZE : ENTRY_HEIGHT + BORDER_WIDTH * 2f;
+		float x = ENTRY_LEFT_INSET;
+		float y = ENTRY_BOTTOM_OFFSET;
+		float sizeX = hovered ? HOVER_BORDER_SIZE : ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f;
+		float sizeY = hovered ? HOVER_BORDER_SIZE : ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f;
 		boolean inside = mouseX >= x && mouseX <= x + sizeX && mouseY >= y && mouseY <= y + sizeY;
 		if (inside != hovered) {
 			hovered = inside;
-			entryBorder.setSize(hovered ? EXPANDED_SIZE : ENTRY_WIDTH + BORDER_WIDTH * 2f,
-					hovered ? EXPANDED_SIZE : ENTRY_HEIGHT + BORDER_WIDTH * 2f);
+			entryBorder.setSize(hovered ? HOVER_BORDER_SIZE : ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f,
+					hovered ? HOVER_BORDER_SIZE : ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
 			if (hovered) Global.getSoundPlayer().playUISound("BUtil_button_in", 1f, 1f);
 		}
 		boolean down = Mouse.isButtonDown(0);
-		if (inside && down && !mouseHeld && panelCooldown > 0.1f) {
+		if (inside && down && !mouseHeld && panelCooldown > ENTRY_CLICK_COOLDOWN) {
 			Global.getSoundPlayer().playUISound("BUtil_button_down", 1f, 1f);
 			openPanel();
 		}

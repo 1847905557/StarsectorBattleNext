@@ -8,6 +8,8 @@ import java.awt.Color;
 
 public class BattleNext_UiTheme {
 
+	private static final float CONTENT_BACKGROUND_ALPHA = 0.92f;
+
 	public static final Color ACCENT = Misc.getButtonTextColor();
 	public static final Color PANEL = Global.getSettings().getColor("buttonBgDark");
 	public static final Color HEADER = Misc.getDarkPlayerColor();
@@ -22,6 +24,6 @@ public class BattleNext_UiTheme {
 		content.setParaFontColor(TEXT);
 		content.setTitleOrbitronLarge();
 		content.setParaSmallInsignia();
-		content.setBgAlpha(0.92f);
+		content.setBgAlpha(CONTENT_BACKGROUND_ALPHA);
 	}
 }

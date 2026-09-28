@@ -12,6 +12,23 @@ import org.boxutil.units.standard.misc.UIBorderObject;
 
 public class BattleNext_ConfirmationDialog {
 
+	private static final float DIALOG_MAX_WIDTH = 520f;
+	private static final float DIALOG_PARENT_WIDTH_RESERVE = 40f;
+	private static final float DIALOG_HEIGHT = 160f;
+	private static final float DIALOG_SIDE_INSET = 12f;
+	private static final float DIALOG_MESSAGE_TOP = 8f;
+	private static final float DIALOG_MESSAGE_HEIGHT = 75f;
+	private static final float DIALOG_MESSAGE_GAP = 12f;
+	private static final float DIALOG_STATUS_TOP = 88f;
+	private static final float DIALOG_STATUS_HEIGHT = 25f;
+	private static final float DIALOG_STATUS_TEXT_RESERVE = 10f;
+	private static final float DIALOG_BUTTON_TOP = 118f;
+	private static final float DIALOG_BUTTON_HEIGHT = 30f;
+	private static final float DIALOG_BUTTON_MAX_WIDTH = 145f;
+	private static final float DIALOG_BUTTON_GAP = 8f;
+	private static final float DIALOG_BUTTON_WIDTH_RESERVE = 40f;
+	private static final float DIALOG_BORDER_INSET = 8f;
+
 	public interface ConfirmationDialogHost {
 
 		boolean saveCurrentPage();
@@ -73,7 +90,7 @@ public class BattleNext_ConfirmationDialog {
 		if (!"confirm_save".equals(action) && !"confirm_discard".equals(action)) return;
 		if ("confirm_save".equals(action) && !host.saveCurrentPage()) {
 			confirmationStatus.setText(confirmationStatusContent.shortenString(host.getSaveError(),
-					confirmationStatusContent.getPosition().getWidth() - 10f));
+					confirmationStatusContent.getPosition().getWidth() - DIALOG_STATUS_TEXT_RESERVE));
 			return;
 		}
 		if ("confirm_discard".equals(action)) {
@@ -95,27 +112,32 @@ public class BattleNext_ConfirmationDialog {
 
 	private void showConfirmation() {
 		if (confirmation != null) return;
-		float width = Math.min(520f, parent.getPosition().getWidth() - 40f);
-		confirmation = Global.getSettings().createCustom(width, 160f, new ConfirmationDialogPlugin(width));
-		UIRect dialogRect = new UIRect(12f, 8f, width - 24f, 75f);
+		float width = Math.min(DIALOG_MAX_WIDTH, parent.getPosition().getWidth() - DIALOG_PARENT_WIDTH_RESERVE);
+		confirmation = Global.getSettings().createCustom(width, DIALOG_HEIGHT, new ConfirmationDialogPlugin(width));
+		UIRect dialogRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_MESSAGE_TOP,
+				width - DIALOG_SIDE_INSET * 2f, DIALOG_MESSAGE_HEIGHT);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
 		BattleNext_UiTheme.configure(dialog);
 		dialog.addTitle(strings.get(deleteDescription == null ? "unsaved_title" : "delete_title"));
 		dialog.addPara(deleteDescription == null ? strings.get("unsaved_message")
-				: strings.get("delete_message") + " " + deleteDescription, 12f, BattleNext_UiTheme.TEXT);
+				: strings.get("delete_message") + " " + deleteDescription, DIALOG_MESSAGE_GAP, BattleNext_UiTheme.TEXT);
 		dialogRect.addTooltip();
-		UIRect statusRect = new UIRect(12f, 88f, width - 24f, 25f);
+		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP,
+				width - DIALOG_SIDE_INSET * 2f, DIALOG_STATUS_HEIGHT);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
 		confirmationStatus = confirmationStatusContent.addPara("", 0f, BattleNext_UiTheme.MUTED);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
 		String[] actions = deleteDescription == null
 				? new String[]{"save", "discard", "cancel"} : new String[]{"confirm", "cancel"};
-		float buttonWidth = Math.min(145f, (width - 40f) / actions.length);
-		float firstX = (width - (buttonWidth * actions.length + 8f * (actions.length - 1))) * 0.5f;
+		float buttonWidth = Math.min(DIALOG_BUTTON_MAX_WIDTH,
+				(width - DIALOG_BUTTON_WIDTH_RESERVE) / actions.length);
+		float firstX = (width - (buttonWidth * actions.length
+				+ DIALOG_BUTTON_GAP * (actions.length - 1))) * 0.5f;
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(confirmation,
-					new UIRect(firstX + index * (buttonWidth + 8f), 118f, buttonWidth, 30f),
+					new UIRect(firstX + index * (buttonWidth + DIALOG_BUTTON_GAP), DIALOG_BUTTON_TOP,
+							buttonWidth, DIALOG_BUTTON_HEIGHT),
 					strings.get((deleteDescription == null ? "unsaved_" : "delete_") + actions[index]),
 					(deleteDescription == null ? "confirm_" : "delete_") + actions[index], CutStyle.ALL, false);
 		}
@@ -129,9 +151,9 @@ public class BattleNext_ConfirmationDialog {
 		private final float borderY;
 
 		private ConfirmationDialogPlugin(float width) {
-			border.setSize(width + 16f, 176f);
-			borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - 8f;
-			borderY = (ShaderCore.getScreenHeight() - 160f) * 0.5f - 8f;
+			border.setSize(width + DIALOG_BORDER_INSET * 2f, DIALOG_HEIGHT + DIALOG_BORDER_INSET * 2f);
+			borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - DIALOG_BORDER_INSET;
+			borderY = (ShaderCore.getScreenHeight() - DIALOG_HEIGHT) * 0.5f - DIALOG_BORDER_INSET;
 		}
 
 		@Override

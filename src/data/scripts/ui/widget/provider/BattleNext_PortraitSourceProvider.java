@@ -16,10 +16,12 @@ import java.util.*;
 public class BattleNext_PortraitSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
+	private static final int PORTRAIT_SELECTION_MAX_COUNT = 1;
+	private static final float PORTRAIT_ID_TOOLTIP_GAP = 5f;
 
 	@Override
 	public int getMaxCount(String id) {
-		return 1;
+		return PORTRAIT_SELECTION_MAX_COUNT;
 	}
 
 	@Override
@@ -94,6 +96,6 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionPicke
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), 5f, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), PORTRAIT_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
 	}
 }

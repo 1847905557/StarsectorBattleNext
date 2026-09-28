@@ -30,6 +30,12 @@ import java.util.function.Consumer;
 
 public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
+	private static final float REPORT_SUMMARY_TOP_GAP = 8f;
+	private static final float REPORT_CONTEXT_TOP_GAP = 6f;
+	private static final float REPORT_SECTION_TOP_GAP = 10f;
+	private static final float MEMBER_TITLE_TOP_GAP = 5f;
+	private static final float MEMBER_DETAIL_TOP_GAP = 2f;
+
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
@@ -37,6 +43,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
+
 	private CustomPanelAPI panel;
 	private UIRect listRect;
 	private UIRect detailRect;
@@ -75,28 +82,30 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	@Override
 	public void createContents() {
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), 30f),
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
 				panel, text("page_reports"));
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER, 2f);
+		listRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
+		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footerRect = regions[2];
 		String[] actions = {"back"};
-		float buttonWidth = Math.min(160f, (footerRect.getWidth() - 20f) / actions.length);
+		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, actions.length);
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(panel,
-					new UIRect(footerRect.getX() + index * (buttonWidth + 10f), footerRect.getY(), buttonWidth, 30f),
+					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
 		}
-		float statusX = actions.length * buttonWidth + 30f;
-		if (footerRect.getWidth() - statusX >= 60f) {
-			TooltipMakerAPI footerStatus = panel.createUIElement(footerRect.getWidth() - statusX, 30f, false);
+		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
+		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
+			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
-			statusLabel.getPosition().inTL(0f, 5f);
-			footerStatus.setHeightSoFar(30f);
-			panel.addUIElement(footerStatus).inTL(footerRect.getX() + statusX, footerRect.getY());
+			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
+			footerStatus.setHeightSoFar(statusRect.getHeight());
+			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
 		}
 
 		refreshContent();
@@ -106,24 +115,30 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	public void refreshContent() {
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		TooltipMakerAPI listContent = listPanel.createUIElement(listRect.getWidth() - 18f, listRect.getHeight() - 16f, true);
+		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
+		TooltipMakerAPI listContent = listPanel.createUIElement(listContentRect.getWidth(), listContentRect.getHeight(), true);
 		addList(listContent);
-		listPanel.addUIElement(listContent).inTL(8f, 8f);
+		listPanel.addUIElement(listContent).inTL(listContentRect.getX() - listRect.getX(),
+				listContentRect.getY() - listRect.getY());
 
 		detailRect.removeLatestSubPanel();
 		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!detailOpen) {
-			TooltipMakerAPI prompt = detailPanel.createUIElement(detailRect.getWidth() - 18f, detailRect.getHeight() - 16f, false);
+			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
+			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
 			prompt.addTitle(text("select_report"));
-			detailPanel.addUIElement(prompt).inTL(8f, 8f);
+			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
+					promptRect.getY() - detailRect.getY());
 			return;
 		}
-		TooltipMakerAPI detailContent = detailPanel.createUIElement(detailRect.getWidth() - 16f, detailRect.getHeight() - 50f, true);
+		UIRect contentRect = BattleNext_PageLayout.managementEditorRect(detailRect);
+		TooltipMakerAPI detailContent = detailPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
 		addDetails(detailContent);
-		detailPanel.addUIElement(detailContent).inTL(8f, 8f);
+		detailPanel.addUIElement(detailContent).inTL(contentRect.getX() - detailRect.getX(),
+				contentRect.getY() - detailRect.getY());
 		BattleReportListItem selected = entry(selectedId);
 		ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-				new UIRect(8f, detailRect.getHeight() - 36f, 145f, 28f),
+				BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 				text("delete"), "delete", CutStyle.ALL, true);
 		delete.setEnabled(selected != null && (selected.tournament == null
 				? reportStore.isLoaded() : tournamentStore.isLoaded()));
@@ -176,11 +191,13 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_reports"));
 		if (!reportStore.isLoaded()) listContent.addPara(text("load_failed") + ": "
-				+ reportStore.getLoadError(), 8f, BattleNext_UiTheme.MUTED);
-		if (entries.isEmpty()) listContent.addPara(text("no_reports"), 10f, BattleNext_UiTheme.MUTED);
+				+ reportStore.getLoadError(), BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP,
+				BattleNext_UiTheme.MUTED);
+		if (entries.isEmpty()) listContent.addPara(text("no_reports"),
+				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
 		for (BattleReportListItem entry : entries) {
 			BattleNext_PageLayout.buttonWithTooltip(listContent, listLabel(entry),
-					"report:" + entry.report.getId(), Math.max(80f, listRect.getWidth() - 30f));
+					"report:" + entry.report.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
 	}
 
@@ -191,29 +208,32 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		detailContent.addTitle(report.getId());
 		String time = timeText(report);
 		detailContent.addPara((time.isEmpty() ? "" : time + " / ") + text("winner") + ": " + report.getWinner()
-				+ " / " + text("duration") + ": " + report.getDurationMillis() + " ms", 8f, BattleNext_UiTheme.TEXT);
-		if (!selected.context.isEmpty()) detailContent.addPara(selected.context, 6f, BattleNext_UiTheme.MUTED);
-		detailContent.addPara(text("damage_dealt"), 10f, BattleNext_UiTheme.ACCENT);
+				+ " / " + text("duration") + ": " + report.getDurationMillis() + " ms",
+				REPORT_SUMMARY_TOP_GAP, BattleNext_UiTheme.TEXT);
+		if (!selected.context.isEmpty()) detailContent.addPara(selected.context,
+				REPORT_CONTEXT_TOP_GAP, BattleNext_UiTheme.MUTED);
+		detailContent.addPara(text("damage_dealt"), REPORT_SECTION_TOP_GAP, BattleNext_UiTheme.ACCENT);
 		appendMembers(detailContent, sorted(report, true));
-		detailContent.addPara(text("damage_taken"), 10f, BattleNext_UiTheme.ACCENT);
+		detailContent.addPara(text("damage_taken"), REPORT_SECTION_TOP_GAP, BattleNext_UiTheme.ACCENT);
 		appendMembers(detailContent, sorted(report, false));
 	}
 
 	private void appendMembers(TooltipMakerAPI detailContent, List<BattleNext_MemberReport> members) {
 		for (BattleNext_MemberReport member : members) {
-			detailContent.addPara(member.getVariantId() + " " + member.getName(), 5f, BattleNext_UiTheme.TEXT);
+			detailContent.addPara(member.getVariantId() + " " + member.getName(),
+					MEMBER_TITLE_TOP_GAP, BattleNext_UiTheme.TEXT);
 			detailContent.addPara(text("damage_dealt") + ": " + member.getDamageDealt()
 					+ " / " + text("damage_taken") + ": " + member.getDamageTaken()
-					+ " / " + text("status") + ": " + member.getStatus(), 2f,
+					+ " / " + text("status") + ": " + member.getStatus(), MEMBER_DETAIL_TOP_GAP,
 					BattleNext_UiTheme.MUTED);
 			detailContent.addPara(text("hull") + ": " + member.getHullDamageDealt()
 					+ " / " + member.getHullDamageTaken() + "   " + text("shield")
 					+ ": " + member.getShieldDamageDealt() + " / " + member.getShieldDamageTaken(),
-					2f, BattleNext_UiTheme.MUTED);
+					MEMBER_DETAIL_TOP_GAP, BattleNext_UiTheme.MUTED);
 			detailContent.addPara(text("emp") + ": " + member.getEmpDamageDealt()
 					+ " / " + member.getEmpDamageTaken() + "   " + text("final_hull")
 					+ ": " + member.getFinalHullFraction() + "   " + text("final_cr")
-					+ ": " + member.getFinalCr(), 2f, BattleNext_UiTheme.MUTED);
+					+ ": " + member.getFinalCr(), MEMBER_DETAIL_TOP_GAP, BattleNext_UiTheme.MUTED);
 		}
 	}
 

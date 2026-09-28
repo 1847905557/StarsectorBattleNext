@@ -28,6 +28,14 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private static final Color DEFAULT_BORDER = new Color(35, 105, 123, 220);
 	private static final Color SELECTION_COLOR = new Color(0.35f, 0.75f, 0.9f, 0.35f);
 	private static final float CARET_WIDTH = 2f;
+	private static final float DEFAULT_TEXT_SIDE_PADDING = 3f;
+	private static final float TEXT_LABEL_WIDTH_OVERHANG = 4f;
+	private static final float SELECTION_VERTICAL_INSET = 3f;
+	private static final float CARET_VERTICAL_INSET = 4f;
+	private static final float CURSOR_BLINK_CYCLES_PER_SECOND = 2f;
+	private static final int CURSOR_BLINK_PHASE_COUNT = 2;
+	private static final float CURSOR_BLINK_PERIOD = 2f;
+
 	public static final int RECOMMENDED_MAX_CHARS = 200;
 	public static final float AUTO_SCROLL_START_SPEED = 40f;
 	public static final float AUTO_SCROLL_MAX_SPEED = 160f;
@@ -43,7 +51,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private int cursor;
 	private int anchor;
 	private int maxChars = -1;
-	private float pad = 3f;
+	private float pad = DEFAULT_TEXT_SIDE_PADDING;
 	private float scroll;
 	private float blink;
 	private boolean showCursor = true;
@@ -151,7 +159,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 		textLabel.setText(text);
 		textLabel.setColor(textColor);
-		textLabel.getPosition().setSize(Math.max(1f, totalWidth + 4f), height);
+		textLabel.getPosition().setSize(Math.max(1f, totalWidth + TEXT_LABEL_WIDTH_OVERHANG), height);
 		textLabel.getPosition().inLMid(pad - scroll);
 	}
 
@@ -363,7 +371,8 @@ public final class BattleNext_TextField implements TextFieldAPI {
 				float start = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionStart()));
 				float end = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionEnd()));
 				BattleNext_GeometryRenderer.fillRect(field.panel.getPosition().getX() + field.pad + start - field.scroll,
-						field.panel.getPosition().getY() + 3f, end - start, field.height - 6f,
+						field.panel.getPosition().getY() + SELECTION_VERTICAL_INSET, end - start,
+						field.height - SELECTION_VERTICAL_INSET * 2f,
 						SELECTION_COLOR, alphaMult);
 			}
 		}
@@ -372,11 +381,13 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		public void render(float alphaMult) {
 			if (field == null) return;
 			if (BattleNext_TextFieldSession.isFocused(field) && field.showCursor
-					&& ((int) (field.blink * 2f) % 2 == 0)) {
+					&& ((int) (field.blink * CURSOR_BLINK_CYCLES_PER_SECOND)
+							% CURSOR_BLINK_PHASE_COUNT == 0)) {
 				float x = field.panel.getPosition().getX() + field.pad
 						+ field.textLabel.computeTextWidth(field.text.substring(0, field.cursor)) - field.scroll;
-				BattleNext_GeometryRenderer.fillRect(x, field.panel.getPosition().getY() + 4f, CARET_WIDTH,
-						field.height - 8f, field.textColor, alphaMult);
+				BattleNext_GeometryRenderer.fillRect(x,
+						field.panel.getPosition().getY() + CARET_VERTICAL_INSET, CARET_WIDTH,
+						field.height - CARET_VERTICAL_INSET * 2f, field.textColor, alphaMult);
 			}
 			if (clipState != null) {
 				BattleNext_GeometryRenderer.popClip(clipState);
@@ -395,7 +406,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		public void advance(float amount) {
 			if (BattleNext_TextFieldSession.isFocused(field)) {
 				field.blink += amount;
-				if (field.blink > 2f) field.blink = 0f;
+				if (field.blink > CURSOR_BLINK_PERIOD) field.blink = 0f;
 			}
 			if (BattleNext_TextFieldSession.isDragging(field)) {
 				float mouseX = BattleNext_TextFieldSession.getPointerX();
@@ -650,5 +661,15 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	@Override
 	public void showCursor() {
 		showCursor = true;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj);
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode();
 	}
 }
