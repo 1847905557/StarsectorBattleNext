@@ -104,7 +104,8 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	}
 
 	private void recordFailure(Exception exception) {
-		loadError = exception.getMessage();
+		String message = exception.getMessage();
+		loadError = message == null || message.isBlank() ? exception.toString() : message;
 	}
 
 	private void register(T model, String path) {
