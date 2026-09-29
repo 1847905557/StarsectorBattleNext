@@ -29,8 +29,13 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 
 	@Override
 	protected BattleNext_BattleReportModel parse(String path) throws IOException, JSONException {
+		org.json.JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
+		return parseReport(json);
+	}
+
+	static BattleNext_BattleReportModel parseReport(org.json.JSONObject json) throws JSONException {
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
-		report.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+		report.fromJson(json);
 		return report;
 	}
 

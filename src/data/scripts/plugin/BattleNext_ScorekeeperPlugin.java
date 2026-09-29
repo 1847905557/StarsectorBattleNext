@@ -3,7 +3,6 @@ package data.scripts.plugin;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DamagingProjectileAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageListener;
@@ -14,6 +13,7 @@ import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.report.BattleNext_DamageAttribution;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -59,14 +59,20 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	@Override
 	public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
-		if (frozenReport != null || result == null) return;
-		ScoreTrackedFleetMember targetMember = findTracked(target);
-		if (targetMember != null) {
-			targetMember.report.addDamageTaken(result.getDamageToHull(), result.getDamageToShields(), result.getEmpDamage());
+		if (frozenReport != null || result == null || !(target instanceof ShipAPI targetShip)) return;
+		BattleNext_DamageAttribution.SourceKey key = BattleNext_DamageAttribution.sourceKey(source, result);
+		if (!targetShip.isFighter() && !targetShip.isStationModule()) {
+			ScoreTrackedFleetMember targetMember = findTracked(targetShip);
+			if (targetMember != null) {
+				targetMember.report.addDamageTaken(key.kind(), key.id(), result.getDamageToHull(),
+						result.getTotalDamageToArmor(), result.getDamageToShields(), result.getEmpDamage());
+			}
 		}
-		ScoreTrackedFleetMember sourceMember = findTracked(sourceShip(source));
+		ShipAPI sourceShip = BattleNext_DamageAttribution.memberShip(BattleNext_DamageAttribution.sourceShip(source));
+		ScoreTrackedFleetMember sourceMember = findTracked(sourceShip);
 		if (sourceMember != null) {
-			sourceMember.report.addDamageDealt(result.getDamageToHull(), result.getDamageToShields(), result.getEmpDamage());
+			sourceMember.report.addDamageDealt(key.kind(), key.id(), result.getDamageToHull(),
+					result.getTotalDamageToArmor(), result.getDamageToShields(), result.getEmpDamage());
 		}
 	}
 
@@ -153,15 +159,8 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		frozenReport = report;
 	}
 
-	private ScoreTrackedFleetMember findTracked(CombatEntityAPI entity) {
-		if (!(entity instanceof ShipAPI)) return null;
-		return membersByFleetMember.get(((ShipAPI)entity).getFleetMember());
-	}
-
-	private ShipAPI sourceShip(Object source) {
-		if (source instanceof ShipAPI) return (ShipAPI)source;
-		if (source instanceof DamagingProjectileAPI) return ((DamagingProjectileAPI)source).getSource();
-		return null;
+	private ScoreTrackedFleetMember findTracked(ShipAPI ship) {
+		return ship == null ? null : membersByFleetMember.get(ship.getFleetMember());
 	}
 
 	private class ScoreTrackedFleetMember {

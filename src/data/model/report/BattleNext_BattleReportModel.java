@@ -15,6 +15,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	public static final int FORMAT_VERSION = 1;
 
 	private String id = "";
+	private String name = "";
 	private String winner = "draw";
 	private long durationMillis = 0L;
 	private long createdAt = 0L;
@@ -26,11 +27,12 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
 		id = json.optString("id", "");
+		name = json.getString("name");
 		winner = json.optString("winner", "draw");
 		durationMillis = json.optLong("durationMillis", 0L);
 		createdAt = json.optLong("createdAt", 0L);
-		parseMembers(json.optJSONArray("playerMembers"), playerMembers);
-		parseMembers(json.optJSONArray("enemyMembers"), enemyMembers);
+		parseMembers(json.getJSONArray("playerMembers"), playerMembers);
+		parseMembers(json.getJSONArray("enemyMembers"), enemyMembers);
 	}
 
 	@Override
@@ -38,6 +40,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
+		json.put("name", name);
 		json.put("winner", winner);
 		json.put("durationMillis", durationMillis);
 		json.put("createdAt", createdAt);
@@ -53,6 +56,14 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 
 	public void setId(String id) {
 		this.id = id == null ? "" : id.trim();
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name == null ? "" : name.trim();
 	}
 
 	public String getWinner() {
@@ -95,8 +106,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		if (member != null) enemyMembers.add(member);
 	}
 
-	private static void parseMembers(JSONArray array, List<BattleNext_MemberReport> target) {
-		if (array == null) return;
+	private static void parseMembers(JSONArray array, List<BattleNext_MemberReport> target) throws JSONException {
 		for (int index = 0; index < array.length(); index++) {
 			JSONObject member = array.optJSONObject(index);
 			if (member != null) target.add(BattleNext_MemberReport.fromJson(member));

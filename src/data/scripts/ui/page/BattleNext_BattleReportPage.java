@@ -1,10 +1,19 @@
 package data.scripts.ui.page;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_Round;
@@ -13,18 +22,28 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.report.BattleNext_DamageSourceReport;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.awt.Color;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Locale;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -33,8 +52,17 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private static final float REPORT_SUMMARY_TOP_GAP = 8f;
 	private static final float REPORT_CONTEXT_TOP_GAP = 6f;
 	private static final float REPORT_SECTION_TOP_GAP = 10f;
-	private static final float MEMBER_TITLE_TOP_GAP = 5f;
-	private static final float MEMBER_DETAIL_TOP_GAP = 2f;
+	private static final float DETAIL_CONTROL_SIDE_RESERVE = 12f;
+	private static final float MEMBER_ROW_HEIGHT = 40f;
+	private static final float MEMBER_THUMB_SIZE = 32f;
+	private static final float MEMBER_ROW_GAP = 4f;
+	private static final float MEMBER_BODY_INSET = 8f;
+	private static final float MEMBER_BODY_LINE_HEIGHT = 24f;
+	private static final float SOURCE_ROW_HEIGHT = 40f;
+	private static final float SOURCE_ROW_GAP = 4f;
+	private static final float MEMBER_METRICS_MIN_WIDTH = 155f;
+	private static final float MEMBER_METRICS_MAX_WIDTH = 260f;
+	private static final Color MEMBER_BODY_BACKGROUND = new Color(0, 0, 0, 150);
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -48,8 +76,13 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private UIRect listRect;
 	private UIRect detailRect;
 	private final List<BattleReportListItem> entries = new ArrayList<>();
+	private final Set<MemberRow> expandedMembers = new HashSet<>();
+	private final Map<String, MemberRow> memberActions = new HashMap<>();
 	private String selectedId = "";
 	private boolean detailOpen;
+	private TextFieldAPI nameField;
+	private String savedName = "";
+	private int memberActionIndex;
 	private LabelAPI statusLabel;
 	private String status = "";
 
@@ -65,6 +98,8 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		this.panel = panel;
 		selectedId = "";
 		detailOpen = false;
+		nameField = null;
+		expandedMembers.clear();
 		status = "";
 		try {
 			reportStore.reload();
@@ -113,6 +148,11 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	@Override
 	public void refreshContent() {
+		String editedName = nameField == null ? null : nameField.getText();
+		BattleNext_TextField.clearRegisteredFields();
+		nameField = null;
+		memberActions.clear();
+		memberActionIndex = 0;
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
@@ -133,7 +173,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		}
 		UIRect contentRect = BattleNext_PageLayout.managementEditorRect(detailRect);
 		TooltipMakerAPI detailContent = detailPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
-		addDetails(detailContent);
+		addDetails(detailContent, detailPanel, contentRect.getWidth(), editedName);
 		detailPanel.addUIElement(detailContent).inTL(contentRect.getX() - detailRect.getX(),
 				contentRect.getY() - detailRect.getY());
 		BattleReportListItem selected = entry(selectedId);
@@ -142,29 +182,58 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 				text("delete"), "delete", CutStyle.ALL, true);
 		delete.setEnabled(selected != null && (selected.tournament == null
 				? reportStore.isLoaded() : tournamentStore.isLoaded()));
+		UIRect deleteRect = BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect);
+		BattleNext_PageLayout.fixedButton(detailPanel,
+				new UIRect(deleteRect.getX() + deleteRect.getWidth() + 10f, deleteRect.getY(),
+						deleteRect.getWidth(), deleteRect.getHeight()),
+				text("save"), "save", CutStyle.ALL, true);
 	}
 
 	@Override
 	public void buttonPressed(Object buttonId) {
 		if (buttonId instanceof String && ((String) buttonId).startsWith("report:")) {
 			String id = ((String) buttonId).substring("report:".length());
-			navigation.accept(() -> { selectedId = id; detailOpen = true; refreshContent(); });
+			navigation.accept(() -> {
+				selectedId = id;
+				detailOpen = true;
+				nameField = null;
+				expandedMembers.clear();
+				savedName = entry(id).report.getName();
+				refreshContent();
+			});
+		} else if (buttonId instanceof String && memberActions.containsKey(buttonId)) {
+			MemberRow row = memberActions.get(buttonId);
+			toggleExpanded(expandedMembers, row);
+			refreshContent();
+		} else if ("save".equals(buttonId)) {
+			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
 				&& entry(selectedId) != null) {
 			BattleReportListItem selected = entry(selectedId);
-			deletion.accept(listLabel(selected), () -> {
+			Runnable action = () -> deletion.accept(listLabel(selected), () -> {
 				try {
 					deleteReport(selected);
+					load();
 					selectedId = "";
 					detailOpen = false;
+					nameField = null;
+					expandedMembers.clear();
 					status = text("deleted");
 					refreshContent();
 				} catch (Exception exception) {
 					setStatus(text("save_failed") + ": " + exception.getMessage());
 				}
 			});
+			if (hasUnsavedChanges()) navigation.accept(action);
+			else action.run();
 		} else if ("back".equals(buttonId)) {
-			if (detailOpen) navigation.accept(() -> { selectedId = ""; detailOpen = false; refreshContent(); });
+			if (detailOpen) navigation.accept(() -> {
+				selectedId = "";
+				detailOpen = false;
+				nameField = null;
+				expandedMembers.clear();
+				refreshContent();
+			});
 			else backAction.run();
 		}
 	}
@@ -201,11 +270,18 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		}
 	}
 
-	private void addDetails(TooltipMakerAPI detailContent) {
+	private void addDetails(TooltipMakerAPI detailContent, CustomPanelAPI detailPanel,
+			float contentWidth, String editedName) {
 		BattleReportListItem selected = entry(selectedId);
 		if (selected == null) return;
 		BattleNext_BattleReportModel report = selected.report;
-		detailContent.addTitle(report.getId());
+		detailContent.addTitle(report.getName());
+		detailContent.addPara(text("report_name"), REPORT_SUMMARY_TOP_GAP, BattleNext_UiTheme.TEXT);
+		nameField = BattleNext_TextField.addTo(detailContent, detailPanel,
+				detailControlWidth(contentWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+				nameForRefresh(report, editedName), detailContent);
+		nameField.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		detailContent.addPara(report.getId(), REPORT_CONTEXT_TOP_GAP, BattleNext_UiTheme.MUTED);
 		String time = timeText(report);
 		detailContent.addPara((time.isEmpty() ? "" : time + " / ") + text("winner") + ": " + report.getWinner()
 				+ " / " + text("duration") + ": " + report.getDurationMillis() + " ms",
@@ -213,27 +289,327 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		if (!selected.context.isEmpty()) detailContent.addPara(selected.context,
 				REPORT_CONTEXT_TOP_GAP, BattleNext_UiTheme.MUTED);
 		detailContent.addPara(text("damage_dealt"), REPORT_SECTION_TOP_GAP, BattleNext_UiTheme.ACCENT);
-		appendMembers(detailContent, sorted(report, true));
+		appendMembers(detailContent, detailPanel, contentWidth, sorted(report, true), true);
 		detailContent.addPara(text("damage_taken"), REPORT_SECTION_TOP_GAP, BattleNext_UiTheme.ACCENT);
-		appendMembers(detailContent, sorted(report, false));
+		appendMembers(detailContent, detailPanel, contentWidth, sorted(report, false), false);
 	}
 
-	private void appendMembers(TooltipMakerAPI detailContent, List<BattleNext_MemberReport> members) {
+	private void appendMembers(TooltipMakerAPI detailContent, CustomPanelAPI detailPanel, float contentWidth,
+			List<BattleNext_MemberReport> members, boolean dealt) {
 		for (BattleNext_MemberReport member : members) {
-			detailContent.addPara(member.getVariantId() + " " + member.getName(),
-					MEMBER_TITLE_TOP_GAP, BattleNext_UiTheme.TEXT);
-			detailContent.addPara(text("damage_dealt") + ": " + member.getDamageDealt()
-					+ " / " + text("damage_taken") + ": " + member.getDamageTaken()
-					+ " / " + text("status") + ": " + member.getStatus(), MEMBER_DETAIL_TOP_GAP,
-					BattleNext_UiTheme.MUTED);
-			detailContent.addPara(text("hull") + ": " + member.getHullDamageDealt()
-					+ " / " + member.getHullDamageTaken() + "   " + text("shield")
-					+ ": " + member.getShieldDamageDealt() + " / " + member.getShieldDamageTaken(),
-					MEMBER_DETAIL_TOP_GAP, BattleNext_UiTheme.MUTED);
-			detailContent.addPara(text("emp") + ": " + member.getEmpDamageDealt()
-					+ " / " + member.getEmpDamageTaken() + "   " + text("final_hull")
-					+ ": " + member.getFinalHullFraction() + "   " + text("final_cr")
-					+ ": " + member.getFinalCr(), MEMBER_DETAIL_TOP_GAP, BattleNext_UiTheme.MUTED);
+			String action = "member:" + memberActionIndex++;
+			MemberRow row = new MemberRow(member, dealt);
+			memberActions.put(action, row);
+			boolean expanded = expandedMembers.contains(row);
+			float width = detailControlWidth(contentWidth);
+			List<BattleNext_DamageSourceReport> sources = sourcesFor(row);
+			float bodyHeight = expanded ? memberBodyHeight(sources.size()) : 0f;
+			CustomPanelAPI memberPanel = detailPanel.createCustomPanel(width,
+					MEMBER_ROW_HEIGHT + bodyHeight, new BaseCustomUIPanelPlugin());
+			addMemberHeader(memberPanel, row, action, width, expanded);
+			if (expanded) addMemberBody(memberPanel, row, sources, width, bodyHeight);
+			detailContent.addCustom(memberPanel, MEMBER_ROW_GAP);
+		}
+	}
+
+	private void addMemberHeader(CustomPanelAPI memberPanel, MemberRow row, String action,
+			float width, boolean expanded) {
+		MemberHeaderPlugin plugin = new MemberHeaderPlugin(this, action, expanded);
+		CustomPanelAPI header = memberPanel.createCustomPanel(width, MEMBER_ROW_HEIGHT, plugin);
+		plugin.setPosition(header.getPosition());
+		HullSummary hull = resolveHull(row.member().getVariantId(), this::loadVariant);
+		TooltipMakerAPI icon = header.createUIElement(MEMBER_THUMB_SIZE, MEMBER_ROW_HEIGHT, false);
+		if (!addSprite(icon, hull.spritePath())) {
+			icon.addPara("?", 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
+		}
+		header.addUIElement(icon).inTL(0f, (MEMBER_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f);
+		float metricsWidth = metricsWidth(width);
+		float nameWidth = Math.max(1f, width - MEMBER_THUMB_SIZE - metricsWidth - 20f);
+		Color color = expanded ? BattleNext_UiTheme.TEXT : BattleNext_UiTheme.MUTED;
+		TooltipMakerAPI names = header.createUIElement(nameWidth, MEMBER_ROW_HEIGHT, false);
+		String shipName = row.member().getName().isEmpty() ? row.member().getVariantId() : row.member().getName();
+		names.addPara(names.shortenString(shipName, nameWidth - 6f), 3f, color);
+		names.addPara(names.shortenString(hull.name(), nameWidth - 6f), 1f, color);
+		header.addUIElement(names).inTL(MEMBER_THUMB_SIZE + 8f, 0f);
+		TooltipMakerAPI metrics = header.createUIElement(metricsWidth, MEMBER_ROW_HEIGHT, false);
+		String status = statusLabel(row.member().getStatus());
+		metrics.addPara(metrics.shortenString(totalLabel(row) + "  " + status, metricsWidth - 6f), 3f, color);
+		metrics.addPara(metrics.shortenString(text("final_hull") + ": " + row.member().getFinalHullFraction()
+				+ "  " + text("final_cr") + ": " + row.member().getFinalCr(), metricsWidth - 6f), 1f, color);
+		header.addUIElement(metrics).inTL(width - metricsWidth - 4f, 0f);
+		memberPanel.addComponent(header).inTL(0f, 0f);
+	}
+
+	private void addMemberBody(CustomPanelAPI memberPanel, MemberRow row,
+			List<BattleNext_DamageSourceReport> sources, float width, float height) {
+		MemberBodyPlugin plugin = new MemberBodyPlugin();
+		CustomPanelAPI body = memberPanel.createCustomPanel(width, height, plugin);
+		plugin.setPosition(body.getPosition());
+		float contentWidth = width - MEMBER_BODY_INSET * 2f;
+		TooltipMakerAPI content = body.createUIElement(contentWidth, height - MEMBER_BODY_INSET * 2f, false);
+		CustomPanelAPI summary = body.createCustomPanel(contentWidth, MEMBER_BODY_LINE_HEIGHT,
+				new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI summaryHost = summary.createUIElement(contentWidth, MEMBER_BODY_LINE_HEIGHT, false);
+		summaryHost.setParaSmallOrbitron();
+		addDamageColumns(summaryHost, 0f, contentWidth, damageValues(row));
+		summaryHost.setHeightSoFar(MEMBER_BODY_LINE_HEIGHT);
+		summary.addUIElement(summaryHost).inTL(0f, 0f);
+		content.addCustom(summary, 0f);
+		if (sources.isEmpty()) {
+			CustomPanelAPI empty = body.createCustomPanel(contentWidth, SOURCE_ROW_HEIGHT,
+					new BaseCustomUIPanelPlugin());
+			TooltipMakerAPI emptyHost = empty.createUIElement(contentWidth, SOURCE_ROW_HEIGHT, false);
+			emptyHost.addPara(text("no_damage_sources"), 0f, BattleNext_UiTheme.MUTED)
+					.getPosition().inTL(0f, 10f);
+			emptyHost.setHeightSoFar(SOURCE_ROW_HEIGHT);
+			empty.addUIElement(emptyHost).inTL(0f, 0f);
+			content.addCustom(empty, SOURCE_ROW_GAP);
+		} else {
+			for (BattleNext_DamageSourceReport source : sortedSources(sources)) {
+				addSourceRow(body, content, source, contentWidth);
+			}
+		}
+		content.setHeightSoFar(height - MEMBER_BODY_INSET * 2f);
+		body.addUIElement(content).inTL(MEMBER_BODY_INSET, MEMBER_BODY_INSET);
+		memberPanel.addComponent(body).inTL(0f, MEMBER_ROW_HEIGHT);
+	}
+
+	private void addSourceRow(CustomPanelAPI body, TooltipMakerAPI content,
+			BattleNext_DamageSourceReport source, float width) {
+		SourceRowPlugin plugin = new SourceRowPlugin();
+		CustomPanelAPI sourcePanel = body.createCustomPanel(width, SOURCE_ROW_HEIGHT, plugin);
+		plugin.setPosition(sourcePanel.getPosition());
+		BattleNext_ReportSourceDisplay.SourceVisual visual =
+				BattleNext_ReportSourceDisplay.resolve(source, Global.getSettings());
+		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, SOURCE_ROW_HEIGHT, false);
+		if (!addSprite(icon, visual.primarySprite()) && !addSprite(icon, visual.secondarySprite())) {
+			icon.addPara(visual.placeholder(), 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
+		}
+		sourcePanel.addUIElement(icon).inTL(0f, (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f);
+		float textX = MEMBER_THUMB_SIZE + 8f;
+		float textWidth = sourceTextWidth(width);
+		TooltipMakerAPI labels = sourcePanel.createUIElement(textWidth, SOURCE_ROW_HEIGHT, false);
+		String name = visual.resolved() ? visual.name() : sourceKindLabel(source.getKind()) + ": " + visual.name();
+		labels.addPara(labels.shortenString(name, Math.max(1f, textWidth - 4f)), 0f,
+				BattleNext_UiTheme.TEXT).getPosition().inTL(0f, 0f);
+		addDamageColumns(labels, 18f, textWidth,
+				new double[]{source.getHull(), source.getArmor(), source.getShields(), source.getEmp()});
+		labels.setHeightSoFar(SOURCE_ROW_HEIGHT);
+		sourcePanel.addUIElement(labels).inTL(textX, 0f);
+		content.addCustom(sourcePanel, SOURCE_ROW_GAP);
+		content.addTooltipToPrevious(new BaseTooltipCreator() {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return 360f;
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				tooltip.addTitle(visual.name());
+				tooltip.addPara(sourceKindLabel(source.getKind()) + ": " + source.getId(),
+						4f, BattleNext_UiTheme.MUTED);
+			}
+		}, TooltipLocation.RIGHT);
+	}
+
+	private void addDamageColumns(TooltipMakerAPI host, float y, float width, double[] values) {
+		String[] labels = {text("hull"), text("armor"), text("shield"), text("emp")};
+		float columnWidth = width / values.length;
+		for (int index = 0; index < values.length; index++) {
+			String value = labels[index] + ": " + formatDamage(values[index]);
+			LabelAPI label = host.addPara(host.shortenString(value, Math.max(1f, columnWidth - 4f)),
+					0f, BattleNext_UiTheme.MUTED);
+			label.getPosition().inTL(index * columnWidth, y);
+		}
+	}
+
+	static float detailControlWidth(float contentWidth) {
+		return Math.max(1f, contentWidth - DETAIL_CONTROL_SIDE_RESERVE);
+	}
+
+	static String nameForRefresh(BattleNext_BattleReportModel report, String editedName) {
+		return editedName == null ? report.getName() : editedName;
+	}
+
+	static float metricsWidth(float rowWidth) {
+		return Math.min(MEMBER_METRICS_MAX_WIDTH,
+				Math.max(MEMBER_METRICS_MIN_WIDTH, rowWidth * 0.28f));
+	}
+
+	static float memberBodyHeight(int sourceCount) {
+		return MEMBER_BODY_INSET * 2f + MEMBER_BODY_LINE_HEIGHT
+				+ (SOURCE_ROW_HEIGHT + SOURCE_ROW_GAP) * Math.max(1, sourceCount);
+	}
+
+	static float sourceTextWidth(float rowWidth) {
+		return Math.max(1f, rowWidth - MEMBER_THUMB_SIZE - 8f - MEMBER_BODY_INSET);
+	}
+
+	static String formatDamage(double value) {
+		return String.format(Locale.ROOT, "%,.1f", value);
+	}
+
+	static List<BattleNext_DamageSourceReport> sourcesFor(MemberRow row) {
+		return row.dealt() ? row.member().getDealtBySource() : row.member().getTakenBySource();
+	}
+
+	static HullSummary resolveHull(String variantId, Function<String, ShipVariantAPI> variants) {
+		ShipVariantAPI variant = variants.apply(variantId);
+		ShipHullSpecAPI hull = variant == null ? null : variant.getHullSpec();
+		if (hull == null) return new HullSummary(variantId, "");
+		String name = hull.getHullName();
+		String sprite = hull.getSpriteName();
+		return new HullSummary(name == null || name.isEmpty() ? variantId : name,
+				sprite == null ? "" : sprite);
+	}
+
+	private ShipVariantAPI loadVariant(String id) {
+		if (id == null || id.isEmpty()) return null;
+		try {
+			return Global.getSettings().getVariant(id);
+		} catch (RuntimeException exception) {
+			return null;
+		}
+	}
+
+	private boolean addSprite(TooltipMakerAPI host, String path) {
+		if (path == null || path.isEmpty()) return false;
+		try {
+			Global.getSettings().getSprite(path);
+			host.addImage(path, MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE, 0f);
+			return true;
+		} catch (RuntimeException exception) {
+			return false;
+		}
+	}
+
+	static String statusKey(String status) {
+		return switch (status) {
+			case "destroyed" -> "status_destroyed";
+			case "retreated" -> "status_retreated";
+			default -> "status_alive";
+		};
+	}
+
+	private String statusLabel(String status) {
+		return reportStrings.get(statusKey(status));
+	}
+
+	private String totalLabel(MemberRow row) {
+		return (row.dealt() ? text("damage_dealt") : text("damage_taken")) + ": "
+				+ (row.dealt() ? row.member().getDamageDealt() : row.member().getDamageTaken());
+	}
+
+	static double[] damageValues(MemberRow row) {
+		BattleNext_MemberReport member = row.member();
+		boolean dealt = row.dealt();
+		return new double[]{
+				dealt ? member.getHullDamageDealt() : member.getHullDamageTaken(),
+				dealt ? member.getArmorDamageDealt() : member.getArmorDamageTaken(),
+				dealt ? member.getShieldDamageDealt() : member.getShieldDamageTaken(),
+				dealt ? member.getEmpDamageDealt() : member.getEmpDamageTaken()
+		};
+	}
+
+	private String sourceKindLabel(String kind) {
+		return switch (kind) {
+			case "weapon" -> reportStrings.get("source_weapon");
+			case "fighter_wing" -> reportStrings.get("source_fighter_wing");
+			case "ship" -> reportStrings.get("source_ship");
+			case "projectile_spec" -> reportStrings.get("source_projectile");
+			case "source_type" -> reportStrings.get("source_type");
+			case "damage_type" -> reportStrings.get("source_damage_type");
+			default -> kind;
+		};
+	}
+
+	static List<BattleNext_DamageSourceReport> sortedSources(List<BattleNext_DamageSourceReport> sources) {
+		List<BattleNext_DamageSourceReport> ordered = new ArrayList<>(sources);
+		ordered.sort(Comparator.comparingDouble(BattleNext_DamageSourceReport::getTotal).reversed());
+		return ordered;
+	}
+
+	static void toggleExpanded(Set<MemberRow> expanded, MemberRow row) {
+		if (!expanded.add(row)) expanded.remove(row);
+	}
+
+	static record MemberRow(BattleNext_MemberReport member, boolean dealt) { }
+	static record HullSummary(String name, String spritePath) { }
+
+	private static class MemberHeaderPlugin extends BaseCustomUIPanelPlugin {
+		private final BattleNext_BattleReportPage page;
+		private final String action;
+		private final boolean expanded;
+		private PositionAPI position;
+
+		private MemberHeaderPlugin(BattleNext_BattleReportPage page, String action, boolean expanded) {
+			this.page = page;
+			this.action = action;
+			this.expanded = expanded;
+		}
+
+		private void setPosition(PositionAPI position) {
+			this.position = position;
+		}
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			if (position == null) return;
+			Color background = expanded ? BattleNext_UiTheme.PANEL : BattleNext_UiTheme.PANEL.darker();
+			BattleNext_GeometryRenderer.fillRect(position, background, alphaMult);
+			BattleNext_GeometryRenderer.lineLoop(new float[]{
+					position.getX(), position.getY(),
+					position.getX() + position.getWidth(), position.getY(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
+					position.getX(), position.getY() + position.getHeight()
+			}, BattleNext_UiTheme.HEADER, alphaMult, expanded ? 2f : 1f);
+		}
+
+		@Override
+		public void processInput(List<InputEventAPI> events) {
+			for (InputEventAPI event : events) {
+				if (event.isConsumed() || !event.isLMBDownEvent() || !position.containsEvent(event)) continue;
+				page.buttonPressed(action);
+				event.consume();
+				return;
+			}
+		}
+	}
+
+	private static class MemberBodyPlugin extends BaseCustomUIPanelPlugin {
+		private PositionAPI position;
+
+		private void setPosition(PositionAPI position) {
+			this.position = position;
+		}
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			if (position == null) return;
+			BattleNext_GeometryRenderer.fillRect(position, MEMBER_BODY_BACKGROUND, alphaMult);
+			BattleNext_GeometryRenderer.lineLoop(new float[]{
+					position.getX(), position.getY(),
+					position.getX() + position.getWidth(), position.getY(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
+					position.getX(), position.getY() + position.getHeight()
+			}, BattleNext_UiTheme.HEADER, alphaMult, 2f);
+		}
+	}
+
+	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
+		private PositionAPI position;
+
+		private void setPosition(PositionAPI position) {
+			this.position = position;
+		}
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			if (position == null) return;
+			BattleNext_GeometryRenderer.lineStrip(new float[]{
+					position.getX(), position.getY() + position.getHeight(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight()
+			}, BattleNext_UiTheme.MUTED, alphaMult * 0.6f, 1f);
 		}
 	}
 
@@ -255,7 +631,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private String listLabel(BattleReportListItem entry) {
 		String time = timeText(entry.report);
-		return (time.isEmpty() ? "" : time + " / ") + entry.report.getWinner()
+		return entry.report.getName() + " / " + (time.isEmpty() ? "" : time + " / ") + entry.report.getWinner()
 				+ " / " + (entry.report.getPlayerMembers().size() + entry.report.getEnemyMembers().size());
 	}
 
@@ -277,12 +653,65 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			return;
 		}
 		entry.round.setReport(new BattleNext_BattleReportModel());
-		tournamentStore.save(entry.tournament);
+		try {
+			tournamentStore.save(entry.tournament);
+		} catch (IOException | JSONException | RuntimeException exception) {
+			entry.round.setReport(entry.report);
+			throw exception;
+		}
 	}
 
 	@Override
 	public String getStatusText() {
 		return status;
+	}
+
+	@Override
+	public boolean hasUnsavedChanges() {
+		return nameField != null && !nameField.getText().equals(savedName);
+	}
+
+	@Override
+	public boolean save() {
+		if (nameField == null || entry(selectedId) == null) return true;
+		String nextName = nameField.getText().trim();
+		if (nextName.isEmpty()) {
+			setStatus(text("invalid_report_name"));
+			return false;
+		}
+		BattleReportListItem selected = entry(selectedId);
+		try {
+			persistName(selected.report, selected.tournament, reportStore, tournamentStore, nextName);
+			savedName = nextName;
+			nameField.setText(nextName);
+			setStatus(text("saved"));
+			refreshContent();
+			return true;
+		} catch (Exception exception) {
+			setStatus(text("save_failed") + ": " + exception.getMessage());
+			return false;
+		}
+	}
+
+	static void persistName(BattleNext_BattleReportModel report, BattleNext_TournamentModel tournament,
+			BattleNext_BattleReportStore reports, BattleNext_TournamentStore tournaments, String name)
+			throws IOException, JSONException {
+		String nextName = name == null ? "" : name.trim();
+		if (nextName.isEmpty()) throw new IllegalArgumentException("Report name is empty");
+		String previous = report.getName();
+		report.setName(nextName);
+		try {
+			if (tournament == null) reports.save(report);
+			else tournaments.save(tournament);
+		} catch (IOException | JSONException | RuntimeException exception) {
+			report.setName(previous);
+			throw exception;
+		}
+	}
+
+	@Override
+	public void discard() {
+		if (nameField != null) nameField.setText(savedName);
 	}
 
 	private void setStatus(String value) {
@@ -293,7 +722,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private String text(String key) {
 		if (key.equals("damage_dealt") || key.equals("damage_taken") || key.equals("winner")
 				|| key.equals("duration") || key.equals("status") || key.equals("hull") || key.equals("shield")
-				|| key.equals("emp") || key.equals("final_hull") || key.equals("final_cr")) return reportStrings.get(key);
+				|| key.equals("armor") || key.equals("emp") || key.equals("final_hull") || key.equals("final_cr")) return reportStrings.get(key);
 		return strings.get(key);
 	}
 

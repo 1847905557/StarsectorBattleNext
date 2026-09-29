@@ -43,7 +43,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
-				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null));
+				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null,
+				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName(), "PvE"));
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);
 		api.addBriefingItem("Use left/right to rotate faction selection.");
 		api.initMap(-MAP_HALF_SIZE, MAP_HALF_SIZE, -MAP_HALF_SIZE, MAP_HALF_SIZE);

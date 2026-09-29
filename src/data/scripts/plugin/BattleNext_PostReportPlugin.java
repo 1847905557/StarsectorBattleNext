@@ -70,10 +70,11 @@ public class BattleNext_PostReportPlugin extends BaseEveryFrameCombatPlugin {
 		for (BattleNext_MemberReport member : members) {
 			double value = dealt ? member.getDamageDealt() : member.getDamageTaken();
 			double hull = dealt ? member.getHullDamageDealt() : member.getHullDamageTaken();
+			double armor = dealt ? member.getArmorDamageDealt() : member.getArmorDamageTaken();
 			double shields = dealt ? member.getShieldDamageDealt() : member.getShieldDamageTaken();
 			double emp = dealt ? member.getEmpDamageDealt() : member.getEmpDamageTaken();
 			engine.getCombatUI().addMessage(MESSAGE_PRIORITY, strings.format("member_damage", member.getVariantId(),
-					value, hull, shields, emp));
+					value, hull, armor, shields, emp));
 		}
 	}
 

@@ -12,7 +12,10 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.tools.BattleNext_Settings;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin {
@@ -20,13 +23,19 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private final BattleNext_Match match;
 	private final BattleNext_BattleSourceProvider provider;
+	private final String playerName;
+	private final String enemyName;
+	private final String marker;
 	private boolean recorded;
 
 	public BattleNext_BattleResultRecorder(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_Match match,
-			BattleNext_BattleSourceProvider provider) {
+			BattleNext_BattleSourceProvider provider, String playerName, String enemyName, String marker) {
 		this.scorekeeper = scorekeeper;
 		this.match = match;
 		this.provider = provider;
+		this.playerName = playerName;
+		this.enemyName = enemyName;
+		this.marker = marker;
 	}
 
 	@Override
@@ -43,6 +52,9 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	private void record(BattleNext_BattleReportModel report) throws IOException, org.json.JSONException {
 		if (report.getId().isEmpty()) report.setId(UUID.randomUUID().toString());
 		if (report.getCreatedAt() <= 0L) report.setCreatedAt(System.currentTimeMillis());
+		String playerLabel = playerName == null || playerName.isBlank() ? match.getPlayer() : playerName;
+		String enemyLabel = enemyName == null || enemyName.isBlank() ? match.getEnemy() : enemyName;
+		if (report.getName().isEmpty()) report.setName(defaultName(playerLabel, enemyLabel, marker, report.getCreatedAt()));
 		BattleNext_TournamentModel tournament = provider == null ? null : provider.getActiveTournament();
 		if (tournament == null) {
 			BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
@@ -61,6 +73,11 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			store.save(tournament);
 		}
 		BattleNext_BattleSignals.markPendingResult();
+	}
+
+	public static String defaultName(String playerName, String enemyName, String marker, long createdAt) {
+		String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).format(new Date(createdAt));
+		return playerName + " vs " + enemyName + " - " + marker + " - " + time;
 	}
 
 	private String resolveWinner(BattleNext_Match match, String winner) {

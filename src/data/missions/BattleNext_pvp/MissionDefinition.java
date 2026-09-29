@@ -45,6 +45,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		BattleNext_TournamentModel tournament = provider.getActiveTournament();
 		int mapIndex = 0;
+		String reportMarker;
 		BattleNext_Match match;
 		String progress;
 		if (tournament == null) {
@@ -57,9 +58,12 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			if (quickBattleRoundIndex == 1) match.setSides(match.getEnemy(), match.getPlayer());
 			progress = BattleNext_MatchProgress.quickBattle(quickBattleMatchIndex + 1, matches.size(),
 					quickBattleRoundIndex + 1).format(strings);
+			reportMarker = "Quick Match " + (quickBattleMatchIndex + 1) + " Round " + (quickBattleRoundIndex + 1);
 		} else {
 			match = matches.get(0);
 			progress = progress(tournament, match);
+			reportMarker = "Tournament " + tournament.getName() + " Match " + match.getId()
+					+ " Round " + (match.getRounds().size() + 1);
 			if (!provider.getRuleWarnings().isEmpty()
 					&& !BattleNext_BattleSignals.consumeAuthorization(tournament.getId(), match.getId())) {
 				showBlocked(api, strings.get("rules_blocked"), provider.getRuleWarnings());
@@ -96,7 +100,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
-		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider));
+		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, provider,
+				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName(), reportMarker));
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
