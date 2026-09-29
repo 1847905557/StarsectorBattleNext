@@ -60,6 +60,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private boolean handleCtrlV = true;
 	private boolean verticalCursor = true;
 	private String undoText = "";
+	private char pendingHighSurrogate;
 	private Color textColor = DEFAULT_TEXT_COLOR;
 	private Color background = DEFAULT_BACKGROUND;
 	private Color border = DEFAULT_BORDER;
@@ -185,11 +186,12 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		refreshVisual();
 	}
 
-	private void insert(char c) {
-		if (!isValidChar(c)) return;
+	private void insertCodePoint(int codePoint) {
+		if (!isAcceptedInputCodePoint(codePoint)) return;
+		String replacement = new String(Character.toChars(codePoint));
 		if (limitByStringWidth && !hasSelection()
-				&& textLabel.computeTextWidth(text + c) > width - pad * 2f) return;
-		replaceSelection(String.valueOf(c));
+				&& textLabel.computeTextWidth(text + replacement) > width - pad * 2f) return;
+		replaceSelection(replacement);
 	}
 
 	private void deletePrevious() {
@@ -198,8 +200,9 @@ public final class BattleNext_TextField implements TextFieldAPI {
 			return;
 		}
 		if (cursor <= 0) return;
-		text = text.substring(0, cursor - 1) + text.substring(cursor);
-		cursor--;
+		int previous = Character.offsetByCodePoints(text, cursor, -1);
+		text = text.substring(0, previous) + text.substring(cursor);
+		cursor = previous;
 		anchor = cursor;
 		notifyChanged();
 	}
@@ -210,7 +213,8 @@ public final class BattleNext_TextField implements TextFieldAPI {
 			return;
 		}
 		if (cursor >= text.length()) return;
-		text = text.substring(0, cursor) + text.substring(cursor + 1);
+		int next = Character.offsetByCodePoints(text, cursor, 1);
+		text = text.substring(0, cursor) + text.substring(next);
 		anchor = cursor;
 		notifyChanged();
 	}
@@ -228,10 +232,23 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private void pasteClipboard() {
 		String clipboard = readClipboard();
 		if (clipboard == null) return;
-		for (int i = 0; i < clipboard.length(); i++) {
-			char c = clipboard.charAt(i);
-			if (isValidChar(c)) insert(c);
+		insertPastedText(clipboard);
+	}
+
+	void insertPastedText(String clipboard) {
+		for (int offset = 0; offset < clipboard.length();) {
+			int codePoint = clipboard.codePointAt(offset);
+			insertCodePoint(codePoint);
+			offset += Character.charCount(codePoint);
 		}
+	}
+
+	static boolean isAcceptedInputCodePoint(int codePoint) {
+		if (!Character.isValidCodePoint(codePoint) || codePoint == '%' || codePoint == '$') return false;
+		int type = Character.getType(codePoint);
+		return type != Character.CONTROL && type != Character.FORMAT
+				&& type != Character.LINE_SEPARATOR && type != Character.PARAGRAPH_SEPARATOR
+				&& type != Character.SURROGATE;
 	}
 
 	private String readClipboard() {
@@ -247,51 +264,67 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	void processKeyboard(InputEventAPI event) {
 		int key = event.getEventValue();
 		boolean extend = event.isShiftDown();
-		if (event.isCtrlDown() && key == Keyboard.KEY_A) {
-			anchor = 0;
-			cursor = text.length();
-			refreshVisual();
-			return;
-		}
-		if (event.isCtrlDown() && key == Keyboard.KEY_C) {
-			copySelection();
-			return;
-		}
-		if (event.isCtrlDown() && key == Keyboard.KEY_X) {
-			copySelection();
-			deleteSelection();
-			return;
-		}
-		if (event.isCtrlDown() && key == Keyboard.KEY_V && handleCtrlV) {
-			pasteClipboard();
+		if (event.isCtrlDown()) {
+			pendingHighSurrogate = 0;
+			if (!event.isAltDown() && key == Keyboard.KEY_A) {
+				anchor = 0;
+				cursor = text.length();
+				refreshVisual();
+			} else if (!event.isAltDown() && key == Keyboard.KEY_C) {
+				copySelection();
+			} else if (!event.isAltDown() && key == Keyboard.KEY_X) {
+				copySelection();
+				deleteSelection();
+			} else if (!event.isAltDown() && key == Keyboard.KEY_V && handleCtrlV) {
+				pasteClipboard();
+			}
 			return;
 		}
 		switch (key) {
 			case Keyboard.KEY_LEFT:
-				moveCursor(cursor - 1, extend);
+				pendingHighSurrogate = 0;
+				moveCursor(cursor > 0 ? Character.offsetByCodePoints(text, cursor, -1) : 0, extend);
 				break;
 			case Keyboard.KEY_RIGHT:
-				moveCursor(cursor + 1, extend);
+				pendingHighSurrogate = 0;
+				moveCursor(cursor < text.length() ? Character.offsetByCodePoints(text, cursor, 1) : cursor, extend);
 				break;
 			case Keyboard.KEY_HOME:
+				pendingHighSurrogate = 0;
 				moveCursor(0, extend);
 				break;
 			case Keyboard.KEY_END:
+				pendingHighSurrogate = 0;
 				moveCursor(text.length(), extend);
 				break;
 			case Keyboard.KEY_BACK:
+				pendingHighSurrogate = 0;
 				deletePrevious();
 				break;
 			case Keyboard.KEY_DELETE:
+				pendingHighSurrogate = 0;
 				deleteNext();
 				break;
 			case Keyboard.KEY_ESCAPE:
+				pendingHighSurrogate = 0;
 				if (undoOnEscape) setText(undoText);
 				releaseFocus();
 				break;
 			default:
 				char value = event.getEventChar();
-				if (value != 0) insert(value);
+				if (pendingHighSurrogate != 0) {
+					char high = pendingHighSurrogate;
+					pendingHighSurrogate = 0;
+					if (Character.isLowSurrogate(value)) {
+						insertCodePoint(Character.toCodePoint(high, value));
+						break;
+					}
+				}
+				if (Character.isHighSurrogate(value)) {
+					pendingHighSurrogate = value;
+				} else if (value != 0) {
+					insertCodePoint(value);
+				}
 		}
 	}
 
@@ -303,7 +336,8 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		if (localX >= totalWidth) return text.length();
 		int best = 0;
 		float bestDistance = Float.MAX_VALUE;
-		for (int i = 0; i <= text.length(); i++) {
+		for (int i = 0; i <= text.length(); i += i < text.length()
+				? Character.charCount(text.codePointAt(i)) : 1) {
 			float distance = Math.abs(textLabel.computeTextWidth(text.substring(0, i)) - localX);
 			if (distance < bestDistance) {
 				bestDistance = distance;
@@ -329,15 +363,18 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	void beginPointer(float mouseX, float mouseY, boolean extend) {
+		pendingHighSurrogate = 0;
 		updateDragFromPointer(mouseX, mouseY, extend);
 	}
 
 	void endPointer(boolean clearSelection) {
+		pendingHighSurrogate = 0;
 		if (clearSelection) anchor = cursor;
 		resetBlink();
 	}
 
 	void endFocus(boolean clearSelection) {
+		pendingHighSurrogate = 0;
 		if (clearSelection) anchor = cursor;
 		resetBlink();
 	}
@@ -348,6 +385,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	void onFocusGained() {
+		pendingHighSurrogate = 0;
 		undoText = text;
 		resetBlink();
 	}
@@ -518,8 +556,14 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public void setText(String value) {
+		pendingHighSurrogate = 0;
 		text = value == null ? "" : value;
-		if (maxChars >= 0 && text.length() > maxChars) text = text.substring(0, maxChars);
+		if (maxChars >= 0 && text.length() > maxChars) {
+			int end = maxChars;
+			if (end > 0 && Character.isHighSurrogate(text.charAt(end - 1))
+					&& Character.isLowSurrogate(text.charAt(end))) end--;
+			text = text.substring(0, end);
+		}
 		cursor = text.length();
 		anchor = cursor;
 		undoText = text;
@@ -528,7 +572,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public boolean isValidChar(char c) {
-		return c != 0 && c != '%' && c != '$';
+		return isAcceptedInputCodePoint(c);
 	}
 
 	@Override
@@ -550,7 +594,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	public boolean appendCharIfPossible(char c, boolean withSound) {
 		if (!isValidChar(c) || (maxChars >= 0 && !hasSelection() && text.length() >= maxChars)) return false;
 		int oldCursor = cursor;
-		insert(c);
+		insertCodePoint(c);
 		return oldCursor != cursor;
 	}
 
