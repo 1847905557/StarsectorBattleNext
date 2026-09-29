@@ -156,6 +156,14 @@ public class BattleNext_OrderField {
 		visited.add(ship);
 	}
 
+	public void releaseShip(ShipAPI ship) {
+		AutomatedAssignmentInfo info = automation.remove(ship);
+		if (info == null) return;
+		if (sameAssignment(info.assignment, tasks.getAssignmentFor(ship))) {
+			tasks.orderSearchAndDestroy(manager.getDeployedFleetMember(ship), false);
+		}
+	}
+
 	public void pruneAssignments() {
 		automation.keySet().removeIf(ship -> !visited.contains(ship));
 		List<AssignmentInfo> remove = new ArrayList<>();

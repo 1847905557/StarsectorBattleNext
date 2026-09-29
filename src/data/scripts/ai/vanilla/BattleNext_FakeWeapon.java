@@ -832,8 +832,8 @@ public class BattleNext_FakeWeapon implements WeaponAPI {
 
 	/**
 	 * Backing for the ammo-tracker reads FiringSolutionEval performs on weapons.
-	 * approximation: ShipSystemAPI.getAmmoTracker() does not exist, usesAmmo() is
-	 * reconstructed from getMaxAmmo()/getAmmoPerSecond().
+	 * approximation: ShipSystemAPI.getAmmoTracker() does not exist; the runtime
+	 * ammo sentinel and exposed regeneration rate provide the consumed values.
 	 */
 	private static class FakeAmmoTracker implements AmmoTrackerAPI {
 		private final ShipSystemAPI system;
@@ -858,7 +858,7 @@ public class BattleNext_FakeWeapon implements WeaponAPI {
 
 		@Override
 		public boolean usesAmmo() {
-			return this.system.getMaxAmmo() > 0 || this.system.getAmmoPerSecond() > 0;
+			return this.system.getAmmo() != Integer.MAX_VALUE;
 		}
 
 		@Override

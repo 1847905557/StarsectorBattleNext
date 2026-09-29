@@ -1,4 +1,4 @@
-package data.scripts.ai.vanilla.attack;
+package data.scripts.ai.vanilla;
 
 /**
  * Port of engine enum com.fs.starfarer.combat.ai.AutofireState.

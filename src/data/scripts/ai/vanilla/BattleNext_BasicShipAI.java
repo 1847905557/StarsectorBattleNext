@@ -1,45 +1,29 @@
 package data.scripts.ai.vanilla;
 
-import com.fs.starfarer.api.combat.CombatAsteroidAPI;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CollisionGridAPI;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.ShipAIConfig;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
 import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
+import com.fs.starfarer.api.combat.ShipAPI.HullSize;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
+import com.fs.starfarer.api.util.IntervalUtil;
+import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackAIModule;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackingGroup;
 import data.scripts.ai.vanilla.attack.BattleNext_WeaponGroupEvaluation;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_Maneuver;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverManager;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_PursuitAttackManeuver;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_StrafeTargetManeuverV2;
-import data.scripts.ai.vanilla.maneuvers.BattleNext_ThreatAvoidanceManeuver;
+import data.scripts.ai.vanilla.maneuvers.*;
 import data.scripts.ai.vanilla.movement.BattleNext_BasicEngineAI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import data.scripts.ai.vanilla.shields.BattleNext_FrontShieldAI;
 import data.scripts.ai.vanilla.shields.BattleNext_OmniShieldAngleAI;
 import data.scripts.ai.vanilla.shields.BattleNext_ShieldAI;
-import data.scripts.ai.vanilla.system.BattleNext_GenericSystemAI;
+import data.scripts.ai.vanilla.system.BattleNext_PhaseCloakSystemAI;
 import data.scripts.ai.vanilla.system.BattleNext_SystemAI;
-import com.fs.starfarer.api.util.IntervalUtil;
-import com.fs.starfarer.api.util.Misc;
-import java.util.Iterator;
-import java.util.List;
+import data.scripts.ai.vanilla.system.BattleNext_SystemAIFactory;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.lang.ref.WeakReference;
+import java.util.Iterator;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.BasicShipAI, the default
@@ -53,14 +37,11 @@ import org.lwjgl.util.vector.Vector2f;
  *   comparison can never hold for this port.
  * - Reads of ship.getAIFlags() are replaced with this.aiFlags, which is what
  *   the engine-side accessor returns for the vanilla AI anyway.
- * - Phase cloak handling is a stub: the phase cloak AI belongs to the excluded
- *   system-AI family, so phase ships get no phase behavior.
- * - System AI: type-specific system AIs are excluded by scope; every ship
- *   system uses BattleNext_GenericSystemAI as a fallback.
  * - Ship.isPiece() (split station pieces) has no API equivalent and is
  *   approximated by !isAlive().
  */
 public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_ManeuverAPI, BattleNext_Orderable {
+	private static final String INSTANCE_KEY = "BattleNext_BasicShipAI_instance";
 	// intentionally final here: vanilla allowed toggling this dev flag at runtime,
 	// but no ported code ever writes it
 	public static final boolean ALLOW_OLD_STRAFE = false;
@@ -123,8 +104,11 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		this.attackAI = new BattleNext_AttackAIModule(ship, this.aiFlags);
 		this.threatEvalAI = new BattleNext_ThreatEvalAI(ship, this, this.flockingAI);
 		if (ship.getHullSpec().getShieldSpec() != null && ship.getHullSpec().getShieldSpec().getType() == ShieldType.PHASE) {
-			// approximation: the phase cloak AI belongs to the excluded system-AI family,
-			// so phase ships never phase and carry no shield AI.
+			BattleNext_SystemAI phaseAI = BattleNext_SystemAIFactory.create(ship, ship.getPhaseCloak(), this.aiFlags,
+					this.threatEvalAI, this.attackAI, this.flockingAI, this);
+			if (phaseAI instanceof BattleNext_PhaseCloakSystemAI phaseCloak) {
+				phaseCloak.getPhaseCloakShieldAI().setUsePhaseCloak(true);
+			}
 			this.shieldAI = new BattleNext_ShieldAI() {
 				@Override
 				public boolean shouldKeepShieldOn() {
@@ -133,16 +117,19 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 				@Override
 				public boolean hasFiringSolution() {
-					return false;
+					return phaseAI instanceof BattleNext_PhaseCloakSystemAI phaseCloak
+						&& phaseCloak.getPhaseCloakShieldAI().getEval().hasSolution();
 				}
 
 				@Override
 				public BattleNext_FiringSolutionEval getEval() {
-					return null;
+					return phaseAI instanceof BattleNext_PhaseCloakSystemAI phaseCloak
+						? phaseCloak.getPhaseCloakShieldAI().getEval() : null;
 				}
 
 				@Override
 				public void advance(float amount, BattleNext_ThreatEvalAI threatEval, Vector2f avoidanceVector, Vector2f collisionThreatDir, ShipAPI attackTarget) {
+					phaseAI.advance(amount, avoidanceVector, collisionThreatDir, attackTarget);
 				}
 			};
 		} else if (ship.getShield() != null) {
@@ -163,10 +150,20 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		this.behaviorModule = new BattleNext_BehaviorModule(ship, this.threatEvalAI, this.flockingAI, this, this.aiFlags);
 		if (ship.getSystem() != null) {
-			// approximation: every system uses the generic fallback AI; the type-specific
-			// system AIs are out of scope for this port.
-			this.systemAI = new BattleNext_GenericSystemAI(ship, this.aiFlags, this.threatEvalAI, this.attackAI, this.flockingAI);
+			this.systemAI = BattleNext_SystemAIFactory.create(ship, ship.getSystem(), this.aiFlags,
+					this.threatEvalAI, this.attackAI, this.flockingAI, this);
 		}
+		ship.setCustomData(INSTANCE_KEY, new WeakReference<>(this));
+	}
+
+	public static BattleNext_BasicShipAI getActiveInstance(ShipAPI ship) {
+		Object reference = ship.getCustomData().get(INSTANCE_KEY);
+		Object instance = reference instanceof WeakReference<?> ? ((WeakReference<?>) reference).get() : null;
+		if (!(instance instanceof BattleNext_BasicShipAI)) return null;
+		BattleNext_BasicShipAI ai = (BattleNext_BasicShipAI) instance;
+		// approximation: ShipAPI exposes the wrapper AI and its delegated flags;
+		// matching flag identity identifies the installed ported AI.
+		return ship.getShipAI() != null && ship.getShipAI().getAIFlags() == ai.getAIFlags() ? ai : null;
 	}
 
 	@Override
@@ -256,12 +253,17 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 	@Override
 	public void advance(float amount) {
 		if (!this.ship.isHulk()) {
+			// approximation: vanilla ShipStatistics advances from the engine before
+			// ship AI; the public API requires the ported AI to advance its own tracker.
+			ShipAPI nearestEnemy = BattleNext_ShipAIHelper.getNearestEnemyOfMinHullSizeInRange(this.ship, HullSize.FRIGATE, 3000.0F);
+			BattleNext_ShipAIHelper.getStatisticsTracker(this.ship).advance(this.ship, nearestEnemy, amount, this.aiFlags.hasFlag(AIFlags.BACKING_OFF));
+
 			boolean controlsLocked = this.ship.controlsLocked();
 			if (controlsLocked) {
 				this.ship.blockCommandForOneFrame(ShipCommand.USE_SYSTEM);
 				this.ship.blockCommandForOneFrame(ShipCommand.TOGGLE_SHIELD_OR_PHASE_CLOAK);
 				this.ship.blockCommandForOneFrame(ShipCommand.FIRE);
-				this.ship.blockCommandForOneFrame(ShipCommand.USE_SELECTED_GROUP);
+				this.ship.blockCommandForOneFrame(ShipCommand.FIRE);
 				// approximation: the engine FIRE_AT_WILL command is reached through the API
 				// TOGGLE_AUTOFIRE (engine Ship.giveCommand maps TOGGLE_AUTOFIRE -> FIRE_AT_WILL)
 				this.ship.blockCommandForOneFrame(ShipCommand.TOGGLE_AUTOFIRE);
@@ -403,13 +405,19 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			if (this.systemAI != null) {
 				boolean targetInvisible = attackTarget != null && !BattleNext_ShipAIHelper.isEntityVisible(this.ship.getOriginalOwner(), attackTarget);
 				this.aiFlags.setFlag(AIFlags.TARGET_FOR_SHIP_SYSTEM, 1.0F, targetInvisible ? null : attackTarget);
-				this.systemAI.advance(amount, avoidanceVector, this.flockingAI.getAvoidanceLocation(), targetInvisible ? null : attackTarget);
+				if (rttShouldAdvanceSystemAI()) {
+					this.systemAI.advance(amount, avoidanceVector, this.flockingAI.getAvoidanceLocation(), targetInvisible ? null : attackTarget);
+				}
 			}
 
 			if (this.sequence.isManeuverQueueEmpty()) {
 				this.pickManeuver();
 			}
 		}
+	}
+
+	protected boolean rttShouldAdvanceSystemAI() {
+		return true;
 	}
 
 	private boolean isChaseLikeManeuver(BattleNext_Maneuver maneuver) {
@@ -763,7 +771,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			}
 		}
 
-		BattleNext_OrderResponseData orderResponse = this.orderResponseModule.getOrderResponse();
+		BattleNext_OrderResponseData orderResponse = getRttOrderResponse();
+		if (orderResponse == null) orderResponse = this.orderResponseModule.getOrderResponse();
 
 		// map border avoidance
 		if (!this.orderResponseModule.isRetreating() && !this.aiFlags.hasFlag(AIFlags.DO_NOT_AVOID_BORDER)) {
@@ -950,6 +959,10 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		this.pickEngagementManeuver(bestTarget);
 	}
 
+	protected BattleNext_OrderResponseData getRttOrderResponse() {
+		return null;
+	}
+
 	private void pickEngagementManeuver(BattleNext_BestTargetEval bestTarget) {
 		com.fs.starfarer.api.combat.CombatTaskManagerAPI taskManager = BattleNext_ShipAIHelper.getEngine()
 			.getFleetManager(this.ship.getOriginalOwner()).getTaskManager(this.ship.isAlly());
@@ -988,7 +1001,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		boolean aggressive = "aggressive".equals(personality);
 		boolean hasInterceptTask = BattleNext_ShipAIHelper.hasInterceptTask(this.ship);
 		boolean hasStrikeTask = BattleNext_ShipAIHelper.hasStrikeTask(this.ship)
-			&& (!this.ship.getVariant().isCarrier() || this.ship.getHullSpec().getHints().contains(ShipTypeHints.COMBAT));
+			&& (!BattleNext_ShipAIHelper.isCarrier(this.ship) || this.ship.getHullSpec().getHints().contains(ShipTypeHints.COMBAT));
 		boolean orderedToAttack = BattleNext_ShipAIHelper.isShipOrderedToAttack(this.ship);
 		if ((personality.equals("cautious") || personality.equals("timid") || shipUnarmed)
 			&& (shipUnarmed || !targetNonCombat)
@@ -1148,7 +1161,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			}
 		}
 
-		if (this.ship.getVariant().isCarrier() && !this.attackAI.hasNonMissileWeapon()) {
+		if (BattleNext_ShipAIHelper.isCarrier(this.ship) && !this.attackAI.hasNonMissileWeapon()) {
 			float wingRange = this.attackAI.getMinMissileRange();
 			if (this.target != null) {
 				wingRange = Math.min(wingRange, BattleNext_ShipAIHelper.getCarrierWingRange(this.ship, this.target));

@@ -8,7 +8,6 @@ import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
-import com.fs.starfarer.api.loading.ProjectileSpecAPI;
 import com.fs.starfarer.api.loading.WeaponGroupType;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
@@ -24,7 +23,14 @@ import java.util.*;
  * Manual weapon group attack AI: picks (group, target) attack runs and drives them.
  */
 public class BattleNext_AttackAIModule {
+
 	public static final float fighterExtraRange = 500.0F;
+
+	static MissileSpecAPI requireMissileSpec(Object projectileSpec, String weaponId) {
+		if (projectileSpec instanceof MissileSpecAPI missileSpec) return missileSpec;
+		throw new IllegalArgumentException("MISSILE weapons must fire missiles; weapon id: [" + weaponId + "]");
+	}
+
 	private ShipAPI ship;
 	private BattleNext_AttackState attackState = BattleNext_AttackState.PICKING_TARGET;
 	private float stateTimer = 0.0F;
@@ -68,9 +74,7 @@ public class BattleNext_AttackAIModule {
 		if (!ship.isFighter() && !ship.isDrone()) {
 			this.autofireManager = new BattleNext_AutofireManagerV2(ship, this.weaponGroupEvaluations, aiFlags);
 		} else {
-			// approximation: the fighter autofire manager is not ported (fighter AI is out
-			// of scope); the generic manager stands in and the ship path never reaches here
-			this.autofireManager = new BattleNext_AutofireManagerV2(ship, this.weaponGroupEvaluations, aiFlags);
+			this.autofireManager = new BattleNext_FighterAutofireManager(ship, this.weaponGroupEvaluations, aiFlags);
 		}
 
 		this.fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(ship.getOriginalOwner());
@@ -238,9 +242,8 @@ public class BattleNext_AttackAIModule {
 		if ((this.aimPoint != null || fallbackAimPoint != null) && this.attackingGroup != null && this.attackingGroup.getShip() != null) {
 			WeaponGroupAPI group = BattleNext_ShipAIHelper.getWeaponGroup(this.ship, this.attackingGroup.getWeaponGroupIndex());
 			if (group != null && group.getWeaponsCopy() != null) {
-				// intentionally kept dead: vanilla pushed the aim point into each weapon of the group
-				// via weapon.getAimTracker().setTargetLocation(...); the engine-only aim tracker has no
-				// API equivalent and the mouseTarget already drives aiming
+				// approximation: vanilla pushes the aim point into each weapon's AimTracker;
+				// the public API has no AimTracker setter, so mouseTarget drives group aiming.
 			}
 		}
 
@@ -397,7 +400,7 @@ public class BattleNext_AttackAIModule {
 												}
 
 												if (this.attackingGroup.getEvaluationInterval() > 0.0F && this.attackingGroup.getAmmoThreshold() > 0.0F) {
-													this.ship.giveCommand(ShipCommand.USE_SELECTED_GROUP, this.ship.getMouseTarget(), -1);
+													this.ship.giveCommand(ShipCommand.FIRE, this.ship.getMouseTarget(), -1);
 													this.firing = true;
 													this.firingAtTarget = true;
 												}
@@ -777,7 +780,7 @@ public class BattleNext_AttackAIModule {
 			&& system.getSpecAPI().getWeaponTypes() != null
 			&& system.getSpecAPI().getWeaponTypes().contains(WeaponType.MISSILE)) {
 			if (!target.isFighter()
-				&& (!system.getSpecAPI().usesAmmo() || system.getAmmo() > 3 || system.getAmmo() > 1 && system.getAmmoPerSecond() > 0.0F)) {
+				&& (system.getAmmo() == Integer.MAX_VALUE || system.getAmmo() > 3 || system.getAmmo() > 1 && system.getAmmoPerSecond() > 0.0F)) {
 				// approximation: engine ship.getFluxCapacity() == flux tracker capacity == maxFlux
 				float fluxCapacity = this.ship.getMaxFlux();
 				float systemFluxFraction = system.getFluxPerUse() / fluxCapacity;
@@ -963,9 +966,7 @@ public class BattleNext_AttackAIModule {
 		group.setMinWeaponRange(10000.0F);
 		float fluxCostTotal = 0.0F;
 		boolean allWeaponsDry = true;
-		// approximation: engine engineController.getCruiseSpeed() includes the zero-flux boost;
-		// getMaxSpeed() is the closest API value
-		boolean weAreFaster = this.ship.getMaxSpeed() > target.getMaxSpeed();
+		boolean weAreFaster = BattleNext_ShipAIHelper.getCruiseSpeed(this.ship) > BattleNext_ShipAIHelper.getCruiseSpeed(target);
 		float distance = BattleNext_ShipAIHelper.getDistance(this.ship.getLocation(), targetLoc) - this.ship.getCollisionRadius() - target.getCollisionRadius();
 		if (weAreFaster) {
 			distance *= 0.7F;
@@ -1160,11 +1161,8 @@ public class BattleNext_AttackAIModule {
 						float shieldFluxPrediction = 0.0F;
 						float missileTravelTime = 0.0F;
 						if (weapon.getType() == WeaponType.MISSILE) {
-							if (!(((ProjectileSpecAPI) weapon.getSpec().getProjectileSpec()) instanceof MissileSpecAPI)) {
-								throw new RuntimeException("MISSILE weapons must fire missiles; weapon id: [" + weapon.getId() + "]");
-							}
-
-							MissileSpecAPI missileSpec = (MissileSpecAPI) ((ProjectileSpecAPI) weapon.getSpec().getProjectileSpec());
+							MissileSpecAPI missileSpec = requireMissileSpec(
+									weapon.getSpec().getProjectileSpec(), weapon.getId());
 							float missileSpeed = missileSpec.getHullSpec().getEngineSpec().getMaxSpeed();
 							if (this.ship.getMutableStats() != null) {
 								missileSpeed = this.ship.getMutableStats().getMissileMaxSpeedBonus().computeEffective(missileSpeed);
@@ -1297,7 +1295,7 @@ public class BattleNext_AttackAIModule {
 						if (target.getFluxTracker().isOverloadedOrVenting()
 							&& !target.isFighter()
 							&& weapon.getType() == WeaponType.MISSILE
-							&& ((ProjectileSpecAPI) weapon.getSpec().getProjectileSpec()) instanceof MissileSpecAPI) {
+							&& weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI) {
 							float recoverTime;
 							if (target.getFluxTracker().isOverloaded()) {
 								recoverTime = target.getFluxTracker().getOverloadTimeRemaining();

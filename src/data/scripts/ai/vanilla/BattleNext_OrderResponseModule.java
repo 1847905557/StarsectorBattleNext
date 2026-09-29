@@ -164,7 +164,7 @@ public class BattleNext_OrderResponseModule {
 				|| this.ship.getWing().getSourceShip() == null
 				// approximation: FighterWing.isCarrierAlive() checks the source bay's carrier for life
 				|| !this.ship.getWing().getSourceShip().isAlive()
-				|| !BattleNext_ShipAIHelper.isAlwaysEscortWing(this.ship.getWing().getSpec()) && !this.ship.isPullBackFighters()) {
+				|| !BattleNext_ShipAIHelper.isAlwaysEscortWing(this.ship.getWing().getSpec()) && !this.ship.getWing().getSourceShip().isPullBackFighters()) {
 				if (this.ship.isFighter() && this.ship.getWing() != null) {
 					return null;
 				}
@@ -288,9 +288,7 @@ public class BattleNext_OrderResponseModule {
 				}
 			}
 
-			// approximation: engine Ship.isCarrier() also requires the launch bays to cover two
-			// thirds of the fighter bays stat; the hull hint alone is used here
-			boolean carrierWithoutCombatHints = this.ship.getHullSpec().isCarrier();
+			boolean carrierWithoutCombatHints = BattleNext_ShipAIHelper.isCarrier(this.ship);
 			carrierWithoutCombatHints &= !this.ship.getHullSpec().getHints().contains(ShipTypeHints.NO_AUTO_ESCORT);
 			carrierWithoutCombatHints &= !this.ship.getHullSpec().getHints().contains(ShipTypeHints.COMBAT);
 			if ((taskType == CombatAssignmentType.INTERCEPT || taskType == CombatAssignmentType.AVOID || taskType == CombatAssignmentType.IGNORE || taskType == CombatAssignmentType.STRIKE && !carrierWithoutCombatHints)
@@ -463,8 +461,10 @@ public class BattleNext_OrderResponseModule {
 				case AVOID:
 				case INTERCEPT:
 					if ((isBomberWing || isSupportWing) && taskTarget instanceof DeployedFleetMemberAPI) {
-						// the engine calls getShipIfShip(), which is null for fighter-wing members
-						response.forcedTarget = ((DeployedFleetMemberAPI) taskTarget).getShip();
+						DeployedFleetMemberAPI targetMember = (DeployedFleetMemberAPI) taskTarget;
+						if (!targetMember.isFighterWing()) {
+							response.forcedTarget = targetMember.getShip();
+						}
 					} else {
 						BattleNext_TaskMoveManeuver engageMove = new BattleNext_TaskMoveManeuver(this.ship, taskTarget.getLocation(), this.maneuverAPI);
 						response.maneuver = engageMove;

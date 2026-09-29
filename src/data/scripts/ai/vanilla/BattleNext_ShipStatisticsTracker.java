@@ -2,10 +2,10 @@ package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.battlesnext.util.annotation.PublicData;
 import com.fs.starfarer.api.util.Misc;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -16,9 +16,8 @@ import java.util.List;
  * fitTrend(duration).avgX / .slope.
  *
  * Deviations from vanilla:
- * - Damage dealt is fed from outside via addDamageDealt (wired to an engine-wide
- *   damage listener by BattleNext_ShipAIHelper); damage taken is the per-sample
- *   hull point loss.
+ * - Damage dealt and taken are fed from an engine-wide damage listener by
+ *   BattleNext_ShipAIHelper.
  * - "Backoff" is approximated with the BACKING_OFF AI flag of the ship.
  * - "Distance to enemy" uses the nearest enemy passed in by the caller.
  * One instance lives per ship inside the ship's custom data.
@@ -26,12 +25,10 @@ import java.util.List;
 public class BattleNext_ShipStatisticsTracker {
 	public static final String CUSTOM_DATA_KEY = "BattleNext_ShipStatisticsTracker";
 
-	private static final float SAMPLE_INTERVAL = 0.2F;
-	private static final float WINDOW_KEEP_TIME = 6.0F;
+	private static final int HISTORY_POINTS = 20;
 
 	private float clock = 0.0F;
-	private float sampleTimer = 0.0F;
-	private float lastRecordedHitpoints = -1.0F;
+	private final IntervalUtil intervalTracker = new IntervalUtil(0.75F, 1.25F);
 
 	private final List<Sample> fluxLevelHistory = new ArrayList<>();
 	private final List<Sample> hardFluxLevelHistory = new ArrayList<>();
@@ -52,10 +49,12 @@ public class BattleNext_ShipStatisticsTracker {
 	private static class Sample {
 		private float time;
 		private float value;
+		private float interval;
 
-		Sample(float time, float value) {
+		Sample(float time, float value, float interval) {
 			this.time = time;
 			this.value = value;
+			this.interval = interval;
 		}
 	}
 
@@ -63,26 +62,24 @@ public class BattleNext_ShipStatisticsTracker {
 		this.damageDealtAccum += amount;
 	}
 
+	public void addDamageTaken(float amount) {
+		this.damageTakenAccum += amount;
+	}
+
 	public void advance(ShipAPI ship, CombatEntityAPI nearestEnemy, float amount, boolean backingOff) {
 		this.clock += amount;
-
-		float hitpoints = ship.getHitpoints();
-		if (this.lastRecordedHitpoints >= 0.0F && hitpoints < this.lastRecordedHitpoints) {
-			this.damageTakenAccum += this.lastRecordedHitpoints - hitpoints;
-		}
-		this.lastRecordedHitpoints = hitpoints;
-
-		this.sampleTimer += amount;
-		if (this.sampleTimer < SAMPLE_INTERVAL) {
-			return;
-		}
-		this.sampleTimer = 0.0F;
+		this.intervalTracker.advance(amount);
+		if (!this.intervalTracker.intervalElapsed()) return;
 
 		float fluxLevel = ship.getFluxTracker().getFluxLevel();
 		float hardFluxLevel = ship.getHardFluxLevel();
-		float distanceToEnemy = 0.0F;
+		float distanceToEnemy = 3000.0F;
 		if (nearestEnemy != null) {
 			distanceToEnemy = Misc.getDistance(ship.getLocation(), nearestEnemy.getLocation());
+			distanceToEnemy -= (ship.getCollisionRadius() + nearestEnemy.getCollisionRadius()) * 0.75F;
+			if (distanceToEnemy < 0.0F) {
+				distanceToEnemy = 0.0F;
+			}
 		}
 
 		this.record(this.fluxLevelHistory, this.clock, fluxLevel);
@@ -91,16 +88,14 @@ public class BattleNext_ShipStatisticsTracker {
 		this.record(this.damageTakenHistory, this.clock, this.damageTakenAccum);
 		this.record(this.damageDealtHistory, this.clock, this.damageDealtAccum);
 		this.record(this.backingOffHistory, this.clock, backingOff ? 1.0F : 0.0F);
+		this.damageTakenAccum = 0.0F;
+		this.damageDealtAccum = 0.0F;
 	}
 
 	private void record(List<Sample> history, float now, float value) {
-		history.add(new Sample(now, value));
-		float cutoff = now - WINDOW_KEEP_TIME;
-		Iterator<Sample> iterator = history.iterator();
-		while (iterator.hasNext()) {
-			if (iterator.next().time < cutoff) {
-				iterator.remove();
-			}
+		history.add(new Sample(now, value, this.intervalTracker.getIntervalDuration()));
+		while (history.size() > HISTORY_POINTS) {
+			history.remove(0);
 		}
 	}
 
@@ -110,17 +105,20 @@ public class BattleNext_ShipStatisticsTracker {
 			return fit;
 		}
 
-		float latestTime = history.get(history.size() - 1).time;
-		float cutoff = latestTime - duration;
+		float accumulatedInterval = 0.0F;
+		int firstIndex = history.size() - 1;
+		for (int index = history.size() - 1; index >= 0; index--) {
+			firstIndex = index;
+			accumulatedInterval += history.get(index).interval;
+			if (accumulatedInterval > duration) break;
+		}
 		float sumTime = 0.0F;
 		float sumValue = 0.0F;
 		float sumTimeSquared = 0.0F;
 		float sumTimeValue = 0.0F;
 		int count = 0;
-		for (Sample sample : history) {
-			if (sample.time < cutoff) {
-				continue;
-			}
+		for (int index = firstIndex; index < history.size(); index++) {
+			Sample sample = history.get(index);
 			sumTime += sample.time;
 			sumValue += sample.value;
 			sumTimeSquared += sample.time * sample.time;
@@ -133,7 +131,7 @@ public class BattleNext_ShipStatisticsTracker {
 
 		float meanTime = sumTime / count;
 		float meanValue = sumValue / count;
-		fit.avgX = sumValue / count;
+		fit.avgX = sumValue / accumulatedInterval;
 		float denominator = sumTimeSquared - sumTime * meanTime;
 		if (Math.abs(denominator) < 1.0E-6F) {
 			fit.slope = 0.0F;
@@ -168,6 +166,6 @@ public class BattleNext_ShipStatisticsTracker {
 	}
 
 	public boolean isDistanceHistoryFull() {
-		return this.distanceToEnemyHistory.size() >= (int) (5.0F / SAMPLE_INTERVAL);
+		return this.distanceToEnemyHistory.size() == HISTORY_POINTS;
 	}
 }

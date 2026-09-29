@@ -3,7 +3,7 @@
     "name": "AI Battles Next",
     "author": "AnyIDElse",
 	"version":{"major":0, "minor":0, "patch":1},
-	"gameVersion":"0.98a-RC6",
+	"gameVersion":"0.98a-RC8",
     "description": "A clean AI fleets battle Tournaments",
 	"modPlugin":"data.scripts.BattleNextModPlugin",
 	"jars":["jars/AI_Battles_Next.jar"],

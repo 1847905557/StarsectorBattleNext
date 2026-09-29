@@ -2,6 +2,7 @@ package data.scripts.ai.vanilla.maneuvers;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipCommand;
@@ -35,12 +36,19 @@ public class BattleNext_TaskMoveManeuver implements BattleNext_Maneuver {
 	private float maxRange = Float.MAX_VALUE;
 	private boolean unusedFlag = false;
 	private float currentRange = Float.MAX_VALUE;
+	private float arrivalRange = 500.0F;
 
 	public BattleNext_TaskMoveManeuver(ShipAPI ship, Vector2f destPoint, BattleNext_ManeuverAPI maneuverAPI) {
 		this.ship = ship;
 		this.destPoint = destPoint;
 		this.maneuverAPI = maneuverAPI;
 		this.updateTarget();
+	}
+
+	public static BattleNext_TaskMoveManeuver rttMove(ShipAPI ship, Vector2f destPoint, BattleNext_ManeuverAPI maneuverAPI, float arrivalRange) {
+		BattleNext_TaskMoveManeuver maneuver = new BattleNext_TaskMoveManeuver(ship, destPoint, maneuverAPI);
+		maneuver.arrivalRange = arrivalRange;
+		return maneuver;
 	}
 
 	private void updateTarget() {
@@ -78,14 +86,20 @@ public class BattleNext_TaskMoveManeuver implements BattleNext_Maneuver {
 
 		this.intercepting = false;
 		ShipAPI interceptTarget = null;
-		if (this.ship.getAI() instanceof BattleNext_BasicShipAI) {
-			BattleNext_BasicShipAI basicShipAI = (BattleNext_BasicShipAI) this.ship.getAI();
+		BattleNext_BasicShipAI basicShipAI = BattleNext_BasicShipAI.getActiveInstance(this.ship);
+		if (basicShipAI != null) {
 			BattleNext_OrderResponseModule orderResponse = basicShipAI.getOrderResponseModule();
 			BattleNext_DirectOrders orders = orderResponse.getOrders();
 			boolean interceptOrdered = orders != null && orders.getTaskType() == CombatAssignmentType.INTERCEPT;
 			if (interceptOrdered && orders.getTaskTarget() != null) {
-				// approximation: the API assignment target cannot be resolved back to a
-				// deployed ship, so the intercept target stays unresolved
+				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI) {
+					DeployedFleetMemberAPI taskMember = (DeployedFleetMemberAPI) orders.getTaskTarget();
+					if (!taskMember.isFighterWing()) {
+						interceptTarget = taskMember.getShip();
+					}
+				}
+				// approximation: the internal task target can wrap a deployed member;
+				// AssignmentTargetAPI exposes only directly deployed members and world position.
 			}
 
 			if (interceptTarget != null) {
@@ -234,7 +248,7 @@ public class BattleNext_TaskMoveManeuver implements BattleNext_Maneuver {
 			approachPoint = BattleNext_ShipAIHelper.getInterceptPoint(this.ship, this.destPoint, new Vector2f(), 0.0F, false, true);
 		}
 
-		float closeRange = 500.0F;
+		float closeRange = this.arrivalRange;
 		float currentSpeed = this.ship.getVelocity().length();
 		float farRange = 2000.0F;
 		if (this.maneuverAPI != null) {

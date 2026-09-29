@@ -8,27 +8,22 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Personalities;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
-import data.scripts.tools.BattleNext_Settings;
 
 import java.util.List;
 
-public class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
+public class BattleNext_EnvironmentPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final int MAX_FLEET_POINTS = 999;
 	private static final float COMMAND_POINTS = 999f;
 	private static final float FOG_REVEAL_RADIUS = 90000f;
-	private static final String COMMAND_POINT_MODIFIER = "BattleNext_MissionPlugin";
+	private static final String COMMAND_POINT_MODIFIER = "BattleNext_EnvironmentPlugin";
 
 	private final float timeLimit;
 	private CombatEngineAPI engine;
 	private boolean timeoutApplied;
 	private int elapsedSecond = -1;
 
-	public BattleNext_MissionPlugin() {
-		this(BattleNext_Settings.getBattleTimeLimit());
-	}
-
-	public BattleNext_MissionPlugin(float timeLimit) {
+	public BattleNext_EnvironmentPlugin(float timeLimit) {
 		this.timeLimit = Math.max(0f, timeLimit);
 	}
 
@@ -79,6 +74,6 @@ public class BattleNext_MissionPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getFleetManager(FleetSide.ENEMY).getTaskManager(false).setFullAssault(true);
 		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
 		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
-		Global.getLogger(BattleNext_MissionPlugin.class).info("BattleNext timeout applied at " + timeLimit + " seconds");
+		Global.getLogger(BattleNext_EnvironmentPlugin.class).info("BattleNext timeout applied at " + timeLimit + " seconds");
 	}
 }

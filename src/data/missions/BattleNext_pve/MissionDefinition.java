@@ -6,7 +6,7 @@ import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.plugin.BattleNext_BattleClockPlugin;
-import data.scripts.plugin.BattleNext_MissionPlugin;
+import data.scripts.plugin.BattleNext_EnvironmentPlugin;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
@@ -38,7 +38,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, true);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet, false);
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
-		api.addPlugin(new BattleNext_MissionPlugin(timeLimit));
+		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet.getMembers(), assembledEnemyFleet.getMembers());
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));

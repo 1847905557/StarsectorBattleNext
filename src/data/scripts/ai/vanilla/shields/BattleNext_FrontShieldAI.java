@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.ShieldAPI;
 import data.scripts.ai.vanilla.BattleNext_FiringSolutionEval;
+import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import org.lwjgl.util.vector.Vector2f;
 
@@ -81,9 +82,8 @@ public class BattleNext_FrontShieldAI implements BattleNext_ShieldAI {
 
 					// intentionally kept dead: read in vanilla and never used
 					float unfoldTime = shield.getUnfoldTime();
-					// engine energy is the current flux in the public API
-					float currFlux = this.ship.getFluxTracker().getCurrFlux();
-					float fluxFraction = this.ship.getFluxTracker().getCurrFlux() / this.ship.getMaxFlux();
+					float energy = BattleNext_ShipAIHelper.getFluxAvailable(this.ship);
+					float energyFraction = energy / this.fluxCapacity;
 					boolean dangerBeforeUnfold = this.eval.hasDetectedIncomingDamage() && this.eval.getBestTimeToHit() < this.shieldUnfoldTime + 1.0F
 						|| this.ship.getSinceLastDamageTaken() <= 0.5F;
 					boolean retreatHoldOpen = false;
@@ -131,14 +131,15 @@ public class BattleNext_FrontShieldAI implements BattleNext_ShieldAI {
 							boolean unusedThreat = true;
 						}
 
-						if (!retreatHoldOpen && (currFlux >= this.fluxCapacity * 0.2F || criticalHull) && !shield.isOn()) {
+						if (!retreatHoldOpen && (energy >= this.fluxCapacity * 0.2F || criticalHull)
+								&& BattleNext_ShipAIHelper.isShieldIdle(this.ship)) {
 							if (totalThreat > 0.0F && !threatEvalAI.isAllThreatsActive() || dangerBeforeUnfold || avoidanceVector != null || collisionThreatDir != null) {
 								this.ship.giveCommand(ShipCommand.TOGGLE_SHIELD_OR_PHASE_CLOAK, null, -1);
 								this.shieldsOn = true;
 							}
-						} else if (fluxFraction < 0.5F) {
+						} else if (energyFraction < 0.5F) {
 							this.timeSinceShieldToggle += amount;
-							if ((currFlux < this.fluxCapacity * 0.2F || criticalHull)
+							if ((energy < this.fluxCapacity * 0.2F || criticalHull)
 								&& this.timeSinceShieldToggle > 3.0F
 								&& (totalThreat == 0.0F || threatEvalAI.isAllThreatsActive())
 								&& avoidanceVector == null

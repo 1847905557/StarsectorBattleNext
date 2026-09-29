@@ -29,6 +29,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	private CustomPanelAPI panel;
 	private ButtonAPI fullGraphicEffect;
+	private ButtonAPI rttInPvp;
 	private TextFieldAPI battleTimeLimit;
 	private TextFieldAPI defaultTimeMult;
 	private TextFieldAPI boostTimeMult;
@@ -61,6 +62,11 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 				strings.get("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
 				GRAPHICS_CHECKBOX_TOP_GAP);
 		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
+		rttInPvp = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
+				GRAPHICS_CHECKBOX_HEIGHT,
+				strings.get("settings_rtt_in_pvp"), "rttInPvp", ButtonAPI.UICheckboxSize.SMALL,
+				GRAPHICS_CHECKBOX_TOP_GAP);
+		rttInPvp.setChecked(BattleNext_Settings.isRttInPvp());
 		battleTimeLimit = field(content, "settings_battle_time_limit", Float.toString(BattleNext_Settings.getBattleTimeLimit()));
 		defaultTimeMult = field(content, "settings_default_time_mult", Float.toString(BattleNext_Settings.getDefaultTimeMult()));
 		boostTimeMult = field(content, "settings_boost_time_mult", Float.toString(BattleNext_Settings.getBoostTimeMult()));
@@ -100,7 +106,8 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 			float defaultMult = parsePositive(defaultTimeMult.getText());
 			float boostMult = parsePositive(boostTimeMult.getText());
 			int keepCount = parseCount(reportKeepCount.getText());
-			BattleNext_Settings.save(fullGraphicEffect.isChecked(), timeLimit, defaultMult, boostMult, keepCount);
+			BattleNext_Settings.save(fullGraphicEffect.isChecked(), rttInPvp.isChecked(),
+					timeLimit, defaultMult, boostMult, keepCount);
 			savedState = serializeState();
 			status = strings.get("saved");
 			statusLabel.setText(status);
@@ -116,6 +123,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 	public void discard() {
 		load();
 		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
+		rttInPvp.setChecked(BattleNext_Settings.isRttInPvp());
 		battleTimeLimit.setText(Float.toString(BattleNext_Settings.getBattleTimeLimit()));
 		defaultTimeMult.setText(Float.toString(BattleNext_Settings.getDefaultTimeMult()));
 		boostTimeMult.setText(Float.toString(BattleNext_Settings.getBoostTimeMult()));
@@ -139,7 +147,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	private String serializeState() {
 		if (fullGraphicEffect == null) return "";
-		return fullGraphicEffect.isChecked() + "|" + battleTimeLimit.getText() + "|"
+		return fullGraphicEffect.isChecked() + "|" + rttInPvp.isChecked() + "|" + battleTimeLimit.getText() + "|"
 				+ defaultTimeMult.getText() + "|" + boostTimeMult.getText() + "|" + reportKeepCount.getText();
 	}
 

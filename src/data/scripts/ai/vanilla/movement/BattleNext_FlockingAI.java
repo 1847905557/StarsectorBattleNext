@@ -83,7 +83,7 @@ public class BattleNext_FlockingAI {
 	}
 
 	public void updateMaxSpeed(float amount) {
-		// approximation: ShipEngineControllerAPI has no getEffectiveMaxSpeed(); ShipAPI.getMaxSpeed() returns exactly that engine value
+		// Ship.getMaxSpeed() delegates to the engine controller's effective max speed.
 		this.currentMaxSpeed = this.ship.getMaxSpeed();
 		this.collisionAnalysis.advance(amount);
 	}
@@ -101,7 +101,7 @@ public class BattleNext_FlockingAI {
 	}
 
 	public void update(float amount) {
-		// approximation: ShipEngineControllerAPI has no getEffectiveMaxSpeed(); ShipAPI.getMaxSpeed() returns exactly that engine value
+		// Ship.getMaxSpeed() delegates to the engine controller's effective max speed.
 		float speedFraction = this.currentMaxSpeed / this.ship.getMaxSpeed();
 		if (speedFraction > this.maxSpeedFraction) {
 			speedFraction = this.maxSpeedFraction;
@@ -136,7 +136,7 @@ public class BattleNext_FlockingAI {
 		}
 
 		this.engineAI.setDesiredFacing(this.desiredFacing);
-		// approximation: ShipEngineControllerAPI has no getEffectiveMaxSpeed(); ShipAPI.getMaxSpeed() returns exactly that engine value
+		// Ship.getMaxSpeed() delegates to the engine controller's effective max speed.
 		this.currentMaxSpeed = this.ship.getMaxSpeed();
 	}
 

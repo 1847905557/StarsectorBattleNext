@@ -1,4 +1,4 @@
-package data.scripts.ai.vanilla.attack;
+package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.combat.AutofireAIPlugin;
 import com.fs.starfarer.api.combat.CollisionClass;
@@ -22,6 +22,8 @@ import org.lwjgl.util.vector.Vector2f;
 /**
  * Port of engine class com.fs.starfarer.combat.ai.PointDefenseAutofireAI.
  * Per-weapon point defense targeting and fire permission state machine.
+ * TODO: Connect this port through BattleNextModPlugin.pickWeaponAutofireAI
+ * when the weapon-level replacement policy is defined.
  */
 public class BattleNext_PointDefenseAutofireAI implements AutofireAIPlugin {
 	// f_d435ae80_4, inlined by the compiler into the literals below

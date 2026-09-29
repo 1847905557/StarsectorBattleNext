@@ -265,6 +265,7 @@
 		"BattleNext_ui_settings_heading": "Settings management",
 		"BattleNext_ui_settings_description": "Interface and battle settings.",
 		"BattleNext_ui_settings_full_graphic_effect": "Full graphic effects",
+		"BattleNext_ui_settings_rtt_in_pvp": "Enable RTT controls in PvP",
 		"BattleNext_ui_settings_battle_time_limit": "Battle time limit (seconds)",
 		"BattleNext_ui_settings_default_time_mult": "Default time multiplier",
 		"BattleNext_ui_settings_boost_time_mult": "Boost time multiplier",

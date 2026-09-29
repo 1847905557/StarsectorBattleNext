@@ -92,7 +92,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
 		api.addPlugin(new BattleNext_DeploymentPlugin());
-		api.addPlugin(new BattleNext_MissionPlugin(timeLimit));
+		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
@@ -100,6 +100,9 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
+		if (BattleNext_Settings.isRttInPvp()) {
+			api.addPlugin(new BattleNext_RttPlugin());
+		}
 		BattleNext_PageantPlugin pageant = new BattleNext_PageantPlugin(scorekeeper,
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
 		api.addPlugin(pageant);

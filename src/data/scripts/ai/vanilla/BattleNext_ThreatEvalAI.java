@@ -364,9 +364,9 @@ public class BattleNext_ThreatEvalAI {
 						if (!countedMembers.contains(member)) {
 							countedMembers.add(member);
 							if (other.getOwner() == owner) {
-								ownStrength += member.getMember().getMemberStrength() * strengthWeight;
+								ownStrength += BattleNext_ShipAIHelper.getDeployedMemberStrength(member, other) * strengthWeight;
 							} else {
-								enemyStrength += member.getMember().getMemberStrength() * threatWeight;
+								enemyStrength += BattleNext_ShipAIHelper.getDeployedMemberStrength(member, other) * threatWeight;
 							}
 						}
 					} else if (other.isFighter() && !countedWings.contains(other.getWing())) {
@@ -506,9 +506,11 @@ public class BattleNext_ThreatEvalAI {
 			float radiusSum = this.ship.getCollisionRadius() + target.getCollisionRadius();
 			float explosionRadius = this.ship.getCollisionRadius() + DamagingExplosionSpec.getShipExplosionRadius(target) + 100.0F;
 			float evalBonus = 0.0F;
-			// the ported BasicShipAI exposes its firing solution eval the same way the engine one does
-			if (target.getAI() instanceof BattleNext_BasicShipAI) {
-				BattleNext_FiringSolutionEval eval = ((BattleNext_BasicShipAI) target.getAI()).getEval();
+			// approximation: the engine reads BasicShipAI firing estimates on any
+			// native ship; ShipAPI exposes only a wrapper, so native estimates are unavailable.
+			BattleNext_BasicShipAI targetAI = BattleNext_BasicShipAI.getActiveInstance(target);
+			if (targetAI != null) {
+				BattleNext_FiringSolutionEval eval = targetAI.getEval();
 				evalBonus = (eval.getMaxWeaponDamage() + eval.getHullDamage()) * 2.0F;
 			}
 

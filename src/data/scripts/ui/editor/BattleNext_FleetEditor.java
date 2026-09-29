@@ -21,6 +21,8 @@ import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_PortraitSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_PersonalitySourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -238,12 +240,20 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			title.setHeightSoFar(MEMBER_DETAIL_TITLE_HEIGHT);
 			bodyPanel.addUIElement(title).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 			float y = MEMBER_DETAIL_INSET + MEMBER_DETAIL_TITLE_HEIGHT;
-			fields.variant = addFieldBlock(bodyPanel, memberContent, text("variant"), member.getVariantId(), detailWidth, y);
-			y += MEMBER_DETAIL_FIELD_BLOCK;
+			BattleNext_OptionField variantPicker = new BattleNext_OptionField(overlayHost,
+					new BattleNext_VariantSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
+			fields.variant = addOptionBlock(bodyPanel, memberContent, text("variant"), variantPicker,
+					member.getVariantId(), detailWidth, y);
+			memberPickers.add(variantPicker);
+			y += MEMBER_DETAIL_PICKER_BLOCK;
 			fields.name = addFieldBlock(bodyPanel, memberContent, text("member_name"), member.getName(), detailWidth, y);
 			y += MEMBER_DETAIL_FIELD_BLOCK;
-			fields.personality = addFieldBlock(bodyPanel, memberContent, text("personality"), member.getPersonality(), detailWidth, y);
-			y += MEMBER_DETAIL_FIELD_BLOCK;
+			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(overlayHost,
+					new BattleNext_PersonalitySourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
+			fields.personality = addOptionBlock(bodyPanel, memberContent, text("personality"), personalityPicker,
+					member.getPersonality(), detailWidth, y);
+			memberPickers.add(personalityPicker);
+			y += MEMBER_DETAIL_PICKER_BLOCK;
 			BattleNext_OptionField memberSkills = new BattleNext_OptionField(overlayHost,
 					new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 			fields.skills = addOptionBlock(bodyPanel, memberContent, text("member_skills"), memberSkills,
@@ -274,7 +284,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private float memberDetailHeight() {
 		return MEMBER_DETAIL_INSET * 2f + MEMBER_DETAIL_TITLE_HEIGHT
-				+ MEMBER_DETAIL_FIELD_BLOCK * 5f + MEMBER_DETAIL_PICKER_BLOCK * 2f
+				+ MEMBER_DETAIL_FIELD_BLOCK * 3f + MEMBER_DETAIL_PICKER_BLOCK * 4f
 				+ MEMBER_DETAIL_BUTTON_BLOCK;
 	}
 
@@ -476,10 +486,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				try {
 					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantBuilder.fromRegistered(variantId));
 				} catch (Exception exception) {
-					if (validate) {
-						setStatus(text("invalid_variant"));
-						return false;
-					}
+					// Keep references to variants unavailable in the current game setup.
 				}
 			}
 			members.add(new BattleNext_MemberModel(variantId, value(fields == null ? null : fields.name, existing.getName()),

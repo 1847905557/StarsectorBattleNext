@@ -65,6 +65,24 @@ class BattleNext_OrderFieldTest {
 		assertEquals(List.of(playerOrder), fixture.assignments);
 	}
 
+	@Test
+	void rttTakeoverReleasesOnlyAutomatedAssignment() {
+		Fixture fixture = new Fixture();
+		BattleNext_OrderField field = fixture.field();
+		ShipAPI automated = fixture.ship();
+		ShipAPI manual = fixture.ship();
+		AssignmentTargetAPI target = fixture.objective();
+		assertTrue(field.apply(automated, CombatAssignmentType.ENGAGE, target, 0f));
+		AssignmentInfo playerOrder = fixture.assignment(CombatAssignmentType.DEFEND, fixture.objective());
+		fixture.assigned.put(manual, playerOrder);
+
+		field.releaseShip(automated);
+		field.releaseShip(manual);
+
+		assertNull(fixture.assigned.get(automated));
+		assertSame(playerOrder, fixture.assigned.get(manual));
+	}
+
 	private static class Fixture {
 
 		private final Map<String, Object> custom = new HashMap<>();

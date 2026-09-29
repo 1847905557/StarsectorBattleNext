@@ -432,6 +432,7 @@ public class BattleNext_FiringSolutionEval {
 		}
 
 		for (DamagingProjectileAPI projectile : engine.getProjectiles()) {
+			if (projectile instanceof MissileAPI) continue;
 			if (Math.abs(projectile.getLocation().x - center.x) > halfExtent || Math.abs(projectile.getLocation().y - center.y) > halfExtent) {
 				continue;
 			}
@@ -549,8 +550,9 @@ public class BattleNext_FiringSolutionEval {
 
 		float armorDamageValue = damage.getDamage() * damage.getType().getArmorMult();
 		if (fromMissile || armorDamageValue > this.ship.getHitpoints() * 0.25F || armorDamageValue > this.ship.getMaxHitpoints() * 0.05F) {
-			// approximation: vanilla passed the MovingRay itself; the source ship stands in for it
-			this.accumulateDamage(source, beam.getFrom(), new Vector2f(0.0F, 0.0F), damage,
+			// approximation: MovingRay location and velocity are unavailable through BeamAPI;
+			// the beam origin and a stationary ray preserve the remaining damage test.
+			this.accumulateDamage(null, beam.getFrom(), new Vector2f(0.0F, 0.0F), damage,
 				range, totals, angle, arc, result, maxTime, false);
 		}
 	}

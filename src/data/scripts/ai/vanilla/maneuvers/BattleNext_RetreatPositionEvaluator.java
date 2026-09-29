@@ -32,6 +32,11 @@ public class BattleNext_RetreatPositionEvaluator implements BattleNext_ShipAIHel
 		return this.allowSameStationOrShip;
 	}
 
+	@Override
+	public boolean allowsSameStationOrShip() {
+		return this.allowSameStationOrShip;
+	}
+
 	// approximation: reconstructed base-class behavior; ships at or above the
 	// configured hull size count when they pass the ownership and targetability
 	// checks

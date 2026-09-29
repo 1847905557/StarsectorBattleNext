@@ -1,6 +1,7 @@
 package data.scripts.ai.vanilla.maneuvers;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShieldAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
@@ -180,8 +181,9 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 		this.targetSide = 0.0F;
 		if (!this.holdTarget) {
 			float gridSpan = 4000.0F;
-			// approximation: the engine spatial ship grid is replaced by a scan of the
-			// full ship list restricted to the same query box
+			// approximation: the engine spatial ship grid returns every ship in cells
+			// overlapping a 4000 x 4000 query; the public API exposes the ship list,
+			// so an exact 4000 x 4000 box is used as the candidate boundary.
 			List<ShipAPI> ships = BattleNext_ShipAIHelper.getEngine().getShips();
 			float bestSide = 0.0F;
 			float bestScore = 0.0F;
@@ -942,14 +944,20 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 		threatScore += crMult;
 		if (BattleNext_ShipAIHelper.hasInterceptTask(this.ship)) {
 			ShipAPI interceptTarget = null;
-			if (this.ship.getAI() instanceof BattleNext_BasicShipAI) {
-				BattleNext_BasicShipAI basicShipAI = (BattleNext_BasicShipAI) this.ship.getAI();
+			BattleNext_BasicShipAI basicShipAI = BattleNext_BasicShipAI.getActiveInstance(this.ship);
+			if (basicShipAI != null) {
 				BattleNext_OrderResponseModule orderResponse = basicShipAI.getOrderResponseModule();
 				boolean interceptOrdered = orderResponse.getOrders() != null
 					&& orderResponse.getOrders().getTaskType() == CombatAssignmentType.INTERCEPT;
 				if (interceptOrdered && orderResponse.getOrders().getTaskTarget() != null) {
-					// approximation: the API assignment target cannot be resolved back to
-					// a deployed ship, so the intercept target stays unresolved
+					if (orderResponse.getOrders().getTaskTarget() instanceof DeployedFleetMemberAPI) {
+						DeployedFleetMemberAPI taskMember = (DeployedFleetMemberAPI) orderResponse.getOrders().getTaskTarget();
+						if (!taskMember.isFighterWing()) {
+							interceptTarget = taskMember.getShip();
+						}
+					}
+					// approximation: internal task wrappers lack an AssignmentTargetAPI
+					// mapping; directly deployed member targets retain their ship identity.
 				}
 			}
 
@@ -1205,10 +1213,14 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 			if (orders != null
 				&& orders.getTaskType() != null
 				&& orders.getTaskTarget() != null) {
-				// approximation: the ported orders carry only the assignment target, the
-				// deployed-fleet-member identity re-check of vanilla always resolves to
-				// its null branch and clears the station cover
-				stationCover = false;
+				if (!(orders.getTaskTarget() instanceof DeployedFleetMemberAPI)) {
+					stationCover = false;
+				} else {
+					ShipAPI assignedShip = ((DeployedFleetMemberAPI) orders.getTaskTarget()).getShip();
+					stationCover = isStationCoverTaskTarget(assignedShip, this.targetShip);
+				}
+				// approximation: vanilla CombatTask may wrap a deployed member; the
+				// public assignment target exposes only direct member identity.
 			}
 		}
 
@@ -1710,6 +1722,10 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 
 	// port of engine HullVariantSpec.isNonCombat: carrier or civilian hints and
 	// no combat hint
+	static boolean isStationCoverTaskTarget(ShipAPI assignedShip, ShipAPI targetShip) {
+		return assignedShip == null || BattleNext_ShipAIHelper.isSameStationOrShip(assignedShip, targetShip);
+	}
+
 	private static boolean isNonCombatVariant(ShipAPI ship) {
 		return (ship.getVariant().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.CARRIER)
 			|| ship.getVariant().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.CIVILIAN))
@@ -1756,10 +1772,8 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 		return 2.0F * radius / ((float) (Math.PI * 2) * distance) * 360.0F;
 	}
 
-	// approximation: ShipAPI has no flux-available accessor; the unspent fraction
-	// of the flux capacity is used
 	private static float fluxAvailable(ShipAPI ship) {
-		return ship.getMaxFlux() * (1.0F - ship.getFluxLevel());
+		return BattleNext_ShipAIHelper.getFluxAvailable(ship);
 	}
 
 	// approximation: the engine combat map center is reconstructed from the helper

@@ -33,15 +33,22 @@ import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageListener;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
+import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WingRole;
 import com.fs.starfarer.api.impl.combat.PhaseCloakStats;
 import com.fs.starfarer.api.util.Misc;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
+import java.io.IOException;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.lwjgl.util.vector.Vector2f;
 
@@ -81,7 +88,12 @@ public class BattleNext_ShipAIHelper {
 	private static final float[] AIM_ERROR_OFFSETS = new float[2];
 	public static final float aimErrorDivisor = 15.0F;
 
-	private static final List<ShipAPI> BLOCKING_SHIPS = new ArrayList<>();
+	private static final String BLOCKING_SHIPS_KEY = "BattleNext_ShipAIHelper_BlockingShips";
+
+	private static class BlockingShipsCache {
+		private float sampledAt;
+		private List<ShipAPI> ships;
+	}
 
 	private static final String DAMAGE_LISTENER_INSTALLED_KEY = "BattleNext_ShipAIHelper_DamageListenerInstalled";
 
@@ -123,6 +135,14 @@ public class BattleNext_ShipAIHelper {
 		engine.getListenerManager().addListener(new DamageListener() {
 			@Override
 			public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
+				if (target instanceof ShipAPI) {
+					Object targetTracker = ((ShipAPI) target).getCustomData().get(BattleNext_ShipStatisticsTracker.CUSTOM_DATA_KEY);
+					if (targetTracker instanceof BattleNext_ShipStatisticsTracker) {
+						float amount = result.getDamageToHull() + result.getTotalDamageToArmor() + result.getDamageToShields();
+						((BattleNext_ShipStatisticsTracker) targetTracker).addDamageTaken(amount);
+					}
+				}
+
 				if (!(source instanceof ShipAPI)) {
 					return;
 				}
@@ -148,8 +168,8 @@ public class BattleNext_ShipAIHelper {
 
 	public static String getPersonality(ShipAPI ship) {
 		String personality = null;
-		if (ship.getAI() instanceof ShipAIPlugin) {
-			ShipAIConfig config = ((ShipAIPlugin) ship.getAI()).getConfig();
+		if (BattleNext_BasicShipAI.getActiveInstance(ship) != null && ship.getShipAI() != null) {
+			ShipAIConfig config = ship.getShipAI().getConfig();
 			if (config != null && config.personalityOverride != null) {
 				personality = config.personalityOverride;
 			}
@@ -159,54 +179,64 @@ public class BattleNext_ShipAIHelper {
 			personality = ship.getCaptain().getPersonalityAPI().getId();
 		}
 
-		return personality;
+		// approximation: ShipAPI omits Ship.getFallbackPersonalityId(); the
+		// engine initializes that field to steady when no captain is present.
+		return personality == null ? "steady" : personality;
 	}
 
-	/**
-	 * Numeric personality scale used where the engine ranked personalities by
-	 * bravery. The values are approximations.
-	 */
-	public static int getBravery(ShipAPI ship) {
+	// PersonalityAPI omits the engine bravery field; the merged personality
+	// spreadsheet is the same data source that initializes PersonalityImpl.
+	public static float getBravery(ShipAPI ship) {
 		String personality = getPersonality(ship);
-		if ("aggressive".equals(personality)) {
-			return 4;
+		try {
+			JSONArray rows = Global.getSettings().getMergedSpreadsheetData("id", "data/characters/personalities.csv");
+			for (int index = 0; index < rows.length(); index++) {
+				JSONObject row = rows.optJSONObject(index);
+				if (row != null && personality.equals(row.optString("id", "").trim())) {
+					return (float) row.getDouble("bravery");
+				}
+			}
+		} catch (IOException | JSONException exception) {
+			throw new IllegalStateException("Unable to load personality bravery", exception);
 		}
-
-		if ("reckless".equals(personality)) {
-			return 5;
-		}
-
-		if ("cautious".equals(personality)) {
-			return 2;
-		}
-
-		if ("timid".equals(personality)) {
-			return 1;
-		}
-
-		return 3;
+		throw new IllegalStateException("Personality bravery missing: " + personality);
 	}
 
-	/**
-	 * Replaces engine hullSpec.computeFleetStrengthValue() with the deployed
-	 * member's fleet point cost.
-	 */
+	// Port of ShipHullSpec.computeFleetStrengthValue(): every hull weapon slot
+	// contributes by size, including slots without a fitted weapon.
 	public static float computeFleetStrength(ShipAPI ship) {
-		if (ship == null) {
-			return 0.0F;
+		float strength = 0.0F;
+		for (WeaponSlotAPI slot : ship.getHullSpec().getAllWeaponSlotsCopy()) {
+			switch (slot.getSlotSize()) {
+				case SMALL:
+					strength += 1.0F;
+					break;
+				case MEDIUM:
+					strength += 2.0F;
+					break;
+				case LARGE:
+					strength += 4.0F;
+					break;
+			}
 		}
 
-		CombatEngineAPI engine = getEngine();
-		if (engine == null) {
-			return 0.0F;
+		return strength;
+	}
+
+	// Port of DeployedFleetMember.getMemberStrength(): non-wing strength follows
+	// the deployed ship's current hull fraction.
+	public static float getDeployedMemberStrength(DeployedFleetMemberAPI member, ShipAPI ship) {
+		float strength = member.getMember().getMemberStrength();
+		if (!member.isFighterWing()) {
+			ShipAPI deployed = ship != null ? ship : member.getShip();
+			if (deployed != null) {
+				strength *= 0.5F + 0.5F * deployed.getHitpoints() / deployed.getMaxHitpoints();
+			}
+			// approximation: a missing API deployed ship has no hull fraction;
+			// the member's undamaged strength is used until a ship is available.
 		}
 
-		DeployedFleetMemberAPI member = engine.getFleetManager(ship.getOwner()).getDeployedFleetMember(ship);
-		if (member == null || member.getMember() == null) {
-			return 0.0F;
-		}
-
-		return member.getMember().getFleetPointCost();
+		return strength;
 	}
 
 	/**
@@ -218,9 +248,9 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	/**
-	 * approximation: engine Shield.isIdle() is not exposed; idle means the
-	 * shield system is not currently on. A ship without a shield counts as
-	 * idle.
+	 * approximation: engine Shield.isIdle() is not exposed. ShieldAPI.isOn()
+	 * reports charge-tracker activation, so the inactive state also includes
+	 * transitions that the original idle check would reject.
 	 */
 	public static boolean isShieldIdle(ShipAPI ship) {
 		ShieldAPI shield = ship.getShield();
@@ -229,6 +259,13 @@ public class BattleNext_ShipAIHelper {
 
 	public static boolean isPhaseShip(ShipAPI ship) {
 		return ship.getPhaseCloak() != null;
+	}
+
+	// Port of Ship.isCarrier(): the variant carrier flag requires sufficient
+	// actual launch bays relative to the modified fighter-bay stat.
+	public static boolean isCarrier(ShipAPI ship) {
+		return ship.getVariant().isCarrier()
+			&& ship.getLaunchBaysCopy().size() >= ship.getMutableStats().getNumFighterBays().getModifiedValue() * 0.66F;
 	}
 
 	public static boolean isEngineDisabled(ShipAPI ship) {
@@ -247,12 +284,8 @@ public class BattleNext_ShipAIHelper {
 		return spec.getRole() == WingRole.SUPPORT;
 	}
 
-	/**
-	 * approximation: the settings file has no dps-to-hit-strength multiplier
-	 * exposed through SettingsAPI; the vanilla default value is used.
-	 */
 	public static float getDpsToHitStrengthMult() {
-		return 0.5F;
+		return Global.getSettings().getFloat("dpsToHitStrengthMult");
 	}
 
 	// approximation: the API exposes only the map extent, not the map origin;
@@ -284,18 +317,33 @@ public class BattleNext_ShipAIHelper {
 		private float expireAt;
 	}
 
-	private static final ConcurrentHashMap<String, TimeoutEntry> timedCustomData = new ConcurrentHashMap<>();
+	// approximation: CombatEngineAPI omits the engine's TimeoutTrackerMap;
+	// combat custom data owns an equivalent elapsed-combat-time map.
+	private static final String TIMED_CUSTOM_DATA_KEY = "BattleNext_ShipAIHelper_TimedCustomData";
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, TimeoutEntry> timedCustomData(CombatEngineAPI engine) {
+		return (Map<String, TimeoutEntry>) engine.getCustomData().computeIfAbsent(
+			TIMED_CUSTOM_DATA_KEY, ignored -> new ConcurrentHashMap<String, TimeoutEntry>());
+	}
 
 	public static Object getCustomDataWithTimeout(String key) {
-		TimeoutEntry entry = timedCustomData.get(key);
+		return getCustomDataWithTimeout(getEngine(), key);
+	}
+
+	static Object getCustomDataWithTimeout(CombatEngineAPI engine, String key) {
+		if (engine == null) {
+			return null;
+		}
+		Map<String, TimeoutEntry> entries = timedCustomData(engine);
+		TimeoutEntry entry = entries.get(key);
 		if (entry == null) {
 			return null;
 		}
 
-		CombatEngineAPI engine = getEngine();
-		float now = engine == null ? 0.0F : engine.getTotalElapsedTime(false);
+		float now = engine.getTotalElapsedTime(false);
 		if (now >= entry.expireAt) {
-			timedCustomData.remove(key);
+			entries.remove(key);
 			return null;
 		}
 
@@ -303,12 +351,18 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static void setCustomDataWithTimeout(String key, Object value, float seconds) {
+		setCustomDataWithTimeout(getEngine(), key, value, seconds);
+	}
+
+	static void setCustomDataWithTimeout(CombatEngineAPI engine, String key, Object value, float seconds) {
+		if (engine == null) {
+			return;
+		}
 		TimeoutEntry entry = new TimeoutEntry();
 		entry.value = value;
-		CombatEngineAPI engine = getEngine();
-		float now = engine == null ? 0.0F : engine.getTotalElapsedTime(false);
+		float now = engine.getTotalElapsedTime(false);
 		entry.expireAt = now + seconds;
-		timedCustomData.put(key, entry);
+		timedCustomData(engine).put(key, entry);
 	}
 
 	public static boolean containsCustomDataWithTimeout(String key) {
@@ -682,9 +736,10 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	/**
-	 * Distance from point to the segment between a and b. Replaces engine
-	 * com.fs.util.VectorMathUtils.distanceToSegment, which the mod API does
-	 * not expose.
+	 * approximation: com.fs.util.VectorMathUtils.distanceToSegment is absent
+	 * from the available source and public API. Projecting onto the finite
+	 * segment and clamping to its endpoints preserves the collision-distance
+	 * criterion used by AIUtils.computeDanger.
 	 */
 	private static float distanceToSegment(Vector2f a, Vector2f b, Vector2f point) {
 		float dx = b.x - a.x;
@@ -705,9 +760,9 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	/**
-	 * Intersection point of the segments p1-p2 and p3-p4, or null. Replaces
-	 * engine com.fs.util.VectorMathUtils.segmentIntersection, which the mod
-	 * API does not expose.
+	 * approximation: com.fs.util.VectorMathUtils.segmentIntersection is absent
+	 * from the available source and public API. A finite-segment parametric
+	 * intersection supplies the point used by hull and shield checks.
 	 */
 	private static Vector2f segmentIntersection(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4) {
 		float d1x = p2.x - p1.x;
@@ -864,6 +919,8 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static BattleNext_Orderable getOrderable(ShipAPI ship) {
+		BattleNext_BasicShipAI portedAI = BattleNext_BasicShipAI.getActiveInstance(ship);
+		if (portedAI != null) return portedAI;
 		return ship.getAI() instanceof BattleNext_Orderable ? (BattleNext_Orderable) ship.getAI() : null;
 	}
 
@@ -1008,17 +1065,11 @@ public class BattleNext_ShipAIHelper {
 		}
 
 		float closingSpeed = getClosingSpeed(ship, target);
-		// approximation: engine cruise speed is not exposed on the engine
-		// controller API; max speed without zero-flux boost is used
-		float targetSpeed = target.getMaxSpeedWithoutBoost();
+		float targetSpeed = getPlanningSpeedWithoutZeroFluxBoost(target);
 		if (effectiveTime > 0.0F) {
 			// approximation: system spec AI hints are not exposed; burst
 			// movement potential treated as 0
 			targetSpeed += 0.0F;
-		}
-
-		if (!target.isEngineBoostActive()) {
-			targetSpeed -= target.getMutableStats().getZeroFluxSpeedBoost().getModifiedValue();
 		}
 
 		if (target.getPhaseCloak() != null && target.getHardFluxLevel() < 0.2F) {
@@ -1031,12 +1082,7 @@ public class BattleNext_ShipAIHelper {
 			targetSpeed += 0.0F * effectiveTime / leadTime;
 		}
 
-		// approximation: engine cruise speed is not exposed on the engine
-		// controller API; max speed without zero-flux boost is used
-		float shipSpeed = ship.getMaxSpeedWithoutBoost();
-		if (!ship.isEngineBoostActive()) {
-			shipSpeed -= ship.getMutableStats().getZeroFluxSpeedBoost().getModifiedValue();
-		}
+		float shipSpeed = getPlanningSpeedWithoutZeroFluxBoost(ship);
 
 		return Math.max(closingSpeed, targetSpeed - shipSpeed);
 	}
@@ -1184,11 +1230,32 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static void clearBlockingShips() {
-		BLOCKING_SHIPS.clear();
+		CombatEngineAPI engine = getEngine();
+		if (engine != null) engine.getCustomData().remove(BLOCKING_SHIPS_KEY);
 	}
 
 	public static void resetBlockingShips() {
-		BLOCKING_SHIPS.clear();
+		clearBlockingShips();
+	}
+
+	// approximation: CombatEngineAPI does not expose the engine's two cache
+	// reset points; elapsed combat time identifies the current AI advance frame.
+	static List<ShipAPI> getBlockingShips(CombatEngineAPI engine) {
+		float now = engine.getTotalElapsedTime(false);
+		Object stored = engine.getCustomData().get(BLOCKING_SHIPS_KEY);
+		if (stored instanceof BlockingShipsCache cache && cache.sampledAt == now) {
+			return cache.ships;
+		}
+		BlockingShipsCache cache = new BlockingShipsCache();
+		cache.sampledAt = now;
+		cache.ships = new ArrayList<>();
+		for (ShipAPI other : engine.getShips()) {
+			if (!other.isFighter() && (other.isHulk() && other.getStationSlot() == null || !other.isTargetable())) {
+				cache.ships.add(other);
+			}
+		}
+		engine.getCustomData().put(BLOCKING_SHIPS_KEY, cache);
+		return cache.ships;
 	}
 
 	public static boolean areHulksInTheWay(ShipAPI ship, CombatEntityAPI danger, Vector2f from, Vector2f to) {
@@ -1197,18 +1264,9 @@ public class BattleNext_ShipAIHelper {
 
 	public static boolean areHulksInTheWay(ShipAPI ship, CombatEntityAPI danger, Vector2f from, Vector2f to, boolean halfWidth) {
 		float dangerStartDistance = getDistance(from, danger.getLocation());
-		if (BLOCKING_SHIPS.isEmpty()) {
-
-			for (ShipAPI other : getEngine().getShips()) {
-				if (!other.isFighter() && (other.isHulk() && other.getStationSlot() == null || !other.isTargetable())) {
-					BLOCKING_SHIPS.add(other);
-				}
-			}
-		}
-
 		float worst = 0.0F;
 
-		for (ShipAPI blocker : BLOCKING_SHIPS) {
+		for (ShipAPI blocker : getBlockingShips(getEngine())) {
 			if ((blocker.getParentStation() == null || blocker.getParentStation() != ship.getParentStation())
 				&& ship.getParentStation() != blocker
 				&& blocker.getParentStation() != ship
@@ -1535,13 +1593,22 @@ public class BattleNext_ShipAIHelper {
 	// entities; the API only exposes ships, missiles, asteroids and damaging
 	// projectiles, so those four lists are scanned together
 	private static List<CombatEntityAPI> getAllCollisionEntities() {
-		List<CombatEntityAPI> entities = new ArrayList<>();
 		CombatEngineAPI engine = getEngine();
-		entities.addAll(engine.getShips());
-		entities.addAll(engine.getMissiles());
-		entities.addAll(engine.getAsteroids());
-		entities.addAll(engine.getProjectiles());
+		List<CombatEntityAPI> entities = new ArrayList<>();
+		Set<CombatEntityAPI> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+		addUniqueCollisionEntities(entities, seen, engine.getShips());
+		addUniqueCollisionEntities(entities, seen, engine.getMissiles());
+		addUniqueCollisionEntities(entities, seen, engine.getAsteroids());
+		addUniqueCollisionEntities(entities, seen, engine.getProjectiles());
 		return entities;
+	}
+
+	static void addUniqueCollisionEntities(List<CombatEntityAPI> output, Set<CombatEntityAPI> seen, List<? extends CombatEntityAPI> candidates) {
+		for (CombatEntityAPI entity : candidates) {
+			if (seen.add(entity)) {
+				output.add(entity);
+			}
+		}
 	}
 
 	public static CombatEntityAPI getNearestEnemyEntity(CombatEntityAPI excluded, CollisionClass... collisionClasses) {
@@ -1596,13 +1663,13 @@ public class BattleNext_ShipAIHelper {
 		return result;
 	}
 
-	// approximation: the engine narrows candidates through its AI collision
-	// grid; the grid is only a spatial index, so all collision entities are
-	// scanned and the range filter applied directly
+	// approximation: the engine AI grid visits cells overlapping a square of
+	// side 2 * maxRange. The public API exposes entity lists instead of that
+	// grid, so the same square bounds the candidates without cell-edge spill.
 	public static CombatEntityAPI getNearestEnemyEntityInRange(Vector2f from, int owner, float maxRange, CollisionClass... collisionClasses) {
 		List<CombatEntityAPI> candidates = new ArrayList<>();
 		for (CombatEntityAPI entity : getAllCollisionEntities()) {
-			if (getDistance(from, entity.getLocation()) <= maxRange * 2.0F) {
+			if (isWithinAiGridQuery(from, entity.getLocation(), maxRange)) {
 				candidates.add(entity);
 			}
 		}
@@ -1625,6 +1692,11 @@ public class BattleNext_ShipAIHelper {
 		}
 
 		return result;
+	}
+
+	static boolean isWithinAiGridQuery(Vector2f center, Vector2f candidate, float halfExtent) {
+		return Math.abs(candidate.x - center.x) <= halfExtent
+			&& Math.abs(candidate.y - center.y) <= halfExtent;
 	}
 
 	public static CombatEntityAPI getNearestEnemyEntity(CombatEntityAPI excluded, Vector2f from, CollisionClass... collisionClasses) {
@@ -2147,9 +2219,9 @@ public class BattleNext_ShipAIHelper {
 		return isEscortTargetOf(ship, target, 0);
 	}
 
-	// approximation: the engine reads EscortTargetManeuverV3 from the ship
-	// AI's current maneuver; the ported maneuver state is reachable only
-	// through the MANEUVER_TARGET flag, so the flag stands in for it
+	// approximation: native FighterAI exposes no current maneuver through the
+	// public API. Its MANEUVER_TARGET flag can also name an attack target, so
+	// the recursive escort relationship can include a non-escort fighter.
 	public static boolean isEscortTargetOf(ShipAPI ship, ShipAPI target, int depth) {
 		if (depth < 2) {
 			ShipAPI escortTarget = getEscortTarget(ship);
@@ -2226,7 +2298,8 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static boolean isEscorting(ShipAPI ship) {
-		return getEscortTarget(ship) != null;
+		BattleNext_BasicShipAI ai = BattleNext_BasicShipAI.getActiveInstance(ship);
+		return ai != null && ai.getCurrentManeuver() instanceof data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3;
 	}
 
 	public static boolean isShipBeingEscorted(ShipAPI ship) {
@@ -2257,10 +2330,17 @@ public class BattleNext_ShipAIHelper {
 		return getEscortTarget(ship) != null;
 	}
 
-	// approximation: the engine follows EscortTargetManeuverV3 on the ship
-	// AI's current maneuver; the ported maneuver manager exposes its target
-	// through the MANEUVER_TARGET flag instead
 	public static ShipAPI getEscortTarget(ShipAPI ship) {
+		BattleNext_BasicShipAI portedAI = BattleNext_BasicShipAI.getActiveInstance(ship);
+		if (portedAI != null) {
+			if (portedAI.getCurrentManeuver() instanceof data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3) {
+				return ((data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3) portedAI.getCurrentManeuver()).getTargetShip();
+			}
+			return null;
+		}
+		// approximation: native FighterAI current maneuver is hidden by the
+		// public API; MANEUVER_TARGET also carries completed attack targets.
+		// The flag supplies a candidate without proving an escort maneuver.
 		ShipwideAIFlags flags = ship.getAIFlags();
 		if (flags == null) {
 			return null;
@@ -2550,17 +2630,21 @@ public class BattleNext_ShipAIHelper {
 
 	public interface TargetValidityFilter {
 		boolean isShipValid(ShipAPI queryShip, Vector2f at, ShipAPI candidate);
+
+		default boolean allowsSameStationOrShip() {
+			return true;
+		}
 	}
 
-	// the engine also allowed a specific attack filter to bypass the
-	// same-station check through a flag on an internal subclass; that bypass
-	// is not portable and is dropped
+	// The engine applies the station restriction only to its OO0O$Oo filter
+	// subtype, using its f_722efca7_3 flag. Generic filters pass unchanged.
 	public static int countEnemiesInRange(ShipAPI ship, Vector2f from, float facing, float arc, float maxRange, TargetValidityFilter filter) {
 		List<ShipAPI> ships = getEngine().getShips();
 		int count = 0;
 
 		for (ShipAPI other : ships) {
-			if (filter.isShipValid(ship, from, other) && !isSameStationOrShip(ship, other)) {
+			if (filter.isShipValid(ship, from, other)
+				&& (!isSameStationOrShip(ship, other) || filter.allowsSameStationOrShip())) {
 				float distance = getDistance(ship.getLocation(), other.getLocation());
 				if (!(distance > maxRange) && (arc >= 360.0F || isInArc(facing, arc, ship.getLocation(), other.getLocation()))) {
 					count++;
@@ -2977,8 +3061,9 @@ public class BattleNext_ShipAIHelper {
 		ManeuverTargetScanState state = new ManeuverTargetScanState();
 		state.maneuverTargetFlag = ship.getAIFlags().getCustom(AIFlags.MANEUVER_TARGET);
 		List<ShipAPI> ships = getEngine().getShips();
-		if (ship.getAI() instanceof BattleNext_Orderable) {
-			BattleNext_DirectOrders orders = ((BattleNext_Orderable) ship.getAI()).getOrders();
+		BattleNext_Orderable orderable = getOrderable(ship);
+		if (orderable != null) {
+			BattleNext_DirectOrders orders = orderable.getOrders();
 			boolean interceptTask = orders != null && orders.getTaskType() == CombatAssignmentType.INTERCEPT;
 			if (interceptTask && orders.getTaskTarget() != null) {
 				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI) {
@@ -3501,6 +3586,30 @@ public class BattleNext_ShipAIHelper {
 		return ship.getShipTarget();
 	}
 
+	// Port of FighterAI.getCarrierTarget() using the AI flags exposed on ShipAPI.
+	// Ship.isFriendOf() treats owner 100 as neutral on either side.
+	public static ShipAPI getCarrierTarget(ShipAPI carrier) {
+		ShipwideAIFlags flags = carrier.getAIFlags();
+		if (flags != null && flags.hasFlag(AIFlags.CARRIER_FIGHTER_TARGET)) {
+			Object flagged = flags.getCustom(AIFlags.CARRIER_FIGHTER_TARGET);
+			if (flagged instanceof ShipAPI) {
+				ShipAPI target = (ShipAPI) flagged;
+				boolean friend = target.getOwner() != 100 && carrier.getOwner() != 100 && target.getOwner() == carrier.getOwner();
+				if (!target.isHulk() && (!friend || !target.isFighter())) return target;
+			}
+		}
+
+		if (flags != null && flags.getCustom(AIFlags.MANEUVER_TARGET) instanceof ShipAPI) {
+			ShipAPI target = (ShipAPI) flags.getCustom(AIFlags.MANEUVER_TARGET);
+			if (!target.isHulk() && target.getOwner() != 100 && carrier.getOwner() != 100 && target.getOwner() != carrier.getOwner()) return target;
+		}
+
+		ShipAPI target = carrier.getShipTarget();
+		if (target == null || target.isHulk()) return null;
+		boolean friend = target.getOwner() != 100 && carrier.getOwner() != 100 && target.getOwner() == carrier.getOwner();
+		return friend && target.isFighter() ? null : target;
+	}
+
 	public static float getDistanceToEntitySurface(Vector2f point, CombatEntityAPI entity, boolean includeShield) {
 		if (!(entity instanceof ShipAPI)) {
 			return entity.getCollisionRadius();
@@ -3612,20 +3721,16 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static boolean hasInterceptTask(ShipAPI ship) {
-		if (!(ship.getAI() instanceof BattleNext_Orderable)) {
-			return false;
-		}
-
-		BattleNext_DirectOrders orders = ((BattleNext_Orderable) ship.getAI()).getOrders();
+		BattleNext_Orderable orderable = getOrderable(ship);
+		if (orderable == null) return false;
+		BattleNext_DirectOrders orders = orderable.getOrders();
 		return orders != null && orders.getTaskType() == CombatAssignmentType.INTERCEPT;
 	}
 
 	public static boolean hasStrikeTask(ShipAPI ship) {
-		if (!(ship.getAI() instanceof BattleNext_Orderable)) {
-			return false;
-		}
-
-		BattleNext_DirectOrders orders = ((BattleNext_Orderable) ship.getAI()).getOrders();
+		BattleNext_Orderable orderable = getOrderable(ship);
+		if (orderable == null) return false;
+		BattleNext_DirectOrders orders = orderable.getOrders();
 		return orders != null && orders.getTaskType() == CombatAssignmentType.STRIKE;
 	}
 
@@ -3652,8 +3757,7 @@ public class BattleNext_ShipAIHelper {
 	public static boolean isShipOrderedToAttack(ShipAPI ship) {
 		CombatTaskManagerAPI taskManager = getEngine().getFleetManager(ship.getOriginalOwner()).getTaskManager(ship.isAlly());
 		boolean intercept = hasInterceptTask(ship);
-		// approximation: ShipAPI has no isCarrier(); the variant flag is used
-		boolean strike = hasStrikeTask(ship) && !ship.getVariant().isCarrier();
+		boolean strike = hasStrikeTask(ship) && !isCarrier(ship);
 		boolean reckless = "reckless".equals(getPersonality(ship));
 		boolean timid = "timid".equals(getPersonality(ship));
 		// intentionally kept faithful: vanilla resets the timid check to false
@@ -3663,9 +3767,7 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static float getMaxSpeed(ShipAPI ship) {
-		// approximation: engine cruise speed is not exposed on the engine
-		// controller API; max speed without zero-flux boost is used
-		float speed = ship.getMaxSpeedWithoutBoost();
+		float speed = getCruiseSpeed(ship);
 		if (ship.getPhaseCloak() != null && ship.getHardFluxLevel() < 0.2F) {
 			speed *= 2.0F;
 		}
@@ -3676,6 +3778,26 @@ public class BattleNext_ShipAIHelper {
 			speed += 0.0F;
 		}
 
+		return speed;
+	}
+
+	// Port of ShipEngineController.getCruiseSpeed(): the modified speed includes
+	// the active zero-flux boost, while an inactive boost is added for planning.
+	public static float getCruiseSpeed(ShipAPI ship) {
+		float speed = ship.getMutableStats().getMaxSpeed().getModifiedValue();
+		if (!ship.isEngineBoostActive()) {
+			speed += ship.getMutableStats().getZeroFluxSpeedBoost().getModifiedValue();
+		}
+		return speed;
+	}
+
+	// AIUtils.getShipScore() starts with cruise speed and removes only a boost
+	// that is currently inactive. An active boost remains in modified max speed.
+	static float getPlanningSpeedWithoutZeroFluxBoost(ShipAPI ship) {
+		float speed = getCruiseSpeed(ship);
+		if (!ship.isEngineBoostActive()) {
+			speed -= ship.getMutableStats().getZeroFluxSpeedBoost().getModifiedValue();
+		}
 		return speed;
 	}
 

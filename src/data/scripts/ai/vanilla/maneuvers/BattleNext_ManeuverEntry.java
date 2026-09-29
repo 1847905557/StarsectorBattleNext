@@ -6,9 +6,7 @@ import com.fs.starfarer.api.combat.ShipAPI;
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.ManeuverEntry.
  * One queued maneuver plus its time budget.
- * Deviation from vanilla: the hulk check also covers maneuvers exposing a ship
- * target through the shared Maneuver interface only; the engine additionally
- * special-cases AttackRunManeuver, which is fighter-only and not ported.
+ * Hulk termination applies to strafe and assignment maneuvers.
  */
 class BattleNext_ManeuverEntry {
 	private BattleNext_Maneuver maneuver;
@@ -38,9 +36,12 @@ class BattleNext_ManeuverEntry {
 			this.done = true;
 		}
 
-		CombatEntityAPI target = this.maneuver.getTarget();
-		if (target instanceof ShipAPI && ((ShipAPI) target).isHulk()) {
-			this.done = true;
+		if (this.maneuver instanceof BattleNext_StrafeTargetManeuverV2
+			|| this.maneuver instanceof BattleNext_AssignmentBasedManeuver) {
+			CombatEntityAPI target = this.maneuver.getTarget();
+			if (target instanceof ShipAPI && ((ShipAPI) target).isHulk()) {
+				this.done = true;
+			}
 		}
 	}
 

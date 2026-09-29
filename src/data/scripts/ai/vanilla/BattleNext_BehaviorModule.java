@@ -188,7 +188,7 @@ public class BattleNext_BehaviorModule {
 						ShipAPI deployed = member.getShip();
 						float deployedTime = deployed.getTimeDeployedForCRReduction();
 						if (deployedTime >= 60.0F) {
-							longDeployedStrength += member.getMember().getMemberStrength();
+							longDeployedStrength += BattleNext_ShipAIHelper.getDeployedMemberStrength(member, deployed);
 						}
 					}
 				}
@@ -266,9 +266,8 @@ public class BattleNext_BehaviorModule {
 			// engine formula from the variant: (carrier or civilian) and not combat
 			boolean targetVariantNonCombat = (targetHints.contains(ShipTypeHints.CARRIER) || target.getVariant().isCivilian()) && !targetHints.contains(ShipTypeHints.COMBAT);
 			targetIsBigger = this.ship.getHullSize().ordinal() < target.getHullSize().ordinal() && (!targetVariantNonCombat || selfNonCombat);
-			// approximation: engine ship.getEngineController().getEffectiveMaxSpeed() is not exposed; the
-			// unboosted max speed is used instead
-			boolean targetSlower = BattleNext_ShipAIHelper.getMaxSpeed(target) < this.ship.getEngineController().getMaxSpeedWithoutBoost() + 30.0F;
+			// Ship.getMaxSpeed() delegates to the engine controller's effective max speed.
+			boolean targetSlower = BattleNext_ShipAIHelper.getMaxSpeed(target) < this.ship.getMaxSpeed() + 30.0F;
 			targetHelpless = target.getFluxTracker().isOverloadedOrVenting()
 				&& (target.getFluxTracker().getOverloadTimeRemaining() > 3.0F || target.getFluxTracker().getTimeToVent() > 4.0F)
 				|| target.isPhased() && target.getFluxLevel() > 0.8F;
@@ -396,9 +395,7 @@ public class BattleNext_BehaviorModule {
 							nearbyPhaseMenaceThreat += threat;
 							phaseMenaces.add(enemy);
 						}
-					} else if (!enemy.isNonCombat(false) && !enemy.getHullSpec().isCarrier()) {
-						// approximation: engine Ship.isCarrier() also requires the launch bays to cover
-						// two thirds of the fighter bays stat; the hull hint alone is used here
+					} else if (!enemy.isNonCombat(false) && !BattleNext_ShipAIHelper.isCarrier(enemy)) {
 						regularThreat += threat;
 						if (distance < 4000.0F) {
 							nearbyRegularThreat += threat;
@@ -804,8 +801,10 @@ public class BattleNext_BehaviorModule {
 	}
 
 	public static float getThreat(BattleNext_ThreatEvalAI threatEvalAI, ShipAPI other) {
-		if (other.getAI() instanceof BattleNext_BasicShipAI) {
-			BattleNext_BasicShipAI basicAI = (BattleNext_BasicShipAI) other.getAI();
+		// approximation: native BasicShipAI attack range is hidden behind the
+		// ShipAPI wrapper; threat evaluation supplies its observable range.
+		BattleNext_BasicShipAI basicAI = BattleNext_BasicShipAI.getActiveInstance(other);
+		if (basicAI != null) {
 			if (basicAI.getAttackAI() != null) {
 				return basicAI.getAttackAI().getNonMissileMaxRange();
 			}
@@ -876,9 +875,9 @@ public class BattleNext_BehaviorModule {
 					}
 
 					if (member.getShip() != null && !member.getShip().controlsLocked() && !member.getShip().isRetreating()) {
-						strength += member.getMember().getMemberStrength() * weight;
+						strength += BattleNext_ShipAIHelper.getDeployedMemberStrength(member, member.getShip()) * weight;
 					} else {
-						strength += member.getMember().getMemberStrength() * 0.25F * weight;
+						strength += BattleNext_ShipAIHelper.getDeployedMemberStrength(member, member.getShip()) * 0.25F * weight;
 					}
 				}
 			}
@@ -887,20 +886,20 @@ public class BattleNext_BehaviorModule {
 		return strength;
 	}
 
-	// approximation: ArmorGridAPI does not expose the average armor fraction; average the
-	// per-cell fractions over the whole grid
+	// Port of ArmorGrid.getAverageArmorFraction() using the exposed grid cells.
 	private static float getAverageArmorFraction(ShipAPI target) {
 		ArmorGridAPI grid = target.getArmorGrid();
 		float total = 0.0F;
 		int cells = 0;
-		int columns = grid.getLeftOf() + grid.getRightOf();
-		int rows = grid.getAbove() + grid.getBelow();
+		float[][] values = grid.getGrid();
+		int columns = values.length;
+		int rows = columns > 0 ? values[0].length : 0;
 		for (int x = 0; x < columns; x++) {
 			for (int y = 0; y < rows; y++) {
 				total += grid.getArmorFraction(x, y);
 				cells++;
 			}
 		}
-		return cells > 0 ? total / cells : 0.0F;
+		return cells > 0 ? total / cells : 1.0F;
 	}
 }

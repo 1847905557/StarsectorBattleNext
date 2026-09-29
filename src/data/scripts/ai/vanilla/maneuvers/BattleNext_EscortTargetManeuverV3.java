@@ -388,9 +388,8 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 					return;
 				}
 
-				// fighter-only dependency: the FighterAI implementation of the maneuver
-				// API is not ported; the spread-based repositioning branch is skipped
-				// entirely
+				// approximation: vanilla FighterAI uses SpreadAI direction to reposition;
+				// the public maneuver API has no spread state, so escort range decides.
 
 				if (targetDistance < holdRange - 100.0F || targetDistance < carrierTargetDistance + 100.0F && targetDistance < holdRange + 1000.0F) {
 					float awayAngle = BattleNext_ShipAIHelper.getAngleFast(this.targetEntity.getLocation(), this.ship.getLocation());
@@ -402,8 +401,8 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 
 		float standOffDistance = BattleNext_ShipAIHelper.getDistance(this.ship.getLocation(), holdPoint);
 		boolean spreadRepositioning = false;
-		// fighter-only dependency: FighterAI.getSpreadAI() is not ported; the spread
-		// state is treated as not spreading
+		// approximation: vanilla FighterAI reads SpreadAI spreading state;
+		// the public maneuver API has no spread state, so it remains idle.
 
 		if (standOffDistance > standOff || spreadRepositioning) {
 			BattleNext_ShipAIHelper.giveMoveCommands(this.ship, this.desiredFacing, 10000.0F);
@@ -651,9 +650,7 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 		if (supportWing && this.ship.getWing() != null && this.ship.getWing().getSpec().hasTag("target_escort_target")) {
 			ShipAPI escortedShip = this.targetShip;
 			if (escortedShip != null) {
-				// approximation: FighterAI.getCarrierTarget is not ported; no carrier
-				// target can be resolved
-				ShipAPI carrierTarget = null;
+				ShipAPI carrierTarget = BattleNext_ShipAIHelper.getCarrierTarget(escortedShip);
 				if (carrierTarget != null) {
 					float distance = BattleNext_ShipAIHelper.getDistance(this.targetShip.getLocation(), carrierTarget.getLocation());
 					if (distance < scanRange + this.collisionRadiiSum) {
@@ -1005,8 +1002,8 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 
 	private float computeDesiredFacing(float desiredAngle) {
 		if (this.ship.isFighter()) {
-			// fighter-only dependency: FighterAI.getSpreadAI() is not ported; the
-			// spread contribution is dropped, matching an idle spread state
+			// approximation: vanilla FighterAI adds SpreadAI heading;
+			// the public maneuver API has no spread vector, so desiredAngle is used.
 			Vector2f heading = BattleNext_ShipAIHelper.getUnitVectorAtAngle(desiredAngle);
 			BattleNext_ShipAIHelper.normalise(heading);
 			return BattleNext_ShipAIHelper.getAngleFast(heading);

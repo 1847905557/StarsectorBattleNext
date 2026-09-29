@@ -11,6 +11,7 @@ import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.order.BattleNext_OrderRegistry;
 import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.ai.rtt.BattleNext_RttShipAI;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -101,6 +102,7 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 		for (ShipAPI ship : engine.getShips()) {
 			if (!ship.isAlive() || ship.isFighter() || ship.isStation() || ship.isStationModule()
 					|| ship.getOriginalOwner() != side.ordinal()) continue;
+			if (BattleNext_RttShipAI.isControlled(ship)) continue;
 			BattleNext_OrderProcessor processor = ordersByMember.get(ship.getFleetMember());
 			if (processor == null) continue;
 			CombatTaskManagerAPI tasks = engine.getFleetManager(ship.getOwner()).getTaskManager(ship.isAlly());
@@ -121,6 +123,7 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 		CombatTaskManagerAPI taskManager = engine.getFleetManager(side).getTaskManager(false);
 		for (ShipAPI ship : engine.getShips()) {
 			if (!ship.isAlive() || ship.isFighter() || ship.isStation() || ship.getOwner() != side.ordinal()) continue;
+			if (BattleNext_RttShipAI.isControlled(ship)) continue;
 			taskManager.orderSearchAndDestroy(engine.getFleetManager(side).getDeployedFleetMember(ship), false);
 		}
 	}

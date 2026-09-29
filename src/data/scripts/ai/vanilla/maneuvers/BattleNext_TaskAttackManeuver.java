@@ -108,8 +108,7 @@ public class BattleNext_TaskAttackManeuver implements BattleNext_Maneuver {
 			float nearestAvoidDistance = Float.MAX_VALUE;
 
 			// approximation: engine CombatTask is not exposed; the side's assignments
-			// stand in for its task list, and the assignee identity check of vanilla
-			// always passes because AssignmentInfo does not carry an assignee
+			// stand in for its task list at the initial avoid-target search.
 			for (AssignmentInfo task : BattleNext_ShipAIHelper.getEngine().getFleetManager(ship.getOriginalOwner()).getTaskManager(ship.isAlly()).getAllAssignments()) {
 				if (task.getType() == CombatAssignmentType.AVOID) {
 					Vector2f taskLocation = task.getTarget().getLocation();
@@ -174,6 +173,18 @@ public class BattleNext_TaskAttackManeuver implements BattleNext_Maneuver {
 
 		for (AssignmentInfo task : BattleNext_ShipAIHelper.getEngine().getFleetManager(ship.getOriginalOwner()).getTaskManager(ship.isAlly()).getAllAssignments()) {
 			if (task.getType() == CombatAssignmentType.AVOID) {
+				// approximation: CombatTask exposes one designated deployed member;
+				// AssignmentInfo supplies only its assigned-member list, so ownership
+				// filtering follows those currently assigned ships.
+				boolean assignedFriendly = false;
+				for (com.fs.starfarer.api.combat.DeployedFleetMemberAPI member : task.getAssignedMembers()) {
+					ShipAPI assignedShip = member.getShip();
+					if (assignedShip != null && !BattleNext_ShipAIHelper.isShipEnemy(ship, assignedShip)) {
+						assignedFriendly = true;
+						break;
+					}
+				}
+				if (assignedFriendly) continue;
 				Vector2f taskLocation = task.getTarget().getLocation();
 				float distance = BattleNext_ShipAIHelper.getDistance(ship.getLocation(), taskLocation);
 				float maxDistance = 5000.0F;

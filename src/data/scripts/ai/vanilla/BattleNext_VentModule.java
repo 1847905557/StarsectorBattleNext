@@ -561,20 +561,13 @@ public class BattleNext_VentModule {
 	 * Port of engine ShipEngineController.getCruiseSpeed().
 	 */
 	private static float getCruiseSpeed(ShipAPI ship) {
-		float cruiseSpeed = ship.getMutableStats().getMaxSpeed().getModifiedValue();
-		if (!ship.isEngineBoostActive()) {
-			cruiseSpeed += ship.getMutableStats().getZeroFluxSpeedBoost().getModifiedValue();
-		}
-
-		return cruiseSpeed;
+		return BattleNext_ShipAIHelper.getCruiseSpeed(ship);
 	}
 
-	/**
-	 * approximation: engine ShipSystem.usesAmmo(); the API has no such accessor,
-	 * so it is reconstructed from max ammo and ammo regeneration
-	 */
-	private static boolean systemUsesAmmo(ShipSystemAPI system) {
-		return system.getMaxAmmo() > 0 || system.getAmmoPerSecond() > 0;
+	// Engine ShipSystem.usesAmmo() delegates to AmmoTracker.usesAmmo(), which
+	// compares the current runtime ammo count against Integer.MAX_VALUE.
+	static boolean systemUsesAmmo(ShipSystemAPI system) {
+		return system.getAmmo() != Integer.MAX_VALUE;
 	}
 
 	/**

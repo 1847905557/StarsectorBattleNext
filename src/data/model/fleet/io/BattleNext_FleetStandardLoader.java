@@ -63,7 +63,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 		}
 		if (fleet.hasLocalVariants()) {
 			for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
-				if (fleet.getVariant(variantId) == null) throw new IllegalStateException("Missing variant " + variantId + " in " + path);
+				if (fleet.getVariant(variantId) == null) fleet.addLoadError("Missing variant " + variantId + " in " + path);
 			}
 		}
 		return fleet;

@@ -463,9 +463,7 @@ public class BattleNext_FighterPullbackModule {
 			if (allied == null) {
 				continue;
 			}
-			if (allied != this.ship && allied.getParentStation() != this.ship && !allied.isFighter() && !allied.getHullSpec().isCarrier()) {
-				// approximation: engine Ship.isCarrier() also requires the launch bays to cover
-				// two thirds of the fighter bays stat; the hull hint alone is used here
+			if (allied != this.ship && allied.getParentStation() != this.ship && !allied.isFighter() && !BattleNext_ShipAIHelper.isCarrier(allied)) {
 				float wingRange = BattleNext_ShipAIHelper.getCarrierWingRange(this.ship, allied);
 				float distance = Misc.getDistance(allied.getLocation(), this.ship.getLocation()) - allied.getCollisionRadius();
 				if (!(distance > wingRange)) {
@@ -511,7 +509,7 @@ public class BattleNext_FighterPullbackModule {
 				if (distance < 1000.0F + allied.getCollisionRadius()) {
 					pressure += 0.5F;
 				}
-			} else if (enemy.getLaunchBaysCopy().size() > 0 && allied == getEngineCarrierTarget(enemy)) {
+		} else if (enemy.getLaunchBaysCopy().size() > 0 && allied == BattleNext_ShipAIHelper.getCarrierTarget(enemy)) {
 				pressure += enemy.getLaunchBaysCopy().size();
 			}
 		}
@@ -757,9 +755,9 @@ public class BattleNext_FighterPullbackModule {
 		return 10.0F;
 	}
 
-	// approximation: the fighter AI is not ported, so a wing leader counts as being in an
-	// attack run when it has a ship target or its flags carry IN_ATTACK_RUN; the engine
-	// fighter AI sets that flag while flying an AttackRunManeuver
+	// approximation: FighterAI.getCurrentManeuver() is hidden by ShipAIPlugin.
+	// A ship target can persist outside AttackRunManeuver; IN_ATTACK_RUN marks
+	// only part of that maneuver and can be mirrored by a wing follower.
 	private static boolean isFighterInAttackRun(ShipAPI fighter) {
 		if (fighter.getShipTarget() != null) {
 			return true;
@@ -769,26 +767,14 @@ public class BattleNext_FighterPullbackModule {
 		return flags != null && flags.hasFlag(AIFlags.IN_ATTACK_RUN);
 	}
 
-	// approximation: vanilla read the fighter AI's AttackRunManeuver target here
+	// approximation: vanilla reads AttackRunManeuver.getTarget(); ShipAPI exposes
+	// only the fighter's ship target, which can differ from the maneuver target.
 	private static ShipAPI getFighterAttackRunTarget(ShipAPI fighter) {
 		if (!isFighterInAttackRun(fighter)) {
 			return null;
 		}
 
 		return fighter.getShipTarget();
-	}
-
-	// approximation: vanilla read the engine's static FighterAI.getCarrierTarget map, which
-	// is not accessible; the CARRIER_FIGHTER_TARGET flag the ported carrier logic sets on
-	// its own carriers is used instead
-	private static ShipAPI getEngineCarrierTarget(ShipAPI enemyCarrier) {
-		ShipwideAIFlags flags = enemyCarrier.getAIFlags();
-		if (flags == null) {
-			return null;
-		}
-
-		Object carrierTarget = flags.getCustom(AIFlags.CARRIER_FIGHTER_TARGET);
-		return carrierTarget instanceof ShipAPI ? (ShipAPI) carrierTarget : null;
 	}
 
 	// replacement for com.fs.util.container.Pair

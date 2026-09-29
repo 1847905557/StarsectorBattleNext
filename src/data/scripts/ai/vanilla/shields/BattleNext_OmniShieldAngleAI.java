@@ -156,11 +156,10 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 							this.timeSinceShieldHit = 0.0F;
 						}
 
-						// engine energy is the current flux in the public API
-						float fluxFraction = this.ship.getFluxTracker().getCurrFlux() / this.ship.getMaxFlux();
+						float energyFraction = BattleNext_ShipAIHelper.getFluxAvailable(this.ship) / this.ship.getMaxFlux();
 						boolean okToRaise = false;
 						if (!this.eval.isShieldFacingOk()
-							&& (fluxFraction > 0.2F || this.ship.getShield().isOn() || shouldRaiseShield || phasedThreatNear || avoidanceVector != null && this.eval.hasSolution() || collisionThreatDir != null)) {
+							&& (energyFraction > 0.2F || this.ship.getShield().isOn() || shouldRaiseShield || phasedThreatNear || avoidanceVector != null && this.eval.hasSolution() || collisionThreatDir != null)) {
 							if (debug) {
 								System.out.println("Ok to raise, shield on:" + this.ship.getShield().isOn());
 							}
@@ -177,17 +176,17 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 						}
 
 						boolean fluxTooHigh = false;
-						if (fluxFraction < 0.5F) {
+						if (energyFraction < 0.5F) {
 							this.timeSinceShieldToggle += amount;
 							if (threatShip != null) {
-								float currFlux = this.ship.getFluxTracker().getCurrFlux();
+								float energy = BattleNext_ShipAIHelper.getFluxAvailable(this.ship);
 								float maxFlux = this.ship.getMaxFlux();
 								float fluxThreshold = 0.2F;
 								if (avoidanceVector != null) {
 									fluxThreshold = 0.1F;
 								}
 
-								if (currFlux < maxFlux * fluxThreshold && this.timeSinceShieldToggle > this.shieldRaiseDelay) {
+								if (energy < maxFlux * fluxThreshold && this.timeSinceShieldToggle > this.shieldRaiseDelay) {
 									okToRaise = false;
 									fluxTooHigh = true;
 									if (debug) {
@@ -295,7 +294,8 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 								this.shieldsOn = false;
 								this.timeSinceShieldHit = 0.0F;
 							}
-						} else if (!this.ship.getShield().isOn() && (okToRaise || criticalHull && shouldRaiseShield)) {
+						} else if (BattleNext_ShipAIHelper.isShieldIdle(this.ship)
+								&& (okToRaise || criticalHull && shouldRaiseShield)) {
 							if (debug) {
 								System.out.println("Toggling shield on");
 							}
