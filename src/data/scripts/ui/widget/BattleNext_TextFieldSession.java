@@ -74,6 +74,7 @@ public class BattleNext_TextFieldSession {
 		finish(!preserveSelection);
 		focusedField = field;
 		field.onFocusGained();
+		field.playFocusSound();
 		pointerOwner = field;
 		phase = TextFieldPointerPhase.PRESSED;
 		generation++;

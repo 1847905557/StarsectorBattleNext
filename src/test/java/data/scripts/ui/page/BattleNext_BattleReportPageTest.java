@@ -10,6 +10,7 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -100,8 +101,8 @@ class BattleNext_BattleReportPageTest {
 				BattleNext_BattleReportPage.resolveHull("wolf_CS", id -> variant));
 		assertEquals(new BattleNext_BattleReportPage.HullSummary("missing", ""),
 				BattleNext_BattleReportPage.resolveHull("missing", id -> null));
-		assertEquals(155f, BattleNext_BattleReportPage.metricsWidth(400f));
-		assertEquals(260f, BattleNext_BattleReportPage.metricsWidth(1200f));
+		assertEquals(155f, BattleNext_ExpandablePanel.headerLayout(400f, false, true).metricsWidth());
+		assertEquals(260f, BattleNext_ExpandablePanel.headerLayout(1200f, false, true).metricsWidth());
 		assertEquals("status_alive", BattleNext_BattleReportPage.statusKey("alive"));
 		assertEquals("status_destroyed", BattleNext_BattleReportPage.statusKey("destroyed"));
 		assertEquals("status_retreated", BattleNext_BattleReportPage.statusKey("retreated"));

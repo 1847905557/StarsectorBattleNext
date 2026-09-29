@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -15,6 +16,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * TextFieldAPI implementation with a clipped viewport and an editable caret.
@@ -35,6 +37,8 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private static final float CURSOR_BLINK_CYCLES_PER_SECOND = 2f;
 	private static final int CURSOR_BLINK_PHASE_COUNT = 2;
 	private static final float CURSOR_BLINK_PERIOD = 2f;
+	static final String TYPE_SOUND_ID = "ui_typer_type";
+	static final String BUZZ_SOUND_ID = "ui_typer_buzz";
 
 	public static final int RECOMMENDED_MAX_CHARS = 200;
 	public static final float AUTO_SCROLL_START_SPEED = 40f;
@@ -46,6 +50,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private final LabelAPI textLabel;
 	private final float width;
 	private final float height;
+	private final Consumer<String> soundSink;
 
 	private String text = "";
 	private int cursor;
@@ -69,6 +74,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		this.panel = panel;
 		this.width = width;
 		this.height = height;
+		this.soundSink = id -> Global.getSoundPlayer().playUISound(id, 1f, 1f);
 		this.textColor = Misc.getButtonTextColor();
 		this.textHost = panel.createUIElement(width, height, false);
 		this.textHost.setParaSmallInsignia();
@@ -164,15 +170,16 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		textLabel.getPosition().inLMid(pad - scroll);
 	}
 
-	private void replaceSelection(String replacement) {
+	private boolean replaceSelection(String replacement) {
 		int start = selectionStart();
 		int end = selectionEnd();
 		String next = text.substring(0, start) + replacement + text.substring(end);
-		if (maxChars >= 0 && next.length() > maxChars) return;
+		if (maxChars >= 0 && next.length() > maxChars) return false;
 		text = next;
 		cursor = start + replacement.length();
 		anchor = cursor;
 		notifyChanged();
+		return true;
 	}
 
 	private void deleteSelection() {
@@ -186,12 +193,12 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		refreshVisual();
 	}
 
-	private void insertCodePoint(int codePoint) {
-		if (!isAcceptedInputCodePoint(codePoint)) return;
+	private boolean insertCodePoint(int codePoint) {
+		if (!isAcceptedInputCodePoint(codePoint)) return false;
 		String replacement = new String(Character.toChars(codePoint));
 		if (limitByStringWidth && !hasSelection()
-				&& textLabel.computeTextWidth(text + replacement) > width - pad * 2f) return;
-		replaceSelection(replacement);
+				&& textLabel.computeTextWidth(text + replacement) > width - pad * 2f) return false;
+		return replaceSelection(replacement);
 	}
 
 	private void deletePrevious() {
@@ -231,16 +238,28 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	private void pasteClipboard() {
 		String clipboard = readClipboard();
-		if (clipboard == null) return;
-		insertPastedText(clipboard);
+		insertPastedText(clipboard == null ? "" : clipboard);
 	}
 
 	void insertPastedText(String clipboard) {
+		boolean accepted = false;
+		boolean rejected = false;
 		for (int offset = 0; offset < clipboard.length();) {
 			int codePoint = clipboard.codePointAt(offset);
-			insertCodePoint(codePoint);
+			if (insertCodePoint(codePoint)) accepted = true;
+			else rejected = true;
 			offset += Character.charCount(codePoint);
 		}
+		if (accepted) soundSink.accept(TYPE_SOUND_ID);
+		if (rejected || !accepted) soundSink.accept(BUZZ_SOUND_ID);
+	}
+
+	void playFocusSound() {
+		soundSink.accept(BUZZ_SOUND_ID);
+	}
+
+	private void playEditSound(boolean accepted) {
+		soundSink.accept(accepted ? TYPE_SOUND_ID : BUZZ_SOUND_ID);
 	}
 
 	static boolean isAcceptedInputCodePoint(int codePoint) {
@@ -274,7 +293,10 @@ public final class BattleNext_TextField implements TextFieldAPI {
 				copySelection();
 			} else if (!event.isAltDown() && key == Keyboard.KEY_X) {
 				copySelection();
-				deleteSelection();
+				if (hasSelection()) {
+					deleteSelection();
+					playEditSound(true);
+				}
 			} else if (!event.isAltDown() && key == Keyboard.KEY_V && handleCtrlV) {
 				pasteClipboard();
 			}
@@ -299,14 +321,19 @@ public final class BattleNext_TextField implements TextFieldAPI {
 				break;
 			case Keyboard.KEY_BACK:
 				pendingHighSurrogate = 0;
+				String beforeBack = text;
 				deletePrevious();
+				playEditSound(!text.equals(beforeBack));
 				break;
 			case Keyboard.KEY_DELETE:
 				pendingHighSurrogate = 0;
+				String beforeDelete = text;
 				deleteNext();
+				playEditSound(!text.equals(beforeDelete));
 				break;
 			case Keyboard.KEY_ESCAPE:
 				pendingHighSurrogate = 0;
+				soundSink.accept(TYPE_SOUND_ID);
 				if (undoOnEscape) setText(undoText);
 				releaseFocus();
 				break;
@@ -316,14 +343,14 @@ public final class BattleNext_TextField implements TextFieldAPI {
 					char high = pendingHighSurrogate;
 					pendingHighSurrogate = 0;
 					if (Character.isLowSurrogate(value)) {
-						insertCodePoint(Character.toCodePoint(high, value));
+						playEditSound(insertCodePoint(Character.toCodePoint(high, value)));
 						break;
 					}
 				}
 				if (Character.isHighSurrogate(value)) {
 					pendingHighSurrogate = value;
 				} else if (value != 0) {
-					insertCodePoint(value);
+					playEditSound(insertCodePoint(value));
 				}
 		}
 	}
@@ -592,10 +619,9 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public boolean appendCharIfPossible(char c, boolean withSound) {
-		if (!isValidChar(c) || (maxChars >= 0 && !hasSelection() && text.length() >= maxChars)) return false;
-		int oldCursor = cursor;
-		insertCodePoint(c);
-		return oldCursor != cursor;
+		boolean accepted = insertCodePoint(c);
+		if (withSound) playEditSound(accepted);
+		return accepted;
 	}
 
 	@Override
@@ -615,18 +641,22 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public void deleteAll(boolean withSound) {
+		boolean changed = !text.isEmpty();
 		text = "";
 		cursor = 0;
 		anchor = 0;
 		notifyChanged();
+		if (withSound) playEditSound(changed);
 	}
 
 	@Override
 	public void deleteLastWord() {
 		if (hasSelection()) {
 			deleteSelection();
+			playEditSound(true);
 			return;
 		}
+		String previous = text;
 		int end = cursor;
 		while (end > 0 && Character.isWhitespace(text.charAt(end - 1))) {
 			end--;
@@ -638,6 +668,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		cursor = end;
 		anchor = end;
 		notifyChanged();
+		playEditSound(!text.equals(previous));
 	}
 
 	@Override
@@ -648,6 +679,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	@Override
 	public void grabFocus(boolean playSound) {
 		BattleNext_TextFieldSession.focus(this);
+		if (playSound) playFocusSound();
 		undoText = text;
 		resetBlink();
 	}

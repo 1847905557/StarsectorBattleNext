@@ -112,8 +112,7 @@ public class BattleNext_PageLayout {
 		ButtonAPI button = maker.addButton(maker.shortenString(title,
 				Math.max(MIN_UI_WIDTH, width - BUTTON_TEXT_TRUNCATION_PADDING)), id, BattleNext_UiTheme.ACCENT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.ALL, width, FOOTER_HEIGHT, BUTTON_VERTICAL_GAP);
-		button.setMouseOverSound("BUtil_button_in");
-		button.setButtonPressedSound("BUtil_button_down");
+		applyButtonSounds(button);
 		return button;
 	}
 
@@ -143,11 +142,15 @@ public class BattleNext_PageLayout {
 				prominent ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, style, rect.getWidth(), rect.getHeight(), 0f);
 		button.getPosition().inTL(0f, 0f);
-		button.setMouseOverSound("BUtil_button_in");
-		button.setButtonPressedSound("BUtil_button_down");
+		applyButtonSounds(button);
 		maker.setHeightSoFar(rect.getHeight());
 		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
 		return button;
+	}
+
+	static void applyButtonSounds(ButtonAPI button) {
+		button.setMouseOverSound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID);
+		button.setButtonPressedSound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID);
 	}
 
 	public static float listWidth(CustomPanelAPI panel) {

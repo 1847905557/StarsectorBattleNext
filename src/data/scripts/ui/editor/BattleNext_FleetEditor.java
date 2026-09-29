@@ -13,10 +13,10 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.provider.BattleNext_CommanderSkillSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_OfficerSkillSourceProvider;
@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.awt.Color;
 
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
@@ -41,8 +40,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private static final float MEMBER_HEADING_GAP = 8f;
 	private static final float FIELD_LABEL_GAP = 5f;
 	private static final float EDITOR_STATUS_GAP = 6f;
-	private static final float MEMBER_ROW_HEIGHT = 40f;
-	private static final float MEMBER_ROW_GAP = 3f;
 	private static final float MEMBER_DETAIL_INSET = 8f;
 	private static final float MEMBER_DETAIL_TITLE_HEIGHT = 24f;
 	private static final float MEMBER_DETAIL_LABEL_HEIGHT = 20f;
@@ -52,9 +49,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			+ BattleNext_PageLayout.FORM_FIELD_HEIGHT + MEMBER_DETAIL_BLOCK_GAP;
 	private static final float MEMBER_DETAIL_PICKER_BLOCK = MEMBER_DETAIL_FIELD_BLOCK + 2f;
 	private static final float MEMBER_DETAIL_BUTTON_BLOCK = BattleNext_PageLayout.FOOTER_HEIGHT + 8f;
-	private static final Color MEMBER_BODY_BACKGROUND = new Color(0, 0, 0, 150);
-	private static final float MEMBER_THUMB_SIZE = 32f;
-	private static final float MEMBER_PORTRAIT_SIZE = 32f;
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
@@ -224,16 +218,16 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private void addMember(int index, BattleNext_MemberModel member, TooltipMakerAPI memberContent, float width) {
 		boolean expanded = expandedMembers.contains(index);
 		float detailHeight = expanded ? memberDetailHeight() : 0f;
-		float memberHeight = MEMBER_ROW_HEIGHT + detailHeight;
-		CustomPanelAPI memberPanel = panel.createCustomPanel(width, memberHeight, new BaseCustomUIPanelPlugin());
-		addMemberSummary(index, member, memberPanel, width, expanded);
+		ShipHullSpecAPI hull = hullSpec(member.getVariantId());
+		String hullName = hull == null ? member.getVariantId() : hull.getHullName();
+		if (hullName == null || hullName.isEmpty()) hullName = text("missing_variant");
+		BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
+				hull == null ? "" : hull.getSpriteName(), true, member.getPortrait(),
+				hullName, member.getName(), "", "");
 		FleetMemberEditorFields fields = new FleetMemberEditorFields();
 		memberFields.add(fields);
-		if (expanded) {
-			MemberBodyPlugin bodyPlugin = new MemberBodyPlugin(this);
-			CustomPanelAPI bodyPanel = memberPanel.createCustomPanel(width, detailHeight, bodyPlugin);
-			bodyPlugin.setPosition(bodyPanel.getPosition());
-			memberPanel.addComponent(bodyPanel).inTL(0f, MEMBER_ROW_HEIGHT);
+		BattleNext_ExpandablePanel.addTo(memberContent, panel, width, expanded, detailHeight, header,
+				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float detailWidth = width - MEMBER_DETAIL_INSET * 2f;
 			TooltipMakerAPI title = bodyPanel.createUIElement(detailWidth, MEMBER_DETAIL_TITLE_HEIGHT, false);
 			title.addPara(text("member") + " " + (index + 1), 0f, BattleNext_UiTheme.TEXT);
@@ -278,8 +272,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 					Math.min(MEMBER_BUTTON_MAX_WIDTH, detailWidth - MEMBER_BUTTON_SIDE_RESERVE));
 			buttonHost.setHeightSoFar(MEMBER_DETAIL_BUTTON_BLOCK);
 			bodyPanel.addUIElement(buttonHost).inTL(MEMBER_DETAIL_INSET, y);
-		}
-		memberContent.addCustom(memberPanel, MEMBER_ROW_GAP);
+		});
 	}
 
 	private float memberDetailHeight() {
@@ -326,48 +319,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		block.addUIElement(labelHost).inTL(0f, 0f);
 	}
 
-	private void addMemberSummary(int index, BattleNext_MemberModel member, CustomPanelAPI host, float width,
-			boolean expanded) {
-		MemberRowPlugin rowPlugin = new MemberRowPlugin(index, this, expanded);
-		CustomPanelAPI row = host.createCustomPanel(width, MEMBER_ROW_HEIGHT, rowPlugin);
-		rowPlugin.setPosition(row.getPosition());
-		TooltipMakerAPI imageHost = row.createUIElement(MEMBER_THUMB_SIZE, MEMBER_ROW_HEIGHT, false);
-		if (!addSprite(imageHost, hullSprite(member), MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE)) {
-			imageHost.addPara("?", 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
-		}
-		row.addUIElement(imageHost).inTL(0f, (MEMBER_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f);
-		TooltipMakerAPI portraitHost = row.createUIElement(MEMBER_PORTRAIT_SIZE, MEMBER_ROW_HEIGHT, false);
-		if (!member.getPortrait().isEmpty()
-				&& !addSprite(portraitHost, member.getPortrait(), MEMBER_PORTRAIT_SIZE, MEMBER_PORTRAIT_SIZE)) {
-			portraitHost.addPara("?", 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
-		}
-		row.addUIElement(portraitHost).inTL(MEMBER_THUMB_SIZE + 4f,
-				(MEMBER_ROW_HEIGHT - MEMBER_PORTRAIT_SIZE) * 0.5f);
-		float labelWidth = Math.max(1f, width - MEMBER_THUMB_SIZE - MEMBER_PORTRAIT_SIZE - 16f);
-		TooltipMakerAPI labels = row.createUIElement(labelWidth, MEMBER_ROW_HEIGHT, false);
-		ShipHullSpecAPI hull = hullSpec(member.getVariantId());
-		String hullName = hull == null ? member.getVariantId() : hull.getHullName();
-		if (hullName == null || hullName.isEmpty()) hullName = text("missing_variant");
-		Color textColor = expanded ? BattleNext_UiTheme.TEXT : BattleNext_UiTheme.MUTED;
-		labels.addPara(labels.shortenString(hullName, labelWidth - 6f), 3f, textColor);
-		if (!member.getName().isEmpty()) {
-			labels.addPara(labels.shortenString(member.getName(), labelWidth - 6f), 1f, textColor);
-		}
-		row.addUIElement(labels).inTL(MEMBER_THUMB_SIZE + MEMBER_PORTRAIT_SIZE + 12f, 0f);
-		host.addComponent(row).inTL(0f, 0f);
-	}
-
-	private boolean addSprite(TooltipMakerAPI host, String path, float width, float height) {
-		if (path == null || path.isEmpty()) return false;
-		try {
-			Global.getSettings().getSprite(path);
-			host.addImage(path, width, height, 0f);
-			return true;
-		} catch (RuntimeException ignored) {
-			return false;
-		}
-	}
-
 	private ShipHullSpecAPI hullSpec(String variantId) {
 		try {
 			BattleNext_VariantBuilder local = draft.getVariant(variantId);
@@ -380,11 +331,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		} catch (RuntimeException exception) {
 			return null;
 		}
-	}
-
-	private String hullSprite(BattleNext_MemberModel member) {
-		ShipHullSpecAPI hull = hullSpec(member.getVariantId());
-		return hull == null ? "" : hull.getSpriteName();
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, float sectionWidth,
@@ -544,80 +490,4 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		private TextFieldAPI tags;
 	}
 
-	private static class MemberRowPlugin extends BaseCustomUIPanelPlugin {
-
-		private final int index;
-		private final BattleNext_FleetEditor editor;
-		private final boolean expanded;
-		private PositionAPI position;
-
-		private MemberRowPlugin(int index, BattleNext_FleetEditor editor, boolean expanded) {
-			this.index = index;
-			this.editor = editor;
-			this.expanded = expanded;
-		}
-
-		private void setPosition(PositionAPI position) {
-			this.position = position;
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			Color background = expanded ? BattleNext_UiTheme.PANEL : BattleNext_UiTheme.PANEL.darker();
-			BattleNext_GeometryRenderer.fillRect(position, background, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{
-					position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, expanded ? 2f : 1f);
-		}
-
-		@Override
-		public void buttonPressed(Object buttonId) {
-			editor.buttonPressed(buttonId);
-		}
-
-		@Override
-		public void processInput(List<InputEventAPI> events) {
-			for (InputEventAPI event : events) {
-				if (event.isConsumed() || !event.isLMBDownEvent()
-						|| !position.containsEvent(event)) continue;
-				editor.buttonPressed("toggle_member:" + index);
-				event.consume();
-				return;
-			}
-		}
-	}
-
-	private static class MemberBodyPlugin extends BaseCustomUIPanelPlugin {
-		private final BattleNext_FleetEditor editor;
-		private PositionAPI position;
-
-		private MemberBodyPlugin(BattleNext_FleetEditor editor) {
-			this.editor = editor;
-		}
-
-		private void setPosition(PositionAPI position) {
-			this.position = position;
-		}
-
-		@Override
-		public void buttonPressed(Object buttonId) {
-			editor.buttonPressed(buttonId);
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			BattleNext_GeometryRenderer.fillRect(position, MEMBER_BODY_BACKGROUND, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{
-					position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, 2f);
-		}
-	}
 }

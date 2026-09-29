@@ -4,7 +4,6 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -28,11 +27,11 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.awt.Color;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,16 +52,11 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private static final float REPORT_CONTEXT_TOP_GAP = 6f;
 	private static final float REPORT_SECTION_TOP_GAP = 10f;
 	private static final float DETAIL_CONTROL_SIDE_RESERVE = 12f;
-	private static final float MEMBER_ROW_HEIGHT = 40f;
 	private static final float MEMBER_THUMB_SIZE = 32f;
-	private static final float MEMBER_ROW_GAP = 4f;
 	private static final float MEMBER_BODY_INSET = 8f;
 	private static final float MEMBER_BODY_LINE_HEIGHT = 24f;
 	private static final float SOURCE_ROW_HEIGHT = 40f;
 	private static final float SOURCE_ROW_GAP = 4f;
-	private static final float MEMBER_METRICS_MIN_WIDTH = 155f;
-	private static final float MEMBER_METRICS_MAX_WIDTH = 260f;
-	private static final Color MEMBER_BODY_BACKGROUND = new Color(0, 0, 0, 150);
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -304,47 +298,21 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			float width = detailControlWidth(contentWidth);
 			List<BattleNext_DamageSourceReport> sources = sourcesFor(row);
 			float bodyHeight = expanded ? memberBodyHeight(sources.size()) : 0f;
-			CustomPanelAPI memberPanel = detailPanel.createCustomPanel(width,
-					MEMBER_ROW_HEIGHT + bodyHeight, new BaseCustomUIPanelPlugin());
-			addMemberHeader(memberPanel, row, action, width, expanded);
-			if (expanded) addMemberBody(memberPanel, row, sources, width, bodyHeight);
-			detailContent.addCustom(memberPanel, MEMBER_ROW_GAP);
+			HullSummary hull = resolveHull(member.getVariantId(), this::loadVariant);
+			String shipName = member.getName().isEmpty() ? member.getVariantId() : member.getName();
+			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
+					hull.spritePath(), false, "", shipName, hull.name(),
+					totalLabel(row) + "  " + statusLabel(member.getStatus()),
+					text("final_hull") + ": " + member.getFinalHullFraction()
+							+ "  " + text("final_cr") + ": " + member.getFinalCr());
+			BattleNext_ExpandablePanel.addTo(detailContent, detailPanel, width, expanded, bodyHeight,
+					header, () -> buttonPressed(action), this::buttonPressed,
+					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
 		}
 	}
 
-	private void addMemberHeader(CustomPanelAPI memberPanel, MemberRow row, String action,
-			float width, boolean expanded) {
-		MemberHeaderPlugin plugin = new MemberHeaderPlugin(this, action, expanded);
-		CustomPanelAPI header = memberPanel.createCustomPanel(width, MEMBER_ROW_HEIGHT, plugin);
-		plugin.setPosition(header.getPosition());
-		HullSummary hull = resolveHull(row.member().getVariantId(), this::loadVariant);
-		TooltipMakerAPI icon = header.createUIElement(MEMBER_THUMB_SIZE, MEMBER_ROW_HEIGHT, false);
-		if (!addSprite(icon, hull.spritePath())) {
-			icon.addPara("?", 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
-		}
-		header.addUIElement(icon).inTL(0f, (MEMBER_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f);
-		float metricsWidth = metricsWidth(width);
-		float nameWidth = Math.max(1f, width - MEMBER_THUMB_SIZE - metricsWidth - 20f);
-		Color color = expanded ? BattleNext_UiTheme.TEXT : BattleNext_UiTheme.MUTED;
-		TooltipMakerAPI names = header.createUIElement(nameWidth, MEMBER_ROW_HEIGHT, false);
-		String shipName = row.member().getName().isEmpty() ? row.member().getVariantId() : row.member().getName();
-		names.addPara(names.shortenString(shipName, nameWidth - 6f), 3f, color);
-		names.addPara(names.shortenString(hull.name(), nameWidth - 6f), 1f, color);
-		header.addUIElement(names).inTL(MEMBER_THUMB_SIZE + 8f, 0f);
-		TooltipMakerAPI metrics = header.createUIElement(metricsWidth, MEMBER_ROW_HEIGHT, false);
-		String status = statusLabel(row.member().getStatus());
-		metrics.addPara(metrics.shortenString(totalLabel(row) + "  " + status, metricsWidth - 6f), 3f, color);
-		metrics.addPara(metrics.shortenString(text("final_hull") + ": " + row.member().getFinalHullFraction()
-				+ "  " + text("final_cr") + ": " + row.member().getFinalCr(), metricsWidth - 6f), 1f, color);
-		header.addUIElement(metrics).inTL(width - metricsWidth - 4f, 0f);
-		memberPanel.addComponent(header).inTL(0f, 0f);
-	}
-
-	private void addMemberBody(CustomPanelAPI memberPanel, MemberRow row,
+	private void addMemberBody(CustomPanelAPI body, MemberRow row,
 			List<BattleNext_DamageSourceReport> sources, float width, float height) {
-		MemberBodyPlugin plugin = new MemberBodyPlugin();
-		CustomPanelAPI body = memberPanel.createCustomPanel(width, height, plugin);
-		plugin.setPosition(body.getPosition());
 		float contentWidth = width - MEMBER_BODY_INSET * 2f;
 		TooltipMakerAPI content = body.createUIElement(contentWidth, height - MEMBER_BODY_INSET * 2f, false);
 		CustomPanelAPI summary = body.createCustomPanel(contentWidth, MEMBER_BODY_LINE_HEIGHT,
@@ -371,7 +339,6 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		}
 		content.setHeightSoFar(height - MEMBER_BODY_INSET * 2f);
 		body.addUIElement(content).inTL(MEMBER_BODY_INSET, MEMBER_BODY_INSET);
-		memberPanel.addComponent(body).inTL(0f, MEMBER_ROW_HEIGHT);
 	}
 
 	private void addSourceRow(CustomPanelAPI body, TooltipMakerAPI content,
@@ -429,11 +396,6 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	static String nameForRefresh(BattleNext_BattleReportModel report, String editedName) {
 		return editedName == null ? report.getName() : editedName;
-	}
-
-	static float metricsWidth(float rowWidth) {
-		return Math.min(MEMBER_METRICS_MAX_WIDTH,
-				Math.max(MEMBER_METRICS_MIN_WIDTH, rowWidth * 0.28f));
 	}
 
 	static float memberBodyHeight(int sourceCount) {
@@ -535,66 +497,6 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	static record MemberRow(BattleNext_MemberReport member, boolean dealt) { }
 	static record HullSummary(String name, String spritePath) { }
-
-	private static class MemberHeaderPlugin extends BaseCustomUIPanelPlugin {
-		private final BattleNext_BattleReportPage page;
-		private final String action;
-		private final boolean expanded;
-		private PositionAPI position;
-
-		private MemberHeaderPlugin(BattleNext_BattleReportPage page, String action, boolean expanded) {
-			this.page = page;
-			this.action = action;
-			this.expanded = expanded;
-		}
-
-		private void setPosition(PositionAPI position) {
-			this.position = position;
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			Color background = expanded ? BattleNext_UiTheme.PANEL : BattleNext_UiTheme.PANEL.darker();
-			BattleNext_GeometryRenderer.fillRect(position, background, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{
-					position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, expanded ? 2f : 1f);
-		}
-
-		@Override
-		public void processInput(List<InputEventAPI> events) {
-			for (InputEventAPI event : events) {
-				if (event.isConsumed() || !event.isLMBDownEvent() || !position.containsEvent(event)) continue;
-				page.buttonPressed(action);
-				event.consume();
-				return;
-			}
-		}
-	}
-
-	private static class MemberBodyPlugin extends BaseCustomUIPanelPlugin {
-		private PositionAPI position;
-
-		private void setPosition(PositionAPI position) {
-			this.position = position;
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			BattleNext_GeometryRenderer.fillRect(position, MEMBER_BODY_BACKGROUND, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{
-					position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, 2f);
-		}
-	}
 
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
 		private PositionAPI position;

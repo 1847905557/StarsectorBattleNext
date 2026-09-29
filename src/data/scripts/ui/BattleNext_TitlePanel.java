@@ -241,11 +241,11 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			hovered = inside;
 			entryBorder.setSize(hovered ? HOVER_BORDER_SIZE : ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f,
 					hovered ? HOVER_BORDER_SIZE : ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
-			if (hovered) Global.getSoundPlayer().playUISound("BUtil_button_in", 1f, 1f);
+			if (hovered) Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, 1f, 1f);
 		}
 		boolean down = Mouse.isButtonDown(0);
 		if (inside && down && !mouseHeld && panelCooldown > ENTRY_CLICK_COOLDOWN) {
-			Global.getSoundPlayer().playUISound("BUtil_button_down", 1f, 1f);
+			Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID, 1f, 1f);
 			openPanel();
 		}
 		mouseHeld = down;

@@ -11,7 +11,9 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_TextFieldTest {
+	private final List<String> sounds = new ArrayList<>();
 
 	@AfterEach
 	void clearFocus() {
@@ -118,10 +121,116 @@ class BattleNext_TextFieldTest {
 		assertEquals("", field.getText());
 	}
 
+	@Test
+	void focusClickAndProgrammaticEditsUseExpectedSounds() throws Exception {
+		BattleNext_TextField field = field();
+		field.setText("initial");
+		assertTrue(sounds.isEmpty());
+		field.grabFocus(false);
+		assertTrue(sounds.isEmpty());
+		field.grabFocus();
+		assertEquals(List.of(BattleNext_TextField.BUZZ_SOUND_ID), sounds);
+		BattleNext_TextFieldSession.register(field);
+		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
+		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
+		assertEquals(List.of("ui_typer_buzz", "ui_typer_buzz", "ui_typer_buzz"), sounds);
+		field.setText("changed");
+		assertEquals(3, sounds.size());
+	}
+
+	@Test
+	void typingDeletionAndEscapeReportAcceptedOrRejectedEdit() throws Exception {
+		BattleNext_TextField field = field();
+		field.setMaxChars(1);
+		field.processKeyboard(key(Keyboard.KEY_A, 'a', false, false));
+		field.processKeyboard(key(Keyboard.KEY_B, 'b', false, false));
+		field.processKeyboard(key(Keyboard.KEY_5, '%', false, false));
+		field.processKeyboard(key(Keyboard.KEY_BACK, '\b', false, false));
+		field.processKeyboard(key(Keyboard.KEY_BACK, '\b', false, false));
+		field.processKeyboard(key(Keyboard.KEY_DELETE, (char) 0, false, false));
+		field.processKeyboard(key(Keyboard.KEY_ESCAPE, (char) 0, false, false));
+		assertEquals(List.of("ui_typer_type", "ui_typer_buzz", "ui_typer_buzz",
+				"ui_typer_type", "ui_typer_buzz", "ui_typer_buzz", "ui_typer_type"), sounds);
+	}
+
+	@Test
+	void pastePlaysAtMostOneSoundPerOutcomeAndEmojiOnce() throws Exception {
+		BattleNext_TextField field = field();
+		field.insertPastedText("A\n😀B");
+		assertEquals("A😀B", field.getText());
+		assertEquals(List.of("ui_typer_type", "ui_typer_buzz"), sounds);
+		sounds.clear();
+		field.insertPastedText("XY");
+		assertEquals(List.of("ui_typer_type"), sounds);
+		sounds.clear();
+		field.insertPastedText("");
+		assertEquals(List.of("ui_typer_buzz"), sounds);
+		sounds.clear();
+		field.setMaxChars(field.getText().length());
+		field.insertPastedText("Z");
+		assertEquals(List.of("ui_typer_buzz"), sounds);
+	}
+
+	@Test
+	void silentMethodsAndIgnoredShortcutsStaySilent() throws Exception {
+		BattleNext_TextField field = field();
+		field.setText("abc");
+		assertTrue(field.appendCharIfPossible('d', false));
+		assertFalse(field.appendCharIfPossible('%', false));
+		field.deleteAll(false);
+		field.processKeyboard(key(Keyboard.KEY_B, 'b', true, false));
+		field.processKeyboard(key(Keyboard.KEY_LEFT, (char) 0, false, false));
+		assertTrue(sounds.isEmpty());
+		field.deleteAll();
+		assertEquals(List.of("ui_typer_buzz"), sounds);
+		sounds.clear();
+		field.setText("two words");
+		field.deleteLastWord();
+		assertEquals(List.of("ui_typer_type"), sounds);
+	}
+
+	@Test
+	void cutAndPublicDeleteMethodsRespectChangeAndSoundFlags() throws Exception {
+		BattleNext_TextField field = field();
+		field.setText("abc");
+		field.processKeyboard(key(Keyboard.KEY_A, (char) 1, true, false));
+		field.processKeyboard(key(Keyboard.KEY_C, (char) 3, true, false));
+		assertTrue(sounds.isEmpty());
+		field.processKeyboard(key(Keyboard.KEY_X, (char) 24, true, false));
+		assertEquals("", field.getText());
+		assertEquals(List.of("ui_typer_type"), sounds);
+		sounds.clear();
+		field.setText("text");
+		field.deleteAll();
+		assertEquals(List.of("ui_typer_type"), sounds);
+		sounds.clear();
+		assertTrue(field.appendCharIfPossible('q'));
+		assertFalse(field.appendCharIfPossible('%'));
+		assertEquals(List.of("ui_typer_type", "ui_typer_buzz"), sounds);
+	}
+
+	@Test
+	void keyboardSurrogatePairProducesOneTypeSoundAndWidthRejectionBuzzes() throws Exception {
+		BattleNext_TextField field = field();
+		field.processKeyboard(key(Keyboard.KEY_1, '\ud83d', false, false));
+		assertTrue(sounds.isEmpty());
+		field.processKeyboard(key(Keyboard.KEY_2, '\ude00', false, false));
+		assertEquals("😀", field.getText());
+		assertEquals(List.of("ui_typer_type"), sounds);
+		field.setText("");
+		field.setLimitByStringWidth(true);
+		field.setPad(150f);
+		field.processKeyboard(key(Keyboard.KEY_A, 'a', false, false));
+		assertEquals("", field.getText());
+		assertEquals(List.of("ui_typer_type", "ui_typer_buzz"), sounds);
+	}
+
 	private BattleNext_TextField field() throws Exception {
 		PositionAPI position = proxy(PositionAPI.class, (name, args) -> switch (name) {
+			case "getX", "getY" -> 0f;
 			case "getWidth" -> 300f;
 			case "getHeight" -> 28f;
+			case "containsEvent" -> true;
 			default -> null;
 		});
 		LabelAPI label = proxy(LabelAPI.class, (name, args) -> switch (name) {
@@ -146,7 +255,23 @@ class BattleNext_TextFieldTest {
 		setField(field, "text", "");
 		setField(field, "undoText", "");
 		setField(field, "handleCtrlV", true);
+		setField(field, "soundSink", (Consumer<String>) sounds::add);
 		return field;
+	}
+
+	private InputEventAPI pointer() {
+		AtomicBoolean consumed = new AtomicBoolean();
+		return proxy(InputEventAPI.class, (name, args) -> switch (name) {
+			case "isLMBDownEvent" -> true;
+			case "isConsumed" -> consumed.get();
+			case "getX" -> 8;
+			case "getY" -> 8;
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
+			default -> null;
+		});
 	}
 
 	private void setField(BattleNext_TextField field, String name, Object value) throws Exception {
