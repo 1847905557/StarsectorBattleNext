@@ -35,11 +35,18 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private static final float MANAGEMENT_PANEL_EDGE_SHARE = 0.1f;
 	private static final float ENTRY_CLICK_COOLDOWN = 0.1f;
 	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
+	private static final String MISSION_CORE_UI_CLASS = "com.fs.starfarer.coreui.returnnew";
+	private static final String MISSION_REFIT_PROVIDER_CLASS = "com.fs.starfarer.title.Object.ooOO";
+	private static final String TITLE_DIALOG_CLASS = "com.fs.starfarer.ui.oo0O";
 
 	private CombatEngineAPI engine;
-	private CustomPanelAPI mainPanel;
-	private BattleNext_BasePanelPlugin mainPlugin;
+	private CustomPanelAPI configurationPanel;
+	private BattleNext_ConfigurationPanelPlugin configurationPlugin;
+	private CustomPanelAPI emptyPanel;
+	private CustomPanelAPI displayedPanel;
+
 	private UIPanelAPI screenPanel;
+	private Object refitDialog;
 	private SpriteAPI entryIcon;
 	private int backdropTexture;
 	private UIBorderObject entryBorder;
@@ -48,6 +55,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private boolean hovered;
 	private boolean mouseHeld;
 	private boolean renderChecked;
+	private boolean refitDetectionErrorLogged;
 
 	@Override
 	public void init(CombatEngineAPI engine) {
@@ -61,7 +69,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		loadBackdrop();
 		entryBorder = new UIBorderObject(false, true);
 		entryBorder.setSize(ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f, ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
-		createMainPanel();
+		createConfigurationPanel();
 	}
 
 	@Override
@@ -75,6 +83,9 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
+		if (panelVisible && displayedPanel == emptyPanel && !isRefitDialogAttached(refitDialog)) {
+			closePanel();
+		}
 	}
 
 	@Override
@@ -85,7 +96,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 					+ Global.getCurrentState() + ", icon=" + (entryIcon == null ? "missing" : "loaded"));
 			renderChecked = true;
 		}
-		if (Global.getCurrentState() != GameState.TITLE || mainPanel == null) {
+		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {
 			return;
 		}
 		if (panelVisible) {
@@ -98,10 +109,10 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
-		if (Global.getCurrentState() != GameState.TITLE || mainPanel == null) {
+		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {
 			return;
 		}
-		if (panelVisible && mainPlugin != null && mainPlugin.handleGlobalInput(events)) {
+		if (displayedPanel == configurationPanel && configurationPlugin != null && configurationPlugin.handleGlobalInput(events)) {
 			return;
 		}
 		if (!panelVisible) {
@@ -146,8 +157,8 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
 	}
 
-	private void createMainPanel() {
-		if (mainPanel != null) {
+	private void createConfigurationPanel() {
+		if (configurationPanel != null) {
 			return;
 		}
 		screenPanel = getScreenPanel();
@@ -156,34 +167,117 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		}
 		float width = ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_SCREEN_SHARE;
 		float height = ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_SCREEN_SHARE;
-		mainPlugin = new BattleNext_BasePanelPlugin(this::closePanel);
-		mainPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
-		mainPanel = Global.getSettings().createCustom(width, height, mainPlugin);
-		mainPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
+		configurationPlugin = new BattleNext_ConfigurationPanelPlugin(this::closePanel);
+		configurationPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
+		configurationPanel = Global.getSettings().createCustom(width, height, configurationPlugin);
+		configurationPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
 				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
-		mainPlugin.init(mainPanel, width, height);
+		configurationPlugin.init(configurationPanel, width, height);
 	}
 
 	private void openPanel() {
-		if (mainPanel == null) {
-			createMainPanel();
+		if (configurationPanel == null) {
+			createConfigurationPanel();
 		}
-		if (mainPanel == null || screenPanel == null) {
+		if (configurationPanel == null || screenPanel == null) {
 			return;
 		}
-		mainPlugin.open();
-		screenPanel.addComponent(mainPanel);
+		Object dialog = findMissionRefitDialog();
+		if (dialog != null) {
+			createEmptyPanel();
+			if (emptyPanel == null) return;
+			refitDialog = dialog;
+			displayedPanel = emptyPanel;
+		} else {
+			configurationPlugin.open();
+			displayedPanel = configurationPanel;
+		}
+		screenPanel.addComponent(displayedPanel);
 		panelVisible = true;
 		panelCooldown = 0f;
 	}
 
 	private void closePanel() {
-		if (screenPanel != null && mainPanel != null) {
-			screenPanel.removeComponent(mainPanel);
+		if (screenPanel != null && displayedPanel != null) {
+			screenPanel.removeComponent(displayedPanel);
 		}
+		displayedPanel = null;
+		refitDialog = null;
 		panelVisible = false;
 		panelCooldown = 0f;
 		mouseHeld = Mouse.isButtonDown(0);
+	}
+
+	private void createEmptyPanel() {
+		if (emptyPanel != null) return;
+		float width = ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_SCREEN_SHARE;
+		float height = ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_SCREEN_SHARE;
+		BattleNext_EmptyPanelPlugin emptyPlugin = new BattleNext_EmptyPanelPlugin(this::closePanel);
+		emptyPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
+		emptyPanel = Global.getSettings().createCustom(width, height, emptyPlugin);
+		emptyPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
+				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
+		emptyPlugin.init(emptyPanel, width, height);
+	}
+
+	private Object findMissionRefitDialog() {
+		try {
+			for (Object dialog : childrenOf(screenPanel)) {
+				if (!hasDialogSuperclass(dialog) || !isRefitDialogAttached(dialog)) continue;
+				for (Object child : childrenOf(dialog)) {
+					if (!MISSION_CORE_UI_CLASS.equals(child.getClass().getName())) continue;
+					Object provider = invokeNoArg(child, "getPlugin");
+					if (matchesMissionRefit(provider == null ? null : provider.getClass().getName(),
+							hasDialogSuperclass(dialog))) return dialog;
+				}
+			}
+			return null;
+		} catch (Throwable exception) {
+			logRefitDetectionFailure(exception);
+			return null;
+		}
+	}
+
+	static boolean matchesMissionRefit(String providerClassName, boolean dialogTypeMatches) {
+		return MISSION_REFIT_PROVIDER_CLASS.equals(providerClassName) && dialogTypeMatches;
+	}
+
+	private boolean hasDialogSuperclass(Object dialog) {
+		Class<?> type = dialog.getClass();
+		while (type != null) {
+			if (TITLE_DIALOG_CLASS.equals(type.getName())) return true;
+			type = type.getSuperclass();
+		}
+		return false;
+	}
+
+	private List<?> childrenOf(Object panel) throws Throwable {
+		return (List<?>) invokeNoArg(panel, "getChildrenCopy");
+	}
+
+	private Object invokeNoArg(Object target, String name) throws Throwable {
+		for (Object method : target.getClass().getMethods()) {
+			if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals(name)) continue;
+			return BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, target);
+		}
+		throw new NoSuchMethodException(name);
+	}
+
+	private boolean isRefitDialogAttached(Object dialog) {
+		if (dialog == null || screenPanel == null) return false;
+		try {
+			Object parent = invokeNoArg(dialog, "getParent");
+			return parent == screenPanel;
+		} catch (Throwable exception) {
+			logRefitDetectionFailure(exception);
+			return false;
+		}
+	}
+
+	private void logRefitDetectionFailure(Throwable exception) {
+		if (refitDetectionErrorLogged) return;
+		refitDetectionErrorLogged = true;
+		Global.getLogger(BattleNext_TitlePanel.class).warn("Mission refit UI detection failed", exception);
 	}
 
 	private void renderEntry() {

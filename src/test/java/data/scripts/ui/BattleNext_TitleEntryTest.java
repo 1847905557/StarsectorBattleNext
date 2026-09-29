@@ -1,6 +1,7 @@
 package data.scripts.ui;
 
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,8 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -82,5 +85,45 @@ class BattleNext_TitlePanelTest {
 		assertSame(Color.WHITE, color.get());
 		assertEquals(128f, width.get());
 		assertEquals(32f, height.get());
+	}
+
+	@Test
+	void missionRefitRequiresTheMissionProviderAndDialogType() {
+		assertTrue(BattleNext_TitlePanel.matchesMissionRefit(
+				"com.fs.starfarer.title.Object.ooOO", true));
+		assertFalse(BattleNext_TitlePanel.matchesMissionRefit(
+				"com.fs.starfarer.title.dev.StockVariantEditorPlugin", true));
+		assertFalse(BattleNext_TitlePanel.matchesMissionRefit(null, true));
+		assertFalse(BattleNext_TitlePanel.matchesMissionRefit(
+				"com.fs.starfarer.title.Object.ooOO", false));
+	}
+
+	@Test
+	void obfuscatedMissionRefitEntryPointsExistInTheTargetGame() throws Exception {
+		try (ZipFile game = new ZipFile(Path.of("../../starsector-core/starfarer_obf.jar").toFile())) {
+			assertTrue(game.getEntry("com/fs/starfarer/coreui/returnnew.class") != null);
+			assertTrue(game.getEntry("com/fs/starfarer/title/Object/ooOO.class") != null);
+			assertTrue(game.getEntry("com/fs/starfarer/ui/oo0O.class") != null);
+		}
+	}
+
+	@Test
+	void emptyPanelConsumesInputAndCloseInvokesItsOwner() {
+		AtomicBoolean closed = new AtomicBoolean();
+		AtomicBoolean consumed = new AtomicBoolean();
+		InputEventAPI event = (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "isConsumed" -> consumed.get();
+					case "consume" -> { consumed.set(true); yield null; }
+					default -> null;
+				});
+		BattleNext_EmptyPanelPlugin plugin = new BattleNext_EmptyPanelPlugin(() -> closed.set(true));
+
+		plugin.processInput(List.of(event));
+		assertTrue(consumed.get());
+		plugin.buttonPressed("other");
+		assertFalse(closed.get());
+		plugin.buttonPressed("close");
+		assertTrue(closed.get());
 	}
 }
