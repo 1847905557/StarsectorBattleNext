@@ -111,7 +111,6 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_PageantPlugin pageant = new BattleNext_PageantPlugin(scorekeeper,
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
 		api.addPlugin(pageant);
-		api.addPlugin(new BattleNext_PostReportPlugin(scorekeeper, pageant));
 	}
 
 	private String progress(BattleNext_TournamentModel tournament, BattleNext_Match match) {

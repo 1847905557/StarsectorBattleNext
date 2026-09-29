@@ -41,11 +41,9 @@
 		"BattleNext_report_emp": "EMP damage",
 		"BattleNext_report_final_hull": "Final hull",
 		"BattleNext_report_final_cr": "Final CR",
-		"BattleNext_report_battle_report": "Battle report: %s",
-		"BattleNext_report_duration_seconds": "Duration: %s seconds",
-		"BattleNext_report_member_state": "%s %s hull=%s cr=%s",
-		"BattleNext_report_member_damage": "%s %s hull=%s armor=%s shields=%s emp=%s",
-		"BattleNext_report_exit_hint": "Press ESC to exit the battle report."
+		"BattleNext_report_generated": "Battle report generated: %s",
+		"BattleNext_report_not_retained": "Battle report was not retained.",
+		"BattleNext_report_save_failed": "Battle report could not be saved."
 	},
 	"UI": {
 		"BattleNext_title_open": "AI Battles Next",

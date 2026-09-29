@@ -3,6 +3,9 @@
 		"BattleNextTitlePanel": "data.scripts.ui.BattleNext_TitlePanel"
 	},
 	"graphics": {
+		"icon": {
+			"BattleNext_Icon": "graphics/ui/BattleNext_Icon.png"
+		},
 		"misc": {
 			"BattleNext_versus": "graphics/ui/BattleNext/BattleNext_versus.png",
 			"BattleNext_versusFlash": "graphics/ui/BattleNext/BattleNext_versusFlash.png",

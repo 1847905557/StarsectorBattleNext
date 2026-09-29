@@ -5,48 +5,42 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
+import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.api.util.Pair;
 import com.fs.state.AppDriver;
-import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
-import org.boxutil.config.BoxConfigGUI;
 import org.boxutil.manager.ShaderCore;
-import org.boxutil.util.CommonUtil;
 import org.boxutil.units.standard.misc.UIBorderObject;
+import org.boxutil.util.CommonUtil;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import java.awt.Color;
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	private static final float ENTRY_LEFT_INSET = 5f;
-	private static final float ENTRY_BORDER_WIDTH = 8f;
-	private static final float ENTRY_WIDTH = 48f;
-	private static final float ENTRY_HEIGHT = 24f;
+	static final float ENTRY_BORDER_WIDTH = 8f;
+	static final float ENTRY_WIDTH = 96f;
+	static final float ENTRY_HEIGHT = 24f;
 	private static final float ENTRY_BOTTOM_OFFSET = 133f;
-	private static final float HOVER_ICON_INSET = 12f;
-	private static final float HOVER_ICON_SIZE = 88f;
-	private static final float HOVER_BORDER_SIZE = 112f;
 	private static final float MANAGEMENT_PANEL_SCREEN_SHARE = 0.8f;
 	private static final float MANAGEMENT_PANEL_EDGE_SHARE = 0.1f;
 	private static final float ENTRY_CLICK_COOLDOWN = 0.1f;
 	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
 
-	private static final int ICON_PIXEL_CHANNEL_COUNT = 4;
-
 	private CombatEngineAPI engine;
 	private CustomPanelAPI mainPanel;
 	private BattleNext_BasePanelPlugin mainPlugin;
 	private UIPanelAPI screenPanel;
-	private final int[] iconTextures = new int[2];
+	private SpriteAPI entryIcon;
 	private int backdropTexture;
 	private UIBorderObject entryBorder;
 	private float panelCooldown;
@@ -63,7 +57,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		BoxUtilModPlugin.initLater();
-		loadIcons();
+		entryIcon = Global.getSettings().getSprite("icon", "BattleNext_Icon");
 		loadBackdrop();
 		entryBorder = new UIBorderObject(false, true);
 		entryBorder.setSize(ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f, ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
@@ -74,7 +68,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
 			closePanel();
-			releaseIcons();
+			releaseBackdrop();
 			if (engine != null) {
 				engine.removePlugin(this);
 			}
@@ -85,13 +79,13 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void renderInUICoords(ViewportAPI viewport) {
-		boolean panelEmpty = isTitlePanelEmpty();
+
 		if (!renderChecked) {
 			Global.getLogger(BattleNext_TitlePanel.class).info("Title UI render: state="
-					+ Global.getCurrentState() + ", dialogEmpty=" + panelEmpty + ", icon=" + iconTextures[0]);
+					+ Global.getCurrentState() + ", icon=" + (entryIcon == null ? "missing" : "loaded"));
 			renderChecked = true;
 		}
-		if (Global.getCurrentState() != GameState.TITLE || !panelEmpty) {
+		if (Global.getCurrentState() != GameState.TITLE || mainPanel == null) {
 			return;
 		}
 		if (panelVisible) {
@@ -104,7 +98,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
-		if (Global.getCurrentState() != GameState.TITLE || !isTitlePanelEmpty()) {
+		if (Global.getCurrentState() != GameState.TITLE || mainPanel == null) {
 			return;
 		}
 		if (panelVisible && mainPlugin != null && mainPlugin.handleGlobalInput(events)) {
@@ -123,33 +117,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		}
 	}
 
-	private void loadIcons() {
-		if (iconTextures[0] != 0) {
-			return;
-		}
-		String[] paths = {"graphics/ui/BattleNext_FeaturesIcon.png", "graphics/ui/BattleNext_ConfigButton.png"};
-		for (int index = 0; index < paths.length; index++) {
-			int texture = GL11.glGenTextures();
-			if (texture == 0) continue;
-			Pair<int[], ByteBuffer> data = CommonUtil.getRawPixels(paths[index], ICON_PIXEL_CHANNEL_COUNT);
-			GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
-			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
-					data.one[0], data.one[1], 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, data.two);
-			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-			iconTextures[index] = texture;
-		}
-		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-	}
-
-	private void releaseIcons() {
-		for (int index = 0; index < iconTextures.length; index++) {
-			if (iconTextures[index] == 0) continue;
-			GL11.glDeleteTextures(iconTextures[index]);
-			iconTextures[index] = 0;
-		}
+	private void releaseBackdrop() {
 		if (backdropTexture != 0) {
 			GL11.glDeleteTextures(backdropTexture);
 			backdropTexture = 0;
@@ -220,27 +188,40 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 
 	private void renderEntry() {
 		entryBorder.render(ENTRY_LEFT_INSET, ENTRY_BOTTOM_OFFSET);
-		float x = hovered ? ENTRY_LEFT_INSET + HOVER_ICON_INSET : ENTRY_LEFT_INSET + ENTRY_BORDER_WIDTH;
-		float y = hovered ? ENTRY_BOTTOM_OFFSET + HOVER_ICON_INSET : ENTRY_BOTTOM_OFFSET + ENTRY_BORDER_WIDTH;
-		float width = hovered ? HOVER_ICON_SIZE : ENTRY_WIDTH;
-		float height = hovered ? HOVER_ICON_SIZE : ENTRY_HEIGHT;
-		BattleNext_GeometryRenderer.texturedQuad(iconTextures[hovered ? 1 : 0], x, y, width, height,
-				1f, 1f, 1f, 1f, 1f, 1f);
+		renderIcon(entryIcon, hovered, ENTRY_LEFT_INSET + ENTRY_BORDER_WIDTH,
+				ENTRY_BOTTOM_OFFSET + ENTRY_BORDER_WIDTH, BattleNext_UiTheme.PANEL, BattleNext_UiTheme.ACCENT);
+	}
+
+	static void renderIcon(SpriteAPI icon, boolean hovered, float x, float y, Color muted, Color accent) {
+		Color previousColor = icon.getColor();
+		float previousWidth = icon.getWidth();
+		float previousHeight = icon.getHeight();
+		try {
+			icon.setColor(iconTint(hovered, muted, accent));
+			icon.setSize(ENTRY_WIDTH, ENTRY_HEIGHT);
+			icon.render(x, y);
+		} finally {
+			icon.setColor(previousColor);
+			icon.setSize(previousWidth, previousHeight);
+		}
+	}
+
+	static Color iconTint(boolean hovered, Color muted, Color accent) {
+		return hovered ? accent : muted;
+	}
+
+	static boolean containsEntry(float x, float y) {
+		return x >= ENTRY_LEFT_INSET && x <= ENTRY_LEFT_INSET + ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f
+				&& y >= ENTRY_BOTTOM_OFFSET && y <= ENTRY_BOTTOM_OFFSET + ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f;
 	}
 
 	private void updateEntryInput() {
 		float scale = Global.getSettings().getScreenScaleMult();
 		float mouseX = Mouse.getX() / scale;
 		float mouseY = Mouse.getY() / scale;
-		float x = ENTRY_LEFT_INSET;
-		float y = ENTRY_BOTTOM_OFFSET;
-		float sizeX = hovered ? HOVER_BORDER_SIZE : ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f;
-		float sizeY = hovered ? HOVER_BORDER_SIZE : ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f;
-		boolean inside = mouseX >= x && mouseX <= x + sizeX && mouseY >= y && mouseY <= y + sizeY;
+		boolean inside = containsEntry(mouseX, mouseY);
 		if (inside != hovered) {
 			hovered = inside;
-			entryBorder.setSize(hovered ? HOVER_BORDER_SIZE : ENTRY_WIDTH + ENTRY_BORDER_WIDTH * 2f,
-					hovered ? HOVER_BORDER_SIZE : ENTRY_HEIGHT + ENTRY_BORDER_WIDTH * 2f);
 			if (hovered) Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, 1f, 1f);
 		}
 		boolean down = Mouse.isButtonDown(0);
@@ -249,10 +230,6 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			openPanel();
 		}
 		mouseHeld = down;
-	}
-
-	private boolean isTitlePanelEmpty() {
-		return BoxConfigGUI.isTitlePanelEmpty();
 	}
 
 	private UIPanelAPI getScreenPanel() {

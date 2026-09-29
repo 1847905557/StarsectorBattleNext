@@ -13,6 +13,7 @@ import data.scripts.tools.BattleNext_Settings;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.units.standard.entity.SpriteEntity;
 import org.boxutil.util.TransformUtil;
+import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
 import java.util.List;
@@ -20,9 +21,10 @@ import java.util.Locale;
 
 public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 
-	private static final float TOP_MARGIN = 20f;
-	private static final float SPRITE_WIDTH = 440f;
-	private static final float SPRITE_HEIGHT = 220f;
+	private static final float TOP_MARGIN = 8f;
+	static final float SPRITE_WIDTH = 220f;
+	static final float SPRITE_HEIGHT = 110f;
+	static final float TIMER_FONT_SIZE = 24f;
 	private static final float TRANSITION_TIME = 0.5f;
 	private static final Color TEXT_COLOR = Color.WHITE;
 
@@ -97,16 +99,19 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 			imageAlpha = resultTimeoutAlpha * resultFade;
 		}
 
-		float centerX = Global.getSettings().getScreenWidth() * 0.5f;
-		float centerY = Global.getSettings().getScreenHeight() - TOP_MARGIN - SPRITE_HEIGHT * 0.5f;
-		timeoutSprite.setLocation(centerX, centerY);
+		Vector2f center = clockCenter(Global.getSettings().getScreenWidth(), Global.getSettings().getScreenHeight());
+		timeoutSprite.setLocation(center.x, center.y);
 		timeoutSprite.getMaterialData().setColorAlpha(imageAlpha);
 		if (timerAlpha > 0f) {
 			timerText.setBaseColor(new Color(TEXT_COLOR.getRed(), TEXT_COLOR.getGreen(), TEXT_COLOR.getBlue(),
 					Math.min(255, Math.round(timerAlpha * 255f))));
-			timerText.draw(centerX - timerText.getWidth() * 0.5f,
-					centerY + timerText.getHeight() * 0.5f);
+			timerText.draw(center.x - timerText.getWidth() * 0.5f,
+					center.y + timerText.getHeight() * 0.5f);
 		}
+	}
+
+	static Vector2f clockCenter(float screenWidth, float screenHeight) {
+		return new Vector2f(screenWidth * 0.5f, screenHeight - TOP_MARGIN - SPRITE_HEIGHT * 0.5f);
 	}
 
 	private void initVisuals() {
@@ -120,7 +125,7 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 		timeoutSprite.getMaterialData().setColor(Color.WHITE);
 		timeoutSprite.getMaterialData().setColorAlpha(0f);
 		timerText = BattleNext_FontData.getOrbitronNormal();
-		timerText.setFontSize(48f);
+		timerText.setFontSize(TIMER_FONT_SIZE);
 		timerText.setBaseColor(TEXT_COLOR);
 	}
 
