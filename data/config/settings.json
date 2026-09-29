@@ -1,6 +1,6 @@
 {
 	"plugins": {
-		"BattleNextTitlePanel": "data.scripts.ui.BattleNext_TitlePanel"
+		"BattleNextTitleEntry": "data.scripts.ui.BattleNext_TitleEntry"
 	},
 	"graphics": {
 		"icon": {

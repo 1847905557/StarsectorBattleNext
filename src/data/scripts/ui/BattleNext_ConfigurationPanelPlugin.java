@@ -10,7 +10,7 @@ import org.boxutil.manager.ShaderCore;
 
 import java.util.List;
 
-public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
+public class BattleNext_ConfigurationPanelPlugin extends BaseCustomUIPanelPlugin {
 
 	private static final float PANEL_BORDER_INSET = 8f;
 
@@ -24,7 +24,7 @@ public class BattleNext_BasePanelPlugin extends BaseCustomUIPanelPlugin {
 	private float backdropU;
 	private float backdropV;
 
-	public BattleNext_BasePanelPlugin(Runnable closeAction) {
+	public BattleNext_ConfigurationPanelPlugin(Runnable closeAction) {
 		uiManager = new BattleNext_UiManager(closeAction);
 	}
 

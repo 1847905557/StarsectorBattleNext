@@ -166,6 +166,11 @@ public class BattleNext_OptionPicker {
 		owner.addComponent(row).inTL(rect.getX(), rect.getY());
 	}
 
+	public void setEnabled(boolean enabled) {
+		if (toggle != null) toggle.setEnabled(enabled);
+		if (!enabled) close();
+	}
+
 	public void close() {
 		BattleNext_TextField.releaseFocusedField();
 		if (activePicker == this) activePicker = null;

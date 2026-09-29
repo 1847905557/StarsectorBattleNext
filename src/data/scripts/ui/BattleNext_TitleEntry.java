@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
@@ -21,10 +22,11 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
 import java.awt.Color;
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
+public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
 	private static final float ENTRY_LEFT_INSET = 5f;
 	static final float ENTRY_BORDER_WIDTH = 8f;
@@ -35,14 +37,18 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private static final float MANAGEMENT_PANEL_EDGE_SHARE = 0.1f;
 	private static final float ENTRY_CLICK_COOLDOWN = 0.1f;
 	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
+
 	private static final String MISSION_CORE_UI_CLASS = "com.fs.starfarer.coreui.returnnew";
 	private static final String MISSION_REFIT_PROVIDER_CLASS = "com.fs.starfarer.title.Object.ooOO";
 	private static final String TITLE_DIALOG_CLASS = "com.fs.starfarer.ui.oo0O";
+	private static final String REFIT_TAB_CLASS = "com.fs.starfarer.coreui.refit.void";
+	private static final String REFIT_SCREEN_CLASS = "com.fs.starfarer.coreui.refit.U";
+	private static final String REFIT_TAB_CONTENT_FIELD = "\u00d200000";
 
 	private CombatEngineAPI engine;
 	private CustomPanelAPI configurationPanel;
 	private BattleNext_ConfigurationPanelPlugin configurationPlugin;
-	private CustomPanelAPI emptyPanel;
+	private CustomPanelAPI refitPanel;
 	private CustomPanelAPI displayedPanel;
 
 	private UIPanelAPI screenPanel;
@@ -83,7 +89,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
-		if (panelVisible && displayedPanel == emptyPanel && !isRefitDialogAttached(refitDialog)) {
+		if (panelVisible && displayedPanel == refitPanel && !isRefitDialogAttached(refitDialog)) {
 			closePanel();
 		}
 	}
@@ -92,7 +98,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	public void renderInUICoords(ViewportAPI viewport) {
 
 		if (!renderChecked) {
-			Global.getLogger(BattleNext_TitlePanel.class).info("Title UI render: state="
+			Global.getLogger(BattleNext_TitleEntry.class).info("Title UI render: state="
 					+ Global.getCurrentState() + ", icon=" + (entryIcon == null ? "missing" : "loaded"));
 			renderChecked = true;
 		}
@@ -115,13 +121,19 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		if (displayedPanel == configurationPanel && configurationPlugin != null && configurationPlugin.handleGlobalInput(events)) {
 			return;
 		}
+		if (displayedPanel == refitPanel
+				&& ((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).handleGlobalInput(events)) return;
 		if (!panelVisible) {
 			return;
 		}
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
-				closePanel();
+				if (displayedPanel == refitPanel) {
+					((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).requestClose();
+				} else {
+					closePanel();
+				}
 				event.consume();
 				return;
 			}
@@ -184,10 +196,21 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		}
 		Object dialog = findMissionRefitDialog();
 		if (dialog != null) {
-			createEmptyPanel();
-			if (emptyPanel == null) return;
+			createRefitPanel();
+			if (refitPanel == null) return;
+			Object refitScreen = selectedMissionRefitScreen(dialog);
+			FleetMemberAPI member = null;
+			if (refitScreen != null) {
+				try {
+					Object selected = invokeNoArg(refitScreen, "getMember");
+					if (selected instanceof FleetMemberAPI) member = (FleetMemberAPI) selected;
+				} catch (Throwable exception) {
+					logRefitDetectionFailure(exception);
+				}
+			}
+			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).open(member, refitScreen);
 			refitDialog = dialog;
-			displayedPanel = emptyPanel;
+			displayedPanel = refitPanel;
 		} else {
 			configurationPlugin.open();
 			displayedPanel = configurationPanel;
@@ -198,6 +221,9 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void closePanel() {
+		if (displayedPanel == refitPanel) {
+			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).close();
+		}
 		if (screenPanel != null && displayedPanel != null) {
 			screenPanel.removeComponent(displayedPanel);
 		}
@@ -208,16 +234,16 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		mouseHeld = Mouse.isButtonDown(0);
 	}
 
-	private void createEmptyPanel() {
-		if (emptyPanel != null) return;
+	private void createRefitPanel() {
+		if (refitPanel != null) return;
 		float width = ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_SCREEN_SHARE;
 		float height = ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_SCREEN_SHARE;
-		BattleNext_EmptyPanelPlugin emptyPlugin = new BattleNext_EmptyPanelPlugin(this::closePanel);
-		emptyPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
-		emptyPanel = Global.getSettings().createCustom(width, height, emptyPlugin);
-		emptyPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
+		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(this::closePanel);
+		plugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
+		refitPanel = Global.getSettings().createCustom(width, height, plugin);
+		refitPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
 				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
-		emptyPlugin.init(emptyPanel, width, height);
+		plugin.init(refitPanel, width, height);
 	}
 
 	private Object findMissionRefitDialog() {
@@ -230,6 +256,26 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 					if (matchesMissionRefit(provider == null ? null : provider.getClass().getName(),
 							hasDialogSuperclass(dialog))) return dialog;
 				}
+			}
+			return null;
+		} catch (Throwable exception) {
+			logRefitDetectionFailure(exception);
+			return null;
+		}
+	}
+
+	private Object selectedMissionRefitScreen(Object dialog) {
+		try {
+			for (Object core : childrenOf(dialog)) {
+				if (!MISSION_CORE_UI_CLASS.equals(core.getClass().getName())) continue;
+				Object tabData = invokeNoArg(core, "getCurrentTabData");
+				if (tabData == null) return null;
+				Object refitTab = MethodHandles.publicLookup().findGetter(tabData.getClass(),
+						REFIT_TAB_CONTENT_FIELD, screenPanel.getClass()).invoke(tabData);
+				if (refitTab == null || !REFIT_TAB_CLASS.equals(refitTab.getClass().getName())) return null;
+				Object refitScreen = invokeNoArg(refitTab, "getRefitPanel");
+				if (refitScreen == null || !REFIT_SCREEN_CLASS.equals(refitScreen.getClass().getName())) return null;
+				return refitScreen;
 			}
 			return null;
 		} catch (Throwable exception) {
@@ -255,7 +301,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 		return (List<?>) invokeNoArg(panel, "getChildrenCopy");
 	}
 
-	private Object invokeNoArg(Object target, String name) throws Throwable {
+	static Object invokeNoArg(Object target, String name) throws Throwable {
 		for (Object method : target.getClass().getMethods()) {
 			if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals(name)) continue;
 			return BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, target);
@@ -277,7 +323,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private void logRefitDetectionFailure(Throwable exception) {
 		if (refitDetectionErrorLogged) return;
 		refitDetectionErrorLogged = true;
-		Global.getLogger(BattleNext_TitlePanel.class).warn("Mission refit UI detection failed", exception);
+		Global.getLogger(BattleNext_TitleEntry.class).warn("Mission refit UI detection failed", exception);
 	}
 
 	private void renderEntry() {
@@ -329,7 +375,7 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 	private UIPanelAPI getScreenPanel() {
 		try {
 			if (!BUtil_RefMethod.VALID) {
-				Global.getLogger(BattleNext_TitlePanel.class).warn("Title screen panel reflection is unavailable");
+				Global.getLogger(BattleNext_TitleEntry.class).warn("Title screen panel reflection is unavailable");
 				return null;
 			}
 			Object state = AppDriver.getInstance().getCurrentState();
@@ -339,10 +385,10 @@ public class BattleNext_TitlePanel extends BaseEveryFrameCombatPlugin {
 				Object result = BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, state);
 				return result instanceof UIPanelAPI ? (UIPanelAPI) result : null;
 			}
-			Global.getLogger(BattleNext_TitlePanel.class).warn("Title screen panel getter is unavailable");
+			Global.getLogger(BattleNext_TitleEntry.class).warn("Title screen panel getter is unavailable");
 			return null;
 		} catch (Throwable exception) {
-			CommonUtil.printThrowable(BattleNext_TitlePanel.class, "Title screen panel lookup failed: ", exception);
+			CommonUtil.printThrowable(BattleNext_TitleEntry.class, "Title screen panel lookup failed: ", exception);
 			return null;
 		}
 	}
