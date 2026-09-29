@@ -4,7 +4,6 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
@@ -45,7 +44,7 @@ public class BattleNext_VariantSourceProvider implements BattleNext_OptionPicker
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), VARIANT_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), VARIANT_ID_TOOLTIP_GAP);
 	}
 
 	private ShipVariantAPI loadVariant(String id) {

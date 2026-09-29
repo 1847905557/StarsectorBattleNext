@@ -2,7 +2,6 @@ package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.json.JSONArray;
@@ -49,11 +48,11 @@ public class BattleNext_PersonalitySourceProvider implements BattleNext_OptionPi
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		JSONObject row = findRow(option.getId());
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), PERSONALITY_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), PERSONALITY_ID_TOOLTIP_GAP);
 		if (row != null) {
 			String description = row.optString("desc", "").trim();
 			if (!description.isEmpty()) {
-				tooltip.addPara(description, PERSONALITY_DESCRIPTION_TOOLTIP_GAP, BattleNext_UiTheme.TEXT);
+				tooltip.addPara(description, PERSONALITY_DESCRIPTION_TOOLTIP_GAP);
 			}
 		}
 	}

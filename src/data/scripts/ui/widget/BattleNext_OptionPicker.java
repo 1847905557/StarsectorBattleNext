@@ -94,8 +94,8 @@ public class BattleNext_OptionPicker {
 	private static final float TILE_COUNT_PIP_TOP_INSET = 4f;
 	private static final float TILE_COUNT_PIP_SPACING = 7f;
 	private static final float TILE_COUNT_PIP_SIZE = 5f;
-	private static final float HOVER_MAX_WIDTH = 300f;
-	private static final float HOVER_MAX_HEIGHT = 180f;
+	private static final float HOVER_MAX_WIDTH = 480f;
+	private static final float HOVER_MAX_HEIGHT = 240f;
 	private static final float HOVER_CONTENT_INSET = 6f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.HEADER;
@@ -268,7 +268,7 @@ public class BattleNext_OptionPicker {
 	private TooltipMakerAPI searchElement(float width) {
 
 		TooltipMakerAPI searchBar = popup.createUIElement(width - 2f * POPUP_INSET, SEARCH_HEIGHT, false);
-		searchBar.addPara(strings.get("picker_search"), 0f, BattleNext_UiTheme.MUTED)
+		searchBar.addPara(strings.get("picker_search"), 0f)
 				.getPosition().inTL(0f, SEARCH_LABEL_TOP_INSET);
 		TooltipMakerAPI fieldHost = popup.createUIElement(width - SEARCH_FIELD_WIDTH_RESERVE, SEARCH_HEIGHT, false);
 		search = BattleNext_TextField.addTo(fieldHost, popup,
@@ -300,7 +300,7 @@ public class BattleNext_OptionPicker {
 			}
 		}
 		if (visible.isEmpty()) {
-			grid.addPara(strings.get("picker_no_options"), POPUP_INSET, BattleNext_UiTheme.MUTED);
+			grid.addPara(strings.get("picker_no_options"), POPUP_INSET);
 		} else {
 			int columns = Math.max(1, (int) ((width - 2f * POPUP_INSET + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
 			for (int index = 0; index < visible.size(); index++) {
@@ -336,8 +336,7 @@ public class BattleNext_OptionPicker {
 		}
 		TooltipMakerAPI fallback = tile.createUIElement(TILE_ICON_SIZE, TILE_ICON_SIZE, false);
 		fallback.setParaSmallInsignia();
-		fallback.addPara(fallback.shortenString(option.label, TILE_LABEL_TRUNCATION_WIDTH),
-				0f, BattleNext_UiTheme.MUTED)
+		fallback.addPara(fallback.shortenString(option.label, TILE_LABEL_TRUNCATION_WIDTH), 0f)
 				.getPosition().inMid();
 		tile.addUIElement(fallback).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
 	}

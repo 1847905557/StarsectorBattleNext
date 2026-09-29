@@ -52,10 +52,10 @@ public class BattleNext_RefitDModSourceProvider implements BattleNext_OptionPick
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
 		tooltip.addTitle(spec.getDisplayName());
-		tooltip.addPara(choice.getId(), 4f, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(choice.getId(), 4f);
 		if (variant != null) {
 			tooltip.addPara(strings.get(isSuitableFor(variant, spec)
-					? "refit_suitable" : "refit_unsuitable"), 6f, BattleNext_UiTheme.TEXT);
+					? "refit_suitable" : "refit_unsuitable"), 6f);
 		}
 	}
 

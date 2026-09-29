@@ -170,7 +170,7 @@ public final class BattleNext_DropdownField {
 		TooltipMakerAPI list = popup.createUIElement(width - POPUP_SCROLLBAR_RESERVE, height, true);
 		list.setButtonFontOrbitron20();
 		if (options.isEmpty()) {
-			list.addPara("", 0f, BattleNext_UiTheme.MUTED);
+			list.addPara("", 0f);
 		} else {
 			for (DropdownChoice option : options) {
 				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option,

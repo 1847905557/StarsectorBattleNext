@@ -58,11 +58,10 @@ public class BattleNext_RefitSModSourceProvider implements BattleNext_OptionPick
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
 		tooltip.addTitle(spec.getDisplayName());
-		tooltip.addPara(choice.getId(), 4f, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(choice.getId(), 4f);
 		if (variant != null && variant.getHullSpec().isBuiltInMod(choice.getId())) {
 			boolean effect = spec.getEffect() != null && spec.getEffect().hasSModEffect();
-			tooltip.addPara(strings.get(effect ? "refit_smod_effect" : "refit_smod_no_effect"),
-					6f, BattleNext_UiTheme.TEXT);
+			tooltip.addPara(strings.get(effect ? "refit_smod_effect" : "refit_smod_no_effect"), 6f);
 		}
 	}
 }

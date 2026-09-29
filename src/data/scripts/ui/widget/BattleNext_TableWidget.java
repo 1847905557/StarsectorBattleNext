@@ -112,8 +112,7 @@ public class BattleNext_TableWidget {
 		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
 		maker.setParaSmallInsignia();
 		LabelAPI label = maker.addPara(maker.shortenString(value,
-				Math.max(1f, rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)),
-				0f, BattleNext_UiTheme.TEXT);
+				Math.max(1f, rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f);
 		label.setAlignment(Alignment.MID);
 		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
 		label.getPosition().inTL(0f,

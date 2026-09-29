@@ -78,7 +78,7 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footer, width, actions.length);
 		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
 			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
-			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
+			statusLabel = footerStatus.addPara(status, 0f);
 			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
 			footerStatus.setHeightSoFar(statusRect.getHeight());
 			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
@@ -97,13 +97,12 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 				listContentRect.getHeight(), true);
 		list.addTitle(text("rules_heading"));
 		if (!store.isLoaded()) list.addPara(text("load_failed") + ": " + store.getLoadError(),
-				RULE_LIST_ERROR_TOP_GAP, BattleNext_UiTheme.MUTED);
+				RULE_LIST_ERROR_TOP_GAP);
 		for (BattleNext_RuleModel rule : store.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(list, rule.getName(),
 					"rules:select:" + rule.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
-		if (store.getAll().isEmpty()) list.addPara(text("rules_empty"),
-				RULE_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
+		if (store.getAll().isEmpty()) list.addPara(text("rules_empty"), RULE_LIST_EMPTY_TOP_GAP);
 		listPanel.addUIElement(list).inTL(listContentRect.getX() - listRect.getX(),
 				listContentRect.getY() - listRect.getY());
 		detailRect.removeLatestSubPanel();

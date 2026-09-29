@@ -191,13 +191,13 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private void fillMeta(TooltipMakerAPI metaContent, float width) {
 		metaContent.addTitle(text("fleet_section_details"));
-		status = metaContent.addPara(text("ready"), EDITOR_STATUS_GAP, BattleNext_UiTheme.MUTED);
+		status = metaContent.addPara(text("ready"), EDITOR_STATUS_GAP);
 		id = field(metaContent, text("fleet_id"), draft.getId(), width, metaContent);
 		folderName = field(metaContent, text("fleet_folder_name"), draft.getFolderName(), width, metaContent);
 		name = field(metaContent, text("fleet_name"), draft.getName(), width, metaContent);
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width, metaContent);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width, metaContent);
-		metaContent.addPara(text("fleet_skills"), FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
+		metaContent.addPara(text("fleet_skills"), FIELD_LABEL_GAP);
 		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 		skills = skillsPicker.addTo(metaContent, panel, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
 				String.join(",", draft.getSkills()), metaContent);
@@ -230,7 +230,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float detailWidth = width - MEMBER_DETAIL_INSET * 2f;
 			TooltipMakerAPI title = bodyPanel.createUIElement(detailWidth, MEMBER_DETAIL_TITLE_HEIGHT, false);
-			title.addPara(text("member") + " " + (index + 1), 0f, BattleNext_UiTheme.TEXT);
+			title.addPara(text("member") + " " + (index + 1), 0f);
 			title.setHeightSoFar(MEMBER_DETAIL_TITLE_HEIGHT);
 			bodyPanel.addUIElement(title).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 			float y = MEMBER_DETAIL_INSET + MEMBER_DETAIL_TITLE_HEIGHT;
@@ -314,7 +314,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private void addMemberLabel(CustomPanelAPI block, String label, float width) {
 		TooltipMakerAPI labelHost = block.createUIElement(width, MEMBER_DETAIL_LABEL_HEIGHT, false);
-		labelHost.addPara(label, 0f, BattleNext_UiTheme.MUTED);
+		labelHost.addPara(label, 0f);
 		labelHost.setHeightSoFar(MEMBER_DETAIL_LABEL_HEIGHT);
 		block.addUIElement(labelHost).inTL(0f, 0f);
 	}
@@ -340,7 +340,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value,
 			float sectionWidth, TooltipMakerAPI... viewports) {
-		host.addPara(label, FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
+		host.addPara(label, FIELD_LABEL_GAP);
 		TextFieldAPI field = BattleNext_TextField.addTo(host, owner,
 				Math.max(FIELD_MIN_WIDTH, sectionWidth - FIELD_SIDE_RESERVE),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value,

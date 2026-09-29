@@ -6,7 +6,6 @@ import com.fs.starfarer.api.characters.FullName.Gender;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.tools.BattleNext_ModFileManager;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
@@ -96,6 +95,6 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionPicke
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), PORTRAIT_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), PORTRAIT_ID_TOOLTIP_GAP);
 	}
 }

@@ -133,7 +133,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				new UIRect(closeX, footerY, FOOTER_BUTTON_WIDTH, BattleNext_PageLayout.FOOTER_HEIGHT),
 				strings.get("close"), "close", CutStyle.BOTTOM, false);
 		TooltipMakerAPI status = panel.createUIElement(width * 0.5f, BattleNext_PageLayout.FOOTER_HEIGHT, false);
-		statusLabel = status.addPara("", 0f, BattleNext_UiTheme.MUTED);
+		statusLabel = status.addPara("", 0f);
 		panel.addUIElement(status).inTL(BORDER_INSET, footerY);
 		saveButton.setEnabled(false);
 	}
@@ -453,7 +453,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			SpriteAPI sprite = Global.getSettings().getSprite(path);
 			float availableWidth = width - FRAME_INSET * 4f;
 			float availableHeight = height - 70f;
-			float scale = Math.min(availableWidth / sprite.getWidth(), availableHeight / sprite.getHeight());
+			float scale = shipSpriteScale(sprite.getWidth(), sprite.getHeight(), availableWidth, availableHeight);
 			float imageWidth = sprite.getWidth() * scale;
 			float imageHeight = sprite.getHeight() * scale;
 			TooltipMakerAPI image = leftContent.createUIElement(imageWidth, imageHeight, false);
@@ -463,6 +463,10 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		} catch (RuntimeException exception) {
 			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit hull sprite unavailable: " + path, exception);
 		}
+	}
+
+	static float shipSpriteScale(float spriteWidth, float spriteHeight, float availableWidth, float availableHeight) {
+		return Math.min(1f, Math.min(availableWidth / spriteWidth, availableHeight / spriteHeight));
 	}
 
 	private void rebuildMods() {
@@ -489,17 +493,16 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				Global.getSettings().getSprite(path);
 				icon.addImage(path, ICON_SIZE, ICON_SIZE, 0f);
 			} catch (RuntimeException exception) {
-				icon.addPara("?", 0f, BattleNext_UiTheme.MUTED);
+				icon.addPara("?", 0f);
 			}
 		}
 		row.addUIElement(icon).inTL(4f, 4f);
 		TooltipMakerAPI name = row.createUIElement(width - ICON_SIZE - 12f, ROW_HEIGHT, false);
-		name.addPara(name.shortenString(spec.getDisplayName(), width - ICON_SIZE - 18f),
-				3f, BattleNext_UiTheme.TEXT);
+		name.addPara(name.shortenString(spec.getDisplayName(), width - ICON_SIZE - 18f), 3f);
 		String state = spec.hasTag(Tags.HULLMOD_DMOD) ? strings.get("refit_dmod")
 				: sModsOf(draft).contains(id) ? strings.get("refit_smod")
 				: draft.getHullSpec().isBuiltInMod(id) ? strings.get("read_only") : "";
-		if (!state.isEmpty()) name.addPara(state, 0f, BattleNext_UiTheme.MUTED);
+		if (!state.isEmpty()) name.addPara(state, 0f);
 		row.addUIElement(name).inTL(ICON_SIZE + 8f, 0f);
 		middleContent.addCustom(row, ROW_GAP);
 		middleContent.addTooltipToPrevious(new BaseTooltipCreator() {
@@ -510,10 +513,10 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 				tooltip.addTitle(spec.getDisplayName());
-				tooltip.addPara(id, 4f, BattleNext_UiTheme.MUTED);
+				tooltip.addPara(id, 4f);
 				String description = spec.getDescription(draft.getHullSize());
 				if (description != null && !description.isBlank()) {
-					tooltip.addPara(description, 8f, BattleNext_UiTheme.TEXT);
+					tooltip.addPara(description, 8f);
 				}
 			}
 		}, TooltipMakerAPI.TooltipLocation.RIGHT);

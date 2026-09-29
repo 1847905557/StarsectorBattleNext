@@ -57,7 +57,6 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private int backdropTexture;
 	private UIBorderObject entryBorder;
 	private float panelCooldown;
-	private boolean panelVisible;
 	private boolean hovered;
 	private boolean mouseHeld;
 	private boolean renderChecked;
@@ -89,7 +88,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
-		if (panelVisible && displayedPanel == refitPanel && !isRefitDialogAttached(refitDialog)) {
+		if (isRefitPanelDisplayed() && !isRefitDialogAttached(refitDialog)) {
 			closePanel();
 		}
 	}
@@ -105,7 +104,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {
 			return;
 		}
-		if (panelVisible) {
+		if (displayedPanel != null) {
 			captureBackdrop();
 			return;
 		}
@@ -115,21 +114,18 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
-		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {
+		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null || displayedPanel == null) {
 			return;
 		}
 		if (displayedPanel == configurationPanel && configurationPlugin != null && configurationPlugin.handleGlobalInput(events)) {
 			return;
 		}
-		if (displayedPanel == refitPanel
+		if (isRefitPanelDisplayed()
 				&& ((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).handleGlobalInput(events)) return;
-		if (!panelVisible) {
-			return;
-		}
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
-				if (displayedPanel == refitPanel) {
+				if (isRefitPanelDisplayed()) {
 					((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).requestClose();
 				} else {
 					closePanel();
@@ -195,6 +191,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		Object dialog = findMissionRefitDialog();
+		CustomPanelAPI nextPanel;
 		if (dialog != null) {
 			createRefitPanel();
 			if (refitPanel == null) return;
@@ -209,29 +206,33 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				}
 			}
 			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).open(member, refitScreen);
-			refitDialog = dialog;
-			displayedPanel = refitPanel;
+			nextPanel = refitPanel;
 		} else {
 			configurationPlugin.open();
-			displayedPanel = configurationPanel;
+			nextPanel = configurationPanel;
 		}
-		screenPanel.addComponent(displayedPanel);
-		panelVisible = true;
+		screenPanel.addComponent(nextPanel);
+		displayedPanel = nextPanel;
+		refitDialog = nextPanel == refitPanel ? dialog : null;
 		panelCooldown = 0f;
 	}
 
 	private void closePanel() {
-		if (displayedPanel == refitPanel) {
+		if (displayedPanel == null) return;
+		if (isRefitPanelDisplayed()) {
 			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).close();
 		}
-		if (screenPanel != null && displayedPanel != null) {
+		if (screenPanel != null) {
 			screenPanel.removeComponent(displayedPanel);
 		}
 		displayedPanel = null;
 		refitDialog = null;
-		panelVisible = false;
 		panelCooldown = 0f;
 		mouseHeld = Mouse.isButtonDown(0);
+	}
+
+	private boolean isRefitPanelDisplayed() {
+		return refitPanel != null && displayedPanel == refitPanel;
 	}
 
 	private void createRefitPanel() {

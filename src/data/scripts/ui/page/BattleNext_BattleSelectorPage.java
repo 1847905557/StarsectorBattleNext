@@ -108,7 +108,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 				labelWidth, SOURCE_CONTROL_HEIGHT);
 		TooltipMakerAPI sourceLabel = labelRect.beginTooltip(panel, false);
 		sourceLabel.setParaOrbitronLarge();
-		sourceLabel.addPara(text("battle_source"), 0f, BattleNext_UiTheme.ACCENT)
+		sourceLabel.addPara(text("battle_source"), 0f)
 				.getPosition().inTL(0f, SOURCE_LABEL_TEXT_TOP_INSET);
 		sourceLabel.setHeightSoFar(labelRect.getHeight());
 		labelRect.addTooltip();
@@ -237,8 +237,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
 			BattleNext_UiTheme.configure(message);
 			message.addTitle(text("tournament_missing"));
-			message.addPara(text("tournament_missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP,
-					BattleNext_UiTheme.MUTED);
+			message.addPara(text("tournament_missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP);
 			messageRect.addTooltip();
 			return;
 		}
@@ -256,27 +255,23 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		rect.removeLatestSubPanel();
 		CustomPanelAPI summaryPanel = rect.createSubPanel(detailPanel, null).getPanel();
 		TooltipMakerAPI summary = summaryPanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
-		if (!loadError.isEmpty()) summary.addPara(loadError, 0f, BattleNext_UiTheme.MUTED);
+		if (!loadError.isEmpty()) summary.addPara(loadError, 0f);
 		summary.addTitle(text("tournament_summary"));
-		summary.addPara(text("status") + ": " + tournamentStatus(tournament),
-				TOURNAMENT_SUMMARY_STATUS_GAP, BattleNext_UiTheme.TEXT);
+		summary.addPara(text("status") + ": " + tournamentStatus(tournament), TOURNAMENT_SUMMARY_STATUS_GAP);
 		summary.addPara(text("tournament_format") + ": " + bracketLabel(tournament)
-				+ " / " + strings.format("bo", tournament.getBoCount()), TOURNAMENT_SUMMARY_DETAIL_GAP,
-				BattleNext_UiTheme.TEXT);
-		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(),
-				TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
+				+ " / " + strings.format("bo", tournament.getBoCount()), TOURNAMENT_SUMMARY_DETAIL_GAP);
+		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(), TOURNAMENT_SUMMARY_DETAIL_GAP);
 		if (tournament.isCompleted()) {
-			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(),
-					TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
+			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(), TOURNAMENT_SUMMARY_DETAIL_GAP);
 		}
 		summary.addPara(text("tournament_rules") + ": "
 				+ (tournament.getRuleId().isEmpty() ? text("rules_unbound")
 						: ruleStore.get(tournament.getRuleId()) == null
 						? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
-				TOURNAMENT_SUMMARY_DETAIL_GAP, BattleNext_UiTheme.TEXT);
-		summary.addPara(text("fleet_ids"), TOURNAMENT_SUMMARY_SECTION_GAP, BattleNext_UiTheme.ACCENT);
+				TOURNAMENT_SUMMARY_DETAIL_GAP);
+		summary.addPara(text("fleet_ids"), TOURNAMENT_SUMMARY_SECTION_GAP);
 		for (String fleet : tournament.getFleetIds()) {
-			summary.addPara(fleet, TOURNAMENT_SUMMARY_FLEET_GAP, BattleNext_UiTheme.TEXT);
+			summary.addPara(fleet, TOURNAMENT_SUMMARY_FLEET_GAP);
 		}
 		summaryPanel.addUIElement(summary).inTL(0f, 0f);
 	}
@@ -288,37 +283,35 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		BattleNext_Match next = nextMatch(tournament);
 		schedule.addTitle(text("next_match"));
 		if (next == null) {
-			schedule.addPara(text("no_pending_match"), TOURNAMENT_SCHEDULE_ENTRY_GAP, BattleNext_UiTheme.MUTED);
+			schedule.addPara(text("no_pending_match"), TOURNAMENT_SCHEDULE_ENTRY_GAP);
 		} else {
 			schedule.addPara(next.getId() + ": " + next.getPlayer() + " / " + next.getEnemy(),
-					TOURNAMENT_SCHEDULE_ENTRY_GAP, BattleNext_UiTheme.TEXT);
+					TOURNAMENT_SCHEDULE_ENTRY_GAP);
 			if (selectedId.equals(tournamentStore.getActiveId())) {
 				provider.load();
-				for (String reason : provider.getWarnings()) schedule.addPara(reason,
-						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
-				for (String reason : provider.getRuleWarnings()) schedule.addPara(reason,
-						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
+				for (String reason : provider.getWarnings()) schedule.addPara(reason, TOURNAMENT_SCHEDULE_WARNING_GAP);
+				for (String reason : provider.getRuleWarnings()) schedule.addPara(reason, TOURNAMENT_SCHEDULE_WARNING_GAP);
 				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
 					BattleNext_PageLayout.button(schedule, text("rules_force_start"), "tournament:authorize",
 							TOURNAMENT_ACTION_BUTTON_WIDTH);
 				}
 			}
 		}
-		schedule.addPara(text("matches"), TOURNAMENT_SCHEDULE_SECTION_GAP, BattleNext_UiTheme.ACCENT);
+		schedule.addPara(text("matches"), TOURNAMENT_SCHEDULE_SECTION_GAP);
 		for (BattleNext_Match match : tournament.getMatches()) {
 			String matchLabel = match.getEnemy().isEmpty() ? text("stage_bye")
 					: BattleNext_MatchProgress.tournament(tournament, match).format(strings);
 			schedule.addPara(matchLabel + " / " + match.getId() + ": " + match.getPlayer()
 					+ " / " + match.getEnemy() + " [" + enumLabel("stage_", match.getStage())
 					+ " / " + enumLabel("match_status_", match.getStatus()) + "]",
-					TOURNAMENT_SCHEDULE_MATCH_GAP, BattleNext_UiTheme.TEXT);
+					TOURNAMENT_SCHEDULE_MATCH_GAP);
 			for (int index = 0; index < match.getRounds().size(); index++) {
 				BattleNext_Round round = match.getRounds().get(index);
 				String outcome = enumLabel("round_status_", round.getStatus());
 				if (round.getStatus() != BattleNext_Round.RoundStatus.DRAW) outcome += " (" + round.getWinnerFleetId() + ")";
 				schedule.addPara(strings.format("round_progress", index + 1, tournament.getBoCount())
 						+ " / " + text("status") + ": " + outcome,
-						TOURNAMENT_SCHEDULE_WARNING_GAP, BattleNext_UiTheme.MUTED);
+						TOURNAMENT_SCHEDULE_WARNING_GAP);
 			}
 		}
 		if (!tournament.isStarted()) {

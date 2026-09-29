@@ -88,7 +88,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
 		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
 			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
-			statusLabel = footerStatus.addPara(status, 0f, BattleNext_UiTheme.MUTED);
+			statusLabel = footerStatus.addPara(status, 0f);
 			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
 			footerStatus.setHeightSoFar(statusRect.getHeight());
 			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
@@ -138,7 +138,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 				TooltipMakerAPI note = detailPanel.createUIElement(noteRect.getWidth(), noteRect.getHeight(), false);
 				note.addPara(note.shortenString(text("source_unavailable_short"),
 						detailRect.getWidth() - BattleNext_PageLayout.MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE),
-						0f, BattleNext_UiTheme.MUTED);
+						0f);
 				detailPanel.addUIElement(note).inTL(noteRect.getX(), noteRect.getY());
 			}
 		}
@@ -188,9 +188,9 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 	private void addList(TooltipMakerAPI listContent) {
 		listContent.addTitle(text("page_fleets"));
 		if (!store.isLoaded()) listContent.addPara(text("load_failed") + ": " + store.getLoadError(),
-				BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP, BattleNext_UiTheme.MUTED);
+				BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP);
 		if (store.getAll().isEmpty()) listContent.addPara(text("no_fleets"),
-				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP, BattleNext_UiTheme.MUTED);
+				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP);
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName(),
 					"fleet:" + fleet.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));

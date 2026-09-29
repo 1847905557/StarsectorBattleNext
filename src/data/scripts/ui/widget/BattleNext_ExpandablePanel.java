@@ -78,21 +78,16 @@ public class BattleNext_ExpandablePanel {
 		if (header.secondarySlot()) addIcon(top, header.secondarySprite(), ICON_SIZE + 4f, true);
 		boolean rightSummary = !header.rightFirstLine().isEmpty() || !header.rightSecondLine().isEmpty();
 		HeaderLayout layout = headerLayout(width, header.secondarySlot(), rightSummary);
-		Color textColor = expanded ? BattleNext_UiTheme.TEXT : BattleNext_UiTheme.MUTED;
 		TooltipMakerAPI names = top.createUIElement(layout.textWidth(), HEADER_HEIGHT, false);
-		names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)),
-				3f, textColor);
+		names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)), 3f);
 		if (!header.secondLine().isEmpty()) {
-			names.addPara(names.shortenString(header.secondLine(), Math.max(1f, layout.textWidth() - 6f)),
-					1f, textColor);
+			names.addPara(names.shortenString(header.secondLine(), Math.max(1f, layout.textWidth() - 6f)), 1f);
 		}
 		top.addUIElement(names).inTL(layout.textX(), 0f);
 		if (rightSummary) {
 			TooltipMakerAPI metrics = top.createUIElement(layout.metricsWidth(), HEADER_HEIGHT, false);
-			metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth() - 6f),
-					3f, textColor);
-			metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth() - 6f),
-					1f, textColor);
+			metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth() - 6f), 3f);
+			metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth() - 6f), 1f);
 			top.addUIElement(metrics).inTL(layout.metricsX(), 0f);
 		}
 	}
@@ -102,7 +97,7 @@ public class BattleNext_ExpandablePanel {
 		if (!addSprite(image, path)) {
 			String fallback = missingIconLabel(secondarySlot);
 			if (!fallback.isEmpty()) {
-				image.addPara(fallback, 0f, BattleNext_UiTheme.MUTED).getPosition().inMid();
+				image.addPara(fallback, 0f).getPosition().inMid();
 			}
 		}
 		top.addUIElement(image).inTL(x, (HEADER_HEIGHT - ICON_SIZE) * 0.5f);

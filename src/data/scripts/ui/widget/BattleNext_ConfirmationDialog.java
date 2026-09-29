@@ -120,12 +120,12 @@ public class BattleNext_ConfirmationDialog {
 		BattleNext_UiTheme.configure(dialog);
 		dialog.addTitle(strings.get(deleteDescription == null ? "unsaved_title" : "delete_title"));
 		dialog.addPara(deleteDescription == null ? strings.get("unsaved_message")
-				: strings.get("delete_message") + " " + deleteDescription, DIALOG_MESSAGE_GAP, BattleNext_UiTheme.TEXT);
+				: strings.get("delete_message") + " " + deleteDescription, DIALOG_MESSAGE_GAP);
 		dialogRect.addTooltip();
 		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_STATUS_HEIGHT);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
-		confirmationStatus = confirmationStatusContent.addPara("", 0f, BattleNext_UiTheme.MUTED);
+		confirmationStatus = confirmationStatusContent.addPara("", 0f);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
 		String[] actions = deleteDescription == null

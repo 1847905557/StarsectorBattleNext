@@ -1,7 +1,11 @@
 package data.scripts.ui;
 
+import com.fs.starfarer.api.GameState;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -10,6 +14,7 @@ import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -135,6 +140,37 @@ class BattleNext_TitleEntryTest {
 		assertFalse(closed.get());
 		plugin.buttonPressed("close");
 		assertTrue(closed.get());
+	}
+
+	@Test
+	void titleInputBeforeRefitPanelCreationKeepsTheEntryAvailable() throws Exception {
+		SettingsAPI previous = Global.getSettings();
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
+						"getCurrentState".equals(method.getName()) ? GameState.TITLE : null);
+		CustomPanelAPI configuration = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> null);
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+		Field field = BattleNext_TitleEntry.class.getDeclaredField("configurationPanel");
+		field.setAccessible(true);
+		field.set(entry, configuration);
+		Field displayed = BattleNext_TitleEntry.class.getDeclaredField("displayedPanel");
+		displayed.setAccessible(true);
+		Global.setSettings(settings);
+		try {
+			assertDoesNotThrow(() -> entry.processInputPreCoreControls(0f, List.of()));
+			displayed.set(entry, configuration);
+			assertDoesNotThrow(() -> entry.processInputPreCoreControls(0f, List.of()));
+		} finally {
+			Global.setSettings(previous);
+		}
+	}
+
+	@Test
+	void cleanupBeforeAnyPanelIsDisplayedDoesNotRequireMouseInput() {
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+
+		assertDoesNotThrow(() -> entry.advance(0f, List.of()));
 	}
 
 }

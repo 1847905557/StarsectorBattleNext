@@ -6,7 +6,6 @@ import com.fs.starfarer.api.characters.SkillSpecAPI;
 import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
@@ -76,9 +75,9 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.O
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), SKILL_ID_TOOLTIP_GAP, BattleNext_UiTheme.MUTED);
+		tooltip.addPara(option.getId(), SKILL_ID_TOOLTIP_GAP);
 		if (spec != null && spec.getDescription() != null && !spec.getDescription().isBlank()) {
-			tooltip.addPara(spec.getDescription(), SKILL_DESCRIPTION_TOOLTIP_GAP, BattleNext_UiTheme.TEXT);
+			tooltip.addPara(spec.getDescription(), SKILL_DESCRIPTION_TOOLTIP_GAP);
 		}
 	}
 }

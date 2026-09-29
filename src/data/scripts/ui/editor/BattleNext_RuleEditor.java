@@ -111,7 +111,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		float rightWidth = usableWidth - leftWidth;
 		TooltipMakerAPI details = contentPanel.createUIElement(leftWidth, contentRect.getHeight(), true);
 		details.addTitle(text("rules_editable"));
-		statusLabel = details.addPara(status, STATUS_LINE_GAP, BattleNext_UiTheme.MUTED);
+		statusLabel = details.addPara(status, STATUS_LINE_GAP);
 		idField = field(details, panel, text("rules_id"), draft.getId(),
 				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
 		nameField = field(details, panel, text("rules_name"), draft.getName(),
@@ -154,8 +154,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 		LabelAPI descriptionLabel = descriptionHost.addPara(
 				descriptionHost.shortenString(description, Math.max(1f,
-						cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f,
-				spec == null ? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT);
+						cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f);
 		descriptionLabel.setAlignment(Alignment.MID);
 		descriptionLabel.getPosition().setSize(descriptionWidth,
 				descriptionLabel.getPosition().getHeight());
@@ -173,7 +172,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			TooltipMakerAPI missing = row.createUIElement(missingWidth,
 					BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 			LabelAPI missingLabel = missing.addPara(missing.shortenString(displayValue(restriction),
-					cells[VALUE_COLUMN].getWidth() - MISSING_VALUE_TRUNCATION_PADDING), 0f, BattleNext_UiTheme.MUTED);
+					cells[VALUE_COLUMN].getWidth() - MISSING_VALUE_TRUNCATION_PADDING), 0f);
 			missingLabel.setAlignment(Alignment.MID);
 			missingLabel.getPosition().setSize(missingWidth,
 					missingLabel.getPosition().getHeight());
@@ -365,7 +364,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width,
 			TooltipMakerAPI... viewports) {
-		host.addPara(label, DETAILS_FIELD_LABEL_GAP, BattleNext_UiTheme.MUTED);
+		host.addPara(label, DETAILS_FIELD_LABEL_GAP);
 		return BattleNext_TextField.addTo(host, owner,
 				Math.max(DETAILS_FIELD_MIN_WIDTH, width),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
@@ -411,8 +410,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-			tooltip.addPara(description, 0f, BattleNext_UiTheme.TEXT);
-			tooltip.addPara(id + "  [" + type + "]", RESTRICTION_TOOLTIP_META_GAP, BattleNext_UiTheme.MUTED);
+			tooltip.addPara(description, 0f);
+			tooltip.addPara(id + "  [" + type + "]", RESTRICTION_TOOLTIP_META_GAP);
 		}
 	}
 
@@ -446,7 +445,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f, BattleNext_UiTheme.TEXT);
+			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f);
 		}
 	}
 }

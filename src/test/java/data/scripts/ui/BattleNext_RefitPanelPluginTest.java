@@ -28,6 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BattleNext_RefitPanelPluginTest {
 
 	@Test
+	void shipSpriteKeepsNativeSizeWhenItFitsAndShrinksToFitOtherwise() {
+		assertEquals(1f, BattleNext_RefitPanelPlugin.shipSpriteScale(128f, 256f, 500f, 700f));
+		assertEquals(0.5f, BattleNext_RefitPanelPlugin.shipSpriteScale(800f, 200f, 400f, 700f));
+		assertEquals(0.5f, BattleNext_RefitPanelPlugin.shipSpriteScale(200f, 800f, 400f, 400f));
+	}
+
+	@Test
 	void ordinaryAndBuiltInHullmodsCanBePromotedAndDemoted() {
 		HullState hull = new HullState("wolf", false, false, false, Set.of("built"), null, null);
 		VariantState variant = new VariantState(hull, Set.of("normal", "built"));

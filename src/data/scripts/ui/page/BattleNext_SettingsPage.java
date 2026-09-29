@@ -56,7 +56,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 		UIRect contentRect = rest[1];
 		TooltipMakerAPI content = BattleNext_PageLayout.column(contentRect, panel);
 		content.addTitle(strings.get("settings_heading"));
-		content.addPara(strings.get("settings_description"), DESCRIPTION_TOP_GAP, BattleNext_UiTheme.TEXT);
+		content.addPara(strings.get("settings_description"), DESCRIPTION_TOP_GAP);
 		fullGraphicEffect = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
 				GRAPHICS_CHECKBOX_HEIGHT,
 				strings.get("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
@@ -75,13 +75,16 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 				contentRect.getY() + contentRect.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT
 						- SETTINGS_FOOTER_BOTTOM_INSET,
 				contentRect.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT);
-		BattleNext_PageLayout.fixedButton(panel, footer, strings.get("save"), "settings_save",
+		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footer, 1);
+		BattleNext_PageLayout.fixedButton(panel,
+				BattleNext_PageLayout.managementFooterButtonRect(footer, buttonWidth, 0),
+				strings.get("save"), "settings_save",
 				com.fs.starfarer.api.ui.CutStyle.ALL, true);
-		statusLabel = content.addPara(status, STATUS_TOP_GAP, BattleNext_UiTheme.MUTED);
+		statusLabel = content.addPara(status, STATUS_TOP_GAP);
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
-		content.addPara(strings.get(labelKey), FIELD_LABEL_TOP_GAP, BattleNext_UiTheme.TEXT);
+		content.addPara(strings.get(labelKey), FIELD_LABEL_TOP_GAP);
 		TextFieldAPI field = BattleNext_TextField.addTo(content, panel,
 				Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, content);

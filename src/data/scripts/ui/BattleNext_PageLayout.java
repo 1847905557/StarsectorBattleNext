@@ -126,7 +126,7 @@ public class BattleNext_PageLayout {
 			}
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				tooltip.addPara(title, 0f, BattleNext_UiTheme.TEXT);
+				tooltip.addPara(title, 0f);
 			}
 		}, TooltipLocation.RIGHT);
 		return button;

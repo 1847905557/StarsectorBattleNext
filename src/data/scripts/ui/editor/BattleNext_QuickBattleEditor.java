@@ -17,7 +17,6 @@ import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.widget.BattleNext_TextField;
 import org.json.JSONException;
 
-import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -191,7 +190,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		status = statusContent.addPara(statusContent.shortenString(
 				loadError.isEmpty() ? text("ready") : loadError, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
-				0f, BattleNext_UiTheme.MUTED);
+				0f);
 		status.getPosition().inTL(0f, STATUS_TOP_INSET);
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
 		panel.addUIElement(statusContent).inTL(statusX, footerRect.getY());
@@ -219,7 +218,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		QuickBattleEditorRow row = new QuickBattleEditorRow();
 		row.id = entry.getId();
 		row.model = entry;
-		addLabel(card, cells[ROW_NUMBER_COLUMN], Integer.toString(index + 1), BattleNext_UiTheme.TEXT, true);
+		addLabel(card, cells[ROW_NUMBER_COLUMN], Integer.toString(index + 1), true);
 		if (entry.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			float rawWidth = cells[MAP_SCALE_COLUMN].getX() + cells[MAP_SCALE_COLUMN].getWidth()
 					- cells[PLAYER_COLUMN].getX();
@@ -239,7 +238,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 		state.setParaSmallInsignia();
 		row.statusContent = state;
-		row.status = state.addPara(text("unavailable"), 0f, BattleNext_UiTheme.MUTED);
+		row.status = state.addPara(text("unavailable"), 0f);
 		row.status.setAlignment(Alignment.MID);
 		row.status.getPosition().setSize(statusLabelWidth, row.status.getPosition().getHeight());
 		row.status.getPosition().inTL(0f, Math.max(0f,
@@ -259,10 +258,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				List<String> errors = validationErrors(row);
 				if (errors.isEmpty()) {
-					tooltip.addPara(text("available"), 0f, BattleNext_UiTheme.TEXT);
+					tooltip.addPara(text("available"), 0f);
 				} else {
 					for (String error : errors) {
-						tooltip.addPara(error, STATUS_TOOLTIP_LINE_GAP, BattleNext_UiTheme.MUTED);
+						tooltip.addPara(error, STATUS_TOOLTIP_LINE_GAP);
 					}
 				}
 			}
@@ -296,13 +295,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		rows.add(row);
 	}
 
-	private void addLabel(CustomPanelAPI host, UIRect rect, String value, Color color,
-			boolean compactFont) {
+	private void addLabel(CustomPanelAPI host, UIRect rect, String value, boolean compactFont) {
 		float labelWidth = rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f;
 		TooltipMakerAPI maker = host.createUIElement(labelWidth, rect.getHeight(), false);
 		if (compactFont) maker.setParaSmallInsignia();
 		LabelAPI label = maker.addPara(maker.shortenString(value,
-				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING), 0f, color);
+				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING), 0f);
 		label.setAlignment(Alignment.MID);
 		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
 		label.getPosition().inTL(0f, Math.max(0f,
@@ -332,14 +330,14 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		for (QuickBattleEditorRow row : rows) {
 			if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				row.status.setText(text("raw_row"));
-				row.status.setColor(BattleNext_UiTheme.MUTED);
+				row.status.setColor(BattleNext_UiTheme.PANEL);
 				continue;
 			}
 			boolean available = validationErrors(row).isEmpty();
 			String label = text(available ? "available" : "unavailable");
 			if (!label.equals(row.status.getText())) {
 				row.status.setText(label);
-				row.status.setColor(available ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.MUTED);
+				row.status.setColor(available ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.PANEL);
 			}
 		}
 	}
