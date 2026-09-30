@@ -445,7 +445,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		ShipHullSpecAPI hull = draft.getHullSpec();
 		TooltipMakerAPI title = leftContent.createUIElement(width - FRAME_INSET * 2f, 42f, false);
 		title.addSectionHeading(title.shortenString(hull.getHullName(), width - FRAME_INSET * 3f),
-				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
+				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
 		leftContent.addUIElement(title).inTL(0f, 0f);
 		String path = hull.getSpriteName();
 		if (path == null || path.isBlank()) return;
@@ -541,7 +541,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			BattleNext_GeometryRenderer.lineLoop(new float[]{position.getX(), position.getY(),
 					position.getX() + position.getWidth(), position.getY(),
 					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.HEADER, alphaMult, 1f);
+					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.PANEL, alphaMult, 1f);
 		}
 		@Override
 		public void advance(float amount) {
@@ -582,7 +582,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			BattleNext_GeometryRenderer.lineLoop(new float[]{position.getX(), position.getY(),
 					position.getX() + position.getWidth(), position.getY(),
 					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.HEADER, alphaMult, FRAME_BORDER);
+					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.PANEL, alphaMult, FRAME_BORDER);
 		}
 	}
 }

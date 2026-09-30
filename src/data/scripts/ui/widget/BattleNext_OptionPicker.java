@@ -98,7 +98,7 @@ public class BattleNext_OptionPicker {
 	private static final float HOVER_MAX_HEIGHT = 240f;
 	private static final float HOVER_CONTENT_INSET = 6f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
-	private static final Color BORDER_COLOR = BattleNext_UiTheme.HEADER;
+	private static final Color BORDER_COLOR = BattleNext_UiTheme.PANEL;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);

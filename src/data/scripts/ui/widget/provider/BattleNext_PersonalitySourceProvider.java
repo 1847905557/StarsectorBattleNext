@@ -2,7 +2,6 @@ package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -13,11 +12,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class BattleNext_PersonalitySourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceProvider {
 
 	private static final String PERSONALITIES_PATH = "data/characters/personalities.csv";
-	private static final float PERSONALITY_ID_TOOLTIP_GAP = 5f;
-	private static final float PERSONALITY_DESCRIPTION_TOOLTIP_GAP = 8f;
 
 	@Override
 	public int getMaxCount(String id) {
@@ -47,13 +44,10 @@ public class BattleNext_PersonalitySourceProvider implements BattleNext_OptionPi
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		JSONObject row = findRow(option.getId());
-		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), PERSONALITY_ID_TOOLTIP_GAP);
+		addHeader(tooltip, option.getLabel(), option.getId());
 		if (row != null) {
 			String description = row.optString("desc", "").trim();
-			if (!description.isEmpty()) {
-				tooltip.addPara(description, PERSONALITY_DESCRIPTION_TOOLTIP_GAP);
-			}
+			addExcerpt(tooltip, description);
 		}
 	}
 

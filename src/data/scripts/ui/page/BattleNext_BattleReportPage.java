@@ -116,9 +116,9 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
 		listRect = regions[0];
 		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+		listRect.addBorder(panel, BattleNext_UiTheme.PANEL,
 				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
-		detailRect.addBorder(panel, BattleNext_UiTheme.HEADER,
+		detailRect.addBorder(panel, BattleNext_UiTheme.PANEL,
 				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footerRect = regions[2];
 		String[] actions = {"back"};

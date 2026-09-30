@@ -4,19 +4,21 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.characters.FullName.Gender;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
+import com.fs.starfarer.api.loading.Description;
+import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_ModFileManager;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.io.IOException;
 import java.util.*;
 
-public class BattleNext_PortraitSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 	private static final int PORTRAIT_SELECTION_MAX_COUNT = 1;
-	private static final float PORTRAIT_ID_TOOLTIP_GAP = 5f;
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 
 	@Override
 	public int getMaxCount(String id) {
@@ -94,7 +96,16 @@ public class BattleNext_PortraitSourceProvider implements BattleNext_OptionPicke
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), PORTRAIT_ID_TOOLTIP_GAP);
+		addHeader(tooltip, option.getLabel(), option.getId());
+		for (FactionSpecAPI spec : Global.getSettings().getAllFactionSpecs()) {
+			if (!option.getLabel().equals(spec.getDisplayName())) continue;
+			if (!spec.getAllPortraits(Gender.MALE).contains(option.getId())
+					&& !spec.getAllPortraits(Gender.FEMALE).contains(option.getId())
+					&& !spec.getAllPortraits(Gender.ANY).contains(option.getId())) continue;
+			Description description = Global.getSettings().getDescription(spec.getId(), Type.FACTION);
+			if (description != null) addExcerpt(tooltip, description.getText1FirstPara());
+			return;
+		}
+		addExcerpt(tooltip, strings.get("refit_custom_portrait"));
 	}
 }

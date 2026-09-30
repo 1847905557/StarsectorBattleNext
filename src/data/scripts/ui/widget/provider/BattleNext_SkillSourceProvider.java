@@ -6,18 +6,17 @@ import com.fs.starfarer.api.characters.SkillSpecAPI;
 import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvider {
 	private static final float ADVANCED_SKILL_LEVEL_THRESHOLD = 1f;
 	private static final int ADVANCED_SKILL_MAX_COUNT = 2;
 	private static final int BASIC_SKILL_MAX_COUNT = 1;
-	private static final float SKILL_ID_TOOLTIP_GAP = 5f;
-	private static final float SKILL_DESCRIPTION_TOOLTIP_GAP = 8f;
+	private static final float SCOPE_GAP = 5f;
+	private static final float SCOPE_RESERVE = 26f;
 
 	@Override
 	public int getMaxCount(String id) {
@@ -74,10 +73,13 @@ public class BattleNext_SkillSourceProvider implements BattleNext_OptionPicker.O
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
-		tooltip.addTitle(option.getLabel());
-		tooltip.addPara(option.getId(), SKILL_ID_TOOLTIP_GAP);
-		if (spec != null && spec.getDescription() != null && !spec.getDescription().isBlank()) {
-			tooltip.addPara(spec.getDescription(), SKILL_DESCRIPTION_TOOLTIP_GAP);
+		addHeader(tooltip, option.getLabel(), option.getId());
+		if (spec == null) return;
+		String scope = String.join(" - ", java.util.stream.Stream.of(spec.getScopeStr(), spec.getScopeStr2())
+				.filter(value -> value != null && !value.isBlank()).toList());
+		addExcerpt(tooltip, spec.getDescription(), scope.isEmpty() ? 0f : SCOPE_RESERVE);
+		if (!scope.isEmpty() && tooltip.getHeightSoFar() + SCOPE_RESERVE <= tooltip.getPosition().getHeight()) {
+			tooltip.addPara(scope, SCOPE_GAP);
 		}
 	}
 }

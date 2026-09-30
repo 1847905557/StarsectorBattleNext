@@ -163,7 +163,7 @@ public class BattleNext_ExpandablePanel {
 					position.getX() + position.getWidth(), position.getY(),
 					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
 					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, expanded ? 2f : 1f);
+			}, BattleNext_UiTheme.PANEL, alphaMult, expanded ? 2f : 1f);
 		}
 
 		@Override
@@ -220,7 +220,7 @@ public class BattleNext_ExpandablePanel {
 					position.getX() + position.getWidth(), position.getY(),
 					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
 					position.getX(), position.getY() + position.getHeight()
-			}, BattleNext_UiTheme.HEADER, alphaMult, 2f);
+			}, BattleNext_UiTheme.PANEL, alphaMult, 2f);
 		}
 	}
 }

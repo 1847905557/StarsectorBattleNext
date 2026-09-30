@@ -92,7 +92,7 @@ public class BattleNext_PageLayout {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH, rect.getWidth()), rect.getHeight(), false);
 		LabelAPI label = maker.addSectionHeading(maker.shortenString(title,
 				rect.getWidth() - PAGE_TITLE_TRUNCATION_PADDING), BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID, 0f);
+				BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
 		label.getPosition().inTL(0f, 0f);
 		maker.setHeightSoFar(rect.getHeight());
 		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());

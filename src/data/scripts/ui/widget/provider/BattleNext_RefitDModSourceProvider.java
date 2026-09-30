@@ -7,8 +7,6 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
@@ -16,7 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class BattleNext_RefitDModSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+public class BattleNext_RefitDModSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final Supplier<ShipVariantAPI> variantSupplier;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
@@ -51,11 +49,13 @@ public class BattleNext_RefitDModSourceProvider implements BattleNext_OptionPick
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice choice) {
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
-		tooltip.addTitle(spec.getDisplayName());
-		tooltip.addPara(choice.getId(), 4f);
+		addHeader(tooltip, spec.getDisplayName(), choice.getId());
 		if (variant != null) {
-			tooltip.addPara(strings.get(isSuitableFor(variant, spec)
-					? "refit_suitable" : "refit_unsuitable"), 6f);
+			if (spec.getEffect() != null) {
+				addExcerpt(tooltip, spec.getDescription(variant.getHullSize()), 32f);
+			}
+			addExcerpt(tooltip, strings.get(isSuitableFor(variant, spec)
+					? "refit_suitable" : "refit_unsuitable"));
 		}
 	}
 

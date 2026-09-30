@@ -214,7 +214,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		BattleNext_QuickBattleModel entry = entries.get(index);
 		CustomPanelAPI card = Global.getSettings().createCustom(width, BattleNext_PageLayout.TABLE_ROW_HEIGHT, inputOwner);
 		new UIRect(0f, 0f, width, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(card,
-				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
+				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
 		QuickBattleEditorRow row = new QuickBattleEditorRow();
 		row.id = entry.getId();
 		row.model = entry;

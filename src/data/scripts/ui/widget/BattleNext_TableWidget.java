@@ -78,7 +78,7 @@ public class BattleNext_TableWidget {
 		TooltipMakerAPI headerBackground = host.createUIElement(tableWidth,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
 		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.HEADER, Alignment.MID,
+				BattleNext_UiTheme.PANEL, Alignment.MID,
 				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
 		headerStrip.getPosition().inTL(0f, 0f);
 		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);

@@ -147,7 +147,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth,
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
 		new UIRect(0f, 0f, tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(row,
-				BattleNext_UiTheme.HEADER, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
+				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
 		float descriptionWidth = Math.max(1f,
 				cells[DESCRIPTION_COLUMN].getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
 		TooltipMakerAPI descriptionHost = row.createUIElement(descriptionWidth,

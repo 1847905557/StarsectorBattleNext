@@ -6,8 +6,6 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
@@ -17,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class BattleNext_RefitSModSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final Supplier<ShipVariantAPI> variantSupplier;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
@@ -57,11 +55,17 @@ public class BattleNext_RefitSModSourceProvider implements BattleNext_OptionPick
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice choice) {
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
-		tooltip.addTitle(spec.getDisplayName());
-		tooltip.addPara(choice.getId(), 4f);
-		if (variant != null && variant.getHullSpec().isBuiltInMod(choice.getId())) {
-			boolean effect = spec.getEffect() != null && spec.getEffect().hasSModEffect();
-			tooltip.addPara(strings.get(effect ? "refit_smod_effect" : "refit_smod_no_effect"), 6f);
+		addHeader(tooltip, spec.getDisplayName(), choice.getId());
+		if (variant == null) return;
+		boolean effect = spec.getEffect() != null && spec.getEffect().hasSModEffect();
+		String sModText = effect && spec.getSModEffectFormat() != null
+				&& !spec.getSModEffectFormat().isBlank() ? spec.getSModDescription(variant.getHullSize()) : "";
+		if (spec.getEffect() != null) {
+			addExcerpt(tooltip, spec.getDescription(variant.getHullSize()), sModText.isBlank() ? 0f : 40f);
+		}
+		if (!sModText.isBlank()) addExcerpt(tooltip, sModText);
+		else if (variant.getHullSpec().isBuiltInMod(choice.getId())) {
+			addExcerpt(tooltip, strings.get("refit_smod_no_effect"));
 		}
 	}
 }
