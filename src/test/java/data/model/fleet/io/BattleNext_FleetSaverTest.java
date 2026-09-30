@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,19 +21,42 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BattleNext_FleetSaverTest {
 
 	@Test
-	void saveRemovesStaleVariantsAndPreservesBackup() throws Exception {
+	void saveCreatesCompleteBackupAndPreservesOtherFiles() throws Exception {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/fleet_data.json.bak", "legacy bak");
 		files.put("tournament/alpha/stale.variant", "stale");
 		files.put("tournament/alpha/keep.txt", "keep");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
 
-		new BattleNext_FleetSaver(files).save(fleet);
+		new BattleNext_FleetSaver(files, () -> LocalDateTime.of(2026, 9, 30, 1, 2, 3, 4_000_000)).save(fleet);
 
 		assertFalse(files.contains("tournament/alpha/stale.variant"));
 		assertTrue(files.contains("tournament/alpha/keep.txt"));
-		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json.bak"));
+		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("stale", files.text("tournament/alpha/backup/20260930-010203-004/stale.variant"));
+		assertEquals("legacy bak", files.text("tournament/alpha/fleet_data.json.bak"));
 		assertTrue(files.contains("tournament/alpha/current.variant"));
+	}
+
+	@Test
+	void repeatedSavesKeepHistoryAndDisambiguateSameTimestamp() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "old");
+		files.put("tournament/alpha/old.variant", "old variant");
+		BattleNext_FleetSaver saver = new BattleNext_FleetSaver(files,
+				() -> LocalDateTime.of(2026, 9, 30, 1, 2, 3, 4_000_000));
+		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
+
+		saver.save(fleet);
+		String firstVersion = files.text("tournament/alpha/fleet_data.json");
+		fleet.setSourcePath("tournament/alpha/fleet_data.json");
+		saver.save(fleet);
+
+		assertEquals("old", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("old variant", files.text("tournament/alpha/backup/20260930-010203-004/old.variant"));
+		assertEquals(firstVersion,
+				files.text("tournament/alpha/backup/20260930-010203-004-1/fleet_data.json"));
 	}
 
 	@Test
@@ -40,14 +64,43 @@ class BattleNext_FleetSaverTest {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/old/fleet_data.json", "old");
 		files.put("tournament/old/old.variant", "old variant");
+		files.put("tournament/old/backup/20260929-010203-004/fleet_data.json", "older");
 		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
 		fleet.setSourcePath("tournament/old/fleet_data.json");
 
-		new BattleNext_FleetSaver(files).save(fleet);
+		new BattleNext_FleetSaver(files, () -> LocalDateTime.of(2026, 9, 30, 1, 2, 3, 4_000_000)).save(fleet);
 
 		assertFalse(files.contains("tournament/old/fleet_data.json"));
 		assertFalse(files.contains("tournament/old/old.variant"));
 		assertTrue(files.contains("tournament/new/fleet_data.json"));
+		assertEquals("older", files.text("tournament/new/backup/20260929-010203-004/fleet_data.json"));
+		assertEquals("old", files.text("tournament/new/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("old variant", files.text("tournament/new/backup/20260930-010203-004/old.variant"));
+	}
+
+	@Test
+	void renameRejectsExistingTargetFleet() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/old/fleet_data.json", "old");
+		files.put("tournament/new/fleet_data.json", "new");
+		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
+		fleet.setSourcePath("tournament/old/fleet_data.json");
+
+		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals("old", files.text("tournament/old/fleet_data.json"));
+		assertEquals("new", files.text("tournament/new/fleet_data.json"));
+	}
+
+	@Test
+	void deleteRemovesBackupHistory() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "current");
+		files.put("tournament/alpha/backup/20260930-010203-004/fleet_data.json", "old");
+
+		new BattleNext_FleetSaver(files).delete(fleet("alpha", "alpha", "current"));
+
+		assertFalse(files.contains("tournament/alpha/fleet_data.json"));
+		assertFalse(files.contains("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
 	}
 
 	@Test
