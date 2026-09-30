@@ -5,6 +5,8 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,7 @@ import java.awt.Color;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -78,9 +81,46 @@ class BattleNext_BaseSourceProviderTest {
 		assertTrue(BattleNext_BaseSourceProvider.fitExcerpt(prose, 0f, ignored -> 40d).isEmpty());
 	}
 
+	@Test
+	void excerptRendersOnceHoverBoundsAreAssignedBeforeMounting() {
+		AtomicReference<Float> height = new AtomicReference<>(0f);
+		List<String> rendered = new ArrayList<>();
+		PositionAPI position = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getHeight" -> height.get();
+					case "getWidth" -> 450f;
+					case "setSize" -> { height.set((Float) args[1]); yield instance; }
+					default -> null;
+				});
+		PositionAPI measured = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) ->
+						"getHeight".equals(method.getName()) ? 20f : null);
+		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getPosition" -> position;
+					case "getHeightSoFar" -> 55f;
+					case "createLabel" -> (LabelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+							new Class<?>[]{LabelAPI.class}, (label, labelMethod, labelArgs) ->
+									"autoSizeToWidth".equals(labelMethod.getName()) ? measured : null);
+					case "addPara" -> { rendered.add((String) args[0]); yield null; }
+					default -> null;
+				});
+		TestProvider provider = new TestProvider();
+		provider.renderExcerpt(tooltip, "In combat, this officer remains steady.");
+		assertTrue(rendered.isEmpty());
+
+		position.setSize(450f, 220f);
+		provider.renderExcerpt(tooltip, "In combat, this officer remains steady.");
+		assertEquals(List.of("In combat, this officer remains steady."), rendered);
+	}
+
 	private static class TestProvider extends BattleNext_BaseSourceProvider {
 		private void renderHeader(TooltipMakerAPI tooltip, String key) {
 			addHeader(tooltip, "Portrait", key);
+		}
+
+		private void renderExcerpt(TooltipMakerAPI tooltip, String text) {
+			addExcerpt(tooltip, text);
 		}
 
 		@Override

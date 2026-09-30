@@ -301,8 +301,8 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 					hull.spritePath(), false, "", shipName, hull.name(),
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
-					text("final_hull") + ": " + member.getFinalHullFraction()
-							+ "  " + text("final_cr") + ": " + member.getFinalCr());
+					text("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
+							+ "  " + text("final_cr") + ": " + formatPercent(member.getFinalCr()));
 			BattleNext_ExpandablePanel.addTo(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
@@ -347,10 +347,17 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source, Global.getSettings());
 		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, SOURCE_ROW_HEIGHT, false);
-		if (!addSprite(icon, visual.primarySprite()) && !addSprite(icon, visual.secondarySprite())) {
+		boolean imageAvailable = addSprite(icon, visual.primarySprite()) || addSprite(icon, visual.secondarySprite());
+		float iconY = (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f;
+		if (imageAvailable) {
+			sourcePanel.addUIElement(icon).inTL(0f, iconY);
+		} else if ("weapon".equals(source.getKind()) || "fighter_wing".equals(source.getKind())
+				|| "ship".equals(source.getKind()) || "?".equals(visual.placeholder())) {
+			plugin.missingIcon = true;
+		} else {
 			icon.addPara(visual.placeholder(), 0f).getPosition().inMid();
+			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		}
-		sourcePanel.addUIElement(icon).inTL(0f, (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f);
 		float textX = MEMBER_THUMB_SIZE + 8f;
 		float textWidth = sourceTextWidth(width);
 		TooltipMakerAPI labels = sourcePanel.createUIElement(textWidth, SOURCE_ROW_HEIGHT, false);
@@ -407,6 +414,10 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		return String.format(Locale.ROOT, "%,.1f", value);
 	}
 
+	static String formatPercent(float fraction) {
+		return String.format(Locale.ROOT, "%.1f%%", fraction * 100f);
+	}
+
 	static List<BattleNext_DamageSourceReport> sourcesFor(MemberRow row) {
 		return row.dealt() ? row.member().getDealtBySource() : row.member().getTakenBySource();
 	}
@@ -455,7 +466,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private String totalLabel(MemberRow row) {
 		return (row.dealt() ? text("damage_dealt") : text("damage_taken")) + ": "
-				+ (row.dealt() ? row.member().getDamageDealt() : row.member().getDamageTaken());
+				+ formatDamage(row.dealt() ? row.member().getDamageDealt() : row.member().getDamageTaken());
 	}
 
 	static double[] damageValues(MemberRow row) {
@@ -496,6 +507,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
 		private PositionAPI position;
+		private boolean missingIcon;
 
 		private void setPosition(PositionAPI position) {
 			this.position = position;
@@ -508,6 +520,15 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 					position.getX(), position.getY() + position.getHeight(),
 					position.getX() + position.getWidth(), position.getY() + position.getHeight()
 			}, BattleNext_UiTheme.PANEL, alphaMult * 0.6f, 1f);
+		}
+
+		@Override
+		public void render(float alphaMult) {
+			if (position == null || !missingIcon) return;
+			float size = MEMBER_THUMB_SIZE * 0.75f;
+			float x = position.getX() + (MEMBER_THUMB_SIZE - size) * 0.5f;
+			float y = position.getY() + (SOURCE_ROW_HEIGHT - size) * 0.5f;
+			BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(), x, y, size, alphaMult);
 		}
 	}
 

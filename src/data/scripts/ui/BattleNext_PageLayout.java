@@ -1,5 +1,7 @@
 package data.scripts.ui;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -10,6 +12,8 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.scripts.battlesnext.util.ui.UIPanelManager;
 import data.scripts.battlesnext.util.ui.UIRect;
+
+import java.awt.Color;
 
 public class BattleNext_PageLayout {
 
@@ -65,6 +69,8 @@ public class BattleNext_PageLayout {
 	public static final float CELL_LABEL_TRUNCATION_PADDING = 10f;
 
 	private static final float MIN_UI_WIDTH = 1f;
+	static final String MISSING_ICON_CATEGORY = "ui";
+	static final String MISSING_ICON_KEY = "checkmark_x";
 	private static final float PAGE_TITLE_TRUNCATION_PADDING = 10f;
 
 	private static final float BUTTON_TEXT_TRUNCATION_PADDING = 16f;
@@ -86,6 +92,55 @@ public class BattleNext_PageLayout {
 	private static final float MANAGEMENT_LIST_MAX_SHARE = 0.4f;
 
 	private BattleNext_PageLayout() {
+	}
+
+	public static SpriteAPI missingIcon() {
+		return Global.getSettings().getSprite(MISSING_ICON_CATEGORY, MISSING_ICON_KEY);
+	}
+
+	public static void renderMissingIcon(SpriteAPI sprite, float x, float y, float size, float alpha) {
+		renderIcon(sprite, x, y, size, BattleNext_UiTheme.ACCENT, alpha);
+	}
+
+	public static float spriteScaleToFit(float width, float height, float availableWidth, float availableHeight) {
+		return Math.min(1f, Math.min(availableWidth / width, availableHeight / height));
+	}
+
+	public static void renderFittedSprite(SpriteAPI sprite, float centerX, float centerY,
+			float availableWidth, float availableHeight, float alpha) {
+		float width = sprite.getWidth();
+		float height = sprite.getHeight();
+		float previousCenterX = sprite.getCenterX();
+		float previousCenterY = sprite.getCenterY();
+		float previousAlpha = sprite.getAlphaMult();
+		float scale = spriteScaleToFit(width, height, availableWidth, availableHeight);
+		try {
+			sprite.setSize(width * scale, height * scale);
+			sprite.setCenter(width * scale * 0.5f, height * scale * 0.5f);
+			sprite.setAlphaMult(previousAlpha * alpha);
+			sprite.renderAtCenter(centerX, centerY);
+		} finally {
+			sprite.setSize(width, height);
+			sprite.setCenter(previousCenterX, previousCenterY);
+			sprite.setAlphaMult(previousAlpha);
+		}
+	}
+
+	static void renderIcon(SpriteAPI sprite, float x, float y, float size, Color color, float alpha) {
+		Color previousColor = sprite.getColor();
+		float previousWidth = sprite.getWidth();
+		float previousHeight = sprite.getHeight();
+		float previousAlpha = sprite.getAlphaMult();
+		try {
+			sprite.setColor(color);
+			sprite.setSize(size, size);
+			sprite.setAlphaMult(previousAlpha * alpha);
+			sprite.renderAtCenter(x + size * 0.5f, y + size * 0.5f);
+		} finally {
+			sprite.setColor(previousColor);
+			sprite.setSize(previousWidth, previousHeight);
+			sprite.setAlphaMult(previousAlpha);
+		}
 	}
 
 	public static TooltipMakerAPI heading(UIRect rect, CustomPanelAPI panel, String title) {

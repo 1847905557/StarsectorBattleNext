@@ -85,6 +85,10 @@ class BattleNext_BattleReportPageTest {
 		assertArrayEquals(new double[]{6d, 7d, 8d, 9d}, BattleNext_BattleReportPage.damageValues(
 				new BattleNext_BattleReportPage.MemberRow(member, false)));
 		assertEquals("1,234.6", BattleNext_BattleReportPage.formatDamage(1234.56d));
+		assertEquals("16,988.7", BattleNext_BattleReportPage.formatDamage(16988.67159819603d));
+		assertEquals("36.6%", BattleNext_BattleReportPage.formatPercent(0.36613744f));
+		assertEquals("70.0%", BattleNext_BattleReportPage.formatPercent(0.7f));
+		assertEquals("0.0%", BattleNext_BattleReportPage.formatPercent(0f));
 	}
 
 	@Test

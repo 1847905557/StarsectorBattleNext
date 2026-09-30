@@ -10,6 +10,10 @@ import java.util.Locale;
 import java.util.function.ToDoubleFunction;
 
 public abstract class BattleNext_BaseSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+	@Override
+	public boolean expectsIcon() {
+		return true;
+	}
 
 	private static final float KEY_GAP = 5f;
 	private static final float BODY_GAP = 8f;

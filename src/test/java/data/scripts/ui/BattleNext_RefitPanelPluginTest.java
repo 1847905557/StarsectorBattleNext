@@ -29,9 +29,9 @@ class BattleNext_RefitPanelPluginTest {
 
 	@Test
 	void shipSpriteKeepsNativeSizeWhenItFitsAndShrinksToFitOtherwise() {
-		assertEquals(1f, BattleNext_RefitPanelPlugin.shipSpriteScale(128f, 256f, 500f, 700f));
-		assertEquals(0.5f, BattleNext_RefitPanelPlugin.shipSpriteScale(800f, 200f, 400f, 700f));
-		assertEquals(0.5f, BattleNext_RefitPanelPlugin.shipSpriteScale(200f, 800f, 400f, 400f));
+		assertEquals(1f, BattleNext_PageLayout.spriteScaleToFit(128f, 256f, 500f, 700f));
+		assertEquals(0.5f, BattleNext_PageLayout.spriteScaleToFit(800f, 200f, 400f, 700f));
+		assertEquals(0.5f, BattleNext_PageLayout.spriteScaleToFit(200f, 800f, 400f, 400f));
 	}
 
 	@Test

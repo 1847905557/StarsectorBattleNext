@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.ToDoubleFunction;
 
 public class BattleNext_OptionPicker {
 
@@ -57,6 +58,10 @@ public class BattleNext_OptionPicker {
 
 		String getIconPath(String id);
 
+		default boolean expectsIcon() {
+			return false;
+		}
+
 		void createTooltip(TooltipMakerAPI tooltip, OptionChoice option);
 	}
 
@@ -83,6 +88,7 @@ public class BattleNext_OptionPicker {
 	private static final float TILE_CONTENT_INSET = 2f;
 	private static final float TILE_ICON_SIZE = 60f;
 	private static final float TILE_LABEL_TRUNCATION_WIDTH = 54f;
+	private static final int TILE_LABEL_MAX_CHARACTERS = 3;
 	private static final float TILE_SELECTION_OUTLINE_INSET = 1f;
 	private static final float TILE_CHECK_START_X = 46f;
 	private static final float TILE_CHECK_START_Y = 51f;
@@ -305,8 +311,9 @@ public class BattleNext_OptionPicker {
 			int columns = Math.max(1, (int) ((width - 2f * POPUP_INSET + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
 			for (int index = 0; index < visible.size(); index++) {
 				OptionChoice option = visible.get(index);
-				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, new OptionPickerTilePlugin(option));
-				addIcon(tile, option);
+				OptionPickerTilePlugin tilePlugin = new OptionPickerTilePlugin(option);
+				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, tilePlugin);
+				addIcon(tile, option, tilePlugin);
 				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP),
 						POPUP_INSET + index / columns * (TILE_SIZE + TILE_GAP));
 				hoverTargets.add(new OptionTileHoverTarget(option, tile));
@@ -319,7 +326,7 @@ public class BattleNext_OptionPicker {
 		popup.addComponent(gridPanel).inTL(POPUP_INSET, POPUP_GRID_TOP);
 	}
 
-	private void addIcon(CustomPanelAPI tile, OptionChoice option) {
+	private void addIcon(CustomPanelAPI tile, OptionChoice option, OptionPickerTilePlugin tilePlugin) {
 
 		String icon = source.getIconPath(option.id);
 		if (icon != null && !icon.isBlank()) {
@@ -334,11 +341,29 @@ public class BattleNext_OptionPicker {
 				// A missing optional sprite leaves the option selectable.
 			}
 		}
+		if (source.expectsIcon()) {
+			tilePlugin.missingIcon = true;
+			return;
+		}
 		TooltipMakerAPI fallback = tile.createUIElement(TILE_ICON_SIZE, TILE_ICON_SIZE, false);
 		fallback.setParaSmallInsignia();
-		fallback.addPara(fallback.shortenString(option.label, TILE_LABEL_TRUNCATION_WIDTH), 0f)
-				.getPosition().inMid();
+		String text = tileLabel(option.label, fallback::computeStringWidth);
+		LabelAPI label = fallback.addPara(text, 0f);
+		label.setAlignment(Alignment.MID);
+		float labelHeight = label.getPosition().getHeight();
+		label.getPosition().setSize(TILE_ICON_SIZE, labelHeight);
+		label.getPosition().inTL(0f, (TILE_ICON_SIZE - labelHeight) * 0.5f);
 		tile.addUIElement(fallback).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
+	}
+
+	static String tileLabel(String value, ToDoubleFunction<String> widthOf) {
+		String normalized = value.strip().replaceAll("\\s+", " ");
+		int characters = Math.min(TILE_LABEL_MAX_CHARACTERS, normalized.codePointCount(0, normalized.length()));
+		String result = normalized.substring(0, normalized.offsetByCodePoints(0, characters));
+		while (!result.isEmpty() && widthOf.applyAsDouble(result) > TILE_LABEL_TRUNCATION_WIDTH) {
+			result = result.substring(0, result.offsetByCodePoints(result.length(), -1));
+		}
+		return result;
 	}
 
 	private void confirm() {
@@ -480,6 +505,8 @@ public class BattleNext_OptionPicker {
 		hoveredOption = target.option;
 		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - HOVER_CONTENT_INSET * 2f,
 				height - HOVER_CONTENT_INSET * 2f, false);
+		tooltip.getPosition().setSize(width - HOVER_CONTENT_INSET * 2f,
+				height - HOVER_CONTENT_INSET * 2f);
 		BattleNext_UiTheme.configure(tooltip);
 		source.createTooltip(tooltip, target.option);
 		hoverPanel.addUIElement(tooltip).inTL(HOVER_CONTENT_INSET, HOVER_CONTENT_INSET);
@@ -580,6 +607,7 @@ public class BattleNext_OptionPicker {
 
 		private final OptionChoice option;
 		private PositionAPI position;
+		private boolean missingIcon;
 
 		private OptionPickerTilePlugin(OptionChoice option) {
 			this.option = option;
@@ -598,6 +626,12 @@ public class BattleNext_OptionPicker {
 
 		@Override
 		public void render(float alphaMult) {
+			if (missingIcon) {
+				float size = TILE_ICON_SIZE * 0.75f;
+				float inset = TILE_CONTENT_INSET + (TILE_ICON_SIZE - size) * 0.5f;
+				BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(),
+						position.getX() + inset, position.getY() + inset, size, alphaMult);
+			}
 			int count = selection.getOrDefault(option.id, 0);
 			if (count == 0) return;
 			BattleNext_GeometryRenderer.lineLoop(new float[]{

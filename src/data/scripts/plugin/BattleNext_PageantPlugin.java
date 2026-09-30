@@ -201,13 +201,13 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			drawSidebar(height, sidebarAlpha);
 		}
 		if ("draw".equals(endingKey)) {
-			drawText(drawText, width * 0.5f, height * 0.5f, fade(time, 0.25f, 5f, 0.5f));
+			drawText(drawText, width * 0.5f, height * 0.5f, fade(time, 0.25f, 10f, 0.5f));
 			return;
 		}
 		BattleNext_FontData.TextObject winnerText = playerWon
 				? playerText : enemyText;
 		float winnerY = height * 0.5f - 50f + time * 5f;
-		float alpha = fade(time, 0.25f, 5f, 1f);
+		float alpha = fade(time, 0.25f, 10f, 1f);
 		drawPlate("plateWinner", width * 0.5f, winnerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
 		drawName(winnerText, width * 0.5f, winnerY, alpha);
 		float bannerTime = time;
@@ -216,12 +216,12 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 		drawSprite(key, width * 0.5f, centerY,
 				"shame".equals(endingKey) ? 764f : 440f,
 				"shame".equals(endingKey) ? 629f : 220f,
-				fade(bannerTime, 0.25f, 5f, 0.5f));
+				fade(bannerTime, 0.25f, 10f, 0.5f));
 		if (bannerTime < 0.5f) {
 			drawSprite(key + "Flash", width * 0.5f, centerY,
 					"shame".equals(endingKey) ? 764f : 440f,
 					"shame".equals(endingKey) ? 629f : 220f,
-					fade(bannerTime, 0.25f, 5f, 0.5f) * (1f - bannerTime / 0.5f));
+					fade(bannerTime, 0.25f, 10f, 0.5f) * (1f - bannerTime / 0.5f));
 		}
 	}
 

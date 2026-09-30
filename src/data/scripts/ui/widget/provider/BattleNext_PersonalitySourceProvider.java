@@ -42,6 +42,11 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 	}
 
 	@Override
+	public boolean expectsIcon() {
+		return false;
+	}
+
+	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		JSONObject row = findRow(option.getId());
 		addHeader(tooltip, option.getLabel(), option.getId());

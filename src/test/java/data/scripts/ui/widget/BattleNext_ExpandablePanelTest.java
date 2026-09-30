@@ -30,6 +30,11 @@ class BattleNext_ExpandablePanelTest {
 		assertEquals(76f, fleet.textX());
 		assertEquals(0f, fleet.metricsWidth());
 		assertTrue(fleet.textX() + fleet.textWidth() <= 400f);
+		BattleNext_ExpandablePanel.HeaderLayout withoutPortrait =
+				BattleNext_ExpandablePanel.headerLayout(400f, false, false);
+		assertEquals(40f, withoutPortrait.textX());
+		assertEquals(8f, withoutPortrait.textX() - BattleNext_ExpandablePanel.ICON_SIZE);
+		assertEquals(8f, fleet.textX() - (BattleNext_ExpandablePanel.ICON_SIZE * 2f + 4f));
 		BattleNext_ExpandablePanel.HeaderLayout report =
 				BattleNext_ExpandablePanel.headerLayout(1200f, false, true);
 		assertEquals(40f, report.textX());
@@ -42,8 +47,6 @@ class BattleNext_ExpandablePanelTest {
 	void focusedColorAndMissingImageSlotsFollowSharedStyle() {
 		assertEquals(PANEL, BattleNext_ExpandablePanel.headerBackground(true, PANEL));
 		assertEquals(PANEL.darker(), BattleNext_ExpandablePanel.headerBackground(false, PANEL));
-		assertEquals("?", BattleNext_ExpandablePanel.missingIconLabel(false));
-		assertEquals("", BattleNext_ExpandablePanel.missingIconLabel(true));
 	}
 
 	@Test
