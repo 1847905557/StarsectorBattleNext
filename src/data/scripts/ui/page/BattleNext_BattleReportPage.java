@@ -49,6 +49,13 @@ import java.util.function.Consumer;
 
 public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float REPORT_SUMMARY_TOP_GAP = 8f;
 	private static final float REPORT_CONTEXT_TOP_GAP = 6f;
 	private static final float REPORT_SECTION_TOP_GAP = 10f;
@@ -144,7 +151,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	@Override
 	public void refreshContent() {
 		String editedName = nameField == null ? null : nameField.getText();
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		nameField = null;
 		memberActions.clear();
 		memberActionIndex = 0;
@@ -271,7 +278,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		BattleNext_BattleReportModel report = selected.report;
 		detailContent.addTitle(report.getName());
 		detailContent.addPara(text("report_name"), REPORT_SUMMARY_TOP_GAP);
-		nameField = BattleNext_TextField.addTo(detailContent, detailPanel,
+		nameField = BattleNext_TextField.addTo(inputRouter, detailContent, detailPanel,
 				detailControlWidth(contentWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT,
 				nameForRefresh(report, editedName), detailContent);
 		nameField.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);

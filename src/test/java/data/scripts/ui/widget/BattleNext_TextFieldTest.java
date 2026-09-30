@@ -43,7 +43,7 @@ class BattleNext_TextFieldTest {
 	void unsupportedControlShortcutsAreConsumedWithoutChangingText() throws Exception {
 		BattleNext_TextField field = field();
 		field.setText("abc");
-		BattleNext_TextFieldSession.register(field);
+		data.scripts.ui.BattleNext_UiInputRouter.current().getSession().register(field);
 		field.grabFocus();
 		for (InputEventAPI event : List.of(key(Keyboard.KEY_B, 'b', true, false),
 				key(Keyboard.KEY_LEFT, (char) 2, true, false),
@@ -130,7 +130,7 @@ class BattleNext_TextFieldTest {
 		assertTrue(sounds.isEmpty());
 		field.grabFocus();
 		assertEquals(List.of(BattleNext_TextField.BUZZ_SOUND_ID), sounds);
-		BattleNext_TextFieldSession.register(field);
+		data.scripts.ui.BattleNext_UiInputRouter.current().getSession().register(field);
 		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
 		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
 		assertEquals(List.of("ui_typer_buzz", "ui_typer_buzz", "ui_typer_buzz"), sounds);
@@ -246,6 +246,7 @@ class BattleNext_TextFieldTest {
 		unsafeField.setAccessible(true);
 		Unsafe unsafe = (Unsafe) unsafeField.get(null);
 		BattleNext_TextField field = (BattleNext_TextField) unsafe.allocateInstance(BattleNext_TextField.class);
+		setField(field, "session", data.scripts.ui.BattleNext_UiInputRouter.current().getSession());
 		setField(field, "panel", panel);
 		setField(field, "textLabel", label);
 		setField(field, "width", 300f);

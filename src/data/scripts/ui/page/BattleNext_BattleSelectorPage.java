@@ -27,6 +27,13 @@ import java.util.List;
 
 public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float SOURCE_HEADER_HEIGHT = 88f;
 	private static final float SOURCE_LABEL_MAX_WIDTH = 175f;
 	private static final float SOURCE_LABEL_WIDTH_SHARE = 0.25f;
@@ -114,7 +121,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		labelRect.addTooltip();
 		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + SOURCE_CONTROL_GAP,
 				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
-		sourceDropdown = new BattleNext_DropdownField(panel, inputOwner, buttonWidth,
+		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel, inputOwner, buttonWidth,
 				id -> {
 					inputOwner.buttonPressed(new BattleSourceSelectionRequest(id));
 				});
@@ -134,6 +141,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		quickBattleEditor = null;
 		if (selectedId.isEmpty()) {
 			quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
+			quickBattleEditor.setInputRouter(inputRouter);
 			quickBattleEditor.attach(contentPanel);
 		} else {
 			buildTournamentDetails(contentPanel);

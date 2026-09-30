@@ -22,6 +22,13 @@ import java.util.*;
 
 public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float RESTRICTION_TITLE_HEIGHT = 24f;
 	private static final float DETAILS_FIELD_RIGHT_INSET = 12f;
 	private static final float STATUS_LINE_GAP = 4f;
@@ -102,7 +109,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	@Override
 	public void refreshContent() {
 		closePicker();
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		float usableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
@@ -132,7 +139,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 				draft.getRestrictions().size(),
 				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions));
 		tableWidget.attach(new UIRect(0f, 0f, rightWidth, tableHeight));
-		restrictionPicker = new BattleNext_OptionPicker(panel, new RestrictionChoiceSource(),
+		restrictionPicker = new BattleNext_OptionPicker(inputRouter, panel, new RestrictionChoiceSource(),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
 		float tableWidth = rightWidth - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
 		restrictionPicker.addTo(tableWidget.getContent(), panel, Math.min(RULE_PICKER_MAX_WIDTH, tableWidth),
@@ -221,7 +228,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		float width = Math.max(FIELD_MIN_WIDTH, rect.getWidth()
 				- BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET - BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET);
 		TooltipMakerAPI maker = owner.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, owner, width,
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, maker, owner, width,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
@@ -365,7 +372,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width,
 			TooltipMakerAPI... viewports) {
 		host.addPara(label, DETAILS_FIELD_LABEL_GAP);
-		return BattleNext_TextField.addTo(host, owner,
+		return BattleNext_TextField.addTo(inputRouter, host, owner,
 				Math.max(DETAILS_FIELD_MIN_WIDTH, width),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 	}

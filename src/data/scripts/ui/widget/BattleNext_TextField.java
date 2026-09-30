@@ -6,6 +6,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.Color;
@@ -45,6 +46,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	public static final float AUTO_SCROLL_MAX_SPEED = 160f;
 	public static final float AUTO_SCROLL_ACCELERATION = 20f;
 
+	private final BattleNext_TextFieldSession session;
 	private final CustomPanelAPI panel;
 	private final TooltipMakerAPI textHost;
 	private final LabelAPI textLabel;
@@ -70,7 +72,8 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private Color background = DEFAULT_BACKGROUND;
 	private Color border = DEFAULT_BORDER;
 
-	private BattleNext_TextField(CustomPanelAPI panel, float width, float height) {
+	private BattleNext_TextField(BattleNext_UiInputRouter router, CustomPanelAPI panel, float width, float height) {
+		this.session = router.getSession();
 		this.panel = panel;
 		this.width = width;
 		this.height = height;
@@ -94,10 +97,15 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
 			float width, float height, String value, TooltipMakerAPI... viewports) {
+		return addTo(BattleNext_UiInputRouter.current(), host, owner, width, height, value, viewports);
+	}
+
+	public static TextFieldAPI addTo(BattleNext_UiInputRouter router, TooltipMakerAPI host, CustomPanelAPI owner,
+			float width, float height, String value, TooltipMakerAPI... viewports) {
 		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
 		CustomPanelAPI panel = owner.createCustomPanel(width, height, plugin);
-		BattleNext_TextField field = new BattleNext_TextField(panel, width, height);
-		BattleNext_TextFieldSession.register(field, viewports);
+		BattleNext_TextField field = new BattleNext_TextField(router, panel, width, height);
+		field.session.register(field, viewports);
 		plugin.field = field;
 		field.setText(value == null ? "" : value);
 		host.addCustom(panel, 0f);
@@ -110,15 +118,15 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	public static void releaseFocusedField() {
-		BattleNext_TextFieldSession.finish(true);
+		BattleNext_UiInputRouter.current().getSession().finish(true);
 	}
 
 	public static void clearRegisteredFields() {
-		BattleNext_TextFieldSession.clearRegisteredFields();
+		BattleNext_UiInputRouter.current().getSession().clearRegisteredFields();
 	}
 
 	public static boolean handleGlobalInput(List<InputEventAPI> events) {
-		return BattleNext_TextFieldSession.handleGlobalInput(events);
+		return BattleNext_UiInputRouter.current().getSession().handleGlobalInput(events);
 	}
 
 	private boolean hasSelection() {
@@ -418,7 +426,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	}
 
 	private void releaseFocus() {
-		BattleNext_TextFieldSession.finish(true);
+		session.finish(true);
 	}
 
 	private static final class TextFieldPanelPlugin extends BaseCustomUIPanelPlugin {
@@ -445,7 +453,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		@Override
 		public void render(float alphaMult) {
 			if (field == null) return;
-			if (BattleNext_TextFieldSession.isFocused(field) && field.showCursor
+			if (field.session.isFocused(field) && field.showCursor
 					&& ((int) (field.blink * CURSOR_BLINK_CYCLES_PER_SECOND)
 							% CURSOR_BLINK_PHASE_COUNT == 0)) {
 				float x = field.panel.getPosition().getX() + field.pad
@@ -469,13 +477,13 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 		@Override
 		public void advance(float amount) {
-			if (BattleNext_TextFieldSession.isFocused(field)) {
+			if (field.session.isFocused(field)) {
 				field.blink += amount;
 				if (field.blink > CURSOR_BLINK_PERIOD) field.blink = 0f;
 			}
-			if (BattleNext_TextFieldSession.isDragging(field)) {
-				float mouseX = BattleNext_TextFieldSession.getPointerX();
-				float mouseY = BattleNext_TextFieldSession.getPointerY();
+			if (field.session.isDragging(field)) {
+				float mouseX = field.session.getPointerX();
+				float mouseY = field.session.getPointerY();
 				float left = field.getPosition().getX() + field.pad;
 				float right = field.getPosition().getX() + field.width - field.pad;
 				float overshoot = 0f;
@@ -511,7 +519,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
 				if (event.isMouseDownEvent() && !field.getPosition().containsEvent(event)
-						&& BattleNext_TextFieldSession.isFocused(field)) {
+						&& field.session.isFocused(field)) {
 					field.releaseFocus();
 				}
 			}
@@ -678,7 +686,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public void grabFocus(boolean playSound) {
-		BattleNext_TextFieldSession.focus(this);
+		session.focus(this);
 		if (playSound) playFocusSound();
 		undoText = text;
 		resetBlink();
@@ -686,7 +694,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 
 	@Override
 	public boolean hasFocus() {
-		return BattleNext_TextFieldSession.isFocused(this);
+		return session.isFocused(this);
 	}
 
 	@Override

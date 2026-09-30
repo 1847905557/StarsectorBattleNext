@@ -21,6 +21,14 @@ import java.util.function.Consumer;
 
 public class BattleNext_TournamentPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+		editor.setInputRouter(router);
+	}
+
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		return draftOpen && editor.handleGlobalInput(events);
 	}

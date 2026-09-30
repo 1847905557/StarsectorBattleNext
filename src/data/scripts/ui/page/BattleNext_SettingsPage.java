@@ -13,6 +13,13 @@ import data.scripts.ui.widget.BattleNext_TextField;
 
 public class BattleNext_SettingsPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float DESCRIPTION_TOP_GAP = 10f;
 	private static final float GRAPHICS_CHECKBOX_WIDTH_RESERVE = 20f;
 	private static final float GRAPHICS_CHECKBOX_HEIGHT = 30f;
@@ -47,7 +54,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	@Override
 	public void createContents() {
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
 		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
@@ -84,7 +91,7 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
 		content.addPara(strings.get(labelKey), FIELD_LABEL_TOP_GAP);
-		TextFieldAPI field = BattleNext_TextField.addTo(content, panel,
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, content, panel,
 				Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, content);
 		field.setMaxChars(FIELD_MAX_CHARS);

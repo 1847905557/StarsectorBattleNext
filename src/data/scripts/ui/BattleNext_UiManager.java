@@ -43,9 +43,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private final Runnable closeAction;
+	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this);
+	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private final BattleNext_StatusBar statusBar = new BattleNext_StatusBar();
 
 	private CustomPanelAPI panel;
@@ -68,6 +69,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	public void attach(CustomPanelAPI panel) {
 		this.panel = panel;
+		BattleNext_UiInputRouter.activate(inputRouter);
 		confirmationDialog.attach(panel);
 		buildShell();
 	}
@@ -124,7 +126,6 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (BattleNext_TextField.handleGlobalInput(events)) return true;
 		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.FLEETS && fleetPage != null
 				&& fleetPage.handleGlobalInput(events)) return true;
 		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.BATTLE_SELECTOR && battleSelectorPage != null
@@ -133,6 +134,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				&& tournamentPage.handleGlobalInput(events)) return true;
 		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.RULES && rulesPage != null
 				&& rulesPage.handleGlobalInput(events)) return true;
+		if (inputRouter.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
@@ -208,7 +210,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void showPage() {
 		if (panel == null) return;
-		BattleNext_TextField.clearRegisteredFields();
+		BattleNext_UiInputRouter.activate(inputRouter);
+		inputRouter.clear();
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
 		if (rulesPage != null) rulesPage.closePicker();
@@ -218,6 +221,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		bodyRect.removeLatestSubPanel();
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
 		BattleNext_PageView view = activeView();
+		view.setInputRouter(inputRouter);
 		if (currentPage == BattleManagementPage.FLEETS) fleetPage.setOverlayHost(panel);
 		view.attach(body);
 	}
@@ -274,7 +278,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void requestClose() {
-		BattleNext_TextField.releaseFocusedField();
+		inputRouter.releaseFocus();
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
 		if (rulesPage != null) rulesPage.closePicker();

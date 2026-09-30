@@ -7,6 +7,7 @@ import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,20 +50,28 @@ public final class BattleNext_DropdownField {
 	private final CustomUIPanelPlugin inputOwner;
 	private final float width;
 	private final DropdownSelectionListener listener;
+	private final BattleNext_UiInputRouter inputRouter;
 	private final List<DropdownChoice> options = new ArrayList<>();
 	private UIRect rect;
 	private CustomPanelAPI row;
 	private ButtonAPI button;
 	private CustomPanelAPI popup;
+	private PopupOverlay popupOverlay;
 	private String value = "";
 	private boolean enabled = true;
 
 	public BattleNext_DropdownField(CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
 			float width, DropdownSelectionListener listener) {
+		this(BattleNext_UiInputRouter.current(), host, inputOwner, width, listener);
+	}
+
+	public BattleNext_DropdownField(BattleNext_UiInputRouter inputRouter, CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
+			float width, DropdownSelectionListener listener) {
 		this.host = host;
 		this.inputOwner = inputOwner;
 		this.width = width;
 		this.listener = listener;
+		this.inputRouter = inputRouter;
 	}
 
 	public void attach(TooltipMakerAPI parent, UIRect rect) {
@@ -111,7 +120,9 @@ public final class BattleNext_DropdownField {
 
 	public void close() {
 		if (popup != null) host.removeComponent(popup);
+		if (popupOverlay != null) inputRouter.pop(popupOverlay);
 		popup = null;
+		popupOverlay = null;
 	}
 
 	private final class DropdownButtonPlugin extends BaseCustomUIPanelPlugin {
@@ -128,7 +139,7 @@ public final class BattleNext_DropdownField {
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (popup == null) return false;
+		if (popup == null || !inputRouter.isTop(popupOverlay)) return false;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent()
@@ -156,6 +167,7 @@ public final class BattleNext_DropdownField {
 	private void openPopup() {
 		close();
 		if (!enabled || rect == null) return;
+		inputRouter.releaseFocus();
 		float hostHeight = host.getPosition().getHeight();
 		float dropdownY = rect.getY() + rect.getHeight() + POPUP_ROW_GAP;
 		float belowSpace = hostHeight - dropdownY - POPUP_SCREEN_MARGIN;
@@ -180,6 +192,31 @@ public final class BattleNext_DropdownField {
 		}
 		popup.addUIElement(list).inTL(0f, 0f);
 		host.addComponent(popup).inTL(rect.getX(), Math.max(POPUP_SCREEN_MARGIN, y));
+		popupOverlay = new PopupOverlay(popup);
+		inputRouter.push(popupOverlay);
+	}
+
+	private final class PopupOverlay implements BattleNext_UiInputRouter.Overlay {
+		private final CustomPanelAPI panel;
+
+		private PopupOverlay(CustomPanelAPI panel) {
+			this.panel = panel;
+		}
+
+		@Override
+		public com.fs.starfarer.api.ui.PositionAPI getBounds() {
+			return panel.getPosition();
+		}
+
+		@Override
+		public boolean handleGlobalInput(List<InputEventAPI> events) {
+			return BattleNext_DropdownField.this.handleGlobalInput(events);
+		}
+
+		@Override
+		public void close() {
+			if (popup != null) BattleNext_DropdownField.this.close();
+		}
 	}
 
 	private final class DropdownPopupPlugin extends BaseCustomUIPanelPlugin {
@@ -189,6 +226,7 @@ public final class BattleNext_DropdownField {
 			DropdownChoice option = (DropdownChoice) buttonId;
 			if (!option.enabled) return;
 			value = option.id;
+			inputRouter.releaseFocus();
 			close();
 			refreshLabel();
 			if (listener != null) listener.onSelected(value);

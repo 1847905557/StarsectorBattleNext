@@ -8,6 +8,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -109,14 +110,13 @@ public class BattleNext_OptionPicker {
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
-	private static BattleNext_OptionPicker activePicker;
-
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final CustomPanelAPI overlayHost;
 	private final OptionChoiceSource source;
 	private final OptionSelectionMode mode;
 	private final Supplier<List<String>> initialSelection;
 	private final Consumer<List<String>> onConfirmed;
+	private final BattleNext_UiInputRouter inputRouter;
 	private List<TooltipMakerAPI> viewports = List.of();
 	private final Map<String, Integer> selection = new LinkedHashMap<>();
 
@@ -125,6 +125,7 @@ public class BattleNext_OptionPicker {
 	private CustomPanelAPI row;
 	private ButtonAPI toggle;
 	private CustomPanelAPI popup;
+	private PopupOverlay popupOverlay;
 	private CustomPanelAPI gridPanel;
 	private ScrollPanelAPI gridScroller;
 	private CustomPanelAPI hoverPanel;
@@ -136,11 +137,18 @@ public class BattleNext_OptionPicker {
 	public BattleNext_OptionPicker(CustomPanelAPI overlayHost, OptionChoiceSource source,
 			OptionSelectionMode mode, Supplier<List<String>> initialSelection,
 			Consumer<List<String>> onConfirmed) {
+		this(BattleNext_UiInputRouter.current(), overlayHost, source, mode, initialSelection, onConfirmed);
+	}
+
+	public BattleNext_OptionPicker(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost, OptionChoiceSource source,
+			OptionSelectionMode mode, Supplier<List<String>> initialSelection,
+			Consumer<List<String>> onConfirmed) {
 		this.overlayHost = overlayHost;
 		this.source = source;
 		this.mode = mode;
 		this.initialSelection = initialSelection;
 		this.onConfirmed = onConfirmed;
+		this.inputRouter = inputRouter;
 	}
 
 	public void addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String label) {
@@ -178,11 +186,13 @@ public class BattleNext_OptionPicker {
 	}
 
 	public void close() {
-		BattleNext_TextField.releaseFocusedField();
-		if (activePicker == this) activePicker = null;
-		if (popup != null) BattleNext_TextFieldSession.clearModalRegion(popup.getPosition());
+		inputRouter.releaseFocus();
+		if (popup != null) {
+			if (popupOverlay != null) inputRouter.pop(popupOverlay);
+		}
 		if (popup != null) overlayHost.removeComponent(popup);
 		popup = null;
+		popupOverlay = null;
 		gridPanel = null;
 		gridScroller = null;
 		hoverPanel = null;
@@ -195,7 +205,7 @@ public class BattleNext_OptionPicker {
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 
-		if (popup == null) return false;
+		if (popup == null || !inputRouter.isTop(popupOverlay)) return false;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent()
@@ -223,8 +233,7 @@ public class BattleNext_OptionPicker {
 	private void open() {
 
 		if (popup != null) return;
-		if (activePicker != null && activePicker != this) activePicker.close();
-		BattleNext_TextField.releaseFocusedField();
+		inputRouter.releaseFocus();
 		options = new ArrayList<>(source.getOptions());
 		Set<String> known = new HashSet<>();
 		for (OptionChoice option : options) {
@@ -265,10 +274,34 @@ public class BattleNext_OptionPicker {
 				strings.get("picker_cancel"), OptionPickerAction.CANCEL, CutStyle.ALL, false);
 		overlayHost.addComponent(popup).inTL(x, y);
 		overlayHost.bringComponentToTop(popup);
-		activePicker = this;
-		BattleNext_TextFieldSession.setModalRegion(popup.getPosition());
+		popupOverlay = new PopupOverlay(popup);
+		inputRouter.push(popupOverlay);
+		inputRouter.registerModalField((BattleNext_TextField) search);
 		lastSearch = "";
 		rebuildGrid();
+	}
+
+	private final class PopupOverlay implements BattleNext_UiInputRouter.Overlay {
+		private final CustomPanelAPI panel;
+
+		private PopupOverlay(CustomPanelAPI panel) {
+			this.panel = panel;
+		}
+
+		@Override
+		public com.fs.starfarer.api.ui.PositionAPI getBounds() {
+			return panel.getPosition();
+		}
+
+		@Override
+		public boolean handleGlobalInput(List<InputEventAPI> events) {
+			return BattleNext_OptionPicker.this.handleGlobalInput(events);
+		}
+
+		@Override
+		public void close() {
+			if (popup != null) BattleNext_OptionPicker.this.close();
+		}
 	}
 
 	private TooltipMakerAPI searchElement(float width) {
@@ -277,7 +310,7 @@ public class BattleNext_OptionPicker {
 		searchBar.addPara(strings.get("picker_search"), 0f)
 				.getPosition().inTL(0f, SEARCH_LABEL_TOP_INSET);
 		TooltipMakerAPI fieldHost = popup.createUIElement(width - SEARCH_FIELD_WIDTH_RESERVE, SEARCH_HEIGHT, false);
-		search = BattleNext_TextField.addTo(fieldHost, popup,
+		search = BattleNext_TextField.addTo(inputRouter, fieldHost, popup,
 				width - SEARCH_FIELD_WIDTH_RESERVE, BattleNext_PageLayout.FORM_FIELD_HEIGHT, "");
 		search.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		fieldHost.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
@@ -534,14 +567,14 @@ public class BattleNext_OptionPicker {
 		public void advance(float amount) {
 			if (toggle == null) return;
 			toggle.setEnabled(isRowVisible()
-					&& (activePicker == null || activePicker == BattleNext_OptionPicker.this));
+					&& (popup == null || inputRouter.isEmpty() || inputRouter.isTop(popupOverlay)));
 		}
 
 		@Override
 		public void processInput(List<InputEventAPI> events) {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed() || !event.isMouseDownEvent()) continue;
-				if (activePicker != null && activePicker != BattleNext_OptionPicker.this
+				if (!inputRouter.isEmpty() && !inputRouter.isTop(popupOverlay)
 						&& contains(row, event)) {
 					event.consume();
 					continue;

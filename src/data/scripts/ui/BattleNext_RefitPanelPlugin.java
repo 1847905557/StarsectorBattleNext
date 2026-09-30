@@ -55,8 +55,9 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private static final Color FRAME_BACKGROUND = new Color(0, 0, 0, 150);
 
 	private final Runnable closeAction;
+	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
-	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this);
+	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, inputRouter);
 
 	private UIBorderObject border;
 	private CustomPanelAPI panel;
@@ -89,6 +90,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	public void init(CustomPanelAPI panel, float width, float height) {
 		this.panel = panel;
+		BattleNext_UiInputRouter.activate(inputRouter);
 		border = new UIBorderObject(false, true);
 		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - BORDER_INSET;
 		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - BORDER_INSET;
@@ -111,10 +113,10 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		panel.addComponent(middlePanel).inTL(middleX, top);
 		panel.addComponent(rightPanel).inTL(rightX, top);
 
-		sModPicker = new BattleNext_OptionPicker(panel, new BattleNext_RefitSModSourceProvider(() -> draft),
+		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, new BattleNext_RefitSModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(sModsOf(draft)), this::selectSMods);
-		dModPicker = new BattleNext_OptionPicker(panel, new BattleNext_RefitDModSourceProvider(() -> draft),
+		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, new BattleNext_RefitDModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(dModsOf(draft)), this::selectDMods);
 		sModPicker.addButton(rightPanel, new UIRect(0f, 0f, rightWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
@@ -166,6 +168,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		sModPicker.setEnabled(false);
 		dModPicker.setEnabled(false);
 		if (confirmation.isActive()) confirmation.handle("confirm_cancel");
+		inputRouter.clear();
 		member = null;
 		refitScreen = null;
 		draft = null;
@@ -186,6 +189,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		if (sModPicker != null && sModPicker.handleGlobalInput(events)) return true;
 		if (dModPicker != null && dModPicker.handleGlobalInput(events)) return true;
+		if (inputRouter.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (!event.isKeyboardEvent() || !event.isKeyDownEvent()
@@ -336,7 +340,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	private void closePickers() {
-		BattleNext_TextField.releaseFocusedField();
+		inputRouter.releaseFocus();
 		if (sModPicker != null) sModPicker.close();
 		if (dModPicker != null) dModPicker.close();
 	}

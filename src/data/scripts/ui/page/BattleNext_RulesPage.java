@@ -18,6 +18,14 @@ import java.util.function.Consumer;
 
 public class BattleNext_RulesPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+		editor.setInputRouter(router);
+	}
+
 	private static final float RULE_LIST_ERROR_TOP_GAP = 5f;
 	private static final float RULE_LIST_EMPTY_TOP_GAP = 8f;
 
@@ -89,7 +97,7 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 	@Override
 	public void refreshContent() {
 		closePicker();
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		listRect.removeLatestSubPanel();
 		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);

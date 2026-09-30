@@ -4,6 +4,8 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 
 public interface BattleNext_PageView {
 
+	default void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) { }
+
 	void attach(CustomPanelAPI body);
 
 	void createContents();

@@ -19,21 +19,22 @@ public class BattleNext_TextFieldSession {
 		DRAGGING
 	}
 
-	private static final Map<BattleNext_TextField, Boolean> REGISTERED = new WeakHashMap<>();
-	private static final Map<BattleNext_TextField, List<TooltipMakerAPI>> VIEWPORTS = new WeakHashMap<>();
-	private static PositionAPI modalRegion;
+	private final Map<BattleNext_TextField, Boolean> REGISTERED = new WeakHashMap<>();
+	private final Map<BattleNext_TextField, List<TooltipMakerAPI>> VIEWPORTS = new WeakHashMap<>();
+	private final Map<BattleNext_TextField, Boolean> MODAL_FIELDS = new WeakHashMap<>();
+	private PositionAPI modalRegion;
 
-	private static BattleNext_TextField focusedField;
-	private static BattleNext_TextField pointerOwner;
-	private static TextFieldPointerPhase phase = TextFieldPointerPhase.IDLE;
-	private static float pointerX;
-	private static float pointerY;
-	private static long generation;
+	private BattleNext_TextField focusedField;
+	private BattleNext_TextField pointerOwner;
+	private TextFieldPointerPhase phase = TextFieldPointerPhase.IDLE;
+	private float pointerX;
+	private float pointerY;
+	private long generation;
 
-	private BattleNext_TextFieldSession() {
+	public BattleNext_TextFieldSession() {
 	}
 
-	static void register(BattleNext_TextField field, TooltipMakerAPI... viewports) {
+	public void register(BattleNext_TextField field, TooltipMakerAPI... viewports) {
 		REGISTERED.put(field, Boolean.TRUE);
 		List<TooltipMakerAPI> hosts = new ArrayList<>();
 		if (viewports != null) {
@@ -44,22 +45,33 @@ public class BattleNext_TextFieldSession {
 		VIEWPORTS.put(field, hosts);
 	}
 
-	static void clearRegisteredFields() {
+	public void clearRegisteredFields() {
 		finish(true);
 		REGISTERED.clear();
 		VIEWPORTS.clear();
-		modalRegion = null;
+		MODAL_FIELDS.clear();
+		clearModalRegion();
 	}
 
-	static void setModalRegion(PositionAPI position) {
+	public void setModalRegion(PositionAPI position) {
 		modalRegion = position;
+		MODAL_FIELDS.clear();
 	}
 
-	static void clearModalRegion(PositionAPI position) {
-		if (modalRegion == position) modalRegion = null;
+	public void clearModalRegion(PositionAPI position) {
+		if (modalRegion == position) clearModalRegion();
 	}
 
-	static void focus(BattleNext_TextField field) {
+	public void clearModalRegion() {
+		modalRegion = null;
+		MODAL_FIELDS.clear();
+	}
+
+	public void registerModalField(BattleNext_TextField field) {
+		if (field != null) MODAL_FIELDS.put(field, Boolean.TRUE);
+	}
+
+	void focus(BattleNext_TextField field) {
 		if (focusedField == field) {
 			field.onFocusGained();
 			return;
@@ -69,7 +81,7 @@ public class BattleNext_TextFieldSession {
 		field.onFocusGained();
 	}
 
-	static void beginPointer(BattleNext_TextField field, InputEventAPI event) {
+	void beginPointer(BattleNext_TextField field, InputEventAPI event) {
 		boolean preserveSelection = focusedField == field && event.isShiftDown();
 		finish(!preserveSelection);
 		focusedField = field;
@@ -83,23 +95,23 @@ public class BattleNext_TextFieldSession {
 		field.beginPointer(pointerX, pointerY, event.isShiftDown());
 	}
 
-	static boolean isFocused(BattleNext_TextField field) {
+	boolean isFocused(BattleNext_TextField field) {
 		return focusedField == field;
 	}
 
-	static boolean isDragging(BattleNext_TextField field) {
+	boolean isDragging(BattleNext_TextField field) {
 		return pointerOwner == field && phase == TextFieldPointerPhase.DRAGGING;
 	}
 
-	static float getPointerX() {
+	float getPointerX() {
 		return pointerX;
 	}
 
-	static float getPointerY() {
+	float getPointerY() {
 		return pointerY;
 	}
 
-	static void finish(boolean clearSelection) {
+	public void finish(boolean clearSelection) {
 		BattleNext_TextField oldFocus = focusedField;
 		BattleNext_TextField oldPointer = pointerOwner;
 		focusedField = null;
@@ -114,7 +126,7 @@ public class BattleNext_TextFieldSession {
 		}
 	}
 
-	static void finishPointer() {
+	void finishPointer() {
 		BattleNext_TextField oldPointer = pointerOwner;
 		pointerOwner = null;
 		phase = TextFieldPointerPhase.IDLE;
@@ -124,7 +136,7 @@ public class BattleNext_TextFieldSession {
 		}
 	}
 
-	static boolean handleGlobalInput(List<InputEventAPI> events) {
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		boolean handled = false;
 		long activeGeneration = generation;
 		for (InputEventAPI event : events) {
@@ -176,9 +188,13 @@ public class BattleNext_TextFieldSession {
 		return handled;
 	}
 
-	private static BattleNext_TextField findTarget(InputEventAPI event) {
+	public boolean hasInputState() {
+		return focusedField != null || pointerOwner != null || !REGISTERED.isEmpty();
+	}
+
+	private BattleNext_TextField findTarget(InputEventAPI event) {
 		for (BattleNext_TextField field : REGISTERED.keySet()) {
-			if (field.isUsableForInput() && isInsideModalRegion(event)
+			if (field.isUsableForInput() && isAllowedByModalScope(field, event)
 					&& field.getPosition().containsEvent(event) && isInsideViewports(field, event)) {
 				return field;
 			}
@@ -186,11 +202,16 @@ public class BattleNext_TextFieldSession {
 		return null;
 	}
 
-	private static boolean isInsideModalRegion(InputEventAPI event) {
+	private boolean isAllowedByModalScope(BattleNext_TextField field, InputEventAPI event) {
+		if (!isInsideModalRegion(event)) return false;
+		return modalRegion == null || MODAL_FIELDS.containsKey(field);
+	}
+
+	private boolean isInsideModalRegion(InputEventAPI event) {
 		return modalRegion == null || modalRegion.containsEvent(event);
 	}
 
-	private static boolean isInsideViewports(BattleNext_TextField field, InputEventAPI event) {
+	private boolean isInsideViewports(BattleNext_TextField field, InputEventAPI event) {
 		for (TooltipMakerAPI host : VIEWPORTS.getOrDefault(field, Collections.emptyList())) {
 			ScrollPanelAPI scroller = host.getExternalScroller();
 			PositionAPI position = scroller == null ? host.getPosition() : scroller.getPosition();

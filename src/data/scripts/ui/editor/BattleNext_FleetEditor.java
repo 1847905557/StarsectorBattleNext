@@ -32,6 +32,13 @@ import java.util.Set;
 
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float FIELD_SIDE_RESERVE = 24f;
 	private static final float FIELD_MIN_WIDTH = 40f;
 	private static final float PICKER_MIN_WIDTH = 72f;
@@ -174,7 +181,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		closePicker();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
@@ -199,7 +206,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width, metaContent);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width, metaContent);
 		metaContent.addPara(text("fleet_skills"), FIELD_LABEL_GAP);
-		skillsPicker = new BattleNext_OptionField(overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
+		skillsPicker = new BattleNext_OptionField(inputRouter, overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 		skills = skillsPicker.addTo(metaContent, panel, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
 				String.join(",", draft.getSkills()), metaContent);
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width, metaContent);
@@ -235,7 +242,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			title.setHeightSoFar(MEMBER_DETAIL_TITLE_HEIGHT);
 			bodyPanel.addUIElement(title).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 			float y = MEMBER_DETAIL_INSET + MEMBER_DETAIL_TITLE_HEIGHT;
-			BattleNext_OptionField variantPicker = new BattleNext_OptionField(overlayHost,
+			BattleNext_OptionField variantPicker = new BattleNext_OptionField(inputRouter, overlayHost,
 					variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE);
 			fields.variant = addOptionBlock(bodyPanel, memberContent, text("variant"), variantPicker,
 					member.getVariantId(), detailWidth, y);
@@ -243,19 +250,19 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			y += MEMBER_DETAIL_PICKER_BLOCK;
 			fields.name = addFieldBlock(bodyPanel, memberContent, text("member_name"), member.getName(), detailWidth, y);
 			y += MEMBER_DETAIL_FIELD_BLOCK;
-			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(overlayHost,
+			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(inputRouter, overlayHost,
 					new BattleNext_PersonalitySourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
 			fields.personality = addOptionBlock(bodyPanel, memberContent, text("personality"), personalityPicker,
 					member.getPersonality(), detailWidth, y);
 			memberPickers.add(personalityPicker);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
-			BattleNext_OptionField memberSkills = new BattleNext_OptionField(overlayHost,
+			BattleNext_OptionField memberSkills = new BattleNext_OptionField(inputRouter, overlayHost,
 					new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 			fields.skills = addOptionBlock(bodyPanel, memberContent, text("member_skills"), memberSkills,
 					String.join(",", member.getSkills()), detailWidth, y);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
 			memberPickers.add(memberSkills);
-			BattleNext_OptionField portraitPicker = new BattleNext_OptionField(overlayHost,
+			BattleNext_OptionField portraitPicker = new BattleNext_OptionField(inputRouter, overlayHost,
 					new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
 			fields.portrait = addOptionBlock(bodyPanel, memberContent, text("portrait"), portraitPicker,
 					member.getPortrait(), detailWidth, y);
@@ -289,7 +296,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		addMemberLabel(block, label, width);
 		float fieldWidth = Math.max(FIELD_MIN_WIDTH, width - FIELD_SIDE_RESERVE);
 		TooltipMakerAPI input = block.createUIElement(fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(input, block, fieldWidth,
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, input, block, fieldWidth,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewport);
 		input.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		block.addUIElement(input).inTL(0f, MEMBER_DETAIL_CONTROL_TOP);
@@ -342,7 +349,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value,
 			float sectionWidth, TooltipMakerAPI... viewports) {
 		host.addPara(label, FIELD_LABEL_GAP);
-		TextFieldAPI field = BattleNext_TextField.addTo(host, owner,
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, host, owner,
 				Math.max(FIELD_MIN_WIDTH, sectionWidth - FIELD_SIDE_RESERVE),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value,
 				viewports);

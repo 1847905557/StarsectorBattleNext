@@ -31,6 +31,13 @@ import java.util.List;
 
 public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float EDITOR_FIELD_MAX_WIDTH = 360f;
 	private static final float EDITOR_FIELD_SIDE_RESERVE = 18f;
 	private static final float BRACKET_CHECKBOX_MIN_WIDTH = 100f;
@@ -133,7 +140,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	@Override
 	public void refreshContent() {
 		closePicker();
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
@@ -195,7 +202,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		if (isReadOnly()) {
 			for (String fleet : draft.getFleetIds()) content.addPara(fleet, FLEET_ENTRY_GAP);
 		} else {
-			fleetPicker = new BattleNext_OptionField(panel, new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
+			fleetPicker = new BattleNext_OptionField(inputRouter, panel, new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
 			fleetField = fleetPicker.addTo(content, panel,
 					Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE),
 					String.join(",", draft.getFleetIds()), content);
@@ -277,7 +284,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			host.addPara(value, READ_ONLY_FIELD_VALUE_GAP);
 			return null;
 		}
-		TextFieldAPI result = BattleNext_TextField.addTo(host, panel,
+		TextFieldAPI result = BattleNext_TextField.addTo(inputRouter, host, panel,
 				Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 		result.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);

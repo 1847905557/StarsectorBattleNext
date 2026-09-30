@@ -20,6 +20,14 @@ import java.util.function.Consumer;
 
 public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+		editor.setInputRouter(router);
+	}
+
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;

@@ -23,6 +23,13 @@ import java.util.List;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
+	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+
+	@Override
+	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+		this.inputRouter = router;
+	}
+
 	private static final float[] COLUMN_SHARES = {0.025f, 0.29f, 0.29f, 0.05f, 0.08f, 0.095f, 0.07f, 0.1f};
 	private static final int ROW_NUMBER_COLUMN = 0;
 	private static final int PLAYER_COLUMN = 1;
@@ -201,7 +208,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public void refreshContent() {
 		if (panel == null) return;
-		BattleNext_TextField.clearRegisteredFields();
+		inputRouter.clear();
 		rows.clear();
 		tableWidget.setRowCount(entries.size());
 		tableWidget.refresh();
@@ -314,7 +321,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		float width = rect.getWidth() - BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET
 				- BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET;
 		TooltipMakerAPI maker = card.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(maker, card, width,
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, maker, card, width,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);

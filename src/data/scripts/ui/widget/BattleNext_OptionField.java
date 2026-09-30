@@ -19,6 +19,7 @@ public class BattleNext_OptionField {
 	private static final float PICKER_BUTTON_WIDTH = 32f;
 	private static final float PICKER_ROW_TOP_GAP = 2f;
 
+	private final data.scripts.ui.BattleNext_UiInputRouter inputRouter;
 	private final CustomPanelAPI overlayHost;
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
 	private final OptionSelectionMode mode;
@@ -27,6 +28,12 @@ public class BattleNext_OptionField {
 
 	public BattleNext_OptionField(CustomPanelAPI overlayHost, BattleNext_OptionPicker.OptionChoiceSource source,
 			OptionSelectionMode mode) {
+		this(data.scripts.ui.BattleNext_UiInputRouter.current(), overlayHost, source, mode);
+	}
+
+	public BattleNext_OptionField(data.scripts.ui.BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
+			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode) {
+		this.inputRouter = inputRouter;
 		this.overlayHost = overlayHost;
 		this.source = source;
 		this.mode = mode;
@@ -42,14 +49,14 @@ public class BattleNext_OptionField {
 		CustomPanelAPI row = owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
 				owner.getPlugin());
 		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		field = BattleNext_TextField.addTo(input, row, inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+		field = BattleNext_TextField.addTo(inputRouter, input, row, inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
 				value == null ? "" : value, viewports);
 		field.getPosition().inTL(0f, 0f);
 		field.setLimitByStringWidth(false);
 		field.setVerticalCursor(true);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		row.addUIElement(input).inTL(0f, 0f);
-		picker = new BattleNext_OptionPicker(overlayHost, source,
+		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, source,
 				toPickerMode(mode), () -> parse(field.getText()), ids -> field.setText(expand(ids)));
 		picker.addButton(row, new UIRect(inputWidth, 0f, PICKER_BUTTON_WIDTH,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT), "...", viewports);
@@ -58,7 +65,7 @@ public class BattleNext_OptionField {
 	}
 
 	public void close() {
-		BattleNext_TextField.releaseFocusedField();
+		inputRouter.releaseFocus();
 		if (picker != null) picker.close();
 	}
 

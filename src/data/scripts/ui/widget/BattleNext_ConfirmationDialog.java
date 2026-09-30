@@ -7,8 +7,10 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
+import org.lwjgl.input.Keyboard;
 
 public class BattleNext_ConfirmationDialog {
 
@@ -39,6 +41,7 @@ public class BattleNext_ConfirmationDialog {
 	}
 
 	private final ConfirmationDialogHost host;
+	private final BattleNext_UiInputRouter inputRouter;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI parent;
 	private CustomPanelAPI confirmation;
@@ -46,9 +49,15 @@ public class BattleNext_ConfirmationDialog {
 	private LabelAPI confirmationStatus;
 	private Runnable onConfirm;
 	private String deleteDescription;
+	private DialogOverlay overlay;
 
 	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host) {
+		this(host, BattleNext_UiInputRouter.current());
+	}
+
+	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host, BattleNext_UiInputRouter inputRouter) {
 		this.host = host;
+		this.inputRouter = inputRouter;
 	}
 
 	public void attach(CustomPanelAPI parent) {
@@ -104,7 +113,9 @@ public class BattleNext_ConfirmationDialog {
 
 	private void close() {
 		if (parent != null && confirmation != null) parent.removeComponent(confirmation);
+		if (overlay != null) inputRouter.pop(overlay);
 		confirmation = null;
+		overlay = null;
 		confirmationStatusContent = null;
 		confirmationStatus = null;
 		deleteDescription = null;
@@ -142,6 +153,44 @@ public class BattleNext_ConfirmationDialog {
 					(deleteDescription == null ? "confirm_" : "delete_") + actions[index], CutStyle.ALL, false);
 		}
 		parent.addComponent(confirmation).inMid();
+		overlay = new DialogOverlay(confirmation);
+		inputRouter.push(overlay);
+	}
+
+	private final class DialogOverlay implements BattleNext_UiInputRouter.Overlay {
+		private final CustomPanelAPI panel;
+
+		private DialogOverlay(CustomPanelAPI panel) {
+			this.panel = panel;
+		}
+
+		@Override
+		public PositionAPI getBounds() {
+			return panel.getPosition();
+		}
+
+		@Override
+		public boolean handleGlobalInput(java.util.List<com.fs.starfarer.api.input.InputEventAPI> events) {
+			for (com.fs.starfarer.api.input.InputEventAPI event : events) {
+				if (event.isConsumed()) continue;
+				if (event.isKeyboardEvent() && event.isKeyDownEvent()
+						&& event.getEventValue() == Keyboard.KEY_ESCAPE) {
+					handle("confirm_cancel");
+					event.consume();
+					return true;
+				}
+				if (event.isMouseDownEvent() && !panel.getPosition().containsEvent(event)) {
+					event.consume();
+					return true;
+				}
+			}
+			return false;
+		}
+
+		@Override
+		public void close() {
+			if (confirmation != null) BattleNext_ConfirmationDialog.this.close();
+		}
 	}
 
 	private class ConfirmationDialogPlugin extends BaseCustomUIPanelPlugin {
