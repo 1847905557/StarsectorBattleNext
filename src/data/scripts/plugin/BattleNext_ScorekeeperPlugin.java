@@ -60,7 +60,10 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	@Override
 	public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
 		if (frozenReport != null || result == null || !(target instanceof ShipAPI targetShip)) return;
-		BattleNext_DamageAttribution.SourceKey key = BattleNext_DamageAttribution.sourceKey(source, result);
+		if (result.getDamageToHull() <= 0f && result.getTotalDamageToArmor() <= 0f
+				&& result.getDamageToShields() <= 0f && result.getEmpDamage() <= 0f) return;
+		Object damageParam = targetShip.getParamAboutToApplyDamage();
+		BattleNext_DamageAttribution.SourceKey key = BattleNext_DamageAttribution.sourceKey(source, damageParam, result);
 		if (!targetShip.isFighter() && !targetShip.isStationModule()) {
 			ScoreTrackedFleetMember targetMember = findTracked(targetShip);
 			if (targetMember != null) {
@@ -68,7 +71,8 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 						result.getTotalDamageToArmor(), result.getDamageToShields(), result.getEmpDamage());
 			}
 		}
-		ShipAPI sourceShip = BattleNext_DamageAttribution.memberShip(BattleNext_DamageAttribution.sourceShip(source));
+		ShipAPI sourceShip = BattleNext_DamageAttribution.memberShip(
+				BattleNext_DamageAttribution.sourceShip(source, damageParam));
 		ScoreTrackedFleetMember sourceMember = findTracked(sourceShip);
 		if (sourceMember != null) {
 			sourceMember.report.addDamageDealt(key.kind(), key.id(), result.getDamageToHull(),

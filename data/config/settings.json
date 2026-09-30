@@ -3,6 +3,10 @@
 		"BattleNextTitleEntry": "data.scripts.ui.BattleNext_TitleEntry"
 	},
 	"graphics": {
+		"report": {
+			"BattleNext_arc": "graphics/icons/hullsys/energy_lash.png",
+			"BattleNext_source_type": "graphics/ui/icons/64x_xcircle.png"
+		},
 		"icon": {
 			"BattleNext_Icon": "graphics/ui/BattleNext_Icon.png"
 		},

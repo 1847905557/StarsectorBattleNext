@@ -4,12 +4,14 @@ import com.fs.starfarer.api.combat.BeamAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.DamagingProjectileAPI;
+import com.fs.starfarer.api.combat.EmpArcEntityAPI;
 import com.fs.starfarer.api.combat.FighterWingAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
+import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
@@ -18,11 +20,14 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_ScorekeeperReportTest {
+	private final Map<ShipAPI, Object[]> damageParams = new IdentityHashMap<>();
 
 	@Test
 	void projectileBeamFighterAndModuleDamageUseTheirExpectedBuckets() throws Exception {
@@ -44,12 +49,12 @@ class BattleNext_ScorekeeperReportTest {
 				List.of(playerMember), List.of(enemyMember));
 		ApplyDamageResultAPI damage = damage(1f, 2f, 3f, 4f);
 
-		scorekeeper.reportDamageApplied(projectile(player, gun, "lightmg_proj"), enemy, damage);
-		scorekeeper.reportDamageApplied(beam(player, gun), enemy, damage);
-		scorekeeper.reportDamageApplied(projectile(fighter, fighterGun, "fighter_proj"), enemy, damage);
-		scorekeeper.reportDamageApplied(projectile(module, moduleGun, "module_proj"), enemy, damage);
-		scorekeeper.reportDamageApplied(projectile(player, gun, "lightmg_proj"), fighter, damage);
-		scorekeeper.reportDamageApplied(projectile(player, gun, "lightmg_proj"), module, damage);
+		apply(scorekeeper, player, enemy, projectile(player, gun, "lightmg_proj"), damage);
+		apply(scorekeeper, player, enemy, beam(player, gun), damage);
+		apply(scorekeeper, fighter, enemy, projectile(fighter, fighterGun, "fighter_proj"), damage);
+		apply(scorekeeper, module, enemy, projectile(module, moduleGun, "module_proj"), damage);
+		apply(scorekeeper, player, fighter, projectile(player, gun, "lightmg_proj"), damage);
+		apply(scorekeeper, player, module, projectile(player, gun, "lightmg_proj"), damage);
 
 		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
@@ -78,12 +83,10 @@ class BattleNext_ScorekeeperReportTest {
 		ApplyDamageResultAPI damage = damage(1f, 2f, 3f, 4f);
 		WeaponAPI gun = weapon("lightmg", player);
 
-		scorekeeper.reportDamageApplied(projectile(player, gun, "proj"),
-				ship(null, true, false, wing, null), damage);
-		scorekeeper.reportDamageApplied(projectile(player, gun, "proj"),
-				ship(null, false, true, null, player), damage);
-		scorekeeper.reportDamageApplied(projectile(player, gun, "proj"), player, damage);
-		scorekeeper.reportDamageApplied(null, player, damage);
+		apply(scorekeeper, player, ship(null, true, false, wing, null), projectile(player, gun, "proj"), damage);
+		apply(scorekeeper, player, ship(null, false, true, null, player), projectile(player, gun, "proj"), damage);
+		apply(scorekeeper, player, player, projectile(player, gun, "proj"), damage);
+		apply(scorekeeper, null, player, null, damage);
 
 		BattleNext_MemberReport report = report(scorekeeper, 0);
 		assertEquals(18d, report.getDamageDealt());
@@ -92,23 +95,157 @@ class BattleNext_ScorekeeperReportTest {
 	}
 
 	@Test
-	void nonWeaponSourcesAndDamageTypeFallbackKeepStableKeys() {
+	void unarmedProjectilesAndBeamsUseDamageTypeWhileDirectShipDamageKeepsHullId() {
 		FleetMemberAPI member = member("player");
 		ShipAPI ship = ship(member, false, false, null, null);
 		ApplyDamageResultAPI damage = damage(1f, 2f, 3f, 4f);
 
+		assertEquals(new BattleNext_DamageAttribution.SourceKey("damage_type", "ENERGY"),
+				BattleNext_DamageAttribution.sourceKey(ship, projectile(ship, null, "proj"), damage));
+		assertEquals(new BattleNext_DamageAttribution.SourceKey("damage_type", "ENERGY"),
+				BattleNext_DamageAttribution.sourceKey(ship, beam(ship, null), damage));
 		assertEquals(new BattleNext_DamageAttribution.SourceKey("ship", "wolf_hull"),
-				BattleNext_DamageAttribution.sourceKey(projectile(ship, null, "proj"), damage));
-		assertEquals(new BattleNext_DamageAttribution.SourceKey("ship", "wolf_hull"),
-				BattleNext_DamageAttribution.sourceKey(ship, damage));
+				BattleNext_DamageAttribution.sourceKey(ship, null, damage));
 		ShipAPI module = ship(null, false, true, null, ship);
 		assertEquals(new BattleNext_DamageAttribution.SourceKey("ship", "wolf_hull"),
-				BattleNext_DamageAttribution.sourceKey(module, damage));
-		assertEquals(new BattleNext_DamageAttribution.SourceKey("projectile_spec", "proj"),
-				BattleNext_DamageAttribution.sourceKey(projectile(null, null, "proj"), damage));
+				BattleNext_DamageAttribution.sourceKey(module, null, damage));
 		assertEquals(new BattleNext_DamageAttribution.SourceKey("damage_type", "ENERGY"),
-				BattleNext_DamageAttribution.sourceKey(null, damage));
-		assertEquals("source_type", BattleNext_DamageAttribution.sourceKey(new Object(), damage).kind());
+				BattleNext_DamageAttribution.sourceKey(null, projectile(null, null, "proj"), damage));
+		assertEquals(new BattleNext_DamageAttribution.SourceKey("damage_type", "ENERGY"),
+				BattleNext_DamageAttribution.sourceKey(null, null, damage));
+		assertEquals("source_type", BattleNext_DamageAttribution.sourceKey(new Object(), null, damage).kind());
+	}
+
+	@Test
+	void unarmedProjectileDamageAccumulatesUnderDamageType() throws Exception {
+		FleetMemberAPI playerMember = member("player");
+		FleetMemberAPI enemyMember = member("enemy");
+		ShipAPI player = ship(playerMember, false, false, null, null);
+		ShipAPI enemy = ship(enemyMember, false, false, null, null);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(
+				List.of(playerMember), List.of(enemyMember));
+
+		apply(scorekeeper, player, enemy, projectile(player, null, "first_proj"), damage(1f, 2f, 3f, 4f));
+		apply(scorekeeper, player, enemy, projectile(player, null, "second_proj"), damage(5f, 6f, 7f, 8f));
+		apply(scorekeeper, player, enemy, null, damage(1f, 0f, 0f, 0f));
+
+		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
+		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
+		assertEquals(2, playerReport.getDealtBySource().size());
+		assertEquals("damage_type", playerReport.getDealtBySource().get(0).getKind());
+		assertEquals("ENERGY", playerReport.getDealtBySource().get(0).getId());
+		assertEquals(6d, playerReport.getDealtBySource().get(0).getHull());
+		assertEquals(8d, playerReport.getDealtBySource().get(0).getArmor());
+		assertEquals(10d, playerReport.getDealtBySource().get(0).getShields());
+		assertEquals(12d, playerReport.getDealtBySource().get(0).getEmp());
+		assertEquals("ship", playerReport.getDealtBySource().get(1).getKind());
+		assertEquals(2, enemyReport.getTakenBySource().size());
+		assertEquals("ENERGY", enemyReport.getTakenBySource().get(0).getId());
+	}
+
+	@Test
+	void impactParameterTakesWeaponPriorityAndMissingSourceUsesProjectileShip() throws Exception {
+		FleetMemberAPI playerMember = member("player");
+		FleetMemberAPI enemyMember = member("enemy");
+		ShipAPI player = ship(playerMember, false, false, null, null);
+		ShipAPI enemy = ship(enemyMember, false, false, null, null);
+		WeaponAPI gun = weapon("lightmg", player);
+		WeaponAPI otherGun = weapon("othergun", player);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(
+				List.of(playerMember), List.of(enemyMember));
+		ApplyDamageResultAPI damage = damage(1f, 2f, 3f, 4f);
+
+		apply(scorekeeper, otherGun, enemy, projectile(player, gun, "lightmg_proj"), damage);
+		apply(scorekeeper, null, enemy, projectile(player, gun, "lightmg_proj"), damage);
+		apply(scorekeeper, player, enemy, projectile(player, gun, "lightmg_proj"), damage(0f, 0f, 0f, 0f));
+
+		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
+		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
+		assertEquals(12d, playerReport.getDamageDealt());
+		assertEquals(1, playerReport.getDealtBySource().size());
+		assertEquals("weapon", playerReport.getDealtBySource().get(0).getKind());
+		assertEquals("lightmg", playerReport.getDealtBySource().get(0).getId());
+		assertEquals(2d, playerReport.getDealtBySource().get(0).getHull());
+		assertEquals(4d, playerReport.getDealtBySource().get(0).getArmor());
+		assertEquals(6d, playerReport.getDealtBySource().get(0).getShields());
+		assertEquals(8d, playerReport.getDealtBySource().get(0).getEmp());
+		assertEquals(1, enemyReport.getTakenBySource().size());
+		assertEquals("lightmg", enemyReport.getTakenBySource().get(0).getId());
+	}
+
+	@Test
+	void zeroDamageDoesNotCreateSourceRows() throws Exception {
+		FleetMemberAPI playerMember = member("player");
+		FleetMemberAPI enemyMember = member("enemy");
+		ShipAPI player = ship(playerMember, false, false, null, null);
+		ShipAPI enemy = ship(enemyMember, false, false, null, null);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(
+				List.of(playerMember), List.of(enemyMember));
+
+		apply(scorekeeper, player, enemy, projectile(player, weapon("lightmg", player), "proj"),
+				damage(0f, 0f, 0f, 0f));
+
+		assertEquals(0, report(scorekeeper, 0).getDealtBySource().size());
+		assertEquals(0, report(scorekeeper, 1).getTakenBySource().size());
+
+		apply(scorekeeper, player, enemy, projectile(player, weapon("lightmg", player), "proj"),
+				damage(0f, 0f, 0f, 4f));
+
+		assertEquals(1, report(scorekeeper, 0).getDealtBySource().size());
+		assertEquals(4d, report(scorekeeper, 0).getDealtBySource().get(0).getEmp());
+		assertEquals(1, report(scorekeeper, 1).getTakenBySource().size());
+	}
+
+	@Test
+	void arcSourcesMergeForShipsAndModulesWhileFightersKeepWingAttribution() throws Exception {
+		FleetMemberAPI playerMember = member("player");
+		FleetMemberAPI enemyMember = member("enemy");
+		ShipAPI player = ship(playerMember, false, false, null, null);
+		ShipAPI enemy = ship(enemyMember, false, false, null, null);
+		ShipAPI module = ship(null, false, true, null, player);
+		FighterWingAPI wing = proxy(FighterWingAPI.class, (name, args) -> switch (name) {
+			case "getWingId" -> "talon_wing";
+			case "getSourceShip" -> player;
+			default -> null;
+		});
+		ShipAPI fighter = ship(null, true, false, wing, null);
+		EmpArcEntityAPI arc = proxy(EmpArcEntityAPI.class, (name, args) -> null);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(
+				List.of(playerMember), List.of(enemyMember));
+
+		apply(scorekeeper, player, enemy, arc, damage(1f, 2f, 3f, 4f));
+		apply(scorekeeper, player, enemy, DamageDealtModifier.EMP_SHIP_SYSTEM_PARAM,
+				damage(5f, 6f, 7f, 8f));
+		apply(scorekeeper, module, enemy, arc, damage(2f, 0f, 0f, 1f));
+		apply(scorekeeper, null, enemy, arc, damage(0f, 0f, 0f, 2f));
+		apply(scorekeeper, fighter, enemy, arc, damage(1f, 0f, 0f, 3f));
+
+		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
+		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
+		assertEquals(2, playerReport.getDealtBySource().size());
+		assertEquals(new BattleNext_DamageAttribution.SourceKey("arc", "arc"),
+				new BattleNext_DamageAttribution.SourceKey(playerReport.getDealtBySource().get(0).getKind(),
+						playerReport.getDealtBySource().get(0).getId()));
+		assertEquals(8d, playerReport.getDealtBySource().get(0).getHull());
+		assertEquals(8d, playerReport.getDealtBySource().get(0).getArmor());
+		assertEquals(10d, playerReport.getDealtBySource().get(0).getShields());
+		assertEquals(13d, playerReport.getDealtBySource().get(0).getEmp());
+		assertEquals("fighter_wing", playerReport.getDealtBySource().get(1).getKind());
+		assertEquals("talon_wing", playerReport.getDealtBySource().get(1).getId());
+		assertEquals(2, enemyReport.getTakenBySource().size());
+		assertEquals("arc", enemyReport.getTakenBySource().get(0).getKind());
+		assertEquals(15d, enemyReport.getTakenBySource().get(0).getEmp());
+	}
+
+	private void apply(BattleNext_ScorekeeperPlugin scorekeeper, Object source, ShipAPI target,
+			Object damageParam, ApplyDamageResultAPI result) {
+		Object[] param = damageParams.get(target);
+		param[0] = damageParam;
+		try {
+			scorekeeper.reportDamageApplied(source, target, result);
+		} finally {
+			param[0] = null;
+		}
 	}
 
 	private BattleNext_MemberReport report(BattleNext_ScorekeeperPlugin scorekeeper, int index) throws Exception {
@@ -134,15 +271,19 @@ class BattleNext_ScorekeeperReportTest {
 	private ShipAPI ship(FleetMemberAPI member, boolean fighter, boolean module, FighterWingAPI wing, ShipAPI parent) {
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (name, args) ->
 				"getHullId".equals(name) ? (module ? "module_hull" : "wolf_hull") : null);
-		return proxy(ShipAPI.class, (name, args) -> switch (name) {
+		Object[] damageParam = new Object[1];
+		ShipAPI ship = proxy(ShipAPI.class, (name, args) -> switch (name) {
 			case "getFleetMember" -> member;
 			case "getHullSpec" -> hull;
+			case "getParamAboutToApplyDamage" -> damageParam[0];
 			case "isFighter" -> fighter;
 			case "isStationModule" -> module;
 			case "getWing" -> wing;
 			case "getParentStation" -> parent;
 			default -> null;
 		});
+		damageParams.put(ship, damageParam);
+		return ship;
 	}
 
 	private WeaponAPI weapon(String id, ShipAPI ship) {

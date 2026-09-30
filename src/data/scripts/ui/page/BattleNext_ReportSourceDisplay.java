@@ -1,16 +1,19 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
 
+import java.util.Locale;
+
 public class BattleNext_ReportSourceDisplay {
 
 	public record SourceVisual(String name, String primarySprite, String secondarySprite,
-			String placeholder, boolean resolved) { }
+			String placeholder, boolean resolved, boolean accentIcon) { }
 
 	private BattleNext_ReportSourceDisplay() {
 	}
@@ -23,7 +26,7 @@ public class BattleNext_ReportSourceDisplay {
 					WeaponSpecAPI spec = settings.getWeaponSpec(id);
 					if (spec != null) {
 						return new SourceVisual(nameOrId(spec.getWeaponName(), id),
-								path(spec.getTurretSpriteName()), path(spec.getHardpointSpriteName()), "W", true);
+								path(spec.getTurretSpriteName()), path(spec.getHardpointSpriteName()), "W", true, false);
 					}
 					break;
 				}
@@ -33,7 +36,7 @@ public class BattleNext_ReportSourceDisplay {
 						ShipVariantAPI variant = wing.getVariant();
 						ShipHullSpecAPI hull = variant == null ? null : variant.getHullSpec();
 						return new SourceVisual(nameOrId(wing.getWingName(), id),
-								hull == null ? "" : path(hull.getSpriteName()), "", "F", true);
+								hull == null ? "" : path(hull.getSpriteName()), "", "F", true, false);
 					}
 					break;
 				}
@@ -41,9 +44,21 @@ public class BattleNext_ReportSourceDisplay {
 					ShipHullSpecAPI hull = settings.getHullSpec(id);
 					if (hull != null) {
 						return new SourceVisual(nameOrId(hull.getHullName(), id),
-								path(hull.getSpriteName()), "", "S", true);
+								path(hull.getSpriteName()), "", "S", true, false);
 					}
 					break;
+				}
+				case "arc": {
+					return new SourceVisual(settings.getString("Report", "BattleNext_report_source_arc"),
+							path(settings.getSpriteName("report", "BattleNext_arc")), "", "A", true, true);
+				}
+				case "source_type": {
+					return new SourceVisual(id, path(settings.getSpriteName("report", "BattleNext_source_type")),
+							"", "T", false, false);
+				}
+				case "damage_type": {
+					String iconKey = "icon_" + DamageType.valueOf(id).name().toLowerCase(Locale.ROOT);
+					return new SourceVisual(id, path(settings.getSpriteName("ui", iconKey)), "", "D", false, false);
 				}
 				default:
 					break;
@@ -51,7 +66,7 @@ public class BattleNext_ReportSourceDisplay {
 		} catch (RuntimeException ignored) {
 			// A missing current asset keeps the report's original source ID visible.
 		}
-		return new SourceVisual(id, "", "", placeholder(source.getKind()), false);
+		return new SourceVisual(id, "", "", placeholder(source.getKind()), false, false);
 	}
 
 	private static String nameOrId(String name, String id) {
@@ -67,7 +82,7 @@ public class BattleNext_ReportSourceDisplay {
 			case "weapon" -> "W";
 			case "fighter_wing" -> "F";
 			case "ship" -> "S";
-			case "projectile_spec" -> "P";
+			case "arc" -> "A";
 			case "source_type" -> "T";
 			case "damage_type" -> "D";
 			default -> "?";

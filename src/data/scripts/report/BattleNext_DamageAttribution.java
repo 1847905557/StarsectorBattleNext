@@ -2,12 +2,15 @@ package data.scripts.report;
 
 import com.fs.starfarer.api.combat.BeamAPI;
 import com.fs.starfarer.api.combat.DamagingProjectileAPI;
+import com.fs.starfarer.api.combat.EmpArcEntityAPI;
 import com.fs.starfarer.api.combat.FighterWingAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
+import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 
 public class BattleNext_DamageAttribution {
+	public static final String ARC_SOURCE_ID = "arc";
 
 	public record SourceKey(String kind, String id) { }
 
@@ -28,6 +31,11 @@ public class BattleNext_DamageAttribution {
 		return null;
 	}
 
+	public static ShipAPI sourceShip(Object source, Object damageParam) {
+		ShipAPI ship = sourceShip(source);
+		return ship == null ? sourceShip(damageParam) : ship;
+	}
+
 	public static ShipAPI memberShip(ShipAPI ship) {
 		if (ship == null) return null;
 		if (ship.isFighter()) {
@@ -41,27 +49,37 @@ public class BattleNext_DamageAttribution {
 		return ship;
 	}
 
-	public static SourceKey sourceKey(Object source, ApplyDamageResultAPI result) {
-		ShipAPI ship = sourceShip(source);
+	public static SourceKey sourceKey(Object source, Object damageParam, ApplyDamageResultAPI result) {
+		ShipAPI ship = sourceShip(source, damageParam);
 		if (ship != null && ship.isFighter() && ship.getWing() != null) {
 			return new SourceKey("fighter_wing", idOrUnknown(ship.getWing().getWingId()));
 		}
-		WeaponAPI weapon = null;
-		if (source instanceof DamagingProjectileAPI projectile) weapon = projectile.getWeapon();
-		if (source instanceof BeamAPI beam) weapon = beam.getWeapon();
-		if (source instanceof WeaponAPI directWeapon) weapon = directWeapon;
+		if (damageParam instanceof EmpArcEntityAPI
+				|| DamageDealtModifier.EMP_SHIP_SYSTEM_PARAM.equals(damageParam)) {
+			return new SourceKey("arc", ARC_SOURCE_ID);
+		}
+		WeaponAPI weapon = weaponOf(damageParam);
+		if (weapon == null) weapon = weaponOf(source);
 		if (weapon != null) {
 			String id = weapon.getSpec() == null ? "" : weapon.getSpec().getWeaponId();
 			if (id == null || id.isEmpty()) id = weapon.getId();
 			return new SourceKey("weapon", idOrUnknown(id));
 		}
-		if (ship != null) return new SourceKey("ship", shipId(memberShip(ship)));
-		if (source instanceof DamagingProjectileAPI projectile
-				&& projectile.getProjectileSpecId() != null && !projectile.getProjectileSpecId().isEmpty()) {
-			return new SourceKey("projectile_spec", projectile.getProjectileSpecId());
+		if (damageParam instanceof DamagingProjectileAPI || source instanceof DamagingProjectileAPI
+				|| damageParam instanceof BeamAPI || source instanceof BeamAPI) {
+			return new SourceKey("damage_type", result.getType() == null ? "unknown" : result.getType().name());
 		}
+		if (ship != null) return new SourceKey("ship", shipId(memberShip(ship)));
 		if (source != null) return new SourceKey("source_type", source.getClass().getName());
+		if (damageParam != null) return new SourceKey("source_type", damageParam.getClass().getName());
 		return new SourceKey("damage_type", result.getType() == null ? "unknown" : result.getType().name());
+	}
+
+	private static WeaponAPI weaponOf(Object source) {
+		if (source instanceof DamagingProjectileAPI projectile) return projectile.getWeapon();
+		if (source instanceof BeamAPI beam) return beam.getWeapon();
+		if (source instanceof WeaponAPI weapon) return weapon;
+		return null;
 	}
 
 	private static String shipId(ShipAPI ship) {

@@ -13,6 +13,61 @@ class BattleNext_PageLayoutMissingIconTest {
 	private static final Color TINT = new Color(30, 60, 90);
 
 	@Test
+	void tintedFittedSpriteShrinksAndRestoresColorSizeCenterAndAlpha() {
+		Color[] color = {Color.WHITE};
+		float[] width = {64f};
+		float[] height = {64f};
+		float[] centerX = {4f};
+		float[] centerY = {5f};
+		float[] alpha = {0.8f};
+		AtomicInteger renders = new AtomicInteger();
+		SpriteAPI sprite = (SpriteAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SpriteAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getColor" -> color[0];
+					case "getWidth" -> width[0];
+					case "getHeight" -> height[0];
+					case "getCenterX" -> centerX[0];
+					case "getCenterY" -> centerY[0];
+					case "getAlphaMult" -> alpha[0];
+					case "setColor" -> { color[0] = (Color) args[0]; yield null; }
+					case "setSize" -> {
+						width[0] = (Float) args[0];
+						height[0] = (Float) args[1];
+						yield null;
+					}
+					case "setCenter" -> {
+						centerX[0] = (Float) args[0];
+						centerY[0] = (Float) args[1];
+						yield null;
+					}
+					case "setAlphaMult" -> { alpha[0] = (Float) args[0]; yield null; }
+					case "renderAtCenter" -> {
+						assertEquals(TINT, color[0]);
+						assertEquals(32f, width[0]);
+						assertEquals(32f, height[0]);
+						assertEquals(16f, centerX[0]);
+						assertEquals(16f, centerY[0]);
+						assertEquals(0.4f, alpha[0]);
+						assertEquals(16f, (Float) args[0]);
+						assertEquals(20f, (Float) args[1]);
+						renders.incrementAndGet();
+						yield null;
+					}
+					default -> null;
+				});
+
+		BattleNext_PageLayout.renderTintedFittedSprite(sprite, 16f, 20f, 32f, 32f, TINT, 0.5f);
+
+		assertEquals(1, renders.get());
+		assertEquals(Color.WHITE, color[0]);
+		assertEquals(64f, width[0]);
+		assertEquals(64f, height[0]);
+		assertEquals(4f, centerX[0]);
+		assertEquals(5f, centerY[0]);
+		assertEquals(0.8f, alpha[0]);
+	}
+
+	@Test
 	void fittedSpriteKeepsNativeSizeCentersBothAxesAndRestoresSharedState() {
 		float[] width = {12f};
 		float[] height = {24f};

@@ -126,6 +126,17 @@ public class BattleNext_PageLayout {
 		}
 	}
 
+	public static void renderTintedFittedSprite(SpriteAPI sprite, float centerX, float centerY,
+			float availableWidth, float availableHeight, Color tint, float alpha) {
+		Color previousColor = sprite.getColor();
+		try {
+			sprite.setColor(tint);
+			renderFittedSprite(sprite, centerX, centerY, availableWidth, availableHeight, alpha);
+		} finally {
+			sprite.setColor(previousColor);
+		}
+	}
+
 	static void renderIcon(SpriteAPI sprite, float x, float y, float size, Color color, float alpha) {
 		Color previousColor = sprite.getColor();
 		float previousWidth = sprite.getWidth();

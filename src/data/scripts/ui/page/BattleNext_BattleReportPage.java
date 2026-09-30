@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -347,12 +348,18 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source, Global.getSettings());
 		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, SOURCE_ROW_HEIGHT, false);
-		boolean imageAvailable = addSprite(icon, visual.primarySprite()) || addSprite(icon, visual.secondarySprite());
 		float iconY = (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f;
-		if (imageAvailable) {
+		if (visual.accentIcon()) {
+			try {
+				plugin.accentSprite = Global.getSettings().getSprite("report", "BattleNext_arc");
+			} catch (RuntimeException exception) {
+				plugin.missingIcon = true;
+			}
+		} else if (addSprite(icon, visual.primarySprite()) || addSprite(icon, visual.secondarySprite())) {
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		} else if ("weapon".equals(source.getKind()) || "fighter_wing".equals(source.getKind())
-				|| "ship".equals(source.getKind()) || "?".equals(visual.placeholder())) {
+				|| "ship".equals(source.getKind()) || "source_type".equals(source.getKind())
+				|| "?".equals(visual.placeholder())) {
 			plugin.missingIcon = true;
 		} else {
 			icon.addPara(visual.placeholder(), 0f).getPosition().inMid();
@@ -485,7 +492,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			case "weapon" -> reportStrings.get("source_weapon");
 			case "fighter_wing" -> reportStrings.get("source_fighter_wing");
 			case "ship" -> reportStrings.get("source_ship");
-			case "projectile_spec" -> reportStrings.get("source_projectile");
+			case "arc" -> reportStrings.get("source_arc");
 			case "source_type" -> reportStrings.get("source_type");
 			case "damage_type" -> reportStrings.get("source_damage_type");
 			default -> kind;
@@ -508,6 +515,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
 		private PositionAPI position;
 		private boolean missingIcon;
+		private SpriteAPI accentSprite;
 
 		private void setPosition(PositionAPI position) {
 			this.position = position;
@@ -524,7 +532,15 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 		@Override
 		public void render(float alphaMult) {
-			if (position == null || !missingIcon) return;
+			if (position == null) return;
+			if (accentSprite != null) {
+				BattleNext_PageLayout.renderTintedFittedSprite(accentSprite,
+						position.getX() + MEMBER_THUMB_SIZE * 0.5f,
+						position.getY() + SOURCE_ROW_HEIGHT * 0.5f,
+						MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE, BattleNext_UiTheme.ACCENT, alphaMult);
+				return;
+			}
+			if (!missingIcon) return;
 			float size = MEMBER_THUMB_SIZE * 0.75f;
 			float x = position.getX() + (MEMBER_THUMB_SIZE - size) * 0.5f;
 			float y = position.getY() + (SOURCE_ROW_HEIGHT - size) * 0.5f;

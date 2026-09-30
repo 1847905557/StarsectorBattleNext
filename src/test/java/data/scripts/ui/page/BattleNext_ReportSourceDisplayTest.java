@@ -1,14 +1,20 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -60,7 +66,7 @@ class BattleNext_ReportSourceDisplayTest {
 	void missingAssetsAndOtherKindsRetainSourceIdsAndCategoryPlaceholders() {
 		SettingsAPI missing = proxy(SettingsAPI.class, name -> null);
 		for (String kind : new String[]{"weapon", "fighter_wing", "ship",
-				"projectile_spec", "source_type", "damage_type"}) {
+				"source_type", "damage_type"}) {
 			BattleNext_ReportSourceDisplay.SourceVisual visual =
 					BattleNext_ReportSourceDisplay.resolve(source(kind, "source-id"), missing);
 			assertEquals("source-id", visual.name());
@@ -70,9 +76,78 @@ class BattleNext_ReportSourceDisplayTest {
 		assertEquals("W", BattleNext_ReportSourceDisplay.resolve(source("weapon", "x"), missing).placeholder());
 		assertEquals("F", BattleNext_ReportSourceDisplay.resolve(source("fighter_wing", "x"), missing).placeholder());
 		assertEquals("S", BattleNext_ReportSourceDisplay.resolve(source("ship", "x"), missing).placeholder());
-		assertEquals("P", BattleNext_ReportSourceDisplay.resolve(source("projectile_spec", "x"), missing).placeholder());
 		assertEquals("T", BattleNext_ReportSourceDisplay.resolve(source("source_type", "x"), missing).placeholder());
 		assertEquals("D", BattleNext_ReportSourceDisplay.resolve(source("damage_type", "x"), missing).placeholder());
+	}
+
+	@Test
+	void arcUsesRegisteredEnergyLashIconAndName() throws Exception {
+		SettingsAPI settings = proxy(SettingsAPI.class, name -> switch (name) {
+			case "getString" -> "Arc";
+			case "getSpriteName" -> "graphics/icons/hullsys/energy_lash.png";
+			default -> null;
+		});
+		BattleNext_ReportSourceDisplay.SourceVisual visual =
+				BattleNext_ReportSourceDisplay.resolve(source("arc", "arc"), settings);
+
+		assertEquals("Arc", visual.name());
+		assertEquals("graphics/icons/hullsys/energy_lash.png", visual.primarySprite());
+		assertTrue(visual.accentIcon());
+		assertTrue(visual.resolved());
+		assertEquals("A", visual.placeholder());
+		JSONObject config = new JSONObject(Files.readString(Path.of("data/config/settings.json"), StandardCharsets.UTF_8));
+		assertEquals(visual.primarySprite(), config.getJSONObject("graphics")
+				.getJSONObject("report").getString("BattleNext_arc"));
+		assertTrue(Files.exists(Path.of("..", "..", "starsector-core", visual.primarySprite())));
+	}
+
+	@Test
+	void sourceTypeUsesRegisteredXCircleWithoutTint() throws Exception {
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+					if (!"getSpriteName".equals(method.getName())) return null;
+					assertEquals("report", args[0]);
+					assertEquals("BattleNext_source_type", args[1]);
+					return "graphics/ui/icons/64x_xcircle.png";
+				});
+		BattleNext_ReportSourceDisplay.SourceVisual visual = BattleNext_ReportSourceDisplay.resolve(
+				source("source_type", "example.DamageSource"), settings);
+
+		assertEquals("example.DamageSource", visual.name());
+		assertEquals("graphics/ui/icons/64x_xcircle.png", visual.primarySprite());
+		assertFalse(visual.accentIcon());
+		assertFalse(visual.resolved());
+		JSONObject config = new JSONObject(Files.readString(Path.of("data/config/settings.json"), StandardCharsets.UTF_8));
+		assertEquals(visual.primarySprite(), config.getJSONObject("graphics")
+				.getJSONObject("report").getString("BattleNext_source_type"));
+		assertTrue(Files.exists(Path.of("..", "..", "starsector-core", visual.primarySprite())));
+	}
+
+	@Test
+	void damageTypesUseFiveUntintedVanillaIcons() {
+		Map<DamageType, String> suffixes = Map.of(
+				DamageType.ENERGY, "energy",
+				DamageType.FRAGMENTATION, "fragmentation",
+				DamageType.HIGH_EXPLOSIVE, "high_explosive",
+				DamageType.KINETIC, "kinetic",
+				DamageType.OTHER, "other");
+		for (Map.Entry<DamageType, String> entry : suffixes.entrySet()) {
+			String expected = "graphics/ui/icons/damagetype_" + entry.getValue() + ".png";
+			SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+					new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+						if (!"getSpriteName".equals(method.getName())) return null;
+						assertEquals("ui", args[0]);
+						assertEquals("icon_" + entry.getValue(), args[1]);
+						return expected;
+					});
+			BattleNext_ReportSourceDisplay.SourceVisual visual = BattleNext_ReportSourceDisplay.resolve(
+					source("damage_type", entry.getKey().name()), settings);
+			assertEquals(expected, visual.primarySprite());
+			assertEquals(entry.getKey().name(), visual.name());
+			assertFalse(visual.accentIcon());
+			assertFalse(visual.resolved());
+			assertTrue(Files.exists(Path.of("..", "..", "starsector-core", visual.primarySprite())));
+		}
 	}
 
 	private BattleNext_DamageSourceReport source(String kind, String id) {
