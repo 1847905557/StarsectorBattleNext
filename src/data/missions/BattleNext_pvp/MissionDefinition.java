@@ -105,7 +105,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
-		if (BattleNext_Settings.isRttInPvp()) {
+		if (BattleNext_Settings.isRttInBattle()) {
 			api.addPlugin(new BattleNext_RttPlugin());
 		}
 		BattleNext_PageantPlugin pageant = new BattleNext_PageantPlugin(scorekeeper,

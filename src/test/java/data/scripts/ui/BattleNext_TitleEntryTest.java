@@ -117,11 +117,20 @@ class BattleNext_TitleEntryTest {
 					game.getEntry("com/fs/starfarer/coreui/refit/U.class")).readAllBytes(), StandardCharsets.UTF_8);
 			String shipDisplay = new String(game.getInputStream(
 					game.getEntry("com/fs/starfarer/coreui/refit/oOOO.class")).readAllBytes(), StandardCharsets.UTF_8);
+			String titleState = new String(game.getInputStream(
+					game.getEntry("com/fs/starfarer/title/TitleScreenState.class")).readAllBytes(), StandardCharsets.ISO_8859_1);
+			String titleDialog = new String(game.getInputStream(
+					game.getEntry("com/fs/starfarer/ui/oo0O.class")).readAllBytes(), StandardCharsets.ISO_8859_1);
 			assertTrue(refitScreen.contains("getShipDisplay"));
 			assertTrue(refitScreen.contains("saveCurrentVariant"));
 			assertTrue(refitScreen.contains("syncWithCurrentVariant"));
 			assertTrue(shipDisplay.contains("getCurrentVariant"));
 			assertTrue(shipDisplay.contains("syncWithVariant"));
+			assertTrue(titleState.contains("showMessageDialog"));
+			assertTrue(titleState.contains("dialogType"));
+			assertTrue(titleDialog.contains("dismiss"));
+			assertTrue(titleDialog.contains("makeOptionInstant"));
+			assertTrue(titleDialog.contains("getInterceptor"));
 		}
 	}
 

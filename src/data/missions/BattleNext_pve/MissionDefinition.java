@@ -4,9 +4,8 @@ import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
-import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
-import data.scripts.plugin.BattleNext_BattleClockPlugin;
-import data.scripts.plugin.BattleNext_EnvironmentPlugin;
+import data.scripts.order.BattleNext_FleetOrderBehavior;
+import data.scripts.plugin.*;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
@@ -38,6 +37,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, true);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet, false);
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
+		api.addPlugin(new BattleNext_DeploymentPlugin());
 		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet.getMembers(), assembledEnemyFleet.getMembers());
 		api.addPlugin(scorekeeper);
@@ -45,6 +45,12 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper,
 				new BattleNext_Match("pve", "pve-player", "pve-enemy", -1, 1f), null,
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName(), "PvE"));
+		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
+				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
+		api.addPlugin(new BattleNext_FreeCameraPlugin());
+		if (BattleNext_Settings.isRttInBattle()) {
+			api.addPlugin(new BattleNext_RttPlugin());
+		}
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);
 		api.addBriefingItem("Use left/right to rotate faction selection.");
 		api.initMap(-MAP_HALF_SIZE, MAP_HALF_SIZE, -MAP_HALF_SIZE, MAP_HALF_SIZE);

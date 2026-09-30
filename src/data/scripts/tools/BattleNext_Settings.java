@@ -10,7 +10,7 @@ public class BattleNext_Settings {
 
 	private static final String PATH = "AI_Battles_Next/settings.json";
 	private static final boolean DEFAULT_FULL_GRAPHIC_EFFECT = true;
-	private static final boolean DEFAULT_RTT_IN_PVP = false;
+	private static final boolean DEFAULT_RTT_IN_BATTLE = false;
 	private static final float DEFAULT_BATTLE_TIME_LIMIT = 500f;
 	private static final float DEFAULT_TIME_MULT = 1f;
 	private static final float DEFAULT_BOOST_TIME_MULT = 3f;
@@ -37,9 +37,9 @@ public class BattleNext_Settings {
 		return values.optBoolean("fullGraphicEffect", DEFAULT_FULL_GRAPHIC_EFFECT);
 	}
 
-	public static boolean isRttInPvp() {
+	public static boolean isRttInBattle() {
 		ensureLoaded();
-		return values.optBoolean("rttInPvp", DEFAULT_RTT_IN_PVP);
+		return values.optBoolean("rttInBattle", DEFAULT_RTT_IN_BATTLE);
 	}
 
 	public static float getBattleTimeLimit() {
@@ -62,7 +62,7 @@ public class BattleNext_Settings {
 		return values.optInt("reportKeepCount", DEFAULT_REPORT_KEEP_COUNT);
 	}
 
-	public static void save(boolean fullGraphicEffect, boolean rttInPvp, float battleTimeLimit, float defaultTimeMult,
+	public static void save(boolean fullGraphicEffect, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
 			float boostTimeMult, int reportKeepCount) {
 		if (battleTimeLimit < 0f || !Float.isFinite(battleTimeLimit)) throw new IllegalArgumentException("Battle time limit is invalid");
 		if (defaultTimeMult <= 0f || !Float.isFinite(defaultTimeMult)) throw new IllegalArgumentException("Default time multiplier is invalid");
@@ -70,7 +70,7 @@ public class BattleNext_Settings {
 		if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
 		JSONObject next = defaults();
 		put(next, "fullGraphicEffect", fullGraphicEffect);
-		put(next, "rttInPvp", rttInPvp);
+		put(next, "rttInBattle", rttInBattle);
 		put(next, "battleTimeLimit", battleTimeLimit);
 		put(next, "defaultTimeMult", defaultTimeMult);
 		put(next, "boostTimeMult", boostTimeMult);
@@ -86,7 +86,7 @@ public class BattleNext_Settings {
 	private static JSONObject defaults() {
 		JSONObject result = new JSONObject();
 		put(result, "fullGraphicEffect", DEFAULT_FULL_GRAPHIC_EFFECT);
-		put(result, "rttInPvp", DEFAULT_RTT_IN_PVP);
+		put(result, "rttInBattle", DEFAULT_RTT_IN_BATTLE);
 		put(result, "battleTimeLimit", DEFAULT_BATTLE_TIME_LIMIT);
 		put(result, "defaultTimeMult", DEFAULT_TIME_MULT);
 		put(result, "boostTimeMult", DEFAULT_BOOST_TIME_MULT);
@@ -96,7 +96,7 @@ public class BattleNext_Settings {
 
 	private static void merge(JSONObject stored) {
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
-		putIf(values, "rttInPvp", stored.has("rttInPvp") ? stored.optBoolean("rttInPvp") : null);
+		putIf(values, "rttInBattle", stored.has("rttInBattle") ? stored.optBoolean("rttInBattle") : null);
 		putIf(values, "battleTimeLimit", validNumber(stored, "battleTimeLimit", false));
 		putIf(values, "defaultTimeMult", validNumber(stored, "defaultTimeMult", true));
 		putIf(values, "boostTimeMult", validNumber(stored, "boostTimeMult", true));

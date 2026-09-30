@@ -45,6 +45,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private static final String REFIT_TAB_CLASS = "com.fs.starfarer.coreui.refit.void";
 	private static final String REFIT_SCREEN_CLASS = "com.fs.starfarer.coreui.refit.U";
 	private static final String REFIT_TAB_CONTENT_FIELD = "\u00d200000";
+	private final BattleNext_TitleModalDialog titleModal = new BattleNext_TitleModalDialog();
 
 	private CombatEngineAPI engine;
 	private CustomPanelAPI configurationPanel;
@@ -89,6 +90,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
+		if (displayedPanel == null && titleModal.hasOwnedDialog()) titleModal.close();
 		if (isRefitPanelDisplayed() && !isRefitDialogAttached(refitDialog)) {
 			closePanel();
 		}
@@ -224,19 +226,20 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			configurationPlugin.open();
 			nextPanel = configurationPanel;
 		}
+		titleModal.open(screenPanel, AppDriver.getInstance().getCurrentState());
 		screenPanel.addComponent(nextPanel);
-		screenPanel.bringComponentToTop(nextPanel);
 		displayedPanel = nextPanel;
 		refitDialog = nextPanel == refitPanel ? dialog : null;
 		panelCooldown = 0f;
 	}
 
 	private void closePanel() {
-		if (displayedPanel == null) return;
+		if (displayedPanel == null && !titleModal.hasOwnedDialog()) return;
 		if (isRefitPanelDisplayed()) {
 			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).close();
 		}
-		if (screenPanel != null) {
+		titleModal.close();
+		if (screenPanel != null && displayedPanel != null) {
 			screenPanel.removeComponent(displayedPanel);
 		}
 		displayedPanel = null;
