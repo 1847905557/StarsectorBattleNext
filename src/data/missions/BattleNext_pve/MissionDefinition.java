@@ -4,6 +4,7 @@ import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
+import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.*;
 import data.scripts.fleet.BattleNext_FleetBuilder;
@@ -29,6 +30,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
+		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
 		expectedDp = BattleNext_KeyTuning.adjustVerticalClamped(expectedDp, EXPECTED_DP_STEP, MIN_EXPECTED_DP, MAX_EXPECTED_DP);
 		factionIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(factionIndex, FACTION_COUNT);
 		BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();

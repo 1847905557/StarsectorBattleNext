@@ -10,7 +10,9 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import data.missions.BattleNext_MissionRestrictedUnlock;
 import com.fs.state.AppDriver;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
@@ -40,6 +42,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
 
 	private static final String MISSION_CORE_UI_CLASS = "com.fs.starfarer.coreui.returnnew";
+	private static final String MISSION_WIDGET_CLASS = "com.fs.starfarer.title.Object.E";
 	private static final String MISSION_REFIT_PROVIDER_CLASS = "com.fs.starfarer.title.Object.ooOO";
 	private static final String TITLE_DIALOG_CLASS = "com.fs.starfarer.ui.oo0O";
 	private static final String REFIT_TAB_CLASS = "com.fs.starfarer.coreui.refit.void";
@@ -63,11 +66,14 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private boolean mouseHeld;
 	private boolean renderChecked;
 	private boolean refitDetectionErrorLogged;
+	private boolean missionSelectionErrorLogged;
+	private boolean missionListClickPending;
 
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
 		if (Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
+			BattleNext_MissionRestrictedUnlock.getInstance().forget();
 			engine.removePlugin(this);
 			return;
 		}
@@ -82,12 +88,18 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
+			BattleNext_MissionRestrictedUnlock.getInstance().forget();
 			closePanel();
 			releaseBackdrop();
 			if (engine != null) {
 				engine.removePlugin(this);
 			}
 			return;
+		}
+		if (missionListClickPending) {
+			missionListClickPending = false;
+		} else {
+			updateMissionRestrictedUnlock();
 		}
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
 		if (displayedPanel == null && titleModal.hasOwnedDialog()) titleModal.close();
@@ -117,6 +129,9 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
+		if (Global.getCurrentState() == GameState.TITLE && displayedPanel == null) {
+			restoreBeforeMissionListClick(events);
+		}
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null || displayedPanel == null) {
 			return;
 		}
@@ -142,6 +157,69 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			}
 		}
 		consumeOutsideMouseInput(displayedPanel.getPosition(), events);
+	}
+
+	private void updateMissionRestrictedUnlock() {
+
+		BattleNext_MissionRestrictedUnlock unlock = BattleNext_MissionRestrictedUnlock.getInstance();
+		if (!unlock.isEnabled() && !unlock.hasPreview()) return;
+		try {
+			Object widget = missionWidget();
+			Object detail = invokeNoArg(widget, "getMissionDetail");
+			Object preview = invokeNoArg(detail, "getPreview");
+			boolean visible = isMissionWidgetVisible(widget);
+			unlock.observe(preview, visible, !visible && findMissionRefitDialog() != null);
+		} catch (Throwable exception) {
+			unlock.restore();
+			logMissionSelectionFailure(exception);
+		}
+	}
+
+	private void restoreBeforeMissionListClick(List<InputEventAPI> events) {
+
+		BattleNext_MissionRestrictedUnlock unlock = BattleNext_MissionRestrictedUnlock.getInstance();
+		if (!unlock.isEnabled()) return;
+		try {
+			Object widget = missionWidget();
+			if (!isMissionWidgetVisible(widget)) return;
+			Object list = invokeNoArg(widget, "getMissionList");
+			PositionAPI bounds = ((UIComponentAPI) list).getPosition();
+			if (isMissionListClick(bounds, events)) {
+				unlock.restore();
+				missionListClickPending = true;
+			}
+		} catch (Throwable exception) {
+			unlock.restore();
+			logMissionSelectionFailure(exception);
+		}
+	}
+
+	static boolean isMissionListClick(PositionAPI bounds, List<InputEventAPI> events) {
+		for (InputEventAPI event : events) {
+			if (event.isConsumed() || !event.isLMBDownEvent() || !bounds.containsEvent(event)) continue;
+			return true;
+		}
+		return false;
+	}
+
+	private boolean isMissionWidgetVisible(Object widget) throws Throwable {
+		Object fader = invokeNoArg(widget, "getFader");
+		float brightness = ((Number) invokeNoArg(fader, "getBrightness")).floatValue();
+		return brightness > 0f && !(Boolean) invokeNoArg(fader, "isFadingOut");
+	}
+
+	private Object missionWidget() throws Throwable {
+
+		for (Object child : childrenOf(screenPanel)) {
+			if (MISSION_WIDGET_CLASS.equals(child.getClass().getName())) return child;
+		}
+		throw new IllegalStateException("Mission widget is unavailable");
+	}
+
+	private void logMissionSelectionFailure(Throwable exception) {
+		if (missionSelectionErrorLogged) return;
+		missionSelectionErrorLogged = true;
+		Global.getLogger(BattleNext_TitleEntry.class).warn("Mission selection detection failed", exception);
 	}
 
 	static void consumeOutsideMouseInput(PositionAPI bounds, List<InputEventAPI> events) {

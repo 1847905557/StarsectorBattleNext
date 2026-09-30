@@ -5,7 +5,7 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.missions.BattleNext_BattleMap;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleModel;
@@ -21,7 +21,6 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -53,7 +52,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	private static final float FIELD_LABEL_GAP = 5f;
 	private static final float READ_ONLY_FIELD_VALUE_GAP = 2f;
 	private static final int RANDOM_MAP_ID = -1;
-	private static final int LAST_MAP_ID = BattleNext_BattleMap.MAP_COUNT - 1;
+	private static final int LAST_MAP_ID = BattleNext_MissionBattleMap.MAP_COUNT - 1;
 
 	private final BattleNext_TournamentStore store;
 	private final BattleNext_FleetStore fleetStore;

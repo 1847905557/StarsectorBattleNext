@@ -103,8 +103,24 @@ class BattleNext_TitleEntryTest {
 	}
 
 	@Test
+	void missionListClickIsDetectedBeforeTheTitleUiConsumesIt() {
+		InputEventAPI inside = mouseEvent("isLMBDownEvent", new AtomicBoolean());
+		InputEventAPI outside = mouseEvent("isLMBDownEvent", new AtomicBoolean());
+		AtomicBoolean consumed = new AtomicBoolean(true);
+		InputEventAPI alreadyConsumed = mouseEvent("isLMBDownEvent", consumed);
+		PositionAPI bounds = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) ->
+						"containsEvent".equals(method.getName()) && args[0] == inside);
+
+		assertTrue(BattleNext_TitleEntry.isMissionListClick(bounds, List.of(outside, inside)));
+		assertFalse(BattleNext_TitleEntry.isMissionListClick(bounds, List.of(outside, alreadyConsumed)));
+		assertFalse(BattleNext_TitleEntry.isMissionListClick(bounds, List.of()));
+	}
+
+	@Test
 	void obfuscatedMissionRefitEntryPointsExistInTheTargetGame() throws Exception {
 		try (ZipFile game = new ZipFile(Path.of("../../starsector-core/starfarer_obf.jar").toFile())) {
+			assertTrue(game.getEntry("com/fs/starfarer/title/Object/E.class") != null);
 			assertTrue(game.getEntry("com/fs/starfarer/coreui/returnnew.class") != null);
 			assertTrue(game.getEntry("com/fs/starfarer/title/Object/ooOO.class") != null);
 			assertTrue(game.getEntry("com/fs/starfarer/ui/oo0O.class") != null);
@@ -131,6 +147,11 @@ class BattleNext_TitleEntryTest {
 			assertTrue(titleDialog.contains("dismiss"));
 			assertTrue(titleDialog.contains("makeOptionInstant"));
 			assertTrue(titleDialog.contains("getInterceptor"));
+			String missionWidget = new String(game.getInputStream(
+					game.getEntry("com/fs/starfarer/title/Object/E.class")).readAllBytes(), StandardCharsets.ISO_8859_1);
+			assertTrue(missionWidget.contains("getMissionList"));
+			assertTrue(missionWidget.contains("getMissionDetail"));
+			assertTrue(missionWidget.contains("getFader"));
 		}
 	}
 

@@ -3,7 +3,7 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
-import data.missions.BattleNext_BattleMap;
+import data.missions.BattleNext_MissionBattleMap;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
@@ -50,7 +50,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private static final float TOURNAMENT_SCHEDULE_MATCH_GAP = 8f;
 
 	private static final int RANDOM_MAP_ID = -1;
-	private static final int LAST_MAP_ID = BattleNext_BattleMap.MAP_COUNT - 1;
+	private static final int LAST_MAP_ID = BattleNext_MissionBattleMap.MAP_COUNT - 1;
 
 	public static final class BattleSourceSelectionRequest {
 		private final String id;

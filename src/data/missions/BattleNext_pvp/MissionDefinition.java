@@ -5,7 +5,8 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
-import data.missions.BattleNext_BattleMap;
+import data.missions.BattleNext_MissionBattleMap;
+import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -34,6 +35,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
+		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
 
 		List<BattleNext_Match> matches = provider.load();
 		if (matches.isEmpty()) {
@@ -85,7 +87,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 					? assembledEnemyFleet.getDefinition().getName() : strings.get("invalid_enemy"));
 			api.addBriefingItem(strings.get("invalid_battle_assembly"));
 			api.addBriefingItem(progress);
-			BattleNext_BattleMap.apply(api, 0, 1f);
+			BattleNext_MissionBattleMap.apply(api, 0, 1f);
 			return;
 		}
 
@@ -93,7 +95,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet);
 		api.addBriefingItem(strings.format("map_briefing", match.getMap(), match.getMapScale()));
 		api.addBriefingItem(progress);
-		BattleNext_BattleMap.apply(api, BattleNext_BattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
+		BattleNext_MissionBattleMap.apply(api, BattleNext_MissionBattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
 		api.addPlugin(new BattleNext_DeploymentPlugin());
 		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
@@ -124,7 +126,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.setFleetTagline(FleetSide.ENEMY, message);
 		api.addBriefingItem(message);
 		for (String reason : reasons) api.addBriefingItem(reason);
-		BattleNext_BattleMap.apply(api, 0, 1f);
+		BattleNext_MissionBattleMap.apply(api, 0, 1f);
 	}
 
 	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet assembledFleet) {

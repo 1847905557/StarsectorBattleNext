@@ -1725,6 +1725,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		return this.targetOverride;
 	}
 
+	@Override
 	public void setTargetOverride(ShipAPI targetOverride) {
 		this.targetOverride = targetOverride;
 	}
@@ -1739,9 +1740,11 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		return this.eval;
 	}
 
+	@Override
 	public void setDoNotFireDelay(float amount) {
 	}
 
+	@Override
 	public boolean needsRefit() {
 		return false;
 	}

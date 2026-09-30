@@ -5,6 +5,7 @@ import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
+import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_FreeCameraPlugin;
 import data.scripts.plugin.BattleNext_RttPlugin;
@@ -15,6 +16,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
+		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
 
 		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, false, 1);

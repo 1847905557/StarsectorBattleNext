@@ -3,6 +3,7 @@ package data.scripts;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
+import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.order.BattleNext_OrderRegistry;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -42,6 +43,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 	@Override
 	public void onGameLoad(boolean newGame) {
+		BattleNext_MissionRestrictedUnlock.getInstance().forget();
 
 		boolean classLoad = false;
 		if (Global.getSector().getPersistentData().containsKey(CLASS_MARK)) {

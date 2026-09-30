@@ -5,7 +5,7 @@ import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
-import data.missions.BattleNext_BattleMap;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -47,7 +47,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private static final float STATUS_TOOLTIP_LINE_GAP = 4f;
 
 	private static final int RANDOM_MAP_ID = -1;
-	private static final int LAST_MAP_ID = BattleNext_BattleMap.MAP_COUNT - 1;
+	private static final int LAST_MAP_ID = BattleNext_MissionBattleMap.MAP_COUNT - 1;
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;

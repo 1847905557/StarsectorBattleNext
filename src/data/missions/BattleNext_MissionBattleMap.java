@@ -2,12 +2,12 @@ package data.missions;
 
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 
-public class BattleNext_BattleMap {
+public class BattleNext_MissionBattleMap {
 
 	public static final int MAP_COUNT = 12;
 	private static final float MIN_MAP_SCALE = 0.1f;
 
-	private BattleNext_BattleMap() {
+	private BattleNext_MissionBattleMap() {
 
 	}
 
