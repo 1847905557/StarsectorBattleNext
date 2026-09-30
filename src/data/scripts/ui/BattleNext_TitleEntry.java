@@ -9,6 +9,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.state.AppDriver;
 import org.boxutil.BoxUtilModPlugin;
@@ -117,11 +118,15 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null || displayedPanel == null) {
 			return;
 		}
-		if (displayedPanel == configurationPanel && configurationPlugin != null && configurationPlugin.handleGlobalInput(events)) {
-			return;
+		if (screenPanel != null) screenPanel.bringComponentToTop(displayedPanel);
+		if (displayedPanel == configurationPanel && configurationPlugin != null) {
+			configurationPlugin.handleGlobalInput(events);
 		}
-		if (isRefitPanelDisplayed()
-				&& ((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).handleGlobalInput(events)) return;
+		if (displayedPanel == null) return;
+		if (isRefitPanelDisplayed()) {
+			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).handleGlobalInput(events);
+		}
+		if (displayedPanel == null) return;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
@@ -133,6 +138,14 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				event.consume();
 				return;
 			}
+		}
+		consumeOutsideMouseInput(displayedPanel.getPosition(), events);
+	}
+
+	static void consumeOutsideMouseInput(PositionAPI bounds, List<InputEventAPI> events) {
+		for (InputEventAPI event : events) {
+			if (event.isConsumed() || !event.isMouseEvent() || bounds.containsEvent(event)) continue;
+			event.consume();
 		}
 	}
 
@@ -212,6 +225,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			nextPanel = configurationPanel;
 		}
 		screenPanel.addComponent(nextPanel);
+		screenPanel.bringComponentToTop(nextPanel);
 		displayedPanel = nextPanel;
 		refitDialog = nextPanel == refitPanel ? dialog : null;
 		panelCooldown = 0f;

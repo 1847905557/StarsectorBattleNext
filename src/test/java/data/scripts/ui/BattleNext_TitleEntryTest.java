@@ -6,7 +6,10 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIPanelAPI;
 import org.json.JSONObject;
+import org.lwjgl.input.Keyboard;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
@@ -164,6 +167,159 @@ class BattleNext_TitleEntryTest {
 		} finally {
 			Global.setSettings(previous);
 		}
+	}
+
+	@Test
+	void displayedPanelGoesToTopAndBlocksOutsideMouseEvents() throws Exception {
+		SettingsAPI previous = Global.getSettings();
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
+						"getCurrentState".equals(method.getName()) ? GameState.TITLE : null);
+		AtomicBoolean outsideConsumed = new AtomicBoolean();
+		AtomicBoolean insideConsumed = new AtomicBoolean();
+		InputEventAPI outside = mouseEvent("isMouseDownEvent", outsideConsumed);
+		InputEventAPI inside = mouseEvent("isMouseDownEvent", insideConsumed);
+		PositionAPI bounds = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) ->
+						"containsEvent".equals(method.getName()) && args[0] == inside);
+		CustomPanelAPI panel = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) ->
+						"getPosition".equals(method.getName()) ? bounds : null);
+		List<String> order = new ArrayList<>();
+		UIPanelAPI screen = (UIPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{UIPanelAPI.class}, (instance, method, args) -> {
+					if ("bringComponentToTop".equals(method.getName())) {
+						assertSame(panel, args[0]);
+						order.add("top");
+					}
+					return null;
+				});
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+		setField(entry, "configurationPanel", panel);
+		setField(entry, "displayedPanel", panel);
+		setField(entry, "screenPanel", screen);
+		Global.setSettings(settings);
+		try {
+			entry.processInputPreCoreControls(0f, List.of(outside, inside));
+		} finally {
+			Global.setSettings(previous);
+		}
+		assertEquals(List.of("top"), order);
+		assertTrue(outsideConsumed.get());
+		assertFalse(insideConsumed.get());
+	}
+
+	@Test
+	void outsideGateConsumesPressReleaseMoveAndWheelWhileLeavingKeyboardAlone() {
+		InputEventAPI keyboard = (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{InputEventAPI.class}, (instance, method, args) ->
+						"isKeyboardEvent".equals(method.getName()));
+		PositionAPI outside = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) -> false);
+		for (String kind : List.of("isMouseDownEvent", "isMouseUpEvent", "isMouseMoveEvent", "isMouseScrollEvent")) {
+			AtomicBoolean consumed = new AtomicBoolean();
+			BattleNext_TitleEntry.consumeOutsideMouseInput(outside, List.of(mouseEvent(kind, consumed)));
+			assertTrue(consumed.get(), kind);
+		}
+		BattleNext_TitleEntry.consumeOutsideMouseInput(outside, List.of(keyboard));
+	}
+
+	@Test
+	void refitAndEmptyPanelsUseTheSameOutsideGate() throws Exception {
+		SettingsAPI previous = Global.getSettings();
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
+						"getCurrentState".equals(method.getName()) ? GameState.TITLE : null);
+		PositionAPI bounds = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) -> false);
+		CustomPanelAPI configuration = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> null);
+		UIPanelAPI screen = (UIPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{UIPanelAPI.class}, (instance, method, args) -> null);
+		Global.setSettings(settings);
+		try {
+			for (boolean refit : new boolean[]{false, true}) {
+				AtomicBoolean consumed = new AtomicBoolean();
+				Object plugin = refit ? new BattleNext_RefitPanelPlugin(() -> { })
+						: new BattleNext_EmptyPanelPlugin(() -> { });
+				CustomPanelAPI displayed = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> switch (method.getName()) {
+							case "getPosition" -> bounds;
+							case "getPlugin" -> plugin;
+							default -> null;
+						});
+				BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+				setField(entry, "configurationPanel", configuration);
+				setField(entry, "displayedPanel", displayed);
+				setField(entry, "screenPanel", screen);
+				if (refit) setField(entry, "refitPanel", displayed);
+				entry.processInputPreCoreControls(0f, List.of(mouseEvent("isMouseDownEvent", consumed)));
+				assertTrue(consumed.get());
+			}
+		} finally {
+			Global.setSettings(previous);
+		}
+	}
+
+	@Test
+	void refitCloseReturnsRemainingMouseInputInTheSameFrame() throws Exception {
+		SettingsAPI previous = Global.getSettings();
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
+						"getCurrentState".equals(method.getName()) ? GameState.TITLE : null);
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(() -> {
+			try {
+				setField(entry, "displayedPanel", null);
+			} catch (Exception exception) {
+				throw new RuntimeException(exception);
+			}
+		});
+		CustomPanelAPI configuration = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> null);
+		CustomPanelAPI refit = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) ->
+						"getPlugin".equals(method.getName()) ? plugin : null);
+		UIPanelAPI screen = (UIPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{UIPanelAPI.class}, (instance, method, args) -> null);
+		setField(entry, "configurationPanel", configuration);
+		setField(entry, "refitPanel", refit);
+		setField(entry, "displayedPanel", refit);
+		setField(entry, "screenPanel", screen);
+		AtomicBoolean escapeConsumed = new AtomicBoolean();
+		InputEventAPI escape = (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "isConsumed" -> escapeConsumed.get();
+					case "isKeyboardEvent", "isKeyDownEvent" -> true;
+					case "getEventValue" -> Keyboard.KEY_ESCAPE;
+					case "consume" -> { escapeConsumed.set(true); yield null; }
+					default -> false;
+				});
+		AtomicBoolean mouseConsumed = new AtomicBoolean();
+		Global.setSettings(settings);
+		try {
+			entry.processInputPreCoreControls(0f, List.of(escape, mouseEvent("isMouseDownEvent", mouseConsumed)));
+		} finally {
+			Global.setSettings(previous);
+		}
+		assertTrue(escapeConsumed.get());
+		assertFalse(mouseConsumed.get());
+	}
+
+	private InputEventAPI mouseEvent(String kind, AtomicBoolean consumed) {
+		return (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "isConsumed" -> consumed.get();
+					case "isMouseEvent" -> true;
+					case "consume" -> { consumed.set(true); yield null; }
+					default -> method.getName().equals(kind);
+				});
+	}
+
+	private void setField(Object owner, String name, Object value) throws Exception {
+		Field field = owner.getClass().getDeclaredField(name);
+		field.setAccessible(true);
+		field.set(owner, value);
 	}
 
 	@Test
