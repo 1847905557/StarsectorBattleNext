@@ -51,6 +51,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private static final float MEMBER_DETAIL_BUTTON_BLOCK = BattleNext_PageLayout.FOOTER_HEIGHT + 8f;
 
 	private final BattleNext_FleetStore store;
+	private final BattleNext_VariantSourceProvider variantSource = new BattleNext_VariantSourceProvider();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private final List<FleetMemberEditorFields> memberFields = new ArrayList<>();
 	private final Set<Integer> expandedMembers = new HashSet<>();
@@ -235,7 +236,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			bodyPanel.addUIElement(title).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 			float y = MEMBER_DETAIL_INSET + MEMBER_DETAIL_TITLE_HEIGHT;
 			BattleNext_OptionField variantPicker = new BattleNext_OptionField(overlayHost,
-					new BattleNext_VariantSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
+					variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE);
 			fields.variant = addOptionBlock(bodyPanel, memberContent, text("variant"), variantPicker,
 					member.getVariantId(), detailWidth, y);
 			memberPickers.add(variantPicker);
@@ -326,7 +327,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				String hullId = local.toJson().optString("hullId", "");
 				return hullId.isEmpty() ? null : Global.getSettings().getHullSpec(hullId);
 			}
-			ShipVariantAPI variant = Global.getSettings().getVariant(variantId);
+			ShipVariantAPI variant = variantSource.resolve(variantId);
 			return variant == null ? null : variant.getHullSpec();
 		} catch (RuntimeException exception) {
 			return null;
@@ -430,8 +431,18 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			}
 			if (!variantId.isEmpty()) {
 				try {
+					if (variantId.startsWith(BattleNext_VariantSourceProvider.PINNED_PREFIX)) {
+						BattleNext_VariantBuilder snapshot = BattleNext_VariantBuilder.fromVariant(variantSource.resolve(variantId));
+						variantId = snapshot.getId();
+						draft.putVariant(snapshot);
+						if (fields != null && fields.variant != null) fields.variant.setText(variantId);
+					}
 					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantBuilder.fromRegistered(variantId));
 				} catch (Exception exception) {
+					if (variantId.startsWith(BattleNext_VariantSourceProvider.PINNED_PREFIX) && validate) {
+						setStatus(text("invalid_variant") + ": " + exception.getMessage());
+						return false;
+					}
 					// Keep references to variants unavailable in the current game setup.
 				}
 			}

@@ -8,12 +8,27 @@ import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+
+import java.io.IOException;
+import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvider {
+	public static final String PINNED_PREFIX = "pinned:";
+	private final BattleNext_PinnedVariantStore pinnedVariants;
+
+	public BattleNext_VariantSourceProvider() {
+		this(new BattleNext_PinnedVariantStore());
+	}
+
+	public BattleNext_VariantSourceProvider(BattleNext_PinnedVariantStore pinnedVariants) {
+		this.pinnedVariants = pinnedVariants;
+	}
 
 	private static final int VARIANT_SELECTION_MAX_COUNT = 1;
 	private static final float FACT_GAP = 5f;
@@ -32,6 +47,18 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			ShipVariantAPI variant = loadVariant(id);
 			if (variant == null || variant.isFighter()) continue;
 			options.add(new OptionChoice(id, label(variant)));
+		}
+		try {
+			pinnedVariants.reload();
+		} catch (IOException | JSONException | RuntimeException exception) {
+			Global.getLogger(BattleNext_VariantSourceProvider.class).warn("Unable to load pinned variants", exception);
+		}
+		if (pinnedVariants.isLoaded()) {
+			for (BattleNext_PinnedVariantModel pin : pinnedVariants.getAll()) {
+				ShipVariantAPI variant = pinnedVariants.resolve(pin.getPinId());
+				if (variant.isFighter()) continue;
+				options.add(new OptionChoice(PINNED_PREFIX + pin.getPinId(), pin.getDisplayName()));
+			}
 		}
 		options.sort(Comparator.comparing(OptionChoice::getId));
 		return options;
@@ -63,10 +90,22 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		}
 	}
 
+	public ShipVariantAPI resolve(String id) {
+		if (!id.startsWith(PINNED_PREFIX)) return Global.getSettings().getVariant(id);
+		if (!pinnedVariants.isLoaded()) {
+			try {
+				pinnedVariants.reload();
+			} catch (IOException | JSONException exception) {
+				throw new IllegalStateException("Unable to load pinned variants", exception);
+			}
+		}
+		return pinnedVariants.resolve(id.substring(PINNED_PREFIX.length()));
+	}
+
 	private ShipVariantAPI loadVariant(String id) {
 		if (id == null || id.isEmpty()) return null;
 		try {
-			return Global.getSettings().getVariant(id);
+			return resolve(id);
 		} catch (RuntimeException exception) {
 			return null;
 		}

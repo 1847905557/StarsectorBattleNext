@@ -74,7 +74,8 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 		if (!normalized.startsWith(BASE_ROOT)) return false;
 		String relative = normalized.substring(BASE_ROOT.length());
 		int separator = relative.indexOf('/');
-		return separator > 0 && relative.substring(separator).equals("/" + DATA_FILE);
+		return separator > 0 && !BattleNext_EntryId.isReservedFolder(relative.substring(0, separator))
+				&& relative.substring(separator).equals("/" + DATA_FILE);
 	}
 
 	private static String fleetFolder(String path) {
