@@ -20,28 +20,28 @@ import org.boxutil.backends.reflect.BUtil_RefMethod;
 
 import java.util.List;
 
-public class BattleNext_PinnedVariantRefitButton extends BaseRefitButton implements EveryFrameScript {
+public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton implements EveryFrameScript {
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 	private CustomPanelAPI background;
 	private UIPanelAPI host;
 	private RefitContext openedContext;
-	private BattleNext_PinnedVariantPanel display;
+	private BattleNext_LunaPinnedVariantPanel display;
 
-	private BattleNext_PinnedVariantRefitButton() {
+	private BattleNext_LunaPinnedVariantRefitButton() {
 
 	}
 
 	@LifecycleEntry
 	public static void register() {
-		if (LunaRefitManager.hasButtonOfClass(BattleNext_PinnedVariantRefitButton.class)) return;
-		LunaRefitManager.addRefitButton(new BattleNext_PinnedVariantRefitButton());
+		if (LunaRefitManager.hasButtonOfClass(BattleNext_LunaPinnedVariantRefitButton.class)) return;
+		LunaRefitManager.addRefitButton(new BattleNext_LunaPinnedVariantRefitButton());
 	}
 
 	@LifecycleEntry
 	public static void onGameLoad() {
-		BattleNext_PinnedVariantRefitButton button = (BattleNext_PinnedVariantRefitButton)
-				LunaRefitManager.getFirstButtonOfClass(BattleNext_PinnedVariantRefitButton.class);
+		BattleNext_LunaPinnedVariantRefitButton button = (BattleNext_LunaPinnedVariantRefitButton)
+				LunaRefitManager.getFirstButtonOfClass(BattleNext_LunaPinnedVariantRefitButton.class);
 
 		if (button == null) throw new IllegalStateException("Pinned variant refit button is not registered");
 		button.cleanup();
@@ -81,12 +81,12 @@ public class BattleNext_PinnedVariantRefitButton extends BaseRefitButton impleme
 
 	@Override
 	public float getPanelWidth(FleetMemberAPI member, ShipVariantAPI variant) {
-		return Math.min(640f, Global.getSettings().getScreenWidth() * 0.8f);
+		return Global.getSettings().getScreenWidth() * 0.8f;
 	}
 
 	@Override
 	public float getPanelHeight(FleetMemberAPI member, ShipVariantAPI variant) {
-		return Math.min(560f, Global.getSettings().getScreenHeight() * 0.8f);
+		return Global.getSettings().getScreenHeight() * 0.8f;
 	}
 
 	@Override
@@ -116,7 +116,7 @@ public class BattleNext_PinnedVariantRefitButton extends BaseRefitButton impleme
 			error = strings.get("pin_context_error") + ": " + exception;
 			Global.getLogger(getClass()).warn("Unable to capture campaign refit context", exception);
 		}
-		display = new BattleNext_PinnedVariantPanel(this::dismiss);
+		display = new BattleNext_LunaPinnedVariantPanel(this::dismiss);
 		display.open(selected, error);
 		float width = backgroundPanel.getPosition().getWidth();
 		float height = backgroundPanel.getPosition().getHeight();

@@ -86,6 +86,7 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 	private String savedName = "";
 	private int memberActionIndex;
 	private LabelAPI statusLabel;
+	private ButtonAPI saveButton;
 	private String status = "";
 
 	public BattleNext_BattleReportPage(Runnable backAction, Consumer<Runnable> navigation,
@@ -129,12 +130,13 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		detailRect.addBorder(panel, BattleNext_UiTheme.PANEL,
 				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		UIRect footerRect = regions[2];
-		String[] actions = {"back"};
+		String[] actions = {"save", "back"};
 		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, actions.length);
 		for (int index = 0; index < actions.length; index++) {
-			BattleNext_PageLayout.fixedButton(panel,
+			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
 					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
 					text(actions[index]), actions[index], CutStyle.ALL, true);
+			if (index == 0) saveButton = button;
 		}
 		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
 		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
@@ -165,6 +167,9 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 
 		detailRect.removeLatestSubPanel();
 		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
+		BattleReportListItem selected = entry(selectedId);
+		saveButton.setEnabled(detailOpen && selected != null && (selected.tournament == null
+				? reportStore.isLoaded() : tournamentStore.isLoaded()));
 		if (!detailOpen) {
 			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
 			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
@@ -178,17 +183,11 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 		addDetails(detailContent, detailPanel, contentRect.getWidth(), editedName);
 		detailPanel.addUIElement(detailContent).inTL(contentRect.getX() - detailRect.getX(),
 				contentRect.getY() - detailRect.getY());
-		BattleReportListItem selected = entry(selectedId);
 		ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 				BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 				text("delete"), "delete", CutStyle.ALL, true);
 		delete.setEnabled(selected != null && (selected.tournament == null
 				? reportStore.isLoaded() : tournamentStore.isLoaded()));
-		UIRect deleteRect = BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect);
-		BattleNext_PageLayout.fixedButton(detailPanel,
-				new UIRect(deleteRect.getX() + deleteRect.getWidth() + 10f, deleteRect.getY(),
-						deleteRect.getWidth(), deleteRect.getHeight()),
-				text("save"), "save", CutStyle.ALL, true);
 	}
 
 	@Override
@@ -392,7 +391,8 @@ public class BattleNext_BattleReportPage implements BattleNext_PageView {
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 				tooltip.addTitle(visual.name());
-				tooltip.addPara(sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+				BattleNext_PageLayout.addMutedIdLine(tooltip,
+						sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
 			}
 		}, TooltipLocation.RIGHT);
 	}

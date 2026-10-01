@@ -196,7 +196,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
 				&& tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId)) {
 			BattleNext_TournamentModel selected = tournamentStore.get(selectedId);
-			deletion.accept(selected.getName() + " [" + selectedId + "]", () -> {
+			deletion.accept(selected.getName(), () -> {
 				try {
 					tournamentStore.delete(selectedId);
 					selectedId = "";

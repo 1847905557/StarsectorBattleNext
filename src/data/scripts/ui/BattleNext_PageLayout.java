@@ -198,6 +198,33 @@ public class BattleNext_PageLayout {
 		return button;
 	}
 
+	public static void addIdTooltip(TooltipMakerAPI host, String title, String id) {
+		addMetadataTooltip(host, title, id);
+	}
+
+	public static void addMetadataTooltip(TooltipMakerAPI host, String title, String... lines) {
+		host.addTooltipToPrevious(new BaseTooltipCreator() {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return 320f;
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				tooltip.addTitle(title);
+				for (String line : lines) {
+					addMutedIdLine(tooltip, line, 5f);
+				}
+			}
+		}, TooltipLocation.RIGHT);
+	}
+
+	public static void addMutedIdLine(TooltipMakerAPI tooltip, String value, float pad) {
+		tooltip.setParaSmallInsignia();
+		tooltip.addPara(value, BattleNext_UiTheme.MUTED, pad);
+		tooltip.setParaFontDefault();
+	}
+
 	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
 			CutStyle style, boolean prominent) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH,

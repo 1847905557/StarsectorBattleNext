@@ -103,7 +103,10 @@ public class BattleNext_TournamentDisplay {
 		fleetTitle.setBgAlpha(0f);
 		fleetTitle.addTitle(text("fleet_ids"));
 		for (String fleetId : tournament.getFleetIds()) {
-			fleets.addPara(fleetLabel(fleetId), fleetId.equals(tournament.getFleetIds().get(0)) ? 0f : FLEET_GAP);
+			float pad = fleetId.equals(tournament.getFleetIds().get(0)) ? 0f : FLEET_GAP;
+			String name = fleetLabel(fleetId);
+			fleets.addPara(name, pad);
+			BattleNext_PageLayout.addIdTooltip(fleets, name, fleetId);
 		}
 
 		float titleHeight = title.getHeightSoFar();
@@ -133,7 +136,10 @@ public class BattleNext_TournamentDisplay {
 		content.addPara(strings.format("chart_finished_matches", completedMatches(tournament),
 				tournament.getPlayableMatchTotal()), DETAIL_GAP);
 		if (tournament.isCompleted()) {
-			content.addPara(text("winner") + ": " + fleetLabel(tournament.getChampionFleetId()), DETAIL_GAP);
+			String winnerId = tournament.getChampionFleetId();
+			String winner = text("winner") + ": " + fleetLabel(winnerId);
+			content.addPara(winner, DETAIL_GAP);
+			BattleNext_PageLayout.addIdTooltip(content, winner, winnerId);
 		}
 		content.addPara(text("tournament_rules") + ": "
 				+ (tournament.getRuleId().isEmpty() ? text("rules_unbound")
@@ -151,8 +157,11 @@ public class BattleNext_TournamentDisplay {
 		if (next == null) {
 			content.addPara(text("no_pending_match"), MATCH_GAP);
 		} else {
-			content.addPara(text("next_match") + ": " + next.getId() + " / " + fleetLabel(next.getPlayer())
-					+ " vs " + fleetLabel(next.getEnemy()), MATCH_GAP);
+			String match = text("next_match") + ": " + fleetLabel(next.getPlayer())
+					+ " vs " + fleetLabel(next.getEnemy());
+			content.addPara(match, MATCH_GAP);
+			BattleNext_PageLayout.addMetadataTooltip(content, match,
+					next.getId(), next.getPlayer(), next.getEnemy());
 		}
 		for (String warning : details.warnings()) {
 			content.addPara(warning, WARNING_GAP);
@@ -184,7 +193,7 @@ public class BattleNext_TournamentDisplay {
 		if (name == null) {
 			return text("invalid_player") + " [" + id + "]";
 		}
-		return name + " [" + id + "]";
+		return name;
 	}
 
 	private String tournamentStatus() {

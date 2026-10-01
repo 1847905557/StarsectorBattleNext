@@ -303,7 +303,7 @@ class BattleNext_TournamentViewTest {
 		String initial = cup.toJson().toString();
 		build.invoke(page, harness.panel);
 		assertTrue(harness.paragraphs.contains("Completed matches: 0 / 3"));
-		assertTrue(harness.paragraphs.contains("Fleet F1 [F1]"));
+		assertTrue(harness.paragraphs.contains("Fleet F1"));
 		assertTrue(harness.scrollingHostCreated);
 		assertTrue(harness.customChartAdded);
 		assertTrue(harness.reservedChartHeight > 0f);
@@ -345,7 +345,7 @@ class BattleNext_TournamentViewTest {
 		build.invoke(page, harness.panel);
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Chart error")));
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Unknown bracket")));
-		assertTrue(harness.paragraphs.contains("Fleet F1 [F1]"));
+		assertTrue(harness.paragraphs.contains("Fleet F1"));
 		java.lang.reflect.Field chart = page.getClass().getDeclaredField("tournamentDisplay");
 		chart.setAccessible(true);
 		assertNotNull(chart.get(page));
@@ -588,7 +588,7 @@ class BattleNext_TournamentViewTest {
 				assertEquals(details.bounds.topPad + Math.max(details.height, participants.height), harness.summaryBounds.height);
 				assertEquals(harness.summaryBounds.height + 10f, harness.contentHeight);
 				assertEquals(count, participants.text.size());
-				assertTrue(participants.text.contains(longName + " [F1]"));
+				assertTrue(participants.text.contains(longName));
 				assertTrue(details.text.stream().anyMatch(value -> value.startsWith("Status:")));
 				assertTrue(details.text.stream().anyMatch(value -> value.startsWith("A detailed warning")));
 				assertEquals(state == 0, harness.buttonIds.contains("tournament:start"));

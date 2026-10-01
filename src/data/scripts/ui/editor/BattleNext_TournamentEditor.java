@@ -212,8 +212,9 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			for (int index = 0; index < draft.getFleetIds().size(); index++) {
 				String fleetId = draft.getFleetIds().get(index);
 				BattleNext_FleetModel fleet = fleetStore.get(fleetId);
-				String label = (index + 1) + ". " + (fleet == null ? fleetId : fleet.getName() + " [" + fleetId + "]");
+				String label = (index + 1) + ". " + (fleet == null ? fleetId : fleet.getName());
 				content.addPara(label, FLEET_ENTRY_GAP);
+				BattleNext_PageLayout.addIdTooltip(content, label, fleetId);
 				if (index > 0) BattleNext_PageLayout.button(content, text("move_up"), "fleet:up:" + index,
 						FLEET_ORDER_BUTTON_WIDTH);
 				if (index + 1 < draft.getFleetIds().size()) {
@@ -414,7 +415,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f);
+			tooltip.addTitle(option.getLabel());
+			BattleNext_PageLayout.addMutedIdLine(tooltip, option.getId(), 0f);
 		}
 	}
 }

@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.function.ToDoubleFunction;
 
 public abstract class BattleNext_BaseSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
+
 	@Override
 	public boolean expectsIcon() {
 		return true;
@@ -22,9 +23,7 @@ public abstract class BattleNext_BaseSourceProvider implements BattleNext_Option
 
 	protected void addHeader(TooltipMakerAPI tooltip, String title, String key) {
 		tooltip.addTitle(title);
-		tooltip.setParaSmallInsignia();
-		tooltip.addPara(key, BattleNext_UiTheme.MUTED, KEY_GAP);
-		tooltip.setParaFontDefault();
+		data.scripts.ui.BattleNext_PageLayout.addMutedIdLine(tooltip, key, KEY_GAP);
 	}
 
 	protected void addExcerpt(TooltipMakerAPI tooltip, String text) {

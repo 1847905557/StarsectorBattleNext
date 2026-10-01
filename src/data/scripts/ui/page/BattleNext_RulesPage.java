@@ -156,7 +156,7 @@ public class BattleNext_RulesPage implements BattleNext_PageView {
 		if ("delete".equals(action) && draftOpen && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_RuleModel selected = store.get(selectedId);
 			if (selected == null) return;
-			deletion.accept(selected.getName() + " [" + selectedId + "]", () -> {
+			deletion.accept(selected.getName(), () -> {
 				try {
 					store.delete(selectedId);
 					selectedId = "";

@@ -173,7 +173,7 @@ public class BattleNext_FleetLibraryPage implements BattleNext_PageView {
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty() && store.isLoaded()) {
 			BattleNext_FleetModel selected = store.get(selectedId);
 			if (selected != null && store.isManaged(selected.getId())) {
-				deletion.accept(selected.getName() + " [" + selected.getId() + "]", () -> {
+				deletion.accept(selected.getName(), () -> {
 					try {
 						store.delete(selected.getId());
 						selectedId = "";

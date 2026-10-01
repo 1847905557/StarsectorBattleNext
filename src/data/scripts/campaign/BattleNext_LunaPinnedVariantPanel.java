@@ -3,36 +3,46 @@ package data.scripts.campaign;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.battlesnext.util.ui.UIPanelManager;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_VariantDetails;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
+import java.awt.Color;
 
-public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
+public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 
 	private static final float INSET = 10f;
-	private static final float PREVIEW_HEIGHT = 180f;
+	private static final Color BACKGROUND = Color.BLACK;
+	private static final float BORDER_WIDTH = 2f;
 	private final Runnable closeAction;
 	private final BattleNext_PinnedVariantStore store;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_VariantDetails details = new BattleNext_VariantDetails(
+			() -> refreshContents(this.name.getText()), () -> !this.closed && inputRouter.isEmpty());
 	private BattleNext_VariantBuilder snapshot;
 	private CustomPanelAPI panel;
+	private CustomPanelAPI rightPanel;
+	private CustomPanelAPI contentsPanel;
+	private UIPanelManager contentsManager;
 	private TooltipMakerAPI contents;
 	private TextFieldAPI name;
 	private ButtonAPI saveButton;
@@ -40,11 +50,11 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	private boolean saved;
 	private boolean closed = true;
 
-	BattleNext_PinnedVariantPanel(Runnable closeAction) {
+	BattleNext_LunaPinnedVariantPanel(Runnable closeAction) {
 		this(closeAction, new BattleNext_PinnedVariantStore());
 	}
 
-	BattleNext_PinnedVariantPanel(Runnable closeAction, BattleNext_PinnedVariantStore store) {
+	BattleNext_LunaPinnedVariantPanel(Runnable closeAction, BattleNext_PinnedVariantStore store) {
 		this.closeAction = closeAction;
 		this.store = store;
 	}
@@ -68,6 +78,12 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	void attach(CustomPanelAPI panel, float width, float height) {
 
 		this.panel = panel;
+		BattleNext_PageLayout.heading(new UIRect(INSET, INSET, width - INSET * 2f,
+				BattleNext_PageLayout.HEADER_HEIGHT), panel, strings.get("pin_variant"));
+		float bodyTop = INSET * 2f + BattleNext_PageLayout.HEADER_HEIGHT;
+		float bodyHeight = height - bodyTop - INSET * 2f - BattleNext_PageLayout.FOOTER_HEIGHT;
+		rightPanel = panel.createCustomPanel(width - INSET * 2f, bodyHeight, new FramePlugin());
+		panel.addComponent(rightPanel).inTL(INSET, bodyTop);
 		float buttonWidth = Math.min(180f, (width - INSET * 3f) * 0.5f);
 		float footerY = height - INSET - BattleNext_PageLayout.FOOTER_HEIGHT;
 		saveButton = BattleNext_PageLayout.fixedButton(panel,
@@ -87,35 +103,52 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	private void refreshContents(String displayName) {
 
 		inputRouter.clear();
-		if (contents != null) {
-			panel.removeComponent(contents);
+		float offset = contents == null || contents.getExternalScroller() == null
+				? 0f : contents.getExternalScroller().getYOffset();
+		if (contentsManager != null) {
+			contentsManager.clearAllComponents();
+			rightPanel.removeComponent(contentsManager.getPanel());
 		}
-		float width = panel.getPosition().getWidth() - INSET * 2f;
-		float height = panel.getPosition().getHeight() - INSET * 3f - BattleNext_PageLayout.FOOTER_HEIGHT;
-		contents = panel.createUIElement(width, height, true);
+		float width = rightPanel.getPosition().getWidth() - INSET * 2f;
+		float height = rightPanel.getPosition().getHeight() - INSET * 2f;
+		contentsPanel = rightPanel.createCustomPanel(width, height, new BaseCustomUIPanelPlugin());
+		contentsManager = new UIPanelManager(contentsPanel, null);
+		rightPanel.addComponent(contentsPanel).inTL(INSET, INSET);
+		float metadataLimit = Math.max(1f, (float) Math.floor(height / 3f));
+		CustomPanelAPI metadataPanel = contentsPanel.createCustomPanel(width, metadataLimit, new BaseCustomUIPanelPlugin());
+		contents = metadataPanel.createUIElement(width + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataLimit, true);
 		BattleNext_UiTheme.configure(contents);
-		contents.addTitle(strings.get("pin_variant"));
+		contents.setTextWidthOverride(width);
+		contents.addPara(strings.get("pin_name"), 0f);
+		name = BattleNext_TextField.addTo(inputRouter, contents, metadataPanel, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, displayName, contents);
+		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		if (!status.isEmpty()) {
+			contents.addPara(status, BattleNext_UiTheme.TEXT, INSET);
+		}
+		float metadataHeight = Math.min(metadataLimit, contents.getHeightSoFar());
+		metadataPanel.getPosition().setSize(width, metadataHeight);
+		contents.getPosition().setSize(width + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataHeight);
+		metadataPanel.addUIElement(contents).inTL(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, 0f);
+		contentsManager.addComponent(metadataPanel);
+		metadataPanel.getPosition().inTL(0f, 0f);
+		float detailsHeight = Math.max(1f, height - metadataHeight - BattleNext_PageLayout.MANAGEMENT_CONTENT_INSET);
+		CustomPanelAPI detailsPanel = contentsPanel.createCustomPanel(width, detailsHeight, new BaseCustomUIPanelPlugin());
+		contentsManager.addComponent(detailsPanel);
+		detailsPanel.getPosition().inTL(0f, metadataHeight + BattleNext_PageLayout.MANAGEMENT_CONTENT_INSET);
 		if (snapshot != null) {
 			try {
-				ShipVariantAPI variant = snapshot.build();
-				String path = variant.getHullSpec().getSpriteName();
-				SpriteAPI sprite = Global.getSettings().getSprite(path);
-				float scale = BattleNext_PageLayout.spriteScaleToFit(sprite.getWidth(), sprite.getHeight(), width, PREVIEW_HEIGHT);
-				contents.addImage(path, sprite.getWidth() * scale, sprite.getHeight() * scale, INSET);
-				contents.addPara(variant.getHullSpec().getHullName(), BattleNext_UiTheme.TEXT, INSET);
-				contents.addPara(variant.getDisplayName(), BattleNext_UiTheme.TEXT, INSET);
+				details.addTo(detailsPanel, width, detailsHeight, snapshot.toJson());
 			} catch (Exception exception) {
-				status = strings.get("pin_snapshot_error") + ": " + exception;
-				snapshot = null;
+				TooltipMakerAPI error = detailsPanel.createUIElement(width, detailsHeight, true);
+				error.addPara(strings.get("pin_snapshot_error") + ": " + exception, INSET);
+				detailsPanel.addUIElement(error).inTL(0f, 0f);
 				Global.getLogger(getClass()).warn("Unable to display pinned variant snapshot", exception);
 			}
 		}
-		contents.addPara(strings.get("pin_name"), INSET);
-		name = BattleNext_TextField.addTo(inputRouter, contents, panel, width,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, displayName, contents);
-		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
-		contents.addPara(status, BattleNext_UiTheme.TEXT, INSET);
-		panel.addUIElement(contents).inTL(INSET, INSET);
+		if (contents.getExternalScroller() != null) {
+			contents.getExternalScroller().setYOffset(Math.min(Math.max(0f, contents.getHeightSoFar() - metadataHeight), offset));
+		}
 		saveButton.setEnabled(!closed && snapshot != null && !saved);
 	}
 
@@ -138,7 +171,7 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			store.reload();
 			BattleNext_PinnedVariantModel pin = store.saveVariant(displayName, snapshot.build());
 			saved = true;
-			status = strings.format("pin_saved", pin.getDisplayName(), pin.getPinId());
+			status = strings.format("pin_saved_name", pin.getDisplayName());
 			if (!store.getLoadErrors().isEmpty()) {
 				status += "\n" + strings.get("pin_load_warnings") + "\n" + String.join("\n", store.getLoadErrors());
 			}
@@ -171,13 +204,22 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	}
 
 	void close() {
+
 		inputRouter.clear();
 		if (saveButton != null) {
 			saveButton.setEnabled(false);
 		}
-		if (panel != null && contents != null) {
-			panel.removeComponent(contents);
+		if (rightPanel != null && contentsManager != null) {
+			contentsManager.clearAllComponents();
+			rightPanel.removeComponent(contentsManager.getPanel());
 		}
+		if (panel != null && rightPanel != null) {
+			panel.removeComponent(rightPanel);
+		}
+		details.clear();
+		rightPanel = null;
+		contentsPanel = null;
+		contentsManager = null;
 		snapshot = null;
 		panel = null;
 		contents = null;
@@ -186,4 +228,24 @@ public class BattleNext_PinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		status = "";
 		closed = true;
 	}
+
+	private static class FramePlugin extends BaseCustomUIPanelPlugin {
+		private PositionAPI position;
+
+		@Override
+		public void positionChanged(PositionAPI position) {
+			this.position = position;
+		}
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			if (position == null) return;
+			BattleNext_GeometryRenderer.fillRect(position, BACKGROUND, alphaMult);
+			BattleNext_GeometryRenderer.lineLoop(new float[]{position.getX(), position.getY(),
+					position.getX() + position.getWidth(), position.getY(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
+					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.PANEL, alphaMult, BORDER_WIDTH);
+		}
+	}
+
 }

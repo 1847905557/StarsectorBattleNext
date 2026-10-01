@@ -521,7 +521,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 				tooltip.addTitle(spec.getDisplayName());
-				tooltip.addPara(id, 4f);
+				BattleNext_PageLayout.addMutedIdLine(tooltip, id, 4f);
 				String description = spec.getDescription(draft.getHullSize());
 				if (description != null && !description.isBlank()) {
 					tooltip.addPara(description, 8f);

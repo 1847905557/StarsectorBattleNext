@@ -452,7 +452,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-			tooltip.addPara(option.getLabel() + " [" + option.getId() + "]", 0f);
+			tooltip.addTitle(option.getLabel());
+			BattleNext_PageLayout.addMutedIdLine(tooltip, option.getId(), 0f);
 		}
 	}
 }
