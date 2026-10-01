@@ -42,11 +42,16 @@ public class BattleNext_PinnedVariantDetails {
 	}
 
 	public void addTo(TooltipMakerAPI content, CustomPanelAPI owner, float width, JSONObject json) {
-		addVariant(content, owner, width, json, "root", new HashSet<>());
+		addTo(content, owner, width, json, true);
+	}
+
+	public void addTo(TooltipMakerAPI content, CustomPanelAPI owner, float width, JSONObject json,
+			boolean showPreviewAndIdentity) {
+		addVariant(content, owner, width, json, "root", new HashSet<>(), showPreviewAndIdentity);
 	}
 
 	private void addVariant(TooltipMakerAPI content, CustomPanelAPI owner, float width,
-			JSONObject json, String path, Set<String> parents) {
+			JSONObject json, String path, Set<String> parents, boolean showPreviewAndIdentity) {
 
 		String hullId = json.optString("hullId", "");
 		ShipHullSpecAPI hull = Global.getSettings().getHullSpec(hullId);
@@ -54,15 +59,17 @@ public class BattleNext_PinnedVariantDetails {
 		String variantId = json.optString("variantId", "");
 		Set<String> ancestors = new HashSet<>(parents);
 		if (!ancestors.add(variantId)) throw new IllegalArgumentException("Cyclic module variant: " + variantId);
-		try {
-			SpriteAPI sprite = Global.getSettings().getSprite(hull.getSpriteName());
-			float scale = BattleNext_PageLayout.spriteScaleToFit(sprite.getWidth(), sprite.getHeight(), width, PREVIEW_HEIGHT);
-			content.addImage(hull.getSpriteName(), sprite.getWidth() * scale, sprite.getHeight() * scale, GAP);
-		} catch (RuntimeException exception) {
-			content.addPara(strings.get("variant_preview_error") + ": " + exception, GAP);
+		if (showPreviewAndIdentity) {
+			try {
+				SpriteAPI sprite = Global.getSettings().getSprite(hull.getSpriteName());
+				float scale = BattleNext_PageLayout.spriteScaleToFit(sprite.getWidth(), sprite.getHeight(), width, PREVIEW_HEIGHT);
+				content.addImage(hull.getSpriteName(), sprite.getWidth() * scale, sprite.getHeight() * scale, GAP);
+			} catch (RuntimeException exception) {
+				content.addPara(strings.get("variant_preview_error") + ": " + exception, GAP);
+			}
+			content.addPara(hull.getHullName() + " [" + hullId + "]", GAP);
+			content.addPara(strings.get("variant") + ": " + json.optString("displayName", variantId) + " [" + variantId + "]", GAP);
 		}
-		content.addPara(hull.getHullName() + " [" + hullId + "]", GAP);
-		content.addPara(strings.get("variant") + ": " + json.optString("displayName", variantId) + " [" + variantId + "]", GAP);
 		content.addPara(strings.get("variant_flux") + ": " + json.optInt("fluxCapacitors", 0)
 				+ " / " + json.optInt("fluxVents", 0), GAP);
 		addGroups(content, json.optJSONArray("weaponGroups"));
@@ -174,7 +181,7 @@ public class BattleNext_PinnedVariantDetails {
 				TooltipMakerAPI details = body.createUIElement(width - GAP * 2f, 0f, false);
 				if (open) {
 					try {
-						addVariant(details, body, width - GAP * 2f, json, key, ancestors);
+						addVariant(details, body, width - GAP * 2f, json, key, ancestors, true);
 					} catch (Exception exception) {
 						details.addPara(key + ": " + exception, GAP);
 					}
