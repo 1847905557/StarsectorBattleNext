@@ -18,6 +18,7 @@ import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.page.BattleNext_BattleSelectorPage;
+import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -97,7 +98,7 @@ class BattleNext_TournamentViewTest {
 				assertRecordMapping(tournament, view(tournament));
 				assertNotEquals(initial, tournament.toJson().toString());
 				assertEquals(tournament.getPlayableMatchTotal(),
-						BattleNext_BattleSelectorPage.completedMatches(tournament));
+						BattleNext_TournamentDisplay.completedMatches(tournament));
 			}
 		}
 	}
@@ -204,7 +205,7 @@ class BattleNext_TournamentViewTest {
 		assertEquals("F1", node(chart, "GF_RESET").player.fleetId);
 		assertEquals("F2", node(chart, "GF_RESET").enemy.fleetId);
 		engine.recordRound(cup, "GF_RESET", "F1", new BattleNext_BattleReportModel());
-		assertEquals(3, BattleNext_BattleSelectorPage.completedMatches(cup));
+		assertEquals(3, BattleNext_TournamentDisplay.completedMatches(cup));
 		assertEquals("F1", cup.getChampionFleetId());
 	}
 
@@ -345,7 +346,7 @@ class BattleNext_TournamentViewTest {
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Chart error")));
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Unknown bracket")));
 		assertTrue(harness.paragraphs.contains("Fleet F1 [F1]"));
-		java.lang.reflect.Field chart = page.getClass().getDeclaredField("tournamentView");
+		java.lang.reflect.Field chart = page.getClass().getDeclaredField("tournamentDisplay");
 		chart.setAccessible(true);
 		assertNotNull(chart.get(page));
 		page.closeChart();
@@ -534,9 +535,6 @@ class BattleNext_TournamentViewTest {
 			for (int count : new int[]{2, 32}) {
 				Harness harness = new Harness();
 				harness.customChartAdded = true;
-				BattleNext_BattleSelectorPage page = new BattleNext_BattleSelectorPage(() -> {
-
-				}, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
 				BattleNext_TournamentModel cup = tournament(count,
 						BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3);
 				if (state > 0) {
@@ -548,28 +546,27 @@ class BattleNext_TournamentViewTest {
 						engine.recordRound(cup, match.getId(), match.getPlayer(), new BattleNext_BattleReportModel());
 					}
 				}
-				java.lang.reflect.Field chart = page.getClass().getDeclaredField("tournamentView");
-				chart.setAccessible(true);
-				chart.set(page, view(cup));
-				java.lang.reflect.Field error = page.getClass().getDeclaredField("loadError");
-				error.setAccessible(true);
-				error.set(page, "A detailed warning about tournament configuration. ".repeat(count));
-				java.lang.reflect.Field storeField = page.getClass().getDeclaredField("fleetStore");
-				storeField.setAccessible(true);
-				java.lang.reflect.Field entries = data.model.BattleNext_BaseStore.class.getDeclaredField("entries");
-				entries.setAccessible(true);
-				@SuppressWarnings("unchecked")
-				Map<String, Object> fleets = (Map<String, Object>) entries.get(storeField.get(page));
+				Map<String, String> fleets = new HashMap<>();
 				String longName = "A full fleet name that needs multiple lines in a narrow column ".repeat(3).trim();
 				for (String id : cup.getFleetIds()) {
-					fleets.put(id, new data.model.fleet.BattleNext_FleetModel(id, longName, List.of(), List.of(), List.of()));
+					fleets.put(id, longName);
 				}
 				float width = Math.min(availableWidth, BattleNext_TournamentView.CANVAS_WIDTH);
-				java.lang.reflect.Method build = page.getClass().getDeclaredMethod("addTournamentSummary",
-						CustomPanelAPI.class, TooltipMakerAPI.class, BattleNext_TournamentModel.class, float.class, float.class);
+				BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(fleets, true,
+						state == 1 ? engine.getNextMatch(cup) : null,
+						"A detailed warning about tournament configuration. ".repeat(count), List.of(), true, false);
+				BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(),
+						cup, data, ignored -> {
+
+						});
+				java.lang.reflect.Field chart = display.getClass().getDeclaredField("chart");
+				chart.setAccessible(true);
+				chart.set(display, view(cup));
+				java.lang.reflect.Method build = display.getClass().getDeclaredMethod("addSummary",
+						CustomPanelAPI.class, TooltipMakerAPI.class, float.class, float.class);
 				build.setAccessible(true);
 				String json = cup.toJson().toString();
-				build.invoke(page, harness.panel, harness.host, cup, availableWidth, width);
+				build.invoke(display, harness.panel, harness.host, availableWidth, width);
 				Harness.TextBlock title = harness.summaryBlocks.get(0);
 				Harness.TextBlock details = harness.summaryBlocks.get(1);
 				Harness.TextBlock participants = harness.summaryBlocks.get(2);
@@ -605,6 +602,104 @@ class BattleNext_TournamentViewTest {
 				assertEquals(json, cup.toJson().toString());
 			}
 		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void displayRoutesActionsAndReleasesInputOnClose(boolean started) throws Exception {
+
+		Harness harness = new Harness();
+		harness.chartBounds.api.setSize(700f, 700f);
+		BattleNext_TournamentModel cup = tournament(2,
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1);
+		if (started) {
+			engine.start(cup);
+		}
+		List<Object> actions = new ArrayList<>();
+		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(
+				Map.of("F1", "First", "F2", "Second"), true, started ? engine.getNextMatch(cup) : null,
+				"", List.of("Visible warning"), true, started);
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(router, cup, data, actions::add);
+		String json = cup.toJson().toString();
+		display.attach(harness.panel);
+		CustomUIPanelPlugin plugin = harness.displayPlugin;
+		String action = started ? "tournament:authorize" : "tournament:start";
+
+		assertTrue(harness.scrollingHostCreated);
+		assertTrue(harness.customChartAdded && harness.summaryAdded);
+		assertTrue(harness.paragraphs.contains("Visible warning"));
+		assertTrue(harness.buttonIds.contains(action));
+		plugin.buttonPressed("unrelated");
+		assertTrue(actions.isEmpty());
+		plugin.buttonPressed(action);
+		assertEquals(List.of(action), actions);
+		java.lang.reflect.Field chartField = display.getClass().getDeclaredField("chart");
+		chartField.setAccessible(true);
+		BattleNext_TournamentView chart = (BattleNext_TournamentView) chartField.get(display);
+		BattleNext_TournamentView.Node node = chart.nodes.get(0);
+		float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
+		Event hover = new Event("move", center[0], center[1], 0);
+		display.handleGlobalInput(List.of(hover.api));
+		assertTrue(harness.target.height > 0f);
+		Event down = new Event("down", center[0], center[1], 0);
+		display.handleGlobalInput(List.of(down.api));
+		assertTrue(down.consumed);
+		BattleNext_UiInputRouter.Overlay overlay = new BattleNext_UiInputRouter.Overlay() {
+			@Override
+			public PositionAPI getBounds() {
+				return harness.viewport.api;
+			}
+
+			@Override
+			public boolean handleGlobalInput(List<InputEventAPI> events) {
+				return false;
+			}
+
+			@Override
+			public void close() {
+
+			}
+		};
+		router.push(overlay);
+		plugin.buttonPressed(action);
+		assertEquals(1, actions.size());
+		Event blocked = new Event("wheel", center[0], center[1], -120);
+		display.handleGlobalInput(List.of(blocked.api));
+		assertFalse(blocked.consumed);
+		assertEquals(0f, harness.target.height);
+		router.pop(overlay);
+		display.close();
+		assertNull(chartField.get(display));
+		plugin.buttonPressed(action);
+		assertEquals(1, actions.size());
+		Event afterClose = new Event("wheel", center[0], center[1], -120);
+		display.handleGlobalInput(List.of(afterClose.api));
+		assertFalse(afterClose.consumed);
+		assertEquals(json, cup.toJson().toString());
+	}
+
+	@Test
+	void displayCopiesPresentationInputsAndKeepsDisabledActionsInactive() {
+
+		Map<String, String> names = new HashMap<>(Map.of("F1", "First", "F2", "Second"));
+		List<String> warnings = new ArrayList<>(List.of("Warning"));
+		BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(
+				names, false, null, "", warnings, false, false);
+		names.clear();
+		warnings.clear();
+		assertEquals(2, data.fleetNames().size());
+		assertEquals(List.of("Warning"), data.warnings());
+		Harness harness = new Harness();
+		harness.chartBounds.api.setSize(700f, 700f);
+		List<Object> actions = new ArrayList<>();
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(),
+				tournament(2, BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1), data, actions::add);
+		display.attach(harness.panel);
+		assertFalse(harness.buttons.get(harness.buttons.size() - 1).enabled);
+		harness.displayPlugin.buttonPressed("tournament:start");
+		harness.displayPlugin.buttonPressed("tournament:authorize");
+		assertTrue(actions.isEmpty());
 	}
 
 	@Test
@@ -722,6 +817,7 @@ class BattleNext_TournamentViewTest {
 		private boolean summaryScope;
 		private boolean summaryAdded;
 		private boolean shrinkChildren;
+		private CustomUIPanelPlugin displayPlugin;
 		private final Bounds hostBounds = new Bounds();
 		private TooltipMakerAPI.TooltipCreator tooltip;
 		private final UIComponentAPI targetApi = proxy(UIComponentAPI.class, (name, args) ->
@@ -802,11 +898,15 @@ class BattleNext_TournamentViewTest {
 						rowBounds.api.setLocation(chartBounds.x, chartBounds.y).setSize((Float) args[0], (Float) args[1]);
 						yield row;
 					}
+					if (!(args[2] instanceof BattleNext_TournamentView)) {
+						displayPlugin = (CustomUIPanelPlugin) args[2];
+					}
 					chartBounds.width = (Float) args[0];
 					chartBounds.height = (Float) args[1];
 					yield panel;
 				}
 				case "getPosition", "addComponent" -> chartBounds.api;
+				case "getPlugin" -> displayPlugin;
 				case "addUIElement" -> {
 					if (shrinkChildren) {
 						chartBounds.width = 1f;
