@@ -17,15 +17,39 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 
 	private static final String RESOURCE_FOLDER = "tournament/_pinnedVariants";
 	private final List<String> loadErrors = new ArrayList<>();
+	private List<CatalogEntry> catalog = List.of();
+
+	public record CatalogEntry(String path, String name, String pinId, String hullId,
+			BattleNext_PinnedVariantModel model, String error) {
+
+	}
+
+	public List<CatalogEntry> getCatalog() {
+		return catalog;
+	}
 
 	@Override
 	public List<BattleNext_PinnedVariantModel> load() throws IOException, JSONException {
+
 		loadErrors.clear();
 		List<BattleNext_PinnedVariantModel> result = new ArrayList<>();
 		Set<String> ids = new HashSet<>();
+		List<CatalogEntry> entries = new ArrayList<>();
 		for (String path : catalogPaths()) {
+			String name = path.substring(path.lastIndexOf('/') + 1);
+			String pinId = "";
+			String hullId = "";
 			try {
-				BattleNext_PinnedVariantModel model = parse(path);
+				JSONObject json = new JSONObject(BattleNext_ModFileManager.readText(path));
+				name = json.optString("displayName", name);
+				if (name.isBlank()) {
+					name = path.substring(path.lastIndexOf('/') + 1);
+				}
+				pinId = json.optString("pinId", "");
+				JSONObject variant = json.optJSONObject("variantJson");
+				hullId = variant == null ? "" : variant.optString("hullId", "");
+				BattleNext_PinnedVariantModel model = new BattleNext_PinnedVariantModel();
+				model.fromJson(json);
 				if (!path.equals(RESOURCE_FOLDER + "/" + model.getPinId() + ".json")) {
 					throw new IllegalArgumentException("Pin ID does not match file name");
 				}
@@ -33,10 +57,14 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 				markSource(model, path);
 				model.toBuilder().build();
 				result.add(model);
+				entries.add(new CatalogEntry(path, name, pinId, hullId, model, ""));
 			} catch (IOException | JSONException | RuntimeException exception) {
-				loadErrors.add(path + ": " + exception.getMessage());
+				String error = exception.toString();
+				loadErrors.add(path + ": " + error);
+				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error));
 			}
 		}
+		catalog = List.copyOf(entries);
 		return result;
 	}
 

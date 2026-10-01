@@ -71,6 +71,23 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 		return loader.getLoadErrors();
 	}
 
+	public List<BattleNext_PinnedVariantStandardLoader.CatalogEntry> getCatalog() {
+		return loader.getCatalog();
+	}
+
+	public void deleteFile(String path) throws IOException, JSONException {
+		requireLoaded();
+		String root = "tournament/_pinnedVariants/";
+		if (!path.startsWith(root) || !path.endsWith(".json")) throw new IllegalArgumentException("Invalid pin file: " + path);
+		String file = path.substring(root.length());
+		if (file.contains("/") || file.contains("\\") || file.equals(".json")) throw new IllegalArgumentException("Invalid pin file: " + path);
+		if (loader.getCatalog().stream().noneMatch(entry -> entry.path().equals(path))) {
+			throw new IllegalArgumentException("Pin file is outside the loaded catalog: " + path);
+		}
+		BattleNext_ModFileManager.delete(path);
+		reload();
+	}
+
 	@Override
 	protected BattleNext_PinnedVariantSaver saver() {
 		return saver;

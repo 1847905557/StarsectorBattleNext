@@ -30,6 +30,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private enum BattleManagementPage {
 		BATTLE_SELECTOR("page_battle_selector"),
 		FLEETS("page_fleets"),
+		VARIANTS("page_variants"),
 		REPORTS("page_reports"),
 		TOURNAMENTS("page_tournaments"),
 		RULES("page_rules"),
@@ -58,6 +59,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private BattleNext_BattleSelectorPage battleSelectorPage;
 	private BattleNext_FleetLibraryPage fleetPage;
+	private BattleNext_PinnedVariantPage variantPage;
 	private BattleNext_BattleReportPage reportPage;
 	private BattleNext_TournamentPage tournamentPage;
 	private BattleNext_RulesPage rulesPage;
@@ -144,6 +146,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 					fleetPage.buttonPressed("back");
 				} else if (currentPage == BattleManagementPage.REPORTS && reportPage != null) {
 					reportPage.buttonPressed("back");
+				} else if (currentPage == BattleManagementPage.VARIANTS && variantPage != null) {
+					variantPage.buttonPressed("back");
 				} else if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null) {
 					tournamentPage.buttonPressed("back");
 				} else if (currentPage == BattleManagementPage.RULES && rulesPage != null) {
@@ -247,6 +251,13 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector,
 					this::confirmNavigation, this::confirmDelete);
 			return reportPage;
+		}
+		if (page == BattleManagementPage.VARIANTS) {
+			if (variantPage == null) {
+				variantPage = new BattleNext_PinnedVariantPage(this::returnToBattleSelector,
+						this::confirmNavigation, this::confirmDelete);
+			}
+			return variantPage;
 		}
 		if (page == BattleManagementPage.TOURNAMENTS) {
 			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector,

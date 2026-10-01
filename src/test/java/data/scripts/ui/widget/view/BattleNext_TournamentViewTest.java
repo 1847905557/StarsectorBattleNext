@@ -224,8 +224,8 @@ class BattleNext_TournamentViewTest {
 		String tooltip = chart.tooltipText(node(chart, "W1-1"));
 		assertTrue(tooltip.contains(longName));
 		assertTrue(tooltip.contains("[F1]"));
-		assertTrue(tooltip.contains("Round 1: Draw / Battle reports: Available"));
-		assertTrue(tooltip.contains("Round 2: " + longName + " [F1] / Battle reports: Unavailable"));
+		assertTrue(tooltip.contains("Round 1: Draw / Reports: Available"));
+		assertTrue(tooltip.contains("Round 2: " + longName + " [F1] / Reports: Unavailable"));
 		assertTrue(tooltip.contains("Map scale: 1"));
 		assertTrue(tooltip.contains("Series score: 0 - 1"));
 		assertEquals(22, BattleNext_TournamentView.shorten(longName, 22).length());

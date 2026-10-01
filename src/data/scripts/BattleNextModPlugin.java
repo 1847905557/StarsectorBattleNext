@@ -8,6 +8,7 @@ import data.order.BattleNext_OrderRegistry;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.campaign.BattleNext_PinnedVariantRefitButton;
 
 public class BattleNextModPlugin extends BaseModPlugin {
 
@@ -20,7 +21,9 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 	@Override
 	public void onApplicationLoad() {
+
 		BattleNext_Settings.load();
+		BattleNext_PinnedVariantRefitButton.register();
 
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
 			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 AI Battles Next");
@@ -43,7 +46,9 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 	@Override
 	public void onGameLoad(boolean newGame) {
+
 		BattleNext_MissionRestrictedUnlock.getInstance().forget();
+		BattleNext_PinnedVariantRefitButton.onGameLoad();
 
 		boolean classLoad = false;
 		if (Global.getSector().getPersistentData().containsKey(CLASS_MARK)) {
