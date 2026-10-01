@@ -5,9 +5,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.missions.BattleNext_MissionBattleMap;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
-import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
@@ -20,10 +18,12 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_DropdownField;
+import data.scripts.ui.widget.view.BattleNext_TournamentView;
 import data.scripts.tools.BattleNext_BattleSignals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
@@ -44,22 +44,18 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private static final float SOURCE_CONTROL_HEIGHT = 30f;
 	private static final float SOURCE_LABEL_TEXT_TOP_INSET = 5f;
 	private static final float TOURNAMENT_DETAIL_TITLE_GAP = 10f;
-	private static final float TOURNAMENT_DETAIL_COLUMN_GAP = 10f;
 	private static final float TOURNAMENT_ACTION_BUTTON_WIDTH = 220f;
 	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = 8f;
-	private static final float TOURNAMENT_SUMMARY_STATUS_GAP = 8f;
 	private static final float TOURNAMENT_SUMMARY_DETAIL_GAP = 6f;
 	private static final float TOURNAMENT_SUMMARY_SECTION_GAP = 10f;
 	private static final float TOURNAMENT_SUMMARY_FLEET_GAP = 5f;
 	private static final float TOURNAMENT_SCHEDULE_ENTRY_GAP = 5f;
 	private static final float TOURNAMENT_SCHEDULE_WARNING_GAP = 4f;
-	private static final float TOURNAMENT_SCHEDULE_SECTION_GAP = 12f;
-	private static final float TOURNAMENT_SCHEDULE_MATCH_GAP = 8f;
 
 	private static final int RANDOM_MAP_ID = -1;
 	private static final int LAST_MAP_ID = BattleNext_MissionBattleMap.MAP_COUNT - 1;
 
-	public static final class BattleSourceSelectionRequest {
+	public static class BattleSourceSelectionRequest {
 		private final String id;
 
 		public BattleSourceSelectionRequest(String id) {
@@ -78,6 +74,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	private UIRect contentRect;
 	private BattleNext_DropdownField sourceDropdown;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
+	private BattleNext_TournamentView tournamentView;
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
@@ -136,6 +133,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	@Override
 	public void refreshContent() {
 		if (sourceDropdown != null) sourceDropdown.close();
+		closeChart();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		quickBattleEditor = null;
@@ -177,7 +175,19 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		return sourceDropdown != null && sourceDropdown.handleGlobalInput(events);
+		if (sourceDropdown != null && sourceDropdown.handleGlobalInput(events)) return true;
+
+		if (tournamentView != null) {
+			tournamentView.handleInput(events);
+		}
+		return false;
+	}
+
+	public void closeChart() {
+		if (tournamentView != null) {
+			tournamentView.close();
+			tournamentView = null;
+		}
 	}
 
 	@Override
@@ -220,13 +230,6 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		}
 	}
 
-	private String sourceLabel() {
-		if (selectedId.isEmpty()) return text("quick_battle");
-		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
-		if (tournament == null) return text("tournament_missing") + " [" + selectedId + "]";
-		return tournament.getName();
-	}
-
 	private List<BattleNext_DropdownField.DropdownChoice> sourceOptions() {
 		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
 		options.add(new BattleNext_DropdownField.DropdownChoice("", text("quick_battle")));
@@ -249,85 +252,140 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			messageRect.addTooltip();
 			return;
 		}
-		UIRect[] rows = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight())
-				.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + TOURNAMENT_DETAIL_TITLE_GAP);
+		UIRect root = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight());
+		UIRect[] rows = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + TOURNAMENT_DETAIL_TITLE_GAP);
 		BattleNext_PageLayout.heading(rows[0], detailPanel, tournament.getName());
-		float listWidth = BattleNext_PageLayout.listWidth(detailPanel);
-		UIRect[] columns = rows[1].splitHorizontally(listWidth + TOURNAMENT_DETAIL_COLUMN_GAP);
-
-		listRectSetup(columns[0], detailPanel, tournament);
-		scheduleSetup(columns[1], detailPanel, tournament);
+		CustomPanelAPI viewport = rows[1].createSubPanel(detailPanel, inputOwner).getPanel();
+		TooltipMakerAPI content = viewport.createUIElement(rows[1].getWidth(), rows[1].getHeight(), true);
+		BattleNext_UiTheme.configure(content);
+		content.setBgAlpha(0f);
+		Map<String, String> fleetNames = new java.util.LinkedHashMap<>();
+		for (String fleetId : tournament.getFleetIds()) {
+			if (fleetStore.get(fleetId) != null) {
+				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
+			}
+		}
+		tournamentView = BattleNext_TournamentView.createView(tournament, fleetNames);
+		float availableWidth = Math.max(1f, rows[1].getWidth() - 12f);
+		CustomPanelAPI chart = tournamentView.attach(viewport, content, viewport.getPosition(), inputRouter, availableWidth);
+		addTournamentSummary(viewport, content, tournament, availableWidth, chart.getPosition().getWidth());
+		viewport.addUIElement(content).inTL(0f, 0f);
 	}
 
-	private void listRectSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_TournamentModel tournament) {
-		rect.removeLatestSubPanel();
-		CustomPanelAPI summaryPanel = rect.createSubPanel(detailPanel, null).getPanel();
-		TooltipMakerAPI summary = summaryPanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
-		if (!loadError.isEmpty()) summary.addPara(loadError, 0f);
-		summary.addTitle(text("tournament_summary"));
-		summary.addPara(text("status") + ": " + tournamentStatus(tournament), TOURNAMENT_SUMMARY_STATUS_GAP);
-		summary.addPara(text("tournament_format") + ": " + bracketLabel(tournament)
-				+ " / " + strings.format("bo", tournament.getBoCount()), TOURNAMENT_SUMMARY_DETAIL_GAP);
-		summary.addPara(text("tournament_max_fleet") + ": " + tournament.getMaxFleet(), TOURNAMENT_SUMMARY_DETAIL_GAP);
-		if (tournament.isCompleted()) {
-			summary.addPara(text("winner") + ": " + tournament.getChampionFleetId(), TOURNAMENT_SUMMARY_DETAIL_GAP);
+	private void addTournamentSummary(CustomPanelAPI owner, TooltipMakerAPI content,
+			BattleNext_TournamentModel tournament, float availableWidth, float width) {
+
+		float columnWidth = Math.max(1f, (width - BattleNext_PageLayout.EDITOR_COLUMN_GAP) * 0.5f);
+		CustomPanelAPI row = owner.createCustomPanel(availableWidth, 1f, null);
+		CustomPanelAPI summary = row.createCustomPanel(width, 1f, inputOwner);
+		TooltipMakerAPI title = summary.createUIElement(columnWidth, 0f, false);
+		BattleNext_UiTheme.configure(title);
+		title.setBgAlpha(0f);
+		title.addTitle(text("tournament_summary"));
+		TooltipMakerAPI details = summary.createUIElement(columnWidth, 0f, false);
+		BattleNext_UiTheme.configure(details);
+		details.setBgAlpha(0f);
+		addTournamentOverview(details, tournament, columnWidth);
+		TooltipMakerAPI fleets = summary.createUIElement(columnWidth, 0f, false);
+		BattleNext_UiTheme.configure(fleets);
+		fleets.setBgAlpha(0f);
+		TooltipMakerAPI fleetTitle = summary.createUIElement(columnWidth, 0f, false);
+		BattleNext_UiTheme.configure(fleetTitle);
+		fleetTitle.setBgAlpha(0f);
+		fleetTitle.addTitle(text("fleet_ids"));
+		for (String fleetId : tournament.getFleetIds()) {
+			fleets.addPara(fleetLabel(fleetId), fleetId.equals(tournament.getFleetIds().get(0))
+					? 0f : TOURNAMENT_SUMMARY_FLEET_GAP);
 		}
-		summary.addPara(text("tournament_rules") + ": "
+
+		float titleHeight = title.getHeightSoFar();
+		float fleetTitleHeight = fleetTitle.getHeightSoFar();
+		float columnsTop = Math.max(titleHeight, fleetTitleHeight) + TOURNAMENT_SUMMARY_SECTION_GAP;
+		float height = columnsTop + Math.max(details.getHeightSoFar(), fleets.getHeightSoFar());
+		summary.getPosition().setSize(width, height);
+		title.getPosition().setSize(columnWidth, titleHeight);
+		fleetTitle.getPosition().setSize(columnWidth, fleetTitleHeight);
+		details.getPosition().setSize(columnWidth, details.getHeightSoFar());
+		fleets.getPosition().setSize(columnWidth, fleets.getHeightSoFar());
+		summary.addUIElement(title).inTL(0f, 0f);
+		summary.addUIElement(fleetTitle).inTL(columnWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, 0f);
+		summary.addUIElement(details).inTL(0f, columnsTop);
+		summary.addUIElement(fleets).inTL(columnWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, columnsTop);
+		summary.getPosition().setSize(width, height);
+		row.addComponent(summary).inTL((availableWidth - width) * 0.5f, 0f);
+		row.getPosition().setSize(availableWidth, height);
+		content.addCustom(row, TOURNAMENT_SUMMARY_SECTION_GAP);
+	}
+
+	private void addTournamentOverview(TooltipMakerAPI content, BattleNext_TournamentModel tournament, float width) {
+
+		content.addPara(text("status") + ": " + tournamentStatus(tournament), 0f);
+		content.addPara(text("tournament_format") + ": " + bracketLabel(tournament)
+				+ " / " + strings.format("bo", tournament.getBoCount()), TOURNAMENT_SUMMARY_DETAIL_GAP);
+		content.addPara(strings.format("chart_finished_matches", completedMatches(tournament),
+				tournament.getPlayableMatchTotal()), TOURNAMENT_SUMMARY_DETAIL_GAP);
+		if (tournament.isCompleted()) {
+			content.addPara(text("winner") + ": " + fleetLabel(tournament.getChampionFleetId()),
+					TOURNAMENT_SUMMARY_DETAIL_GAP);
+		}
+		content.addPara(text("tournament_rules") + ": "
 				+ (tournament.getRuleId().isEmpty() ? text("rules_unbound")
 						: ruleStore.get(tournament.getRuleId()) == null
 						? text("tournament_rules_unavailable") : text("tournament_rules_ready")),
 				TOURNAMENT_SUMMARY_DETAIL_GAP);
-		summary.addPara(text("fleet_ids"), TOURNAMENT_SUMMARY_SECTION_GAP);
-		for (String fleet : tournament.getFleetIds()) {
-			summary.addPara(fleet, TOURNAMENT_SUMMARY_FLEET_GAP);
+		content.addPara(text("battle_map_short") + ": "
+				+ (tournament.getMapId() < 0 ? text("chart_random_map") : tournament.getMapId())
+				+ " / " + text("battle_map_scale_short") + ": 1", TOURNAMENT_SUMMARY_DETAIL_GAP);
+		if (!loadError.isEmpty()) {
+			content.addPara(loadError, TOURNAMENT_SCHEDULE_WARNING_GAP);
 		}
-		summaryPanel.addUIElement(summary).inTL(0f, 0f);
-	}
-
-	private void scheduleSetup(UIRect rect, CustomPanelAPI detailPanel, BattleNext_TournamentModel tournament) {
-		rect.removeLatestSubPanel();
-		CustomPanelAPI schedulePanel = rect.createSubPanel(detailPanel, detailPanel.getPlugin()).getPanel();
-		TooltipMakerAPI schedule = schedulePanel.createUIElement(rect.getWidth(), rect.getHeight(), true);
+		for (String error : tournamentView.errors()) {
+			content.addPara(text("chart_error") + ": " + error, TOURNAMENT_SCHEDULE_WARNING_GAP);
+		}
 		BattleNext_Match next = nextMatch(tournament);
-		schedule.addTitle(text("next_match"));
 		if (next == null) {
-			schedule.addPara(text("no_pending_match"), TOURNAMENT_SCHEDULE_ENTRY_GAP);
+			content.addPara(text("no_pending_match"), TOURNAMENT_SCHEDULE_ENTRY_GAP);
 		} else {
-			schedule.addPara(next.getId() + ": " + next.getPlayer() + " / " + next.getEnemy(),
-					TOURNAMENT_SCHEDULE_ENTRY_GAP);
-			if (selectedId.equals(tournamentStore.getActiveId())) {
-				provider.load();
-				for (String reason : provider.getWarnings()) schedule.addPara(reason, TOURNAMENT_SCHEDULE_WARNING_GAP);
-				for (String reason : provider.getRuleWarnings()) schedule.addPara(reason, TOURNAMENT_SCHEDULE_WARNING_GAP);
-				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
-					BattleNext_PageLayout.button(schedule, text("rules_force_start"), "tournament:authorize",
-							TOURNAMENT_ACTION_BUTTON_WIDTH);
-				}
-			}
+			content.addPara(text("next_match") + ": " + next.getId() + " / " + fleetLabel(next.getPlayer())
+					+ " vs " + fleetLabel(next.getEnemy()), TOURNAMENT_SCHEDULE_ENTRY_GAP);
 		}
-		schedule.addPara(text("matches"), TOURNAMENT_SCHEDULE_SECTION_GAP);
-		for (BattleNext_Match match : tournament.getMatches()) {
-			String matchLabel = match.getEnemy().isEmpty() ? text("stage_bye")
-					: BattleNext_MatchProgress.tournament(tournament, match).format(strings);
-			schedule.addPara(matchLabel + " / " + match.getId() + ": " + match.getPlayer()
-					+ " / " + match.getEnemy() + " [" + enumLabel("stage_", match.getStage())
-					+ " / " + enumLabel("match_status_", match.getStatus()) + "]",
-					TOURNAMENT_SCHEDULE_MATCH_GAP);
-			for (int index = 0; index < match.getRounds().size(); index++) {
-				BattleNext_Round round = match.getRounds().get(index);
-				String outcome = enumLabel("round_status_", round.getStatus());
-				if (round.getStatus() != BattleNext_Round.RoundStatus.DRAW) outcome += " (" + round.getWinnerFleetId() + ")";
-				schedule.addPara(strings.format("round_progress", index + 1, tournament.getBoCount())
-						+ " / " + text("status") + ": " + outcome,
-						TOURNAMENT_SCHEDULE_WARNING_GAP);
+		if (selectedId.equals(tournamentStore.getActiveId()) && next != null) {
+			provider.load();
+			for (String warning : provider.getWarnings()) {
+				content.addPara(warning, TOURNAMENT_SCHEDULE_WARNING_GAP);
+			}
+			for (String warning : provider.getRuleWarnings()) {
+				content.addPara(warning, TOURNAMENT_SCHEDULE_WARNING_GAP);
+			}
+			if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
+				BattleNext_PageLayout.button(content, text("rules_force_start"), "tournament:authorize",
+						Math.min(TOURNAMENT_ACTION_BUTTON_WIDTH, width));
 			}
 		}
 		if (!tournament.isStarted()) {
-			ButtonAPI start = BattleNext_PageLayout.button(schedule, text("tournament_start"),
-					"tournament:start", TOURNAMENT_ACTION_BUTTON_WIDTH);
+			ButtonAPI start = BattleNext_PageLayout.button(content, text("tournament_start"),
+					"tournament:start", Math.min(TOURNAMENT_ACTION_BUTTON_WIDTH, width));
 			start.setEnabled(tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded());
 		}
-		schedulePanel.addUIElement(schedule).inTL(0f, 0f);
+	}
+
+	public static int completedMatches(BattleNext_TournamentModel tournament) {
+		int completed = 0;
+		for (BattleNext_Match match : tournament.getMatches()) {
+			if (match.getEnemy().isEmpty()) continue;
+			if (match.getStatus() != BattleNext_Match.MatchStatus.COMPLETE) continue;
+
+			completed++;
+		}
+		return completed;
+	}
+
+	private String fleetLabel(String id) {
+		data.model.fleet.BattleNext_FleetModel fleet = fleetStore.get(id);
+		if (fleet == null) {
+			return text("invalid_player") + " [" + id + "]";
+		}
+		return fleet.getName() + " [" + id + "]";
 	}
 
 	private void startTournament() {
@@ -410,11 +468,9 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	}
 
 	private String bracketLabel(BattleNext_TournamentModel tournament) {
-		return text("bracket_" + tournament.getBracketType().name().toLowerCase(java.util.Locale.ROOT));
-	}
+		if (tournament.getBracketType() == null) return text("chart_unknown_bracket");
 
-	private String enumLabel(String prefix, Enum<?> value) {
-		return text(prefix + value.name().toLowerCase(java.util.Locale.ROOT));
+		return text("bracket_" + tournament.getBracketType().name().toLowerCase(java.util.Locale.ROOT));
 	}
 
 	private String text(String key) {

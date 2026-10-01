@@ -212,6 +212,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		if (panel == null) return;
 		BattleNext_UiInputRouter.activate(inputRouter);
 		inputRouter.clear();
+		if (battleSelectorPage != null) {
+			battleSelectorPage.closeChart();
+		}
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
 		if (rulesPage != null) rulesPage.closePicker();
@@ -279,6 +282,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void requestClose() {
 		inputRouter.releaseFocus();
+		if (battleSelectorPage != null) {
+			battleSelectorPage.closeChart();
+		}
 		if (fleetPage != null) fleetPage.closePicker();
 		if (tournamentPage != null) tournamentPage.closePicker();
 		if (rulesPage != null) rulesPage.closePicker();
