@@ -84,7 +84,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		float bodyHeight = height - bodyTop - INSET * 2f - BattleNext_PageLayout.FOOTER_HEIGHT;
 		rightPanel = panel.createCustomPanel(width - INSET * 2f, bodyHeight, new FramePlugin());
 		panel.addComponent(rightPanel).inTL(INSET, bodyTop);
-		float buttonWidth = Math.min(180f, (width - INSET * 3f) * 0.5f);
+		float buttonWidth = Math.min(220f, (width - INSET * 3f) * 0.5f);
 		float footerY = height - INSET - BattleNext_PageLayout.FOOTER_HEIGHT;
 		saveButton = BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(INSET, footerY, buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),

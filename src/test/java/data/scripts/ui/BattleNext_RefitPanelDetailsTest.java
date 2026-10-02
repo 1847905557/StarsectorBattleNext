@@ -1,0 +1,651 @@
+package data.scripts.ui;
+
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.test.fixture.BattleNext_TestVariantFixture;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.codehaus.janino.SimpleCompiler;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
+	private int panelsBeforeFailure = -1;
+
+	@ParameterizedTest
+	@ValueSource(ints = {800, 1000, 1400})
+	void siblingPanelsUseAgreedProportionsAndIndependentPlugins(int width) throws Exception {
+		deferTooltipWidth = true;
+		BattleNext_RefitPanelPlugin plugin = initialized(width, 700f, () -> {});
+		CustomPanelAPI root = (CustomPanelAPI) getField(plugin, "panel");
+		CustomPanelAPI left = (CustomPanelAPI) getField(plugin, "leftPanel");
+		CustomPanelAPI right = (CustomPanelAPI) getField(plugin, "rightPanel");
+		assertEquals(List.of(left, right), children.get(root).stream().filter(CustomPanelAPI.class::isInstance).toList());
+		assertSame(root.getPosition(), geometry.get(left.getPosition()).getParent());
+		assertSame(root.getPosition(), geometry.get(right.getPosition()).getParent());
+		assertNotSame(plugins.get(root), plugins.get(left));
+		assertNotSame(plugins.get(left), plugins.get(right));
+		assertEquals(width * 0.61f, left.getPosition().getWidth());
+		assertEquals(width * 0.18f, right.getPosition().getWidth());
+		assertEquals(560f, left.getPosition().getHeight());
+		assertEquals(560f, right.getPosition().getHeight());
+		assertEquals(width * 0.09f, left.getPosition().getX());
+		assertEquals(width * 0.03f, right.getPosition().getX() - left.getPosition().getX()
+				- left.getPosition().getWidth(), 0.0001f);
+		assertEquals(width * 0.09f, width - right.getPosition().getX() - right.getPosition().getWidth(), 0.0001f);
+		assertEquals(63f, root.getPosition().getY() + 700f - left.getPosition().getY() - 560f);
+		assertEquals(left.getPosition().getY(), right.getPosition().getY());
+		assertSame(getField(plugin, "inputRouter"), getField(details(plugin), "inputRouter"));
+		for (String key : List.of("sModPicker", "dModPicker")) {
+			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, key);
+			PositionAPI button = ((CustomPanelAPI) getField(picker, "row")).getPosition();
+			assertSame(root, getField(picker, "overlayHost"));
+			assertEquals(width * 0.18f, button.getWidth());
+			assertEquals(30f, button.getHeight());
+			assertEquals(right.getPosition().getX(), button.getX());
+			assertEquals(key.equals("sModPicker") ? 0f : 36f,
+					right.getPosition().getY() + 560f - button.getY() - 30f);
+			assertEquals(key.equals("sModPicker") ? "BattleNext_ui_refit_smods" : "BattleNext_ui_refit_dmods",
+					getField(picker, "title"));
+		}
+		assertEquals(width - 8f - 160f, buttonPositions.get("close").getX());
+		assertEquals(width - 8f - 330f, buttonPositions.get("save").getX());
+		assertEquals(root.getPosition().getY() + 8f, buttonPositions.get("save").getY());
+		assertEquals(160f, buttonPositions.get("save").getWidth());
+		assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT, buttonPositions.get("save").getHeight());
+		plugin.close();
+	}
+
+	@Test
+	void openingClonesCompleteDraftAndDisplaysFiveRegions() throws Exception {
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		current.api.addPermaMod("d", false);
+		current.api.removeSuppressedMod("d");
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		assertNotSame(current.api, draft);
+		JSONObject snapshot = (JSONObject) getField(details(plugin), "variantJson");
+		assertJsonEquals(BattleNext_VariantBuilder.fromVariant(draft).toJson(), snapshot);
+		assertEquals(Set.of("identity", "plugins", "modules", "groups", "wings"), lists(plugin).keySet());
+		assertEquals(5, children.get(details(plugin).getPanel()).size());
+		for (String text : List.of("Hullmod ordinary", "Hullmod sm", "Hullmod built", "Hullmod d",
+				"BattleNext_ui_variant_smod", "BattleNext_ui_variant_dmod", "module: Child", "Wing wing")) {
+			assertTrue(labels.contains(text), text);
+		}
+		assertEquals("LINKED", snapshot.getJSONArray("weaponGroups").getJSONObject(0).getString("mode"));
+		assertEquals(7, snapshot.getJSONObject("modules").getJSONObject("module").getInt("fluxVents"));
+		assertTrue(labels.stream().anyMatch(text -> text.contains("Unsubmitted")));
+		toggle(plugin).run();
+		assertTrue(labels.contains("weapon: Weapon laser"));
+		plugin.close();
+	}
+
+	@Test
+	void selectorsConfirmAndCancelWithoutChangingOriginalAndReleaseSearchInput() throws Exception {
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(plugin, "inputRouter");
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
+		CustomPanelAPI root = (CustomPanelAPI) getField(plugin, "panel");
+		int mounted = children.get(root).size();
+		for (int iteration = 0; iteration < 3; iteration++) {
+			invoke(picker, "open");
+			assertFalse(router.isEmpty());
+			assertSame(root.getPosition(), geometry.get(((CustomPanelAPI) getField(picker, "popup")).getPosition()).getParent());
+			assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			Map<String, Integer> selection = selection(picker);
+			selection.put("ordinary", 1);
+			picker.closeOverlays();
+			assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
+			assertEquals(mounted, children.get(root).size());
+			assertTrue(router.isEmpty());
+			assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		}
+		invoke(picker, "open");
+		selection(picker).put("ordinary", 1);
+		invoke(picker, "confirm");
+		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
+		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
+		assertTrue(router.isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
+				getField(details(plugin), "variantJson"));
+		BattleNext_OptionPicker dPicker = (BattleNext_OptionPicker) getField(plugin, "dModPicker");
+		invoke(dPicker, "open");
+		selection(dPicker).put("d", 1);
+		dPicker.closeOverlays();
+		assertTrue(BattleNext_RefitPanelPlugin.dModsOf((ShipVariantAPI) getField(plugin, "draft")).isEmpty());
+		invoke(dPicker, "open");
+		selection(dPicker).put("d", 1);
+		invoke(dPicker, "confirm");
+		assertEquals("parent_default_D", ((JSONObject) getField(details(plugin), "variantJson")).getString("hullId"));
+		assertTrue(labels.contains("Damaged parent"));
+		assertEquals("parent", current.api.getHullSpec().getHullId());
+		invoke(dPicker, "open");
+		selection(dPicker).clear();
+		invoke(dPicker, "confirm");
+		assertEquals("parent", ((JSONObject) getField(details(plugin), "variantJson")).getString("hullId"));
+		plugin.close();
+	}
+
+	@Test
+	void sameOpeningRefreshRetainsScrollAndExpansionAndClampsShorterContent() throws Exception {
+		JSONObject equipment = equipmentJson();
+		current();
+		DraftVariant current = new DraftVariant(equipment);
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		toggle(plugin).run();
+		Map<String, Float> offsets = new LinkedHashMap<>();
+		for (String key : List.of("plugins", "modules", "groups", "wings")) {
+			TooltipMakerAPI list = lists(plugin).get(key);
+			list.getExternalScroller().setYOffset(80f);
+			offsets.put(key, list.getExternalScroller().getYOffset());
+			assertTrue(offsets.get(key) > 0f, key);
+		}
+		List<Object> previousFrames = new ArrayList<>(children.get(details(plugin).getPanel()));
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "mod_0_with_a_long_name"));
+		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
+		assertTrue(removedComponents.containsAll(previousFrames));
+		assertEquals(5, ((List<?>) getField(details(plugin), "ownedPanels")).size());
+		for (String key : offsets.keySet()) {
+			assertEquals(offsets.get(key), lists(plugin).get(key).getExternalScroller().getYOffset());
+		}
+		DraftVariant shorter = current();
+		setField(plugin, "draft", shorter.api);
+		invoke(plugin, "refreshDetails");
+		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
+		for (String key : offsets.keySet()) {
+			TooltipState state = tooltips.get(lists(plugin).get(key));
+			assertEquals(Math.min(offsets.get(key), Math.max(0f, state.getMountedHeight() - state.getViewport().getHeight())),
+					state.getScroller().getYOffset());
+		}
+		plugin.close();
+	}
+
+	@Test
+	void modalCancellationKeepsDraftAndRestoresDetailsInteraction() throws Exception {
+		AtomicBoolean closed = new AtomicBoolean();
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> closed.set(true));
+		plugin.open(member(current), new Refit(member(current), current.api));
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "ordinary"));
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		Runnable toggle = toggle(plugin);
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
+		invoke(picker, "open");
+		toggle.run();
+		assertEquals(Set.of(), getField(details(plugin), "expanded"));
+		picker.closeOverlays();
+		plugin.requestClose();
+		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(plugin, "confirmation");
+		assertTrue(dialog.isActive());
+		assertFalse(buttons.get("save").get());
+		toggle.run();
+		assertEquals(Set.of(), getField(details(plugin), "expanded"));
+		dialog.handle("confirm_cancel");
+		plugin.advance(0f);
+		assertFalse(closed.get());
+		assertSame(draft, getField(plugin, "draft"));
+		assertTrue(buttons.get("save").get());
+		toggle.run();
+		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built"));
+		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(draft));
+		plugin.requestClose();
+		assertTrue(closed.get());
+		plugin.close();
+	}
+
+	@Test
+	void closeAndReopenReleasePanelsAndResetBrowsingState() throws Exception {
+		JSONObject equipment = equipmentJson();
+		current();
+		DraftVariant current = new DraftVariant(equipment);
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		CustomPanelAPI root = (CustomPanelAPI) getField(plugin, "panel");
+		CustomPanelAPI left = (CustomPanelAPI) getField(plugin, "leftPanel");
+		int mounted = children.get(root).size();
+		for (int iteration = 0; iteration < 3; iteration++) {
+			toggle(plugin).run();
+			lists(plugin).get("groups").getExternalScroller().setYOffset(80f);
+			List<Object> previous = new ArrayList<>(children.get(left));
+			invoke(getField(plugin, "sModPicker"), "open");
+			plugin.close();
+			assertTrue(children.get(left).isEmpty());
+			assertTrue(removedComponents.containsAll(previous));
+			assertNull(details(plugin).getPanel());
+			assertNull(getField(details(plugin), "variantJson"));
+			assertTrue(lists(plugin).isEmpty());
+			assertEquals(Set.of(), getField(details(plugin), "expanded"));
+			assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
+			BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(plugin, "inputRouter");
+			assertTrue(router.isEmpty());
+			assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+			assertEquals(mounted, children.get(root).size());
+			plugin.open(member(current), new Refit(member(current), current.api));
+			assertEquals(5, children.get(left).size());
+			assertEquals(Set.of(), getField(details(plugin), "expanded"));
+			assertEquals(0f, lists(plugin).get("groups").getExternalScroller().getYOffset());
+		}
+		plugin.close();
+	}
+
+	@Test
+	void snapshotAndBuildErrorsReleaseDetailsAndAllowRecovery() throws Exception {
+		DraftVariant current = current();
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		CustomPanelAPI left = (CustomPanelAPI) getField(plugin, "leftPanel");
+		failBuild = true;
+		invoke(plugin, "refreshDetails");
+		assertTrue(children.get(left).isEmpty());
+		assertNull(details(plugin).getPanel());
+		assertTrue(lists(plugin).isEmpty());
+		assertTrue(status(plugin).contains("Unknown hull"));
+		failBuild = false;
+		invoke(plugin, "refreshDetails");
+		assertEquals(5, children.get(left).size());
+		panelsBeforeFailure = 2;
+		invoke(plugin, "refreshDetails");
+		assertTrue(children.get(left).isEmpty());
+		assertNull(details(plugin).getPanel());
+		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
+		assertTrue(status(plugin).contains("Panel build failure"));
+		panelsBeforeFailure = -1;
+		invoke(plugin, "refreshDetails");
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		draft.setModuleVariant("module", null);
+		invoke(plugin, "refreshDetails");
+		assertTrue(children.get(left).isEmpty());
+		assertNull(getField(details(plugin), "variantJson"));
+		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
+		assertTrue(status(plugin).startsWith("BattleNext_ui_save_failed:"));
+		plugin.open(member(current), new Refit(member(current), current.api));
+		assertEquals(5, children.get(left).size());
+		plugin.close();
+	}
+
+	@Test
+	void readFailureClearsPreviousDetailsAndReportsStatus() throws Exception {
+		DraftVariant current = current();
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		CustomPanelAPI left = (CustomPanelAPI) getField(plugin, "leftPanel");
+		plugin.open(member(current), new FailingRefit());
+		assertTrue(children.get(left).isEmpty());
+		assertNull(getField(plugin, "draft"));
+		assertNull(getField(details(plugin), "variantJson"));
+		assertEquals("BattleNext_ui_save_failed: InvocationTargetException", status(plugin));
+		plugin.open(member(current), new Refit(member(current), current.api));
+		setField(plugin, "refitScreen", new FailingRefit());
+		plugin.discardCurrentPage();
+		assertTrue(children.get(left).isEmpty());
+		assertNull(details(plugin).getPanel());
+		assertEquals("BattleNext_ui_save_failed: InvocationTargetException", status(plugin));
+		plugin.close();
+	}
+
+	@Test
+	void saveRefreshRetainsBrowsingStateAndEstablishesNewDraftBaseline() throws Exception {
+		JSONObject equipment = equipmentJson();
+		current();
+		DraftVariant current = new DraftVariant(equipment);
+		AtomicBoolean saved = new AtomicBoolean();
+		AtomicBoolean closed = new AtomicBoolean();
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> closed.set(true));
+		plugin.open(member(current), savingRefit(current, () -> saved.set(true), new AtomicBoolean()));
+		toggle(plugin).run();
+		lists(plugin).get("groups").getExternalScroller().setYOffset(80f);
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "mod_0_with_a_long_name"));
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		assertTrue(plugin.saveCurrentPage());
+		assertTrue(saved.get());
+		assertNotSame(draft, getField(plugin, "draft"));
+		assertEquals(Set.of("sm", "built", "mod_0_with_a_long_name"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
+		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
+		assertEquals(80f, lists(plugin).get("groups").getExternalScroller().getYOffset());
+		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("", plugin.getSaveError());
+		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
+				getField(details(plugin), "variantJson"));
+		assertEquals(getField(plugin, "savedSMods"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built"));
+		plugin.requestClose();
+		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(plugin, "confirmation");
+		assertTrue(dialog.isActive());
+		dialog.handle("confirm_save");
+		assertFalse(dialog.isActive());
+		assertTrue(closed.get());
+		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
+		plugin.close();
+	}
+
+	@Test
+	void committedSaveKeepsSavedStatusWhenDetailRefreshFails() throws Exception {
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> {});
+		plugin.open(member(current), savingRefit(current, () -> failBuild = true, new AtomicBoolean()));
+		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
+		assertTrue(plugin.saveCurrentPage());
+		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("", plugin.getSaveError());
+		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
+		assertNull(details(plugin).getPanel());
+		assertNull(getField(details(plugin), "variantJson"));
+		assertTrue(lists(plugin).isEmpty());
+		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
+		assertTrue(children.get((CustomPanelAPI) getField(plugin, "leftPanel")).isEmpty());
+		plugin.close();
+	}
+
+	@Test
+	void committedSaveReadFailureReleasesOldDetailsAndKeepsSavedBaseline() throws Exception {
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		AtomicBoolean failRead = new AtomicBoolean();
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> {});
+		plugin.open(member(current), savingRefit(current, () -> failRead.set(true), failRead));
+		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
+		assertTrue(plugin.saveCurrentPage());
+		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("", plugin.getSaveError());
+		assertEquals(Set.of("ordinary", "sm", "built"), getField(plugin, "savedSMods"));
+		assertNull(details(plugin).getPanel());
+		assertTrue(lists(plugin).isEmpty());
+		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
+		assertTrue(children.get((CustomPanelAPI) getField(plugin, "leftPanel")).isEmpty());
+		plugin.close();
+	}
+
+	@Test
+	void saveFailureKeepsDraftAndBrowsingStateAndAllowsConfirmationCancellation() throws Exception {
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		AtomicBoolean closed = new AtomicBoolean();
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> closed.set(true));
+		Object refit = savingRefit(current, () -> { throw new IllegalStateException("Commit failure"); }, new AtomicBoolean());
+		plugin.open(member(current), refit);
+		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		toggle(plugin).run();
+		JSONObject snapshot = (JSONObject) getField(details(plugin), "variantJson");
+		plugin.requestClose();
+		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(plugin, "confirmation");
+		dialog.handle("confirm_save");
+		assertTrue(dialog.isActive());
+		assertFalse(closed.get());
+		assertEquals("Commit failure", plugin.getSaveError());
+		assertSame(draft, getField(plugin, "draft"));
+		assertSame(snapshot, getField(details(plugin), "variantJson"));
+		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
+		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(draft));
+		ShipVariantAPI restored = (ShipVariantAPI) refit.getClass().getMethod("getCurrentVariant").invoke(refit);
+		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(restored));
+		dialog.handle("confirm_cancel");
+		plugin.advance(0f);
+		assertTrue(buttons.get("save").get());
+		toggle(plugin).run();
+		assertEquals(Set.of(), getField(details(plugin), "expanded"));
+		plugin.close();
+	}
+
+	private Object savingRefit(DraftVariant current, Runnable afterSave, AtomicBoolean failRead) throws Exception {
+
+		SimpleCompiler compiler = new SimpleCompiler();
+		compiler.setParentClassLoader(current.api.getClass().getClassLoader());
+		compiler.cook("public class RefitDisplay {"
+				+ " public com.fs.starfarer.api.combat.ShipVariantAPI variant;"
+				+ " public Runnable afterSave;"
+				+ " public java.util.concurrent.atomic.AtomicBoolean failRead;"
+				+ " public RefitDisplay(com.fs.starfarer.api.combat.ShipVariantAPI variant, Runnable afterSave,"
+				+ " java.util.concurrent.atomic.AtomicBoolean failRead) {"
+				+ " this.variant = variant; this.afterSave = afterSave; this.failRead = failRead; }"
+				+ " public RefitDisplay getShipDisplay() { return this; }"
+				+ " public com.fs.starfarer.api.combat.ShipVariantAPI getCurrentVariant() {"
+				+ " if (failRead.get()) throw new IllegalStateException(\"Read failure\"); return variant; }"
+				+ " public void syncWithVariant(" + current.api.getClass().getName() + " variant) { this.variant = variant; }"
+				+ " public void syncWithCurrentVariant() {}"
+				+ " public void saveCurrentVariant() { afterSave.run(); } }");
+		return compiler.getClassLoader().loadClass("RefitDisplay")
+				.getConstructor(ShipVariantAPI.class, Runnable.class, AtomicBoolean.class)
+				.newInstance(current.api, afterSave, failRead);
+	}
+
+	@Override
+	protected CustomPanelAPI panel(float width, float height, com.fs.starfarer.api.campaign.CustomUIPanelPlugin plugin) {
+		if (panelsBeforeFailure == 0) throw new IllegalStateException("Panel build failure");
+		if (panelsBeforeFailure > 0) {
+			panelsBeforeFailure--;
+		}
+		return super.panel(width, height, plugin);
+	}
+
+	private BattleNext_RefitPanelPlugin initialized(float width, float height, Runnable close) {
+		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(close);
+		plugin.init(panel(width, height, plugin), width, height);
+		return plugin;
+	}
+
+	private BattleNext_RefitPanelPlugin opened(DraftVariant current) {
+		BattleNext_RefitPanelPlugin plugin = initialized(1000f, 700f, () -> {});
+		FleetMemberAPI member = member(current);
+		plugin.open(member, new Refit(member, current.api));
+		return plugin;
+	}
+
+	private FleetMemberAPI member(DraftVariant current) {
+		return proxy(FleetMemberAPI.class, (method, args) -> "getVariant".equals(method) ? current.api : null);
+	}
+
+	private BattleNext_VariantDetails details(BattleNext_RefitPanelPlugin plugin) throws Exception {
+		return (BattleNext_VariantDetails) getField(plugin, "details");
+	}
+
+	private String status(BattleNext_RefitPanelPlugin plugin) throws Exception {
+		return ((LabelAPI) getField(plugin, "statusLabel")).getText();
+	}
+
+	private Runnable toggle(BattleNext_RefitPanelPlugin plugin) throws Exception {
+		TooltipState groups = tooltips.get(lists(plugin).get("groups"));
+		CustomPanelAPI row = (CustomPanelAPI) groups.getComponents().get(0);
+		CustomPanelAPI header = (CustomPanelAPI) children.get(row).get(0);
+		return (Runnable) getField(plugins.get(header), "onToggle");
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Integer> selection(BattleNext_OptionPicker picker) throws Exception {
+		return (Map<String, Integer>) getField(picker, "selection");
+	}
+
+	private void invoke(Object target, String name) throws Exception {
+		Method method = target.getClass().getDeclaredMethod(name);
+		method.setAccessible(true);
+		method.invoke(target);
+	}
+
+	private void invoke(Object target, String name, Class<?> type, Object argument) throws Exception {
+		Method method = target.getClass().getDeclaredMethod(name, type);
+		method.setAccessible(true);
+		method.invoke(target, argument);
+	}
+
+	private DraftVariant current() throws Exception {
+
+		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
+		ShipHullSpecAPI parent = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
+			case "getHullId" -> "parent";
+			case "getHullName" -> "Parent";
+			case "getSpriteName" -> "graphics/parent.png";
+			case "getBuiltInMods" -> List.of("built");
+			case "isBuiltInMod" -> "built".equals(args[0]);
+			case "getBuiltInWings" -> List.of();
+			default -> null;
+		});
+		hulls.put("parent", parent);
+		ShipHullSpecAPI damaged = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
+			case "getHullId" -> "parent_default_D";
+			case "getHullName" -> "Damaged parent";
+			case "getSpriteName" -> "graphics/parent.png";
+			case "isDHull", "isDefaultDHull" -> true;
+			case "getDParentHull", "getBaseHull" -> parent;
+			case "getBuiltInMods" -> List.of("built");
+			case "isBuiltInMod" -> "built".equals(args[0]);
+			case "getBuiltInWings" -> List.of();
+			default -> null;
+		});
+		hulls.put("parent_default_D", damaged);
+		SettingsAPI previous = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SettingsAPI.class.getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+			if ("getHullModSpec".equals(method.getName())) return hullmod((String) args[0]);
+			if ("getAllHullModSpecs".equals(method.getName())) return List.of(hullmod("d"));
+			try {
+				return method.invoke(previous, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		return new DraftVariant(json);
+	}
+
+	private HullModSpecAPI hullmod(String id) {
+		return proxy(HullModSpecAPI.class, (method, args) -> switch (method) {
+			case "getId" -> id;
+			case "getDisplayName" -> "Hullmod " + id;
+			case "hasTag" -> "d".equals(id) && "dmod".equals(args[0]);
+			default -> null;
+		});
+	}
+
+	public static class FailingRefit {
+		public Object getShipDisplay() {
+			throw new IllegalStateException("Read failure");
+		}
+	}
+
+	private class DraftVariant {
+		private final JSONObject json;
+		private final Map<String, ShipVariantAPI> modules = new LinkedHashMap<>();
+		private final Set<String> mods;
+		private final Set<String> permaMods;
+		private final LinkedHashSet<String> sMods;
+		private final LinkedHashSet<String> builtIns;
+		private final LinkedHashSet<String> suppressed;
+		private ShipHullSpecAPI hull;
+		private final ShipVariantAPI api;
+
+		private DraftVariant(JSONObject json) throws JSONException {
+
+			this.json = new JSONObject(json.toString());
+			hull = hulls.get(json.getString("hullId"));
+			mods = values(json.optJSONArray("hullMods"));
+			permaMods = values(json.optJSONArray("permaMods"));
+			sMods = values(json.optJSONArray("sMods"));
+			builtIns = values(json.optJSONArray("sModdedBuiltIns"));
+			suppressed = values(json.optJSONArray("suppressedMods"));
+			JSONObject moduleJson = json.optJSONObject("modules");
+			if (moduleJson != null && moduleJson.length() > 0) {
+				for (String slot : JSONObject.getNames(moduleJson)) {
+					modules.put(slot, new DraftVariant(moduleJson.getJSONObject(slot)).api);
+				}
+			}
+			api = (ShipVariantAPI) Proxy.newProxyInstance(ShipVariantAPI.class.getClassLoader(),
+					new Class<?>[]{ShipVariantAPI.class}, (instance, method, args) -> switch (method.getName()) {
+				case "equals" -> instance == args[0];
+				case "hashCode" -> System.identityHashCode(instance);
+				case "clone" -> new DraftVariant(snapshot()).api;
+				case "toJSONObject" -> snapshot();
+				case "getHullSpec" -> hull;
+				case "setHullSpecAPI" -> { hull = (ShipHullSpecAPI) args[0]; yield null; }
+				case "getHullVariantId" -> this.json.getString("variantId");
+				case "getHullMods" -> {
+					Set<String> installed = new LinkedHashSet<>(mods);
+					installed.addAll(permaMods);
+					installed.addAll(hull.getBuiltInMods());
+					installed.removeAll(suppressed);
+					yield installed;
+				}
+				case "getPermaMods" -> permaMods;
+				case "getSMods" -> sMods;
+				case "getSModdedBuiltIns" -> builtIns;
+				case "getSuppressedMods" -> suppressed;
+				case "getModuleSlots" -> new ArrayList<>(modules.keySet());
+				case "getStationModules" -> {
+					Map<String, String> ids = new LinkedHashMap<>();
+					modules.forEach((slot, module) -> ids.put(slot, module == null ? "missing" : module.getHullVariantId()));
+					yield ids;
+				}
+				case "getModuleVariant" -> modules.get(args[0]);
+				case "setModuleVariant" -> modules.put((String) args[0], (ShipVariantAPI) args[1]);
+				case "hasDMods" -> permaMods.contains("d");
+				case "addMod" -> mods.add((String) args[0]);
+				case "removeMod" -> mods.remove(args[0]);
+				case "addSuppressedMod" -> suppressed.add((String) args[0]);
+				case "removeSuppressedMod" -> suppressed.remove(args[0]);
+				case "addPermaMod" -> {
+					permaMods.add((String) args[0]);
+					if (args.length > 1 && (Boolean) args[1]) sMods.add((String) args[0]);
+					yield null;
+				}
+				case "removePermaMod" -> {
+					permaMods.remove(args[0]);
+					sMods.remove(args[0]);
+					yield null;
+				}
+				default -> method.getReturnType() == boolean.class ? false : null;
+			});
+		}
+
+		private JSONObject snapshot() throws JSONException {
+			JSONObject snapshot = new JSONObject(json.toString()).put("hullId", hull.getHullId())
+					.put("hullMods", new JSONArray(mods)).put("permaMods", new JSONArray(permaMods))
+					.put("sMods", new JSONArray(sMods)).put("sModdedBuiltIns", new JSONArray(builtIns))
+					.put("suppressedMods", new JSONArray(suppressed));
+			JSONObject moduleJson = new JSONObject();
+			for (var entry : modules.entrySet()) {
+				if (entry.getValue() != null) moduleJson.put(entry.getKey(), entry.getValue().toJSONObject());
+			}
+			return snapshot.put("modules", moduleJson);
+		}
+
+		private LinkedHashSet<String> values(JSONArray array) throws JSONException {
+			LinkedHashSet<String> values = new LinkedHashSet<>();
+			if (array != null) {
+				for (int index = 0; index < array.length(); index++) {
+					values.add(array.getString(index));
+				}
+			}
+			return values;
+		}
+	}
+}

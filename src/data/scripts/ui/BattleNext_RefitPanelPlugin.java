@@ -5,7 +5,6 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.impl.campaign.DModManager;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -13,22 +12,21 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
-import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
+import org.json.JSONException;
 
-import java.awt.Color;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,22 +35,15 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
 
 	private static final float BORDER_INSET = 8f;
-	private static final float SIDE_SHARE = 0.09f;
-	private static final float LEFT_SHARE = 0.38f;
-	private static final float MIDDLE_SHARE = 0.20f;
+	private static final float SIDE_SHARE = 0.1f;
+	private static final float LEFT_SHARE = 0.6f;
 	private static final float RIGHT_SHARE = 0.18f;
-	private static final float GAP_SHARE = 0.03f;
-	private static final float CONTENT_TOP_SHARE = 0.09f;
+	private static final float GAP_SHARE = 0.02f;
+	private static final float CONTENT_TOP_SHARE = 0.1f;
 	private static final float CONTENT_HEIGHT_SHARE = 0.80f;
-	private static final float FRAME_INSET = 8f;
-	private static final float FRAME_BORDER = 2f;
-	private static final float ROW_HEIGHT = 44f;
-	private static final float ROW_GAP = 4f;
-	private static final float ICON_SIZE = 36f;
 	private static final float PICKER_GAP = 36f;
 	private static final float FOOTER_BUTTON_WIDTH = 160f;
 	private static final float FOOTER_BUTTON_GAP = 10f;
-	private static final Color FRAME_BACKGROUND = new Color(0, 0, 0, 150);
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
@@ -62,10 +53,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private UIBorderObject border;
 	private CustomPanelAPI panel;
 	private CustomPanelAPI leftPanel;
-	private CustomPanelAPI middlePanel;
 	private CustomPanelAPI rightPanel;
-	private CustomPanelAPI leftContent;
-	private TooltipMakerAPI middleContent;
+	private BattleNext_VariantDetails details;
 	private BattleNext_OptionPicker sModPicker;
 	private BattleNext_OptionPicker dModPicker;
 	private ButtonAPI saveButton;
@@ -75,7 +64,6 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private ShipVariantAPI draft;
 	private Set<String> savedSMods = Set.of();
 	private Set<String> savedDMods = Set.of();
-	private String selectedMod = "";
 	private String saveError = "";
 	private boolean confirmationWasActive;
 	private float borderX;
@@ -91,6 +79,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	public void init(CustomPanelAPI panel, float width, float height) {
 		this.panel = panel;
 		BattleNext_UiInputRouter.activate(inputRouter);
+		details = new BattleNext_VariantDetails(this::refreshDetails, () -> inputRouter.isEmpty());
 		border = new UIBorderObject(false, true);
 		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - BORDER_INSET;
 		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - BORDER_INSET;
@@ -101,16 +90,12 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		float contentHeight = height * CONTENT_HEIGHT_SHARE;
 		float gap = width * GAP_SHARE;
 		float leftWidth = width * LEFT_SHARE;
-		float middleWidth = width * MIDDLE_SHARE;
 		float rightWidth = width * RIGHT_SHARE;
 		float leftX = width * SIDE_SHARE;
-		float middleX = leftX + leftWidth + gap;
-		float rightX = middleX + middleWidth + gap;
-		leftPanel = panel.createCustomPanel(leftWidth, contentHeight, new FramePlugin());
-		middlePanel = panel.createCustomPanel(middleWidth, contentHeight, new FramePlugin());
+		float rightX = leftX + leftWidth + gap;
+		leftPanel = panel.createCustomPanel(leftWidth, contentHeight, new BaseCustomUIPanelPlugin());
 		rightPanel = panel.createCustomPanel(rightWidth, contentHeight, new BaseCustomUIPanelPlugin());
 		panel.addComponent(leftPanel).inTL(leftX, top);
-		panel.addComponent(middlePanel).inTL(middleX, top);
 		panel.addComponent(rightPanel).inTL(rightX, top);
 
 		buildPickers(rightWidth);
@@ -149,9 +134,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	public void open(FleetMemberAPI member, Object refitScreen) {
 		closePickers();
+		details.close();
+		details.clear();
+		details.setVariantJson(null);
 		this.member = member;
 		this.refitScreen = refitScreen;
-		selectedMod = "";
 		saveError = "";
 		statusLabel.setText("");
 		try {
@@ -159,15 +146,14 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			draft = current == null ? null : current.clone();
 		} catch (Throwable exception) {
 			draft = null;
-			saveError = exception.getMessage();
+			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
 		}
 		savedSMods = draft == null ? Set.of() : sModsOf(draft);
 		savedDMods = draft == null ? Set.of() : dModsOf(draft);
 		confirmationWasActive = false;
 		updateControls();
-		rebuildShip();
-		rebuildMods();
+		refreshDetails();
 	}
 
 	public void close() {
@@ -175,6 +161,9 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		sModPicker.setEnabled(false);
 		dModPicker.setEnabled(false);
 		if (confirmation.isActive()) confirmation.handle("confirm_cancel");
+		details.close();
+		details.clear();
+		details.setVariantJson(null);
 		inputRouter.clear();
 		member = null;
 		refitScreen = null;
@@ -240,13 +229,15 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			draft = saved.clone();
 			savedSMods = sModsOf(draft);
 			savedDMods = dModsOf(draft);
+			refreshDetails();
 			saveError = "";
 			statusLabel.setText(strings.get("saved"));
-			rebuildShip();
-			rebuildMods();
 			return true;
 		} catch (Throwable exception) {
 			if (committed) {
+				details.close();
+				details.clear();
+				details.setVariantJson(null);
 				savedSMods = sModsOf(draft);
 				savedDMods = dModsOf(draft);
 				saveError = "";
@@ -288,7 +279,13 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		try {
 			ShipVariantAPI current = currentVariant();
 			draft = current == null ? null : current.clone();
+			refreshDetails();
 		} catch (Throwable exception) {
+			details.close();
+			details.clear();
+			details.setVariantJson(null);
+			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
 			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Mission refit discard failed", exception);
 		}
 	}
@@ -365,8 +362,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		Set<String> selected = new LinkedHashSet<>(ids);
 		if (selected.equals(sModsOf(draft))) return;
 		applySMods(draft, selected);
-		rebuildMods();
 		statusLabel.setText("");
+		refreshDetails();
 	}
 
 	private void selectDMods(List<String> ids) {
@@ -376,11 +373,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		ShipVariantAPI previous = draft.clone();
 		try {
 			applyDMods(draft, selected);
-			rebuildShip();
-			rebuildMods();
 			statusLabel.setText("");
+			refreshDetails();
 		} catch (RuntimeException exception) {
 			draft = previous;
+			refreshDetails();
 			statusLabel.setText(strings.get("save_failed") + ": " + exception.getMessage());
 		}
 	}
@@ -445,168 +442,27 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		return ids;
 	}
 
-	private void rebuildShip() {
-		if (leftContent != null) leftPanel.removeComponent(leftContent);
-		float width = leftPanel.getPosition().getWidth();
-		float height = leftPanel.getPosition().getHeight();
-		leftContent = leftPanel.createCustomPanel(width - FRAME_INSET * 2f,
-				height - FRAME_INSET * 2f, new BaseCustomUIPanelPlugin());
-		leftPanel.addComponent(leftContent).inTL(FRAME_INSET, FRAME_INSET);
-		if (draft == null || draft.getHullSpec() == null) return;
-		ShipHullSpecAPI hull = draft.getHullSpec();
-		TooltipMakerAPI title = leftContent.createUIElement(width - FRAME_INSET * 2f, 42f, false);
-		title.addSectionHeading(title.shortenString(hull.getHullName(), width - FRAME_INSET * 3f),
-				BattleNext_UiTheme.TEXT, BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
-		leftContent.addUIElement(title).inTL(0f, 0f);
-		String path = hull.getSpriteName();
-		if (path == null || path.isBlank()) return;
+	private void refreshDetails() {
+		if (draft == null) {
+			details.close();
+			details.clear();
+			details.setVariantJson(null);
+			return;
+		}
 		try {
-			SpriteAPI sprite = Global.getSettings().getSprite(path);
-			float availableWidth = width - FRAME_INSET * 4f;
-			float availableHeight = height - 70f;
-			float scale = BattleNext_PageLayout.spriteScaleToFit(
-					sprite.getWidth(), sprite.getHeight(), availableWidth, availableHeight);
-			float imageWidth = sprite.getWidth() * scale;
-			float imageHeight = sprite.getHeight() * scale;
-			TooltipMakerAPI image = leftContent.createUIElement(imageWidth, imageHeight, false);
-			image.addImage(path, imageWidth, imageHeight, 0f);
-			leftContent.addUIElement(image).inTL((availableWidth - imageWidth) * 0.5f + FRAME_INSET,
-					(availableHeight - imageHeight) * 0.5f + 48f);
-		} catch (RuntimeException exception) {
-			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit hull sprite unavailable: " + path, exception);
-		}
-	}
-
-	private void rebuildMods() {
-		if (middleContent != null) middlePanel.removeComponent(middleContent);
-		float width = middlePanel.getPosition().getWidth() - FRAME_INSET * 2f;
-		float height = middlePanel.getPosition().getHeight() - FRAME_INSET * 2f;
-		middleContent = middlePanel.createUIElement(width, height, true);
-		if (draft != null) {
-			List<String> ids = new ArrayList<>(draft.getHullMods());
-			ids.sort(Comparator.comparing(id -> Global.getSettings().getHullModSpec(id).getDisplayName()));
-			for (String id : ids) addModRow(id, width);
-		}
-		middlePanel.addUIElement(middleContent).inTL(FRAME_INSET, FRAME_INSET);
-	}
-
-	private void addModRow(String id, float width) {
-		HullModSpecAPI spec = Global.getSettings().getHullModSpec(id);
-		if (spec == null) return;
-		ModRowPlugin plugin = new ModRowPlugin(id);
-		CustomPanelAPI row = middlePanel.createCustomPanel(width, ROW_HEIGHT, plugin);
-		TooltipMakerAPI icon = row.createUIElement(ICON_SIZE, ICON_SIZE, false);
-		String path = spec.getSpriteName();
-		boolean renderedIcon = false;
-		if (path != null && !path.isBlank()) {
-			try {
-				Global.getSettings().getSprite(path);
-				icon.addImage(path, ICON_SIZE, ICON_SIZE, 0f);
-				renderedIcon = true;
-			} catch (RuntimeException exception) {
-				Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit hullmod icon unavailable: " + path, exception);
+			details.setVariantJson(BattleNext_VariantBuilder.fromVariant(draft).toJson());
+			if (details.getPanel() == null) {
+				details.attach(leftPanel);
+			} else {
+				details.refreshContent();
 			}
-		}
-		if (renderedIcon) {
-			row.addUIElement(icon).inTL(4f, 4f);
-		} else {
-			plugin.missingIcon = true;
-		}
-		TooltipMakerAPI name = row.createUIElement(width - ICON_SIZE - 12f, ROW_HEIGHT, false);
-		name.addPara(name.shortenString(spec.getDisplayName(), width - ICON_SIZE - 18f), 3f);
-		String state = spec.hasTag(Tags.HULLMOD_DMOD) ? strings.get("refit_dmod")
-				: sModsOf(draft).contains(id) ? strings.get("refit_smod")
-				: draft.getHullSpec().isBuiltInMod(id) ? strings.get("read_only") : "";
-		if (!state.isEmpty()) name.addPara(state, 0f);
-		row.addUIElement(name).inTL(ICON_SIZE + 8f, 0f);
-		middleContent.addCustom(row, ROW_GAP);
-		middleContent.addTooltipToPrevious(new BaseTooltipCreator() {
-			@Override
-			public float getTooltipWidth(Object ignored) {
-				return 360f;
-			}
-			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				tooltip.addTitle(spec.getDisplayName());
-				BattleNext_PageLayout.addMutedIdLine(tooltip, id, 4f);
-				String description = spec.getDescription(draft.getHullSize());
-				if (description != null && !description.isBlank()) {
-					tooltip.addPara(description, 8f);
-				}
-			}
-		}, TooltipMakerAPI.TooltipLocation.RIGHT);
-	}
-
-	private class ModRowPlugin extends BaseCustomUIPanelPlugin {
-		private final String id;
-		private PositionAPI position;
-		private boolean hovered;
-		private boolean missingIcon;
-		private ModRowPlugin(String id) {
-			this.id = id;
-		}
-		@Override
-		public void positionChanged(PositionAPI position) {
-			this.position = position;
-		}
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			BattleNext_GeometryRenderer.fillRect(position,
-					id.equals(selectedMod) ? BattleNext_UiTheme.PANEL : BattleNext_UiTheme.PANEL.darker(), alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.PANEL, alphaMult, 1f);
-		}
-		@Override
-		public void render(float alphaMult) {
-			if (position == null || !missingIcon) return;
-			float size = ICON_SIZE * 0.75f;
-			float x = position.getX() + 4f + (ICON_SIZE - size) * 0.5f;
-			float y = position.getY() + position.getHeight() - 4f - ICON_SIZE + (ICON_SIZE - size) * 0.5f;
-			BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(), x, y, size, alphaMult);
-		}
-		@Override
-		public void advance(float amount) {
-			if (position == null) return;
-			float scale = Global.getSettings().getScreenScaleMult();
-			float x = Mouse.getX() / scale;
-			float y = Mouse.getY() / scale;
-			boolean inside = x >= position.getX() && x < position.getX() + position.getWidth()
-					&& y >= position.getY() && y < position.getY() + position.getHeight();
-			if (inside && !hovered) {
-				Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, 1f, 1f);
-			}
-			hovered = inside;
-		}
-		@Override
-		public void processInput(List<InputEventAPI> events) {
-			if (confirmation.isActive() || position == null) return;
-			for (InputEventAPI event : events) {
-				if (event.isConsumed() || !event.isLMBDownEvent() || !position.containsEvent(event)) continue;
-				selectedMod = id;
-				Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID, 1f, 1f);
-				event.consume();
-				return;
-			}
-		}
-	}
-
-	private static class FramePlugin extends BaseCustomUIPanelPlugin {
-		private PositionAPI position;
-		@Override
-		public void positionChanged(PositionAPI position) {
-			this.position = position;
-		}
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (position == null) return;
-			BattleNext_GeometryRenderer.fillRect(position, FRAME_BACKGROUND, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{position.getX(), position.getY(),
-					position.getX() + position.getWidth(), position.getY(),
-					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
-					position.getX(), position.getY() + position.getHeight()}, BattleNext_UiTheme.PANEL, alphaMult, FRAME_BORDER);
+		} catch (JSONException | RuntimeException exception) {
+			details.close();
+			details.clear();
+			details.setVariantJson(null);
+			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
+			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit details refresh failed", exception);
 		}
 	}
 }
