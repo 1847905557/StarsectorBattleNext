@@ -85,7 +85,8 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
 		json.getJSONObject("modules").put("broken", new JSONObject().put("hullId", "missing"));
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
-		details.addTo(panel(600f, 700f, new BaseCustomUIPanelPlugin()), 600f, 700f, json);
+		details.setVariantJson(json);
+		details.attach(panel(600f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.stream().anyMatch(value -> value.contains("Child")));
 		assertTrue(labels.stream().anyMatch(value -> value.contains("child_variant")));
 		assertTrue(labels.stream().anyMatch(value -> value.contains("broken") && value.contains("Unknown module hull")));
@@ -141,7 +142,8 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		}
 		json.put("modules", new JSONObject());
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
-		details.addTo(panel(1000f, 700f, new BaseCustomUIPanelPlugin()), 1000f, 700f, json);
+		details.setVariantJson(json);
+		details.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.contains("Parent"));
 		assertEquals(4, labels.stream().filter("BattleNext_ui_variant_none"::equals).count());
 		for (String key : List.of("plugins", "modules", "groups", "wings")) {
@@ -160,8 +162,10 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		JSONObject json = equipmentJson();
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		CustomPanelAPI owner = panel(width, 601f, new BaseCustomUIPanelPlugin());
-		details.addTo(owner, width, 601f, json);
-		List<PositionAPI> frames = children.get(owner).stream().map(CustomPanelAPI.class::cast)
+		details.setVariantJson(json);
+		details.attach(owner);
+			CustomPanelAPI root = details.getPanel();
+			List<PositionAPI> frames = children.get(root).stream().map(CustomPanelAPI.class::cast)
 				.map(CustomPanelAPI::getPosition).toList();
 		assertEquals(5, frames.size());
 		assertEquals(8f, frames.get(1).getX() - frames.get(0).getX() - frames.get(0).getWidth());
@@ -208,7 +212,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 		JSONObject json = equipmentJson();
 		BattleNext_VariantDetails[] details = new BattleNext_VariantDetails[1];
-		Runnable refresh = () -> details[0].addTo(panel(640f, 601f, new BaseCustomUIPanelPlugin()), 640f, 601f, json);
+		Runnable refresh = () -> { details[0].setVariantJson(json); details[0].attach(panel(640f, 601f, new BaseCustomUIPanelPlugin())); };
 		details[0] = new BattleNext_VariantDetails(refresh);
 		refresh.run();
 		Map<String, Float> offsets = new LinkedHashMap<>();
@@ -271,7 +275,8 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 				.put(new JSONObject().put("mode", "LINKED").put("weapons", new JSONObject()))
 				.put("invalid"));
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
-		details.addTo(panel(1000f, 700f, new BaseCustomUIPanelPlugin()), 1000f, 700f, json);
+		details.setVariantJson(json);
+		details.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		for (String key : List.of("plugins", "modules", "groups", "wings")) {
 			assertEquipmentSpacing(tooltips.get(lists(details).get(key)));
 		}

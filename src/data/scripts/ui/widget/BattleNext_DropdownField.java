@@ -1,20 +1,17 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_UiInputRouter;
-
 import org.lwjgl.input.Keyboard;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public final class BattleNext_DropdownField {
+public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 
 	private static final float POPUP_ROW_GAP = 2f;
 	private static final float POPUP_SCREEN_MARGIN = 8f;
@@ -48,13 +45,10 @@ public final class BattleNext_DropdownField {
 
 	private enum DropdownAction { TOGGLE }
 
-	private final CustomPanelAPI host;
-	private final CustomUIPanelPlugin inputOwner;
 	private final float width;
+	private final CustomPanelAPI overlayHost;
 	private final DropdownSelectionListener listener;
-	private final BattleNext_UiInputRouter inputRouter;
 	private final List<DropdownChoice> options = new ArrayList<>();
-	private UIRect rect;
 	private CustomPanelAPI row;
 	private ButtonAPI button;
 	private CustomPanelAPI popup;
@@ -62,28 +56,22 @@ public final class BattleNext_DropdownField {
 	private String value = "";
 	private boolean enabled = true;
 
-	public BattleNext_DropdownField(CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
-			float width, DropdownSelectionListener listener) {
-		this(BattleNext_UiInputRouter.current(), host, inputOwner, width, listener);
-	}
-
-	public BattleNext_DropdownField(BattleNext_UiInputRouter inputRouter, CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
-			float width, DropdownSelectionListener listener) {
-		this.host = host;
-		this.inputOwner = inputOwner;
-		this.width = width;
-		this.listener = listener;
-		this.inputRouter = inputRouter;
-	}
-
-	public void attach(TooltipMakerAPI parent, UIRect rect) {
-		if (row != null) host.removeComponent(row);
-		this.rect = rect;
-		row = host.createCustomPanel(rect.getWidth(), rect.getHeight(), new DropdownButtonPlugin());
+	@Override
+	protected void buildContent(CustomPanelAPI panel) {
+		float height = panel.getPosition().getHeight();
+		row = ownPanel(panel, panel.createCustomPanel(width, height, new DropdownButtonPlugin()));
 		button = BattleNext_PageLayout.fixedButton(row,
-				new UIRect(0f, 0f, rect.getWidth(), rect.getHeight()), "", DropdownAction.TOGGLE, CutStyle.ALL, false);
-		host.addComponent(row).inTL(rect.getX(), rect.getY());
+				new UIRect(0f, 0f, width, height), "", DropdownAction.TOGGLE, CutStyle.ALL, false);
+		panel.addComponent(row).inTL(0f, 0f);
 		refreshLabel();
+	}
+
+	public BattleNext_DropdownField(BattleNext_UiInputRouter inputRouter,
+			CustomPanelAPI overlayHost, float width, DropdownSelectionListener listener) {
+		super(inputRouter);
+		this.width = width;
+		this.overlayHost = overlayHost;
+		this.listener = listener;
 	}
 
 	public void setValue(String id) {
@@ -105,7 +93,7 @@ public final class BattleNext_DropdownField {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 		if (button != null) button.setEnabled(enabled);
-		if (!enabled) close();
+		if (!enabled) closePopup();
 	}
 
 	public void refreshLabel() {
@@ -120,8 +108,20 @@ public final class BattleNext_DropdownField {
 		button.setText(label);
 	}
 
-	public void close() {
-		if (popup != null) host.removeComponent(popup);
+	@Override
+	protected void clearOverlays() {
+		closePopup();
+	}
+
+	@Override
+	protected void clearContent() {
+		closePopup();
+		row = null;
+		button = null;
+	}
+
+	private void closePopup() {
+		if (popup != null) releasePanel(popup);
 		if (popupOverlay != null) inputRouter.pop(popupOverlay);
 		popup = null;
 		popupOverlay = null;
@@ -132,7 +132,7 @@ public final class BattleNext_DropdownField {
 		public void buttonPressed(Object buttonId) {
 			if (buttonId != DropdownAction.TOGGLE) return;
 			if (popup == null) openPopup();
-			else close();
+			else closePopup();
 		}
 	}
 
@@ -140,20 +140,21 @@ public final class BattleNext_DropdownField {
 		return popup != null;
 	}
 
-	public boolean handleGlobalInput(List<InputEventAPI> events) {
+	@Override
+	protected boolean handleWidgetInput(List<InputEventAPI> events) {
 		if (popup == null || !inputRouter.isTop(popupOverlay)) return false;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent()
 					&& event.getEventValue() == Keyboard.KEY_ESCAPE) {
-				close();
+				closePopup();
 				event.consume();
 				return true;
 			}
 			if (event.isMouseDownEvent()
 					&& !contains(popup, event.getX(), event.getY())
 					&& !contains(button, event.getX(), event.getY())) {
-				close();
+				closePopup();
 			}
 		}
 		return false;
@@ -167,20 +168,24 @@ public final class BattleNext_DropdownField {
 	}
 
 	private void openPopup() {
-		close();
-		if (!enabled || rect == null) return;
+		closePopup();
+		if (!enabled || row == null) return;
 		inputRouter.releaseFocus();
-		float hostHeight = host.getPosition().getHeight();
-		float dropdownY = rect.getY() + rect.getHeight() + POPUP_ROW_GAP;
+		float hostHeight = overlayHost.getPosition().getHeight();
+		PositionAPI rowPosition = row.getPosition();
+		PositionAPI ownerPosition = overlayHost.getPosition();
+		float rowTop = ownerPosition.getY() + hostHeight - rowPosition.getY() - rowPosition.getHeight();
+		float rowX = rowPosition.getX() - ownerPosition.getX();
+		float dropdownY = rowTop + rowPosition.getHeight() + POPUP_ROW_GAP;
 		float belowSpace = hostHeight - dropdownY - POPUP_SCREEN_MARGIN;
-		float aboveSpace = rect.getY() - POPUP_SCREEN_MARGIN;
+		float aboveSpace = rowTop - POPUP_SCREEN_MARGIN;
 		int optionCount = Math.max(1, options.size());
 		float desiredHeight = Math.min(POPUP_MAX_HEIGHT, optionCount * POPUP_OPTION_HEIGHT);
 		boolean above = belowSpace < desiredHeight && aboveSpace > belowSpace;
 		float available = Math.max(POPUP_OPTION_HEIGHT, above ? aboveSpace : belowSpace);
 		float height = Math.min(desiredHeight, available);
-		float y = above ? rect.getY() - height - POPUP_ROW_GAP : dropdownY;
-		popup = host.createCustomPanel(width, height, new DropdownPopupPlugin());
+		float y = above ? rowTop - height - POPUP_ROW_GAP : dropdownY;
+		popup = ownPanel(overlayHost, panel.createCustomPanel(width, height, new DropdownPopupPlugin()));
 		TooltipMakerAPI list = popup.createUIElement(width - POPUP_SCROLLBAR_RESERVE, height, true);
 		list.setButtonFontOrbitron20();
 		if (options.isEmpty()) {
@@ -193,7 +198,8 @@ public final class BattleNext_DropdownField {
 			}
 		}
 		popup.addUIElement(list).inTL(0f, 0f);
-		host.addComponent(popup).inTL(rect.getX(), Math.max(POPUP_SCREEN_MARGIN, y));
+		overlayHost.addComponent(popup).inTL(rowX, Math.max(POPUP_SCREEN_MARGIN, y));
+		overlayHost.bringComponentToTop(popup);
 		popupOverlay = new PopupOverlay(popup);
 		inputRouter.push(popupOverlay);
 	}
@@ -212,12 +218,12 @@ public final class BattleNext_DropdownField {
 
 		@Override
 		public boolean handleGlobalInput(List<InputEventAPI> events) {
-			return BattleNext_DropdownField.this.handleGlobalInput(events);
+			return BattleNext_DropdownField.this.handleWidgetInput(events);
 		}
 
 		@Override
 		public void close() {
-			if (popup != null) BattleNext_DropdownField.this.close();
+			if (popup != null) BattleNext_DropdownField.this.closePopup();
 		}
 	}
 
@@ -229,7 +235,7 @@ public final class BattleNext_DropdownField {
 			if (!option.enabled) return;
 			value = option.id;
 			inputRouter.releaseFocus();
-			close();
+			closePopup();
 			refreshLabel();
 			if (listener != null) listener.onSelected(value);
 		}

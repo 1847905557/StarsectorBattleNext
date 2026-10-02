@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
-public class BattleNext_VariantDetails {
+public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 	private static final float GAP = BattleNext_PageLayout.MANAGEMENT_CONTENT_INSET;
 	private static final float SECTION_HEADER_HEIGHT = BattleNext_PageLayout.TABLE_HEADER_HEIGHT;
@@ -41,6 +41,7 @@ public class BattleNext_VariantDetails {
 	private final Map<String, TooltipMakerAPI> lists = new LinkedHashMap<>();
 	private final Runnable refresh;
 	private final BooleanSupplier interactive;
+	private JSONObject variantJson;
 
 	public BattleNext_VariantDetails(Runnable refresh) {
 		this(refresh, () -> true);
@@ -56,7 +57,18 @@ public class BattleNext_VariantDetails {
 		lists.clear();
 	}
 
-	public void addTo(CustomPanelAPI owner, float width, float height, JSONObject json) {
+	public void setVariantJson(JSONObject json) {
+		variantJson = json;
+	}
+
+	@Override
+	protected void buildContent(CustomPanelAPI panel) {
+		if (variantJson != null) {
+			buildDetails(panel, panel.getPosition().getWidth(), panel.getPosition().getHeight(), variantJson);
+		}
+	}
+
+	private void buildDetails(CustomPanelAPI owner, float width, float height, JSONObject json) {
 
 		Map<String, Float> offsets = new LinkedHashMap<>();
 		for (var entry : lists.entrySet()) {
@@ -110,7 +122,7 @@ public class BattleNext_VariantDetails {
 	}
 
 	private CustomPanelAPI frame(CustomPanelAPI owner, UIRect bounds, String title) {
-		CustomPanelAPI panel = owner.createCustomPanel(bounds.getWidth(), bounds.getHeight(), new FramePlugin());
+		CustomPanelAPI panel = ownPanel(owner, owner.createCustomPanel(bounds.getWidth(), bounds.getHeight(), new FramePlugin()));
 		owner.addComponent(panel).inTL(bounds.getX(), bounds.getY());
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, bounds.getWidth(), SECTION_HEADER_HEIGHT),
 				panel, title);
@@ -300,7 +312,7 @@ public class BattleNext_VariantDetails {
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header("", false, "",
 					strings.format("variant_group_compact", index + 1, count),
 					group.optString("mode", "") + " / " + status, "", "");
-			BattleNext_ExpandablePanel.addTo(list, owner, width, open, bodyHeight, header,
+			BattleNext_ExpandablePanel.add(list, owner, width, open, bodyHeight, header,
 					() -> {
 						if (!interactive.getAsBoolean()) return;
 						if (!expanded.add(key)) {

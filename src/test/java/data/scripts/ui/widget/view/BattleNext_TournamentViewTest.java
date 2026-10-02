@@ -16,6 +16,7 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import static org.junit.jupiter.api.Assertions.*;

@@ -24,7 +24,7 @@ import java.util.function.Consumer;
  * The public TextFieldAPI has no horizontal scrolling state, so this widget
  * keeps the text model and viewport state itself.
  */
-public final class BattleNext_TextField implements TextFieldAPI {
+public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implements TextFieldAPI {
 
 	private static final Color DEFAULT_TEXT_COLOR = Color.WHITE;
 	private static final Color DEFAULT_BACKGROUND = new Color(20, 48, 57, 210);
@@ -47,11 +47,12 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	public static final float AUTO_SCROLL_ACCELERATION = 20f;
 
 	private final BattleNext_TextFieldSession session;
-	private final CustomPanelAPI panel;
-	private final TooltipMakerAPI textHost;
-	private final LabelAPI textLabel;
+	private CustomPanelAPI panel;
+	private TooltipMakerAPI textHost;
+	private LabelAPI textLabel;
 	private final float width;
 	private final float height;
+	private final TooltipMakerAPI[] viewports;
 	private final Consumer<String> soundSink;
 
 	private String text = "";
@@ -72,49 +73,46 @@ public final class BattleNext_TextField implements TextFieldAPI {
 	private Color background = DEFAULT_BACKGROUND;
 	private Color border = DEFAULT_BORDER;
 
-	private BattleNext_TextField(BattleNext_UiInputRouter router, CustomPanelAPI panel, float width, float height) {
-		this.session = router.getSession();
-		this.panel = panel;
-		this.width = width;
-		this.height = height;
-		this.soundSink = id -> Global.getSoundPlayer().playUISound(id, 1f, 1f);
-		this.textColor = Misc.getButtonTextColor();
-		this.textHost = panel.createUIElement(width, height, false);
-		this.textHost.setParaSmallInsignia();
-		this.textHost.setParaFontColor(this.textColor);
-		this.textLabel = textHost.addPara("", 0f);
-		this.textLabel.setAlignment(Alignment.LMID);
-		this.textLabel.setColor(this.textColor);
+	@Override
+	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
+		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
+		panel = ownPanel(host, panelOwner.createCustomPanel(width, height, plugin));
+		textHost = panel.createUIElement(width, height, false);
+		textHost.setParaSmallInsignia();
+		textHost.setParaFontColor(textColor);
+		textLabel = textHost.addPara("", 0f);
+		textLabel.setAlignment(Alignment.LMID);
+		textLabel.setColor(textColor);
 		textHost.setHeightSoFar(height);
 		panel.addUIElement(textHost).inTL(0f, 0f);
+		plugin.field = this;
+		session.register(this, viewports);
+		host.addCustom(panel, 0f);
 		refreshVisual();
 	}
 
-	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
-			float width, float height, String value) {
-		return addTo(host, owner, width, height, value, new TooltipMakerAPI[0]);
+	public TextFieldAPI getField() {
+		return this;
 	}
 
-	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
-			float width, float height, String value, TooltipMakerAPI... viewports) {
-		return addTo(BattleNext_UiInputRouter.current(), host, owner, width, height, value, viewports);
+	public BattleNext_TextField(BattleNext_UiInputRouter router, CustomPanelAPI panelOwner, float width, float height,
+			TooltipMakerAPI... viewports) {
+		super(router);
+		this.session = router.getSession();
+		this.panel = null;
+		this.width = width;
+		this.height = height;
+		this.viewports = viewports;
+		this.soundSink = id -> Global.getSoundPlayer().playUISound(id, 1f, 1f);
+		this.textColor = Misc.getButtonTextColor();
 	}
 
-	public static TextFieldAPI addTo(BattleNext_UiInputRouter router, TooltipMakerAPI host, CustomPanelAPI owner,
-			float width, float height, String value, TooltipMakerAPI... viewports) {
-		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
-		CustomPanelAPI panel = owner.createCustomPanel(width, height, plugin);
-		BattleNext_TextField field = new BattleNext_TextField(router, panel, width, height);
-		field.session.register(field, viewports);
-		plugin.field = field;
-		field.setText(value == null ? "" : value);
-		host.addCustom(panel, 0f);
-		return field;
-	}
-
-	public static TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner,
-			float width, float height) {
-		return addTo(host, owner, width, height, "");
+	@Override
+	protected void clearContent() {
+		session.unregister(this);
+		panel = null;
+		textHost = null;
+		textLabel = null;
 	}
 
 	public static void releaseFocusedField() {
@@ -125,7 +123,7 @@ public final class BattleNext_TextField implements TextFieldAPI {
 		BattleNext_UiInputRouter.current().getSession().clearRegisteredFields();
 	}
 
-	public static boolean handleGlobalInput(List<InputEventAPI> events) {
+	public static boolean handleGlobalInputStatic(List<InputEventAPI> events) {
 		return BattleNext_UiInputRouter.current().getSession().handleGlobalInput(events);
 	}
 

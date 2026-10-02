@@ -81,6 +81,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	private TextFieldAPI mapField;
 	private TextFieldAPI fleetField;
 	private BattleNext_OptionField fleetPicker;
+	private final List<BattleNext_TextField> textFields = new ArrayList<>();
 	private CheckBoxGroup bracketGroup;
 	private final BattleNext_RulesCheck rulesCheck = new BattleNext_RulesCheck();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
@@ -123,7 +124,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	}
 
 	public void closePicker() {
-		if (fleetPicker != null) fleetPicker.close();
+		if (fleetPicker != null) fleetPicker.closeOverlays();
 	}
 
 	@Override
@@ -148,7 +149,12 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 				boField.getText(), maxFleetField.getText(), ruleField.getText(), mapField.getText(), fleetField.getText()};
 		Object bracket = idField == null ? null : bracketGroup.getCheckedValue();
 		closePicker();
-		inputRouter.clear();
+		if (fleetPicker != null) fleetPicker.close();
+		fleetPicker = null;
+		for (BattleNext_TextField field : textFields) {
+			field.close();
+		}
+		textFields.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
@@ -218,10 +224,12 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		if (isReadOnly()) {
 			for (String fleet : draft.getFleetIds()) content.addPara(fleet, FLEET_ENTRY_GAP);
 		} else {
-			fleetPicker = new BattleNext_OptionField(inputRouter, panel, new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
-			fleetField = fleetPicker.addTo(content, panel,
+			fleetPicker = new BattleNext_OptionField(inputRouter, panel,
 					Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE),
-					String.join(",", draft.getFleetIds()), content);
+					new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, content);
+			fleetPicker.attach(content, panel);
+			fleetField = fleetPicker.getField();
+			fleetField.setText(String.join(",", draft.getFleetIds()));
 			fleetField.setMaxChars(FLEET_SELECTOR_MAX_CHARS);
 			BattleNext_PageLayout.button(content, text("apply_fleet_selection"), "fleet:apply",
 					FLEET_APPLY_BUTTON_WIDTH);
@@ -301,9 +309,13 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			host.addPara(value, READ_ONLY_FIELD_VALUE_GAP);
 			return null;
 		}
-		TextFieldAPI result = BattleNext_TextField.addTo(inputRouter, host, panel,
-				Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE),
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
+		float width = Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, panel, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textFields.add(widget);
+		widget.attach(host, panel);
+		widget.setText(value);
+		TextFieldAPI result = widget;
 		result.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		return result;
 	}

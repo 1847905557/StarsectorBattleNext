@@ -113,17 +113,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		panel.addComponent(middlePanel).inTL(middleX, top);
 		panel.addComponent(rightPanel).inTL(rightX, top);
 
-		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, new BattleNext_RefitSModSourceProvider(() -> draft),
-				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
-				() -> draft == null ? List.of() : new ArrayList<>(sModsOf(draft)), this::selectSMods);
-		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, new BattleNext_RefitDModSourceProvider(() -> draft),
-				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
-				() -> draft == null ? List.of() : new ArrayList<>(dModsOf(draft)), this::selectDMods);
-		sModPicker.addButton(rightPanel, new UIRect(0f, 0f, rightWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
-				strings.get("refit_smods"));
-		dModPicker.addButton(rightPanel,
-				new UIRect(0f, PICKER_GAP, rightWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
-				strings.get("refit_dmods"));
+		buildPickers(rightWidth);
 
 		float closeX = width - BORDER_INSET - FOOTER_BUTTON_WIDTH;
 		float footerY = height - BORDER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT;
@@ -138,6 +128,23 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		statusLabel = status.addPara("", 0f);
 		panel.addUIElement(status).inTL(BORDER_INSET, footerY);
 		saveButton.setEnabled(false);
+	}
+
+	private void buildPickers(float width) {
+		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, strings.get("refit_smods"), 0f,
+				new BattleNext_RefitSModSourceProvider(() -> draft),
+				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
+				() -> draft == null ? List.of() : new ArrayList<>(sModsOf(draft)), this::selectSMods);
+		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, strings.get("refit_dmods"), 0f,
+				new BattleNext_RefitDModSourceProvider(() -> draft),
+				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
+				() -> draft == null ? List.of() : new ArrayList<>(dModsOf(draft)), this::selectDMods);
+		TooltipMakerAPI sModHost = rightPanel.createUIElement(width, 30f, false);
+		sModPicker.attach(sModHost, rightPanel);
+		rightPanel.addUIElement(sModHost).inTL(0f, 0f);
+		TooltipMakerAPI dModHost = rightPanel.createUIElement(width, 30f, false);
+		dModPicker.attach(dModHost, rightPanel);
+		rightPanel.addUIElement(dModHost).inTL(0f, PICKER_GAP);
 	}
 
 	public void open(FleetMemberAPI member, Object refitScreen) {
@@ -341,8 +348,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	private void closePickers() {
 		inputRouter.releaseFocus();
-		if (sModPicker != null) sModPicker.close();
-		if (dModPicker != null) dModPicker.close();
+		if (sModPicker != null) sModPicker.closeOverlays();
+		if (dModPicker != null) dModPicker.closeOverlays();
 	}
 
 	private void updateControls() {

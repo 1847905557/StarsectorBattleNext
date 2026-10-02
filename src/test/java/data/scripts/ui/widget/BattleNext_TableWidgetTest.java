@@ -85,10 +85,10 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 	void tablesMeasureRowsAndAdditionalContentBeforeMount(int count) {
 		CustomPanelAPI root = panel(600f, 240f, new BaseCustomUIPanelPlugin());
 		BattleNext_TableWidget table = new BattleNext_TableWidget(
-				root, root.getPlugin(), new String[]{"Name"}, new float[]{1f}, count,
+				root.getPlugin(), new String[]{"Name"}, new float[]{1f}, count,
 				(index, width, cells, content) -> content.addCustom(panel(width, 42f, root.getPlugin()), 0f),
 				(width, content) -> content.addCustom(panel(width, 30f, root.getPlugin()), 5f));
-		table.attach(new UIRect(0f, 0f, 600f, 240f));
+		table.attach(root);
 		TooltipState state = tooltips.get(table.getContent());
 		assertEquals(count * 42f + 35f, state.getMountedHeight());
 		assertEquals(Math.min(222f, state.getMountedHeight() + 10f), state.getViewport().getHeight());

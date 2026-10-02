@@ -58,6 +58,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private final BattleNext_RuleStore store;
 	private final Map<String, ButtonAPI> enabledFields = new LinkedHashMap<>();
 	private final Map<String, TextFieldAPI> valueFields = new LinkedHashMap<>();
+	private final List<BattleNext_TextField> textFields = new ArrayList<>();
 	private CustomPanelAPI panel;
 	private UIRect contentRect;
 	private BattleNext_RuleModel draft;
@@ -87,7 +88,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	}
 
 	public void closePicker() {
-		if (restrictionPicker != null) restrictionPicker.close();
+		if (restrictionPicker != null) restrictionPicker.closeOverlays();
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -122,7 +123,12 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			captureInputs(false);
 		}
 		closePicker();
-		inputRouter.clear();
+		if (restrictionPicker != null) restrictionPicker.close();
+		if (tableWidget != null) tableWidget.close();
+		for (BattleNext_TextField field : textFields) {
+			field.close();
+		}
+		textFields.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		float usableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
@@ -148,14 +154,17 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		String[] labels = {text("rules_restriction"), text("rules_value_items"), text("enabled"), text("actions")};
 		enabledFields.clear();
 		valueFields.clear();
-		restrictionPicker = new BattleNext_OptionPicker(inputRouter, panel, new RestrictionChoiceSource(),
-				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
-		tableWidget = new BattleNext_TableWidget(tablePanel, panel.getPlugin(), labels, COLUMN_SHARES,
+		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), labels, COLUMN_SHARES,
 				draft.getRestrictions().size(),
 				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions),
-				(rowWidth, content) -> restrictionPicker.addTo(content, panel, Math.min(RULE_PICKER_MAX_WIDTH, rowWidth),
-						text("rules_add_restriction"), content, restrictions));
-		tableWidget.attach(new UIRect(0f, 0f, rightWidth, tableHeight));
+				(rowWidth, content) -> {
+					restrictionPicker = new BattleNext_OptionPicker(inputRouter, panel, Math.min(190f, rowWidth),
+							BattleNext_PageLayout.FORM_FIELD_HEIGHT, text("rules_add_restriction"), 2f,
+							new RestrictionChoiceSource(), BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
+							List::of, this::addRestrictions, content, restrictions);
+					restrictionPicker.attach(content, panel);
+				});
+		tableWidget.attach(tablePanel);
 		for (var entry : values.entrySet()) {
 			if (valueFields.containsKey(entry.getKey())) {
 				valueFields.get(entry.getKey()).setText(entry.getValue());
@@ -245,8 +254,12 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		float width = Math.max(FIELD_MIN_WIDTH, rect.getWidth()
 				- BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET - BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET);
 		TooltipMakerAPI maker = owner.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, maker, owner, width,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, owner, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textFields.add(widget);
+		widget.attach(maker, owner);
+		widget.setText(value);
+		TextFieldAPI field = widget;
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		owner.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET,
@@ -391,9 +404,13 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value, float width,
 			TooltipMakerAPI... viewports) {
 		host.addPara(label, DETAILS_FIELD_LABEL_GAP);
-		return BattleNext_TextField.addTo(inputRouter, host, owner,
-				Math.max(DETAILS_FIELD_MIN_WIDTH, width),
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
+		float fieldWidth = Math.max(DETAILS_FIELD_MIN_WIDTH, width);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, owner, fieldWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textFields.add(widget);
+		widget.attach(host, owner);
+		widget.setText(value);
+		return widget;
 	}
 
 	private String displayValue(BattleNext_RuleRestriction restriction) {

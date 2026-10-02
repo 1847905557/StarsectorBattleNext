@@ -68,6 +68,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private CustomPanelAPI overlayHost;
 	private BattleNext_OptionField skillsPicker;
 	private final List<BattleNext_OptionField> memberPickers = new ArrayList<>();
+	private final List<BattleNext_TextField> textFields = new ArrayList<>();
 	private UIRect contentRect;
 	private LabelAPI status;
 	private String statusText = "";
@@ -110,9 +111,9 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public void closePicker() {
 		captureDraft(false);
-		if (skillsPicker != null) skillsPicker.close();
+		if (skillsPicker != null) skillsPicker.closeOverlays();
 		for (BattleNext_OptionField picker : memberPickers) {
-			picker.close();
+			picker.closeOverlays();
 		}
 	}
 
@@ -186,8 +187,15 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
-		inputRouter.clear();
 		closePicker();
+		if (skillsPicker != null) skillsPicker.close();
+		for (BattleNext_OptionField picker : memberPickers) {
+			picker.close();
+		}
+		for (BattleNext_TextField field : textFields) {
+			field.close();
+		}
+		textFields.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		float usableWidth = Math.max(BattleNext_PageLayout.EDITOR_MIN_SPLIT_WIDTH,
@@ -211,9 +219,11 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width, metaContent);
 		description = field(metaContent, text("fleet_description"), draft.getDescription(), width, metaContent);
 		metaContent.addPara(text("fleet_skills"), FIELD_LABEL_GAP);
-		skillsPicker = new BattleNext_OptionField(inputRouter, overlayHost, new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
-		skills = skillsPicker.addTo(metaContent, panel, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
-				String.join(",", draft.getSkills()), metaContent);
+		skillsPicker = new BattleNext_OptionField(inputRouter, overlayHost, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
+				new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, metaContent);
+		skillsPicker.attach(metaContent, panel);
+		skills = skillsPicker.getField();
+		skills.setText(String.join(",", draft.getSkills()));
 		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width, metaContent);
 	}
 
@@ -239,7 +249,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				hullName, member.getName(), "", "");
 		FleetMemberEditorFields fields = new FleetMemberEditorFields();
 		memberFields.add(fields);
-		BattleNext_ExpandablePanel.addTo(memberContent, panel, width, expanded, detailHeight, header,
+		BattleNext_ExpandablePanel.add(memberContent, panel, width, expanded, detailHeight, header,
 				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float detailWidth = width - MEMBER_DETAIL_INSET * 2f;
 			TooltipMakerAPI title = bodyPanel.createUIElement(detailWidth, MEMBER_DETAIL_TITLE_HEIGHT, false);
@@ -247,28 +257,28 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			title.setHeightSoFar(MEMBER_DETAIL_TITLE_HEIGHT);
 			bodyPanel.addUIElement(title).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 			float y = MEMBER_DETAIL_INSET + MEMBER_DETAIL_TITLE_HEIGHT;
-			BattleNext_OptionField variantPicker = new BattleNext_OptionField(inputRouter, overlayHost,
-					variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE);
+			BattleNext_OptionField variantPicker = new BattleNext_OptionField(inputRouter,
+					overlayHost, detailWidth, variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
 			fields.variant = addOptionBlock(bodyPanel, memberContent, text("variant"), variantPicker,
 					member.getVariantId(), detailWidth, y);
 			memberPickers.add(variantPicker);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
 			fields.name = addFieldBlock(bodyPanel, memberContent, text("member_name"), member.getName(), detailWidth, y);
 			y += MEMBER_DETAIL_FIELD_BLOCK;
-			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(inputRouter, overlayHost,
-					new BattleNext_PersonalitySourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
+			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(inputRouter,
+					overlayHost, detailWidth, new BattleNext_PersonalitySourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
 			fields.personality = addOptionBlock(bodyPanel, memberContent, text("personality"), personalityPicker,
 					member.getPersonality(), detailWidth, y);
 			memberPickers.add(personalityPicker);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
-			BattleNext_OptionField memberSkills = new BattleNext_OptionField(inputRouter, overlayHost,
-					new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE);
+			BattleNext_OptionField memberSkills = new BattleNext_OptionField(inputRouter,
+					overlayHost, detailWidth, new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, memberContent);
 			fields.skills = addOptionBlock(bodyPanel, memberContent, text("member_skills"), memberSkills,
 					String.join(",", member.getSkills()), detailWidth, y);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
 			memberPickers.add(memberSkills);
-			BattleNext_OptionField portraitPicker = new BattleNext_OptionField(inputRouter, overlayHost,
-					new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE);
+			BattleNext_OptionField portraitPicker = new BattleNext_OptionField(inputRouter,
+					overlayHost, detailWidth, new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
 			fields.portrait = addOptionBlock(bodyPanel, memberContent, text("portrait"), portraitPicker,
 					member.getPortrait(), detailWidth, y);
 			y += MEMBER_DETAIL_PICKER_BLOCK;
@@ -301,8 +311,12 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		addMemberLabel(block, label, width);
 		float fieldWidth = Math.max(FIELD_MIN_WIDTH, width - FIELD_SIDE_RESERVE);
 		TooltipMakerAPI input = block.createUIElement(fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, input, block, fieldWidth,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewport);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, block, fieldWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewport);
+		textFields.add(widget);
+		widget.attach(input, block);
+		widget.setText(value);
+		TextFieldAPI field = widget;
 		input.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		block.addUIElement(input).inTL(0f, MEMBER_DETAIL_CONTROL_TOP);
 		field.setVerticalCursor(true);
@@ -317,8 +331,9 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 				new BaseCustomUIPanelPlugin());
 		addMemberLabel(block, label, width);
 		TooltipMakerAPI input = block.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT + 2f, false);
-		TextFieldAPI field = option.addTo(input, block,
-				Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE), value, viewport);
+		option.attach(input, block);
+		TextFieldAPI field = option.getField();
+		field.setText(value);
 		input.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT + 2f);
 		block.addUIElement(input).inTL(0f, MEMBER_DETAIL_CONTROL_TOP);
 		owner.addComponent(block).inTL(MEMBER_DETAIL_INSET, y);
@@ -354,10 +369,13 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private TextFieldAPI field(TooltipMakerAPI host, CustomPanelAPI owner, String label, String value,
 			float sectionWidth, TooltipMakerAPI... viewports) {
 		host.addPara(label, FIELD_LABEL_GAP);
-		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, host, owner,
-				Math.max(FIELD_MIN_WIDTH, sectionWidth - FIELD_SIDE_RESERVE),
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value,
-				viewports);
+		float width = Math.max(FIELD_MIN_WIDTH, sectionWidth - FIELD_SIDE_RESERVE);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, owner, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textFields.add(widget);
+		widget.attach(host, owner);
+		widget.setText(value);
+		TextFieldAPI field = widget;
 		field.setVerticalCursor(true);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		return field;

@@ -120,8 +120,11 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		BattleNext_UiTheme.configure(contents);
 		contents.setTextWidthOverride(width);
 		contents.addPara(strings.get("pin_name"), 0f);
-		name = BattleNext_TextField.addTo(inputRouter, contents, metadataPanel, width,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, displayName, contents);
+		BattleNext_TextField nameWidget = new BattleNext_TextField(inputRouter, metadataPanel, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, contents);
+		nameWidget.attach(contents, metadataPanel);
+		nameWidget.setText(displayName);
+		name = nameWidget;
 		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		if (!status.isEmpty()) {
 			contents.addPara(status, BattleNext_UiTheme.TEXT, INSET);
@@ -138,7 +141,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		detailsPanel.getPosition().inTL(0f, metadataHeight + BattleNext_PageLayout.MANAGEMENT_CONTENT_INSET);
 		if (snapshot != null) {
 			try {
-				details.addTo(detailsPanel, width, detailsHeight, snapshot.toJson());
+				details.setVariantJson(snapshot.toJson());
+				details.attach(detailsPanel);
 			} catch (Exception exception) {
 				TooltipMakerAPI error = detailsPanel.createUIElement(width, detailsHeight, true);
 				error.addPara(strings.get("pin_snapshot_error") + ": " + exception, INSET);

@@ -5,14 +5,16 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_ConfirmationDialogTest extends BattleNext_TestPageFixture {
 
 	@Test
-	void unsavedAndDeleteRequestsOpenAndCancelTheirOverlay() {
+	void unsavedAndDeleteRequestsOpenAndCancelTheirOverlay() throws Exception {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		BattleNext_ConfirmationDialog dialog = new BattleNext_ConfirmationDialog(
 				new BattleNext_ConfirmationDialog.ConfirmationDialogHost() {
@@ -44,5 +46,14 @@ class BattleNext_ConfirmationDialogTest extends BattleNext_TestPageFixture {
 		dialog.handle("delete_cancel");
 		assertFalse(dialog.isActive());
 		assertTrue(router.isEmpty());
+		assertTrue(((List<?>) getField(dialog, "ownedPanels")).isEmpty());
+		for (int cycle = 0; cycle < 4; cycle++) {
+			dialog.request(() -> {});
+			assertEquals(1, children.get(root).size());
+			dialog.handle("confirm_cancel");
+			assertTrue(children.get(root).isEmpty());
+			assertTrue(((List<?>) getField(dialog, "ownedPanels")).isEmpty());
+		}
+		dialog.close();
 	}
 }

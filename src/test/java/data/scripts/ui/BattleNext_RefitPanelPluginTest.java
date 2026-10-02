@@ -9,6 +9,11 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.test.fixture.BattleNext_TestPageFixture;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -25,7 +30,37 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class BattleNext_RefitPanelPluginTest {
+class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
+
+	@Test
+	void modSelectorsUseLocalizedTitlesExactGeometryAndFullPanelOverlayHost() throws Exception {
+		deferTooltipWidth = true;
+		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(() -> {});
+		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI right = panel(180f, 560f, new BaseCustomUIPanelPlugin());
+		root.addComponent(right).inTL(700f, 63f);
+		for (String name : List.of("panel", "rightPanel")) {
+			java.lang.reflect.Field field = BattleNext_RefitPanelPlugin.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.set(plugin, "panel".equals(name) ? root : right);
+		}
+		java.lang.reflect.Method build = BattleNext_RefitPanelPlugin.class.getDeclaredMethod("buildPickers", float.class);
+		build.setAccessible(true);
+		build.invoke(plugin, 180f);
+		BattleNext_OptionPicker sMods = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
+		BattleNext_OptionPicker dMods = (BattleNext_OptionPicker) getField(plugin, "dModPicker");
+		for (BattleNext_OptionPicker picker : List.of(sMods, dMods)) {
+			assertSame(root, getField(picker, "overlayHost"));
+			PositionAPI row = ((CustomPanelAPI) getField(picker, "row")).getPosition();
+			assertEquals(180f, row.getWidth());
+			assertEquals(30f, row.getHeight());
+			assertEquals(right.getPosition().getX(), row.getX());
+			float top = right.getPosition().getY() + right.getPosition().getHeight() - row.getY() - row.getHeight();
+			assertEquals(picker == sMods ? 0f : 36f, top);
+			assertEquals(picker == sMods ? "BattleNext_ui_refit_smods" : "BattleNext_ui_refit_dmods", getField(picker, "title"));
+			picker.close();
+		}
+	}
 
 	@Test
 	void shipSpriteKeepsNativeSizeWhenItFitsAndShrinksToFitOtherwise() {

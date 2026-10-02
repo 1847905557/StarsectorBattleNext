@@ -261,6 +261,7 @@ public class BattleNext_TestGameFixture {
 			case "isKeyboardEvent", "isKeyDownEvent" -> "escape".equals(type);
 			case "getEventValue" -> Keyboard.KEY_ESCAPE;
 			case "isMouseDownEvent" -> "outside".equals(type);
+			case "getX", "getY" -> "outside".equals(type) ? -1 : 0;
 			default -> null;
 		});
 	}

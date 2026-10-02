@@ -290,9 +290,11 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		BattleNext_BattleReportModel report = selected.report;
 		detailContent.addTitle(report.getName());
 		detailContent.addPara(text("report_name"), REPORT_SUMMARY_TOP_GAP);
-		nameField = BattleNext_TextField.addTo(inputRouter, detailContent, detailPanel,
-				detailControlWidth(contentWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT,
-				nameForRefresh(report, editedName), detailContent);
+		BattleNext_TextField nameWidget = new BattleNext_TextField(inputRouter, detailPanel,
+				detailControlWidth(contentWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT, detailContent);
+		nameWidget.attach(detailContent, detailPanel);
+		nameWidget.setText(nameForRefresh(report, editedName));
+		nameField = nameWidget;
 		nameField.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		detailContent.addPara(report.getId(), REPORT_CONTEXT_TOP_GAP);
 		String time = timeText(report);
@@ -323,7 +325,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
 					text("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
 							+ "  " + text("final_cr") + ": " + formatPercent(member.getFinalCr()));
-			BattleNext_ExpandablePanel.addTo(detailContent, detailPanel, width, expanded, bodyHeight,
+			BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
 		}

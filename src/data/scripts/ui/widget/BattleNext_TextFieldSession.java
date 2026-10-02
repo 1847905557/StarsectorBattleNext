@@ -53,6 +53,22 @@ public class BattleNext_TextFieldSession {
 		clearModalRegion();
 	}
 
+	public void unregister(BattleNext_TextField field) {
+		REGISTERED.remove(field);
+		VIEWPORTS.remove(field);
+		MODAL_FIELDS.remove(field);
+		if (pointerOwner == field) {
+			pointerOwner = null;
+			phase = TextFieldPointerPhase.IDLE;
+			generation++;
+			field.endPointer(true);
+		}
+		if (focusedField == field) {
+			focusedField = null;
+			field.endFocus(true);
+		}
+	}
+
 	public void setModalRegion(PositionAPI position) {
 		modalRegion = position;
 		MODAL_FIELDS.clear();

@@ -50,7 +50,7 @@ class BattleNext_TextFieldTest {
 		for (InputEventAPI event : List.of(key(Keyboard.KEY_B, 'b', true, false),
 				key(Keyboard.KEY_LEFT, (char) 2, true, false),
 				key(Keyboard.KEY_BACK, '\b', true, true))) {
-			assertTrue(BattleNext_TextField.handleGlobalInput(List.of(event)));
+			assertTrue(BattleNext_TextField.handleGlobalInputStatic(List.of(event)));
 			assertTrue(event.isConsumed());
 			assertEquals("abc", field.getText());
 		}
@@ -133,8 +133,8 @@ class BattleNext_TextFieldTest {
 		field.grabFocus();
 		assertEquals(List.of(BattleNext_TextField.BUZZ_SOUND_ID), sounds);
 		BattleNext_UiInputRouter.current().getSession().register(field);
-		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
-		BattleNext_TextField.handleGlobalInput(List.of(pointer()));
+		BattleNext_TextField.handleGlobalInputStatic(List.of(pointer()));
+		BattleNext_TextField.handleGlobalInputStatic(List.of(pointer()));
 		assertEquals(List.of("ui_typer_buzz", "ui_typer_buzz", "ui_typer_buzz"), sounds);
 		field.setText("changed");
 		assertEquals(3, sounds.size());

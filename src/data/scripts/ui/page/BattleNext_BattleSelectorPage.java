@@ -100,11 +100,12 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		labelRect.addTooltip();
 		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + SOURCE_CONTROL_GAP,
 				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
-		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel, inputOwner, buttonWidth,
+		CustomPanelAPI sourceButtonPanel = sourceButtonRect.createSubPanel(panel, inputOwner).getPanel();
+		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel, buttonWidth,
 				id -> {
 					inputOwner.buttonPressed(new BattleSourceSelectionRequest(id));
 				});
-		sourceDropdown.attach(null, sourceButtonRect);
+		sourceDropdown.attach(sourceButtonPanel);
 		sourceDropdown.setOptions(sourceOptions());
 		sourceDropdown.setValue(selectedId);
 		sourceDropdown.setEnabled(tournamentStore.isLoaded());
@@ -130,7 +131,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	@Override
 	protected void clearPageOverlays() {
 		if (sourceDropdown != null) {
-			sourceDropdown.close();
+			sourceDropdown.closeOverlays();
 		}
 	}
 

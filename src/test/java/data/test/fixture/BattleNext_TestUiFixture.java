@@ -21,6 +21,7 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 import java.awt.Color;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -48,6 +49,35 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final List<String> labels = new ArrayList<>();
 	protected final Map<String, AtomicBoolean> buttons = new LinkedHashMap<>();
 	protected final Map<String, PositionAPI> buttonPositions = new LinkedHashMap<>();
+	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
+	protected final Map<String, Object> buttonIds = new LinkedHashMap<>();
+	protected final List<UIComponentAPI> removedComponents = new ArrayList<>();
+	protected boolean deferTooltipWidth;
+
+	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {
+		return new BattleNext_OptionPicker.OptionChoiceSource() {
+			@Override
+			public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
+				return List.of(new BattleNext_OptionPicker.OptionChoice("first", "First"),
+						new BattleNext_OptionPicker.OptionChoice("second", "Second"));
+			}
+
+			@Override
+			public int getMaxCount(String id) {
+				return 1;
+			}
+
+			@Override
+			public String getIconPath(String id) {
+				return null;
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
+				tooltip.addTitle(option.getLabel());
+			}
+		};
+	}
 	protected final Map<CustomPanelAPI, CustomUIPanelPlugin> plugins = new IdentityHashMap<>();
 	protected final Map<CustomPanelAPI, List<Object>> children = new IdentityHashMap<>();
 	protected final Map<PositionAPI, Bounds> geometry = new IdentityHashMap<>();
@@ -82,7 +112,9 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			}
 			case "removeComponent" -> {
 				List<Object> mounted = children.get(holder[0]);
-				if (mounted != null) mounted.remove(args[0]);
+				assertNotNull(mounted, "Removal must use the actual parent");
+				assertTrue(mounted.remove(args[0]), "Component must be mounted by its removing parent");
+				removedComponents.add((UIComponentAPI) args[0]);
 				yield null;
 			}
 			default -> null;
@@ -106,6 +138,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private final PositionAPI position;
 		private final PositionAPI viewport;
 		private final boolean scrollable;
+		private final float width;
 		private final List<UIComponentAPI> components = new ArrayList<>();
 		private final ScrollPanelAPI scroller;
 		private float usedHeight;
@@ -116,7 +149,8 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private UIComponentAPI previous;
 
 		protected TooltipState(float width, float height, boolean scrollable) {
-			this.position = position(width, height);
+			this.width = width;
+			this.position = position(deferTooltipWidth ? 0f : width, height);
 			this.viewport = position(width, height);
 			this.textWidth = Math.max(1f, width - 10f);
 			this.scrollable = scrollable;
@@ -164,10 +198,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			assertFalse(mounted, "Each tooltip must be mounted once");
 			mountedHeight = usedHeight;
 			float height = position.getHeight() == 0f ? usedHeight : position.getHeight();
-			viewport.setSize(position.getWidth(), height);
+			viewport.setSize(width, height);
 			geometry.get(viewport).parent = owner;
 			geometry.get(position).parent = viewport;
-			position.setSize(position.getWidth(), Math.max(height, usedHeight));
+			position.setSize(width, Math.max(height, usedHeight));
 			mounted = true;
 		}
 
@@ -195,7 +229,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				case "getPrev" -> previous;
 				case "getHeightSoFar" -> usedHeight;
-				case "getWidthSoFar" -> position.getWidth();
+				case "getWidthSoFar" -> width;
 				case "setHeightSoFar" -> {
 					assertFalse(mounted);
 					usedHeight = (Float) args[0];
@@ -209,12 +243,19 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 						"getPosition".equals(name) ? position(1f, 1f) : null);
 				case "addCustomDoNotSetPosition" -> {
 					geometry.get(((UIComponentAPI) args[0]).getPosition()).parent = position;
+					components.add((UIComponentAPI) args[0]);
 					yield args[0];
 				}
 				case "addComponent" -> {
 					PositionAPI child = ((UIComponentAPI) args[0]).getPosition();
 					geometry.get(child).parent = position;
+					components.add((UIComponentAPI) args[0]);
 					yield child;
+				}
+				case "removeComponent" -> {
+					assertTrue(components.remove(args[0]), "Component must be mounted by its removing tooltip");
+					removedComponents.add((UIComponentAPI) args[0]);
+					yield null;
 				}
 				case "shortenString" -> args[0];
 				case "addCustom" -> append((UIComponentAPI) args[0], (Float) args[1]);
@@ -228,6 +269,8 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					boolean checkbox = "addCheckbox".equals(method);
 					String id = String.valueOf(args[checkbox ? 3 : 1]);
 					buttons.put(id, enabled);
+					buttonLabels.put(id, (String) args[checkbox ? 2 : 0]);
+					buttonIds.put(id, args[checkbox ? 3 : 1]);
 					PositionAPI buttonPosition = position((Float) args[checkbox ? 0 : args.length - 3],
 							(Float) args[checkbox ? 1 : args.length - 2]);
 					buttonPositions.put(id, buttonPosition);
@@ -239,6 +282,9 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 							checked.set((Boolean) values[0]);
 						}
 						if ("isChecked".equals(name)) return checked.get();
+						if ("isEnabled".equals(name)) return enabled.get();
+						if ("setText".equals(name)) buttonLabels.put(id, (String) values[0]);
+						if ("getText".equals(name)) return buttonLabels.get(id);
 						if ("getPosition".equals(name)) return buttonPosition;
 						return null;
 					});
@@ -320,7 +366,11 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					middleY = true;
 					yield null;
 				}
-				case "containsEvent" -> false;
+				case "containsEvent" -> {
+					InputEventAPI event = (InputEventAPI) args[0];
+					yield event.getX() >= x && event.getX() < x + width
+							&& event.getY() >= y && event.getY() < y + height;
+				}
 				default -> null;
 			};
 		}

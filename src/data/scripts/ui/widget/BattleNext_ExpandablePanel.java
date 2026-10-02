@@ -36,7 +36,7 @@ public class BattleNext_ExpandablePanel {
 	private BattleNext_ExpandablePanel() {
 	}
 
-	public static void addTo(TooltipMakerAPI list, CustomPanelAPI owner, float width,
+	public static void add(TooltipMakerAPI list, CustomPanelAPI owner, float width,
 			boolean expanded, float bodyHeight, Header header, Runnable onToggle,
 			Consumer<Object> onBodyAction, Consumer<CustomPanelAPI> buildBody) {
 		CustomPanelAPI root = owner.createCustomPanel(width, panelHeight(expanded, bodyHeight),

@@ -189,10 +189,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		String[] labels = {"#", text("battle_player_short"), text("battle_enemy_short"), text("battle_map_short"),
 				text("battle_map_scale_short"), text("status"), text("enabled"), text("actions")};
-		tableWidget = new BattleNext_TableWidget(panel, inputOwner, labels, COLUMN_SHARES,
+		UIRect tableRect = new UIRect(0f, table[0].getY(), table[0].getWidth(),
+				table[0].getHeight() + table[1].getHeight());
+		CustomPanelAPI tablePanel = tableRect.createSubPanel(panel, inputOwner).getPanel();
+		tableWidget = new BattleNext_TableWidget(inputOwner, labels, COLUMN_SHARES,
 				entries.size(), this::addRow);
-		tableWidget.attach(new UIRect(0f, table[0].getY(), table[0].getWidth(),
-				table[0].getHeight() + table[1].getHeight()));
+		tableWidget.attach(tablePanel);
 
 		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
 		float buttonWidth = Math.min(FOOTER_BUTTON_MAX_WIDTH,
@@ -339,8 +341,11 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		float width = rect.getWidth() - BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET
 				- BattleNext_PageLayout.TABLE_FIELD_RIGHT_INSET;
 		TooltipMakerAPI maker = card.createUIElement(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, maker, card, width,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, viewports);
+		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, card, width,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		widget.attach(maker, card);
+		widget.setText(value);
+		TextFieldAPI field = widget;
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		maker.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		card.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.TABLE_FIELD_LEFT_INSET,

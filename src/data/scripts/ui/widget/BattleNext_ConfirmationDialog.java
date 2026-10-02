@@ -1,6 +1,5 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -15,7 +14,7 @@ import org.lwjgl.input.Keyboard;
 
 import java.util.List;
 
-public class BattleNext_ConfirmationDialog {
+public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 
 	private static final float DIALOG_MAX_WIDTH = 520f;
 	private static final float DIALOG_PARENT_WIDTH_RESERVE = 40f;
@@ -44,7 +43,6 @@ public class BattleNext_ConfirmationDialog {
 	}
 
 	private final ConfirmationDialogHost host;
-	private final BattleNext_UiInputRouter inputRouter;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 	private CustomPanelAPI parent;
 	private CustomPanelAPI confirmation;
@@ -54,17 +52,24 @@ public class BattleNext_ConfirmationDialog {
 	private String deleteDescription;
 	private DialogOverlay overlay;
 
-	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host) {
-		this(host, BattleNext_UiInputRouter.current());
-	}
-
 	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host, BattleNext_UiInputRouter inputRouter) {
+		super(inputRouter);
 		this.host = host;
-		this.inputRouter = inputRouter;
 	}
 
-	public void attach(CustomPanelAPI parent) {
-		this.parent = parent;
+	@Override
+	protected void buildContent(CustomPanelAPI panel) {
+		parent = panel;
+	}
+
+	@Override
+	protected void clearPageState() {
+		parent = null;
+	}
+
+	@Override
+	protected void clearOverlays() {
+		closeDialog();
 	}
 
 	public boolean isActive() {
@@ -87,12 +92,12 @@ public class BattleNext_ConfirmationDialog {
 
 	public void handle(Object action) {
 		if ("confirm_cancel".equals(action) || "delete_cancel".equals(action)) {
-			close();
+			closeDialog();
 			return;
 		}
 		if (deleteDescription != null) {
 			if ("delete_confirm".equals(action)) {
-				close();
+				closeDialog();
 				Runnable pending = onConfirm;
 				onConfirm = null;
 				if (pending != null) pending.run();
@@ -108,14 +113,14 @@ public class BattleNext_ConfirmationDialog {
 		if ("confirm_discard".equals(action)) {
 			host.discardCurrentPage();
 		}
-		close();
+		closeDialog();
 		Runnable pending = onConfirm;
 		onConfirm = null;
 		if (pending != null) pending.run();
 	}
 
-	private void close() {
-		if (parent != null && confirmation != null) parent.removeComponent(confirmation);
+	private void closeDialog() {
+		if (confirmation != null) releasePanel(confirmation);
 		if (overlay != null) inputRouter.pop(overlay);
 		confirmation = null;
 		overlay = null;
@@ -127,7 +132,7 @@ public class BattleNext_ConfirmationDialog {
 	private void showConfirmation() {
 		if (confirmation != null) return;
 		float width = Math.min(DIALOG_MAX_WIDTH, parent.getPosition().getWidth() - DIALOG_PARENT_WIDTH_RESERVE);
-		confirmation = Global.getSettings().createCustom(width, DIALOG_HEIGHT, new ConfirmationDialogPlugin(width));
+		confirmation = ownPanel(parent, parent.createCustomPanel(width, DIALOG_HEIGHT, new ConfirmationDialogPlugin(width)));
 		UIRect dialogRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_MESSAGE_TOP,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_MESSAGE_HEIGHT);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
@@ -195,7 +200,7 @@ public class BattleNext_ConfirmationDialog {
 
 		@Override
 		public void close() {
-			if (confirmation != null) BattleNext_ConfirmationDialog.this.close();
+			if (confirmation != null) BattleNext_ConfirmationDialog.this.closeDialog();
 		}
 	}
 

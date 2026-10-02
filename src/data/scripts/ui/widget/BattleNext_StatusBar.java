@@ -4,10 +4,9 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_UiTheme;
 
-public class BattleNext_StatusBar {
+public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 
 	private static final float STATUS_TEXT_RIGHT_RESERVE = 10f;
 	private static final float STATUS_TEXT_TOP_INSET = 5f;
@@ -16,14 +15,21 @@ public class BattleNext_StatusBar {
 	private TooltipMakerAPI content;
 	private LabelAPI statusLabel;
 	private float textWidth;
+	private final float width;
+	private final float height;
 
-	public void attach(CustomPanelAPI panel, UIRect rect) {
-		content = rect.beginTooltip(panel, false);
-		textWidth = rect.getWidth() - STATUS_TEXT_RIGHT_RESERVE;
+	public BattleNext_StatusBar(float width, float height) {
+		this.width = width;
+		this.height = height;
+	}
+
+	@Override
+	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
+		content = host;
+		textWidth = width - STATUS_TEXT_RIGHT_RESERVE;
 		statusLabel = content.addPara(strings.get("ready"), 0f);
 		statusLabel.getPosition().inTL(0f, STATUS_TEXT_TOP_INSET);
-		content.setHeightSoFar(rect.getHeight());
-		rect.addTooltip();
+		content.setHeightSoFar(height);
 	}
 
 	public void update(String error, String activeTournamentId, boolean pendingResult) {

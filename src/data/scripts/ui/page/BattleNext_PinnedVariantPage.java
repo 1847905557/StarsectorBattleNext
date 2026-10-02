@@ -143,8 +143,11 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 		content.addTitle(selected.name());
 		content.addPara(text("pin_name"), 8f);
 		if (selected.model() != null && store.isLoaded()) {
-			name = BattleNext_TextField.addTo(inputRouter, content, metadataPanel, area.getWidth(),
-					BattleNext_PageLayout.FORM_FIELD_HEIGHT, edited, content);
+			BattleNext_TextField nameWidget = new BattleNext_TextField(inputRouter, metadataPanel, area.getWidth(),
+					BattleNext_PageLayout.FORM_FIELD_HEIGHT, content);
+			nameWidget.attach(content, metadataPanel);
+			nameWidget.setText(edited);
+			name = nameWidget;
 			name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		}
 		content.addPara(text("variant_pin_id") + ": " + selected.pinId(), 8f);
@@ -168,7 +171,8 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 			contentPanel.addComponent(visual).inTL(0f,
 					metadataHeight + 8f);
 			try {
-				details.addTo(visual, area.getWidth(), detailsHeight, selected.model().getVariantJson());
+				details.setVariantJson(selected.model().getVariantJson());
+				details.attach(visual);
 			} catch (Exception exception) {
 				TooltipMakerAPI error = visual.createUIElement(area.getWidth(), detailsHeight, true);
 				error.addPara(selected.path() + ": " + exception, 8f);

@@ -4,14 +4,13 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleNext_OptionField {
+public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 
 	public enum OptionSelectionMode {
 		SINGLE, MULTIPLE
@@ -20,57 +19,73 @@ public class BattleNext_OptionField {
 	private static final float PICKER_BUTTON_WIDTH = 32f;
 	private static final float PICKER_ROW_TOP_GAP = 2f;
 
-	private final BattleNext_UiInputRouter inputRouter;
-	private final CustomPanelAPI overlayHost;
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
 	private final OptionSelectionMode mode;
+	private final float width;
+	private final CustomPanelAPI overlayHost;
+	private final TooltipMakerAPI[] viewports;
 	private BattleNext_OptionPicker picker;
-	private TextFieldAPI field;
+	private BattleNext_TextField field;
+	private CustomPanelAPI row;
 
-	public BattleNext_OptionField(CustomPanelAPI overlayHost, BattleNext_OptionPicker.OptionChoiceSource source,
-			OptionSelectionMode mode) {
-		this(BattleNext_UiInputRouter.current(), overlayHost, source, mode);
-	}
-
-	public BattleNext_OptionField(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
-			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode) {
-		this.inputRouter = inputRouter;
-		this.overlayHost = overlayHost;
-		this.source = source;
-		this.mode = mode;
-	}
-
-	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value) {
-		return addTo(host, owner, width, value, new TooltipMakerAPI[0]);
-	}
-
-	public TextFieldAPI addTo(TooltipMakerAPI host, CustomPanelAPI owner, float width, String value,
-			TooltipMakerAPI... viewports) {
+	@Override
+	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI owner) {
 		float inputWidth = width - PICKER_BUTTON_WIDTH;
-		CustomPanelAPI row = owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
-				owner.getPlugin());
+		row = ownPanel(host, owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, owner.getPlugin()));
 		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		field = BattleNext_TextField.addTo(inputRouter, input, row, inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
-				value == null ? "" : value, viewports);
+		BattleNext_TextField textField = new BattleNext_TextField(inputRouter, row, inputWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textField.attach(input, row);
+		field = textField;
 		field.getPosition().inTL(0f, 0f);
 		field.setLimitByStringWidth(false);
 		field.setVerticalCursor(true);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		row.addUIElement(input).inTL(0f, 0f);
-		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, source,
-				toPickerMode(mode), () -> parse(field.getText()), ids -> field.setText(expand(ids)));
-		picker.addButton(row, new UIRect(inputWidth, 0f, PICKER_BUTTON_WIDTH,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT), "...", viewports);
+		TooltipMakerAPI pickerHost = row.createUIElement(PICKER_BUTTON_WIDTH,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, PICKER_BUTTON_WIDTH,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, "...", 0f, source, toPickerMode(mode),
+				() -> parse(field.getText()), ids -> field.setText(expand(ids)), viewports);
+		picker.attach(pickerHost, row);
+		row.addUIElement(pickerHost).inTL(inputWidth, 0f);
 		host.addCustom(row, PICKER_ROW_TOP_GAP);
+	}
+
+	public TextFieldAPI getField() {
 		return field;
 	}
 
-	public void close() {
-		inputRouter.releaseFocus();
-		if (picker != null) picker.close();
+	public BattleNext_OptionField(BattleNext_UiInputRouter inputRouter,
+			CustomPanelAPI overlayHost, float width,
+			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode,
+			TooltipMakerAPI... viewports) {
+		super(inputRouter);
+		this.source = source;
+		this.mode = mode;
+		this.width = width;
+		this.overlayHost = overlayHost;
+		this.viewports = viewports;
 	}
 
-	public boolean handleGlobalInput(List<InputEventAPI> events) {
+
+	@Override
+	protected void clearOverlays() {
+		if (picker != null) picker.closeOverlays();
+	}
+
+	@Override
+	protected void clearContent() {
+		clearOverlays();
+		if (picker != null) picker.close();
+		if (field != null) field.close();
+		row = null;
+		field = null;
+		picker = null;
+	}
+
+	@Override
+	protected boolean handleWidgetInput(List<InputEventAPI> events) {
 		return picker != null && picker.handleGlobalInput(events);
 	}
 

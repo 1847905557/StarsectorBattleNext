@@ -48,7 +48,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
-	private final BattleNext_StatusBar statusBar = new BattleNext_StatusBar();
+	private BattleNext_StatusBar statusBar;
 
 	private CustomPanelAPI panel;
 	private UIRect bodyRect;
@@ -185,8 +185,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 
 		float closeWidth = Math.min(SHELL_CLOSE_MAX_WIDTH, footerRect.getWidth() * SHELL_CLOSE_WIDTH_SHARE);
-		statusBar.attach(panel, new UIRect(footerRect.getX(), footerRect.getY(),
-				footerRect.getWidth() - closeWidth - SHELL_STATUS_CLOSE_GAP, footerRect.getHeight()));
+		float statusWidth = footerRect.getWidth() - closeWidth - SHELL_STATUS_CLOSE_GAP;
+		TooltipMakerAPI footer = panel.createUIElement(statusWidth, footerRect.getHeight(), false);
+		statusBar = new BattleNext_StatusBar(statusWidth, footerRect.getHeight());
+		statusBar.attach(footer, panel);
+		panel.addUIElement(footer).inTL(footerRect.getX(), footerRect.getY());
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth,
 						footerRect.getY(), closeWidth, footerRect.getHeight()),
