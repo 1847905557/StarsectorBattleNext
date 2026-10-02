@@ -164,7 +164,7 @@
 		"BattleNext_ui_refit_hull_size": "Hull size",
 		"BattleNext_ui_refit_base_dp": "Base DP",
 		"BattleNext_ui_refit_custom_portrait": "Custom portrait",
-		"BattleNext_ui_pin_variant": "Pin current variant",
+		"BattleNext_ui_pin_variant": "[Battle NEXT] Pin current variant",
 		"BattleNext_ui_pin_description": "Save a named snapshot of the current ship and all its modules to the pinned variant catalog.",
 		"BattleNext_ui_pin_module": "Return to the parent ship's refit page to pin the entire ship and all its modules.",
 		"BattleNext_ui_pin_context_error": "Could not read the campaign refit context",
