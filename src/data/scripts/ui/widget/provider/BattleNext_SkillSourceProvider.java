@@ -10,6 +10,7 @@ import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvider {
 	private static final float ADVANCED_SKILL_LEVEL_THRESHOLD = 1f;
@@ -75,7 +76,7 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		addHeader(tooltip, option.getLabel(), option.getId());
 		if (spec == null) return;
-		String scope = String.join(" - ", java.util.stream.Stream.of(spec.getScopeStr(), spec.getScopeStr2())
+		String scope = String.join(" - ", Stream.of(spec.getScopeStr(), spec.getScopeStr2())
 				.filter(value -> value != null && !value.isBlank()).toList());
 		addExcerpt(tooltip, spec.getDescription(), scope.isEmpty() ? 0f : SCOPE_RESERVE);
 		if (!scope.isEmpty() && tooltip.getHeightSoFar() + SCOPE_RESERVE <= tooltip.getPosition().getHeight()) {

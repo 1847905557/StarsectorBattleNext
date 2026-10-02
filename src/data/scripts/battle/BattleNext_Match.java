@@ -2,6 +2,7 @@ package data.scripts.battle;
 
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -41,7 +42,7 @@ public class BattleNext_Match {
 	public static BattleNext_Match fromJson(JSONObject json) throws JSONException {
 		BattleNext_Match match = new BattleNext_Match(json.getString("id"), json.getString("player"), json.getString("enemy"), json.getInt("map"), (float)json.getDouble("mapScale"));
 		if (!Float.isFinite(match.mapScale) || match.mapScale <= 0f) throw new IllegalArgumentException("Invalid match mapScale");
-		org.json.JSONArray values = json.optJSONArray("rounds");
+		JSONArray values = json.optJSONArray("rounds");
 		if (values != null) {
 			for (int index = 0; index < values.length(); index++) {
 				if (values.optJSONObject(index) != null) {
@@ -59,7 +60,7 @@ public class BattleNext_Match {
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid match.stage: " + json.getString("stage"), exception);
 		}
-		org.json.JSONArray sources = json.optJSONArray("dependencies");
+		JSONArray sources = json.optJSONArray("dependencies");
 		if (sources != null) {
 			for (int index = 0; index < sources.length(); index++) {
 				match.dependencies.add(sources.getString(index));
@@ -75,14 +76,14 @@ public class BattleNext_Match {
 		json.put("enemy", enemy);
 		json.put("map", map);
 		json.put("mapScale", mapScale);
-		org.json.JSONArray values = new org.json.JSONArray();
+		JSONArray values = new JSONArray();
 		for (BattleNext_Round round : rounds) {
 			values.put(round.toJson());
 		}
 		json.put("rounds", values);
 		json.put("status", status.name());
 		json.put("stage", stage.name());
-		json.put("dependencies", new org.json.JSONArray(dependencies));
+		json.put("dependencies", new JSONArray(dependencies));
 		return json;
 	}
 

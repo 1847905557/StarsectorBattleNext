@@ -2,37 +2,31 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.missions.BattleNext_MissionBattleMap;
-import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_BattleSourceProvider;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.rule.BattleNext_RulesCheck;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.widget.BattleNext_DropdownField;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
-import data.scripts.tools.BattleNext_BattleSignals;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
-
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
-
-	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
-		this.inputRouter = router;
-	}
+public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	private static final float SOURCE_HEADER_HEIGHT = 88f;
 	private static final float SOURCE_LABEL_MAX_WIDTH = 175f;
@@ -62,8 +56,6 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
-	private CustomPanelAPI panel;
 	private UIRect contentRect;
 	private BattleNext_DropdownField sourceDropdown;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
@@ -82,16 +74,13 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 	}
 
 	@Override
-	public void attach(CustomPanelAPI panel) {
-		if (sourceDropdown != null) sourceDropdown.close();
-		this.panel = panel;
+	protected void loadPageState() {
+		quickBattleEditor = null;
 		load();
-		createContents();
 	}
 
 	@Override
-	public void createContents() {
-		if (sourceDropdown != null) sourceDropdown.close();
+	protected void buildPage() {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] sections = root.splitVertically(SOURCE_HEADER_HEIGHT);
 		contentRect = sections[1];
@@ -120,71 +109,38 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 		sourceDropdown.setValue(selectedId);
 		sourceDropdown.setEnabled(tournamentStore.isLoaded());
 
-		refreshContent();
 	}
 
 	@Override
-	public void refreshContent() {
-		if (sourceDropdown != null) sourceDropdown.close();
-		closeChart();
+	protected void refreshPage() {
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
-		quickBattleEditor = null;
 		if (selectedId.isEmpty()) {
-			quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
+			if (quickBattleEditor == null) {
+				quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
+			}
 			quickBattleEditor.setInputRouter(inputRouter);
 			quickBattleEditor.attach(contentPanel);
 		} else {
+			quickBattleEditor = null;
 			buildTournamentDetails(contentPanel);
 		}
 	}
 
 	@Override
-	public boolean hasUnsavedChanges() {
-		return selectedId.isEmpty() && quickBattleEditor != null && quickBattleEditor.hasUnsavedChanges();
-	}
-
-	@Override
-	public boolean save() {
-		return quickBattleEditor == null || quickBattleEditor.save();
-	}
-
-	@Override
-	public void discard() {
-		if (quickBattleEditor != null) quickBattleEditor.discard();
-	}
-
-	public void closeDropdown() {
-		if (sourceDropdown != null) sourceDropdown.close();
-	}
-
-	public void refreshRowStatuses() {
-		if (quickBattleEditor != null) quickBattleEditor.refreshRowStatuses();
-	}
-
-	@Override
-	public String getStatusText() {
-		return quickBattleEditor == null ? loadError : quickBattleEditor.getStatusText();
-	}
-
-	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (sourceDropdown != null && sourceDropdown.handleGlobalInput(events)) return true;
-
-		if (tournamentDisplay != null) {
-			tournamentDisplay.handleGlobalInput(events);
-		}
-		return false;
-	}
-
-	public void closeChart() {
-		if (tournamentDisplay != null) {
-			tournamentDisplay.close();
-			tournamentDisplay = null;
+	protected void clearPageOverlays() {
+		if (sourceDropdown != null) {
+			sourceDropdown.close();
 		}
 	}
 
 	@Override
-	public void buttonPressed(Object buttonId) {
+	protected void clearPageResources() {
+		closeChart();
+	}
+
+	@Override
+	protected void handlePageAction(Object buttonId) {
 		if ("tournament:start".equals(buttonId)) {
 			startTournament();
 		} else if ("tournament:authorize".equals(buttonId)) {
@@ -200,6 +156,50 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			}
 		} else if (selectedId.isEmpty() && quickBattleEditor != null) {
 			quickBattleEditor.buttonPressed(buttonId);
+		}
+	}
+
+	@Override
+	protected boolean isPageDirty() {
+		return selectedId.isEmpty() && quickBattleEditor != null && quickBattleEditor.hasUnsavedChanges();
+	}
+
+	@Override
+	protected boolean savePage() {
+		return quickBattleEditor == null || quickBattleEditor.save();
+	}
+
+	@Override
+	protected void discardPage() {
+		if (quickBattleEditor != null) quickBattleEditor.discard();
+	}
+
+	@Override
+	protected String pageStatus() {
+		return quickBattleEditor == null ? loadError : quickBattleEditor.getStatusText();
+	}
+
+	@Override
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		if (sourceDropdown != null && sourceDropdown.handleGlobalInput(events)) return true;
+
+		if (tournamentDisplay != null) {
+			tournamentDisplay.handleGlobalInput(events);
+		}
+		return false;
+	}
+
+	@Override
+	public void advance(float amount) {
+		if (quickBattleEditor != null) {
+			quickBattleEditor.refreshRowStatuses();
+		}
+	}
+
+	public void closeChart() {
+		if (tournamentDisplay != null) {
+			tournamentDisplay.close();
+			tournamentDisplay = null;
 		}
 	}
 
@@ -245,7 +245,7 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			messageRect.addTooltip();
 			return;
 		}
-		Map<String, String> fleetNames = new java.util.LinkedHashMap<>();
+		Map<String, String> fleetNames = new LinkedHashMap<>();
 		for (String fleetId : tournament.getFleetIds()) {
 			if (fleetStore.get(fleetId) != null) {
 				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
@@ -339,9 +339,5 @@ public class BattleNext_BattleSelectorPage implements BattleNext_PageView {
 			if (match.getStatus() == BattleNext_Match.MatchStatus.PENDING && !match.getEnemy().isEmpty()) return match;
 		}
 		return null;
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 }

@@ -32,7 +32,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class BattleNext_SourceProviderTooltipTest {
+class BattleNext_SourceProviderTooltipIntegrationTest {
 
 	private SettingsAPI previousSettings;
 	private SectorAPI previousSector;

@@ -3,6 +3,7 @@ package data.scripts.fleet;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.loading.VariantSource;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.loading.WeaponGroupType;
 import org.json.JSONArray;
@@ -10,8 +11,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -91,7 +92,7 @@ public class BattleNext_VariantBuilder {
 		variant.setNumFluxCapacitors(json.optInt("fluxCapacitors", 0));
 		variant.setNumFluxVents(json.optInt("fluxVents", 0));
 		variant.setGoalVariant(json.optBoolean("goalVariant", false));
-		variant.setSource(com.fs.starfarer.api.loading.VariantSource.REFIT);
+		variant.setSource(VariantSource.REFIT);
 		addMods("hullMods", variant::addMod);
 		addMods("permaMods", variant::addPermaMod);
 		addMods("sMods", mod -> variant.addPermaMod(mod, true));

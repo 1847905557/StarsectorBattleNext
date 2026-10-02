@@ -1,18 +1,12 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
 import com.fs.starfarer.api.combat.ShipSystemAPI.SystemState;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
-import com.fs.starfarer.api.impl.combat.PhaseCloakStats;
 import com.fs.starfarer.api.loading.DamagingExplosionSpec;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
@@ -198,7 +192,7 @@ public class BattleNext_PhaseCloakShieldAI implements BattleNext_ShieldAI {
 		boolean outOfAttackRange = distance - combinedRadius > maneuverAPI.getAttackAI().getAttackRange() * 1.2F;
 		float rearArc = 90.0F;
 		float goodSpotArc = 90.0F;
-		if (target != null && target.getShield() != null && target.getShield().getType() == com.fs.starfarer.api.combat.ShieldAPI.ShieldType.FRONT) {
+		if (target != null && target.getShield() != null && target.getShield().getType() == ShieldAPI.ShieldType.FRONT) {
 			rearArc = Math.max(25.0F, Math.min(120.0F, 360.0F - Math.min(360.0F, target.getShield().getArc() + 40.0F)));
 			goodSpotArc = Math.max(25.0F, Math.min(120.0F, 360.0F - target.getShield().getArc() + 30.0F));
 		}
@@ -220,7 +214,7 @@ public class BattleNext_PhaseCloakShieldAI implements BattleNext_ShieldAI {
 		boolean targetDoomed = target != null && target.getHitpoints() < 150.0F * target.getHullSize().ordinal();
 		if (target != null) {
 			float bestGroupDamage = 0.0F;
-			for (com.fs.starfarer.api.combat.WeaponGroupAPI group : ship.getWeaponGroupsCopy()) {
+			for (WeaponGroupAPI group : ship.getWeaponGroupsCopy()) {
 				float groupDamage = 0.0F;
 				for (WeaponAPI weapon : group.getWeaponsCopy()) {
 					if (!BattleNext_ShipAIHelper.isInArc(weapon.getCurrAngle(), 90.0F,

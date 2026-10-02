@@ -11,6 +11,7 @@ import data.restriction.BattleNext_RestrictionSpec;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
@@ -22,10 +23,10 @@ import java.util.*;
 
 public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+	private BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 
 	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+	public void setInputRouter(BattleNext_UiInputRouter router) {
 		this.inputRouter = router;
 	}
 
@@ -95,9 +96,12 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
+		boolean opened = idField == null;
 		this.panel = panel;
 		createContents();
-		savedSnapshot = serializeState();
+		if (opened) {
+			savedSnapshot = serializeState();
+		}
 	}
 
 	@Override
@@ -108,6 +112,15 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		String idValue = idField == null ? draft.getId() : idField.getText();
+		String nameValue = nameField == null ? draft.getName() : nameField.getText();
+		Map<String, String> values = new LinkedHashMap<>();
+		if (idField != null) {
+			for (var entry : valueFields.entrySet()) {
+				values.put(entry.getKey(), entry.getValue().getText());
+			}
+			captureInputs(false);
+		}
 		closePicker();
 		inputRouter.clear();
 		contentRect.removeLatestSubPanel();
@@ -119,9 +132,9 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		TooltipMakerAPI details = contentPanel.createUIElement(leftWidth, contentRect.getHeight(), true);
 		details.addTitle(text("rules_editable"));
 		statusLabel = details.addPara(status, STATUS_LINE_GAP);
-		idField = field(details, panel, text("rules_id"), draft.getId(),
+		idField = field(details, panel, text("rules_id"), idValue,
 				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
-		nameField = field(details, panel, text("rules_name"), draft.getName(),
+		nameField = field(details, panel, text("rules_name"), nameValue,
 				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
 		contentPanel.addUIElement(details).inTL(0f, 0f);
 
@@ -135,15 +148,19 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		String[] labels = {text("rules_restriction"), text("rules_value_items"), text("enabled"), text("actions")};
 		enabledFields.clear();
 		valueFields.clear();
-		tableWidget = new BattleNext_TableWidget(tablePanel, panel.getPlugin(), labels, COLUMN_SHARES,
-				draft.getRestrictions().size(),
-				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions));
-		tableWidget.attach(new UIRect(0f, 0f, rightWidth, tableHeight));
 		restrictionPicker = new BattleNext_OptionPicker(inputRouter, panel, new RestrictionChoiceSource(),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions);
-		float tableWidth = rightWidth - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
-		restrictionPicker.addTo(tableWidget.getContent(), panel, Math.min(RULE_PICKER_MAX_WIDTH, tableWidth),
-				text("rules_add_restriction"), tableWidget.getContent(), restrictions);
+		tableWidget = new BattleNext_TableWidget(tablePanel, panel.getPlugin(), labels, COLUMN_SHARES,
+				draft.getRestrictions().size(),
+				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions),
+				(rowWidth, content) -> restrictionPicker.addTo(content, panel, Math.min(RULE_PICKER_MAX_WIDTH, rowWidth),
+						text("rules_add_restriction"), content, restrictions));
+		tableWidget.attach(new UIRect(0f, 0f, rightWidth, tableHeight));
+		for (var entry : values.entrySet()) {
+			if (valueFields.containsKey(entry.getKey())) {
+				valueFields.get(entry.getKey()).setText(entry.getValue());
+			}
+		}
 	}
 
 	private void addRestrictionRow(int index, float tableWidth, UIRect[] cells,
@@ -333,6 +350,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	public void deserialize() {
 		try {
 			draft = baseline == null ? new BattleNext_RuleModel() : copy(baseline);
+			idField = null;
+			nameField = null;
 			refreshContent();
 			savedSnapshot = serializeState();
 		} catch (JSONException exception) {

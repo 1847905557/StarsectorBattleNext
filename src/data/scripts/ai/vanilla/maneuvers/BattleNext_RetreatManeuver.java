@@ -1,10 +1,14 @@
 package data.scripts.ai.vanilla.maneuvers;
 
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
+import com.fs.starfarer.api.combat.ShieldAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.util.IntervalUtil;
+import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
@@ -40,7 +44,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 	private float retreatFacing = Float.MAX_VALUE;
 	private IntervalUtil intervalTracker = new IntervalUtil(0.5F, 1.0F);
 	private ShipAPI retreatTarget;
-	private com.fs.starfarer.api.combat.DeployedFleetMemberAPI deployedFleetMember;
+	private DeployedFleetMemberAPI deployedFleetMember;
 	private float desiredFacing = Float.MAX_VALUE;
 
 	public BattleNext_RetreatManeuver(ShipAPI ship, BattleNext_FlockingAI flockingAI, BattleNext_ManeuverAPI maneuverAPI) {
@@ -60,7 +64,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 			}
 
 			if (!BattleNext_ShipAIHelper.isTravelDriveOn(this.ship)) {
-				data.scripts.ai.vanilla.BattleNext_BestTargetEval eval = BattleNext_ShipAIHelper.getBestManeuverTarget(this.ship);
+				BattleNext_BestTargetEval eval = BattleNext_ShipAIHelper.getBestManeuverTarget(this.ship);
 				if (eval != null) {
 					this.retreatTarget = eval.getTarget();
 				} else {
@@ -182,7 +186,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 			escapeOwner = 1;
 		}
 
-		com.fs.starfarer.api.combat.CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
+		CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
 		if (fleetManager != null && fleetManager.getGoal() == FleetGoal.ESCAPE) {
 			escapeGoal = true;
 		}
@@ -205,7 +209,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 				escapeOwner = 1;
 			}
 
-			com.fs.starfarer.api.combat.CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
+			CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
 			if (fleetManager != null && fleetManager.getGoal() == FleetGoal.ESCAPE) {
 				escapeGoal = true;
 			}
@@ -385,7 +389,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 		}
 
 		float maxDistance = 2000.0F;
-		com.fs.starfarer.api.combat.CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(ship.getOriginalOwner());
+		CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(ship.getOriginalOwner());
 		if (fleetManager != null && fleetManager.getGoal() == FleetGoal.ESCAPE) {
 			maxDistance = 2000.0F;
 		}
@@ -486,7 +490,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 					|| this.maneuverAPI.getThreatEvaluator().getTotalThreat() > 0.05F && !this.maneuverAPI.getThreatEvaluator().isAllThreatsValid()
 			);
 		backOff &= this.maneuverAPI.getThreatEvaluator().getMaxThreatData() != null;
-		if (this.ship.getShield() != null && this.ship.getShield().getType() == com.fs.starfarer.api.combat.ShieldAPI.ShieldType.FRONT) {
+		if (this.ship.getShield() != null && this.ship.getShield().getType() == ShieldAPI.ShieldType.FRONT) {
 			backOff &= this.ship.getArmorGrid().getArmorRating() > 50.0F * this.ship.getHullSize().ordinal();
 		}
 
@@ -509,7 +513,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 			boolean unusedAlwaysFalse = true;
 			unusedAlwaysFalse = false;
 			if (!unusedAlwaysFalse) {
-				float bestArmorAngle = this.computeBestArmorAngle(this.ship.getFacing(), this.ship.getShield() != null && this.ship.getShield().getType() == com.fs.starfarer.api.combat.ShieldAPI.ShieldType.FRONT ? 150.0F : 210.0F);
+				float bestArmorAngle = this.computeBestArmorAngle(this.ship.getFacing(), this.ship.getShield() != null && this.ship.getShield().getType() == ShieldAPI.ShieldType.FRONT ? 150.0F : 210.0F);
 				float armorOffset = bestArmorAngle - this.ship.getFacing();
 				this.desiredFacing -= armorOffset;
 			}

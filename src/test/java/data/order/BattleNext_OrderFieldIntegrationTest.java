@@ -21,7 +21,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BattleNext_OrderFieldTest {
+class BattleNext_OrderFieldIntegrationTest {
 
 	@Test
 	void mergesSameTypeAndRequiresHigherPriorityForDifferentType() {

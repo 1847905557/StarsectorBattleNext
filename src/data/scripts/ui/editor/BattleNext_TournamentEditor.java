@@ -21,6 +21,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -28,13 +29,14 @@ import data.scripts.ui.widget.BattleNext_TextField;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 
 public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+	private BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 
 	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+	public void setInputRouter(BattleNext_UiInputRouter router) {
 		this.inputRouter = router;
 	}
 
@@ -126,9 +128,12 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
+		boolean opened = idField == null;
 		this.panel = panel;
 		createContents();
-		savedSnapshot = serializeState();
+		if (opened) {
+			savedSnapshot = serializeState();
+		}
 	}
 
 	@Override
@@ -139,12 +144,23 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		String[] values = idField == null ? null : new String[]{idField.getText(), nameField.getText(),
+				boField.getText(), maxFleetField.getText(), ruleField.getText(), mapField.getText(), fleetField.getText()};
+		Object bracket = idField == null ? null : bracketGroup.getCheckedValue();
 		closePicker();
 		inputRouter.clear();
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
 		addDetails(content);
+		if (values != null) {
+			TextFieldAPI[] fields = {idField, nameField, boField, maxFleetField, ruleField, mapField, fleetField};
+			for (int index = 0; index < fields.length; index++) {
+				fields[index].setText(values[index]);
+			}
+			bracketGroup.tryCheckValue(bracket);
+			bracketGroup.updateCheck();
+		}
 		contentPanel.addUIElement(content).inTL(0f, 0f);
 		refreshDraftValidation();
 	}
@@ -227,7 +243,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			content.addPara(text("matches"), MATCH_SECTION_GAP);
 			for (BattleNext_Match match : draft.getMatches()) {
 				content.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
-						+ " [" + text("match_status_" + match.getStatus().name().toLowerCase(java.util.Locale.ROOT))
+						+ " [" + text("match_status_" + match.getStatus().name().toLowerCase(Locale.ROOT))
 						+ "]", MATCH_ENTRY_GAP);
 			}
 		}
@@ -276,7 +292,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	}
 
 	private String bracketLabel(TournamentBracketType type) {
-		return text("bracket_" + type.name().toLowerCase(java.util.Locale.ROOT));
+		return text("bracket_" + type.name().toLowerCase(Locale.ROOT));
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, TooltipMakerAPI... viewports) {

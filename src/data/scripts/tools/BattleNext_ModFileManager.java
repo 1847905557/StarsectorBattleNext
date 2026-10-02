@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -363,7 +364,7 @@ public class BattleNext_ModFileManager {
 
 	private static IOException fileFailure(String relativePath, Throwable exception) {
 		Throwable cause = exception;
-		if (exception instanceof java.lang.reflect.InvocationTargetException invocation
+		if (exception instanceof InvocationTargetException invocation
 				&& invocation.getCause() != null) {
 			cause = invocation.getCause();
 		}

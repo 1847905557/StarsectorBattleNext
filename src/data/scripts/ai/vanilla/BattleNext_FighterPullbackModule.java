@@ -20,6 +20,7 @@ import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import data.scripts.battlesnext.util.annotation.PublicData;
 import java.util.ArrayList;
 
 /**
@@ -778,7 +779,7 @@ public class BattleNext_FighterPullbackModule {
 	}
 
 	// replacement for com.fs.util.container.Pair
-	@data.scripts.battlesnext.util.annotation.PublicData
+	@PublicData
 	private static class Pair<One, Two> {
 		public One one;
 		public Two two;

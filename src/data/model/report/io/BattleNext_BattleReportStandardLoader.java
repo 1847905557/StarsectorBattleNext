@@ -6,6 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -29,11 +30,11 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 
 	@Override
 	protected BattleNext_BattleReportModel parse(String path) throws IOException, JSONException {
-		org.json.JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
+		JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
 		return parseReport(json);
 	}
 
-	static BattleNext_BattleReportModel parseReport(org.json.JSONObject json) throws JSONException {
+	static BattleNext_BattleReportModel parseReport(JSONObject json) throws JSONException {
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.fromJson(json);
 		return report;

@@ -2,6 +2,7 @@ package data.scripts.ai.vanilla.maneuvers;
 
 import com.fs.starfarer.api.combat.CollisionClass;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.fleet.FleetGoal;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
@@ -41,7 +42,7 @@ public class BattleNext_ExploreManeuver implements BattleNext_Maneuver {
 			escapeOwner = 1;
 		}
 
-		com.fs.starfarer.api.combat.CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
+		CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(escapeOwner);
 		boolean escapeGoal = fleetManager != null && fleetManager.getGoal() == FleetGoal.ESCAPE;
 		// approximation: the engine combat map bounds are taken from the helper,
 		// which derives them from the engine map size

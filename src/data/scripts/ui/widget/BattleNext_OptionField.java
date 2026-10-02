@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,7 @@ public class BattleNext_OptionField {
 	private static final float PICKER_BUTTON_WIDTH = 32f;
 	private static final float PICKER_ROW_TOP_GAP = 2f;
 
-	private final data.scripts.ui.BattleNext_UiInputRouter inputRouter;
+	private final BattleNext_UiInputRouter inputRouter;
 	private final CustomPanelAPI overlayHost;
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
 	private final OptionSelectionMode mode;
@@ -28,10 +29,10 @@ public class BattleNext_OptionField {
 
 	public BattleNext_OptionField(CustomPanelAPI overlayHost, BattleNext_OptionPicker.OptionChoiceSource source,
 			OptionSelectionMode mode) {
-		this(data.scripts.ui.BattleNext_UiInputRouter.current(), overlayHost, source, mode);
+		this(BattleNext_UiInputRouter.current(), overlayHost, source, mode);
 	}
 
-	public BattleNext_OptionField(data.scripts.ui.BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
+	public BattleNext_OptionField(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode) {
 		this.inputRouter = inputRouter;
 		this.overlayHost = overlayHost;

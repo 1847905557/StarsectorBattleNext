@@ -5,11 +5,8 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader.CatalogEntry;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiInputRouter;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.scripts.ui.widget.BattleNext_TextField;
 
@@ -18,26 +15,18 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
+public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_PinnedVariantStore store;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
-	private BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	private final BattleNext_VariantDetails details = new BattleNext_VariantDetails(
 			this::refreshContent, () -> inputRouter.isEmpty());
-	private CustomPanelAPI panel;
-	private UIRect listRect;
-	private UIRect detailRect;
 	private String selectedPath = "";
 	private String baseline = "";
 	private TextFieldAPI name;
 	private TooltipMakerAPI metadata;
-	private ButtonAPI saveButton;
-	private LabelAPI statusLabel;
-	private String status = "";
 
 	public BattleNext_PinnedVariantPage(Runnable backAction, Consumer<Runnable> navigation,
 			BiConsumer<String, Runnable> deletion) {
@@ -53,14 +42,8 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 	}
 
 	@Override
-	public void setInputRouter(BattleNext_UiInputRouter router) {
-		inputRouter = router;
-	}
+	protected void loadPageState() {
 
-	@Override
-	public void attach(CustomPanelAPI body) {
-
-		panel = body;
 		selectedPath = "";
 		baseline = "";
 		name = null;
@@ -70,60 +53,51 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 		try {
 			store.reload();
 		} catch (Exception exception) {
-			status = strings.get("load_failed") + ": " + exception;
+			status = text("load_failed") + ": " + exception;
 		}
-		createContents();
 	}
 
 	@Override
-	public void createContents() {
-
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
-				panel, strings.get("pinned_variants"));
-		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
-		listRect = regions[0];
-		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.PANEL, BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
-		detailRect.addBorder(panel, BattleNext_UiTheme.PANEL, BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
-		UIRect footer = regions[2];
-		float width = BattleNext_PageLayout.managementFooterButtonWidth(footer, 2);
-		saveButton = BattleNext_PageLayout.fixedButton(panel,
-				BattleNext_PageLayout.managementFooterButtonRect(footer, width, 0), strings.get("save"), "save", CutStyle.ALL, true);
-		BattleNext_PageLayout.fixedButton(panel, BattleNext_PageLayout.managementFooterButtonRect(footer, width, 1),
-				strings.get("back"), "back", CutStyle.ALL, true);
-		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footer, width, 2);
-		statusLabel = null;
-		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
-			TooltipMakerAPI text = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
-			statusLabel = text.addPara(status, 0f);
-			panel.addUIElement(text).inTL(statusRect.getX(), statusRect.getY());
-		}
-		refreshContent();
+	protected String pageTitle() {
+		return text("pinned_variants");
 	}
 
 	@Override
-	public void refreshContent() {
+	protected String[] footerActions() {
+		return new String[]{"save", "back"};
+	}
 
-		String edited = name == null ? baseline : name.getText();
-		float offset = metadata == null || metadata.getExternalScroller() == null
-				? 0f : metadata.getExternalScroller().getYOffset();
-		inputRouter.clear();
-		name = null;
-		listRect.removeLatestSubPanel();
-		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		UIRect listArea = BattleNext_PageLayout.managementContentRect(listRect);
-		TooltipMakerAPI list = listPanel.createUIElement(listArea.getWidth(), listArea.getHeight(), true);
-		list.addTitle(strings.get("pinned_variants"));
-		if (!store.isLoaded()) {
-			list.addPara(strings.get("load_failed") + ": " + store.getLoadError(), 8f);
-		}
-		if (store.getCatalog().isEmpty()) {
-			list.addPara(strings.get("no_pinned_variants"), 10f);
-		}
+	@Override
+	protected String promptText() {
+		return text("select_pinned_variant");
+	}
+
+	@Override
+	protected boolean isListLoaded() {
+		return store.isLoaded();
+	}
+
+	@Override
+	protected String listError() {
+		return store.getLoadError();
+	}
+
+	@Override
+	protected boolean isListEmpty() {
+		return store.getCatalog().isEmpty();
+	}
+
+	@Override
+	protected String emptyListText() {
+		return text("no_pinned_variants");
+	}
+
+	@Override
+	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (CatalogEntry entry : sorted(store.getCatalog())) {
-			BattleNext_PageLayout.button(list, (entry.error().isEmpty() ? "" : strings.get("variant_error_marker") + " ")
+			BattleNext_PageLayout.button(listContent, (entry.error().isEmpty() ? "" : text("variant_error_marker") + " ")
 					+ entry.name(), "pin:" + entry.path(), BattleNext_PageLayout.managementListButtonWidth(listRect));
-			list.addTooltipToPrevious(new BaseTooltipCreator() {
+			listContent.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
 				public float getTooltipWidth(Object ignored) {
 					return 400f;
@@ -150,57 +124,49 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 				}
 			}, TooltipMakerAPI.TooltipLocation.RIGHT);
 		}
-		listPanel.addUIElement(list).inTL(listArea.getX() - listRect.getX(), listArea.getY() - listRect.getY());
-		detailRect.removeLatestSubPanel();
-		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
+	}
+
+	@Override
+	protected void buildDetail(CustomPanelAPI contentPanel) {
+		String edited = name == null ? baseline : name.getText();
+		float offset = metadata == null || metadata.getExternalScroller() == null
+				? 0f : metadata.getExternalScroller().getYOffset();
+		name = null;
 		CatalogEntry selected = selected();
-		saveButton.setEnabled(store.isLoaded() && selected != null && selected.model() != null);
-		if (selected == null) {
-			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
-			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
-			prompt.addTitle(strings.get("select_pinned_variant"));
-			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
-					promptRect.getY() - detailRect.getY());
-			metadata = null;
-			return;
-		}
-		UIRect area = BattleNext_PageLayout.managementEditorRect(detailRect);
+		UIRect area = new UIRect(0f, 0f, contentPanel.getPosition().getWidth(), contentPanel.getPosition().getHeight());
 		float metadataLimit = Math.max(1f, (float) Math.floor(area.getHeight() / 3f));
-		CustomPanelAPI metadataPanel = detailPanel.createCustomPanel(area.getWidth(), metadataLimit,
+		CustomPanelAPI metadataPanel = contentPanel.createCustomPanel(area.getWidth(), metadataLimit,
 				new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = metadataPanel.createUIElement(
 				area.getWidth() + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataLimit, true);
 		content.setTextWidthOverride(area.getWidth());
 		content.addTitle(selected.name());
-		content.addPara(strings.get("pin_name"), 8f);
+		content.addPara(text("pin_name"), 8f);
 		if (selected.model() != null && store.isLoaded()) {
 			name = BattleNext_TextField.addTo(inputRouter, content, metadataPanel, area.getWidth(),
 					BattleNext_PageLayout.FORM_FIELD_HEIGHT, edited, content);
 			name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		}
-		content.addPara(strings.get("variant_pin_id") + ": " + selected.pinId(), 8f);
-		content.addPara(strings.get("variant_source") + ": " + selected.path(), 8f);
+		content.addPara(text("variant_pin_id") + ": " + selected.pinId(), 8f);
+		content.addPara(text("variant_source") + ": " + selected.path(), 8f);
 		if (!selected.error().isEmpty()) {
 			content.addPara(selected.error(), 8f);
 		}
-		ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-				BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect), strings.get("delete"), "delete", CutStyle.ALL, true);
-		delete.setEnabled(store.isLoaded());
 		float metadataHeight = Math.min(metadataLimit, content.getHeightSoFar());
 		metadataPanel.getPosition().setSize(area.getWidth(), metadataHeight);
 		content.getPosition().setSize(area.getWidth() + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataHeight);
 		metadataPanel.addUIElement(content).inTL(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, 0f);
-		detailPanel.addComponent(metadataPanel).inTL(area.getX() - detailRect.getX(), area.getY() - detailRect.getY());
+		contentPanel.addComponent(metadataPanel).inTL(0f, 0f);
 		metadata = content;
 		if (content.getExternalScroller() != null) {
 			content.getExternalScroller().setYOffset(Math.min(Math.max(0f, content.getHeightSoFar() - metadataHeight), offset));
 		}
 		if (selected.error().isEmpty() && selected.model() != null && store.isLoaded()) {
 			float detailsHeight = Math.max(1f, area.getHeight() - metadataHeight - 8f);
-			CustomPanelAPI visual = detailPanel.createCustomPanel(area.getWidth(), detailsHeight,
+			CustomPanelAPI visual = contentPanel.createCustomPanel(area.getWidth(), detailsHeight,
 					new BaseCustomUIPanelPlugin());
-			detailPanel.addComponent(visual).inTL(area.getX() - detailRect.getX(),
-					area.getY() - detailRect.getY() + metadataHeight + 8f);
+			contentPanel.addComponent(visual).inTL(0f,
+					metadataHeight + 8f);
 			try {
 				details.addTo(visual, area.getWidth(), detailsHeight, selected.model().getVariantJson());
 			} catch (Exception exception) {
@@ -211,17 +177,33 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 		}
 	}
 
-	public static List<CatalogEntry> sorted(List<CatalogEntry> entries) {
-		return entries.stream().sorted(Comparator.comparing(CatalogEntry::name)
-				.thenComparing(CatalogEntry::pinId).thenComparing(CatalogEntry::path)).toList();
-	}
-
-	private CatalogEntry selected() {
-		return store.getCatalog().stream().filter(entry -> entry.path().equals(selectedPath)).findFirst().orElse(null);
+	@Override
+	protected boolean isDetailOpen() {
+		return selected() != null;
 	}
 
 	@Override
-	public void buttonPressed(Object buttonId) {
+	protected boolean hasSelection() {
+		return selected() != null;
+	}
+
+	@Override
+	protected boolean isDetailEditable() {
+		return selected().model() != null;
+	}
+
+	@Override
+	protected boolean isSaveDataLoaded() {
+		return store.isLoaded();
+	}
+
+	@Override
+	protected boolean canDelete() {
+		return store.isLoaded();
+	}
+
+	@Override
+	protected void handlePageAction(Object buttonId) {
 
 		if (buttonId instanceof String id && id.startsWith("pin:")) {
 			navigation.accept(() -> {
@@ -259,29 +241,29 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 					name = null;
 					metadata = null;
 					details.clear();
-					setStatus(strings.get("deleted"));
+					setStatus(text("deleted"));
 					refreshContent();
 				} catch (Exception exception) {
-					setStatus(strings.get("save_failed") + ": " + exception);
+					setStatus(text("save_failed") + ": " + exception);
 				}
 			});
 		}
 	}
 
 	@Override
-	public boolean hasUnsavedChanges() {
+	protected boolean isPageDirty() {
 		return name != null && !name.getText().equals(baseline);
 	}
 
 	@Override
-	public boolean save() {
+	protected boolean savePage() {
 
 		CatalogEntry entry = selected();
 		if (entry == null) return true;
 		if (!store.isLoaded() || entry.model() == null || name == null) return false;
 		String next = name.getText().trim();
 		if (next.isEmpty()) {
-			setStatus(strings.get("pin_name_required"));
+			setStatus(text("pin_name_required"));
 			return false;
 		}
 		try {
@@ -289,31 +271,28 @@ public class BattleNext_PinnedVariantPage implements BattleNext_PageView {
 			baseline = next;
 			name.setText(next);
 			store.reload();
-			setStatus(strings.get("saved"));
+			setStatus(text("saved"));
 			refreshContent();
 			return true;
 		} catch (Exception exception) {
-			setStatus(strings.get("save_failed") + ": " + exception);
+			setStatus(text("save_failed") + ": " + exception);
 			return false;
 		}
 	}
 
 	@Override
-	public void discard() {
+	protected void discardPage() {
 		if (name != null) {
 			name.setText(baseline);
 		}
 	}
 
-	@Override
-	public String getStatusText() {
-		return status;
+	public static List<CatalogEntry> sorted(List<CatalogEntry> entries) {
+		return entries.stream().sorted(Comparator.comparing(CatalogEntry::name)
+				.thenComparing(CatalogEntry::pinId).thenComparing(CatalogEntry::path)).toList();
 	}
 
-	private void setStatus(String value) {
-		status = value;
-		if (statusLabel != null) {
-			statusLabel.setText(value);
-		}
+	private CatalogEntry selected() {
+		return store.getCatalog().stream().filter(entry -> entry.path().equals(selectedPath)).findFirst().orElse(null);
 	}
 }

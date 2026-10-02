@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class BattleNext_PageLayoutSoundTest {
+class BattleNext_PageLayoutSoundIntegrationTest {
 
 	@Test
 	void buttonsUseRegisteredVanillaHoverAndPressSounds() {

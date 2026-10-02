@@ -10,11 +10,8 @@ import checks.integrity.support.ProjectRuleRegistryReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 public class FixtureIntegrityRule implements IntegrityRule {
@@ -96,7 +93,7 @@ public class FixtureIntegrityRule implements IntegrityRule {
 			}
 		}
 
-		for (java.util.Map.Entry<String, String> rule : ruleRegistry.classRuleNames().entrySet()) {
+		for (Entry<String, String> rule : ruleRegistry.classRuleNames().entrySet()) {
 			if (!violationCovered.contains(rule.getValue())) {
 				failures.add(rule.getKey() + " has no violation fixture covering " + rule.getValue() + ".");
 			}

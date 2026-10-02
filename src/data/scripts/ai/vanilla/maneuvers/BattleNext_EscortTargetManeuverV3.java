@@ -1,18 +1,13 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
-import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackAIModule;
@@ -20,11 +15,13 @@ import data.scripts.ai.vanilla.collisions.BattleNext_CollisionCheckSegment;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionDangerEntry;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionTimeRange;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import data.scripts.battlesnext.util.annotation.PublicData;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.EscortTargetManeuverV3.
@@ -1395,9 +1392,9 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 	// port of engine HullVariantSpec.isNonCombat: carrier or civilian hints and
 	// no combat hint
 	private static boolean isNonCombatVariant(ShipAPI ship) {
-		return (ship.getVariant().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.CARRIER)
-			|| ship.getVariant().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.CIVILIAN))
-			&& !ship.getVariant().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.COMBAT);
+		return (ship.getVariant().getHints().contains(ShipHullSpecAPI.ShipTypeHints.CARRIER)
+			|| ship.getVariant().getHints().contains(ShipHullSpecAPI.ShipTypeHints.CIVILIAN))
+			&& !ship.getVariant().getHints().contains(ShipHullSpecAPI.ShipTypeHints.COMBAT);
 	}
 
 	// port of engine Utils.m_a6e824ce: the angular span a circle of the given

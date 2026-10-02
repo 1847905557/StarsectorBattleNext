@@ -14,7 +14,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
-class BattleNext_OrderThreadTest {
+class BattleNext_OrderThreadIntegrationTest {
 
 	private static List<CombatEntityAPI> candidates;
 

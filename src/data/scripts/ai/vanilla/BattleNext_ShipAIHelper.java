@@ -1,56 +1,30 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.BoundsAPI;
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.FighterLaunchBayAPI;
-import com.fs.starfarer.api.combat.FogOfWarAPI;
-import com.fs.starfarer.api.combat.GuidedMissileAI;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.MutableShipStatsAPI;
-import com.fs.starfarer.api.combat.ShieldAPI;
-import com.fs.starfarer.api.combat.ShipAIConfig;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageListener;
+import com.fs.starfarer.api.impl.combat.PhaseCloakStats;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WingRole;
-import com.fs.starfarer.api.impl.combat.PhaseCloakStats;
 import com.fs.starfarer.api.util.Misc;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONException;
-import java.io.IOException;
+import data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Port of engine classes com.fs.starfarer.combat.ai.AIUtils and
@@ -74,8 +48,8 @@ public class BattleNext_ShipAIHelper {
 	 * computation runs; the intercept solver rejects low-closing solutions
 	 * while it is set.
 	 */
-	private static final java.util.concurrent.atomic.AtomicBoolean COMPUTING_AIM_POINT =
-		new java.util.concurrent.atomic.AtomicBoolean(false);
+	private static final AtomicBoolean COMPUTING_AIM_POINT =
+		new AtomicBoolean(false);
 
 	public static boolean isComputingAimPoint() {
 		return COMPUTING_AIM_POINT.get();
@@ -2299,7 +2273,7 @@ public class BattleNext_ShipAIHelper {
 
 	public static boolean isEscorting(ShipAPI ship) {
 		BattleNext_BasicShipAI ai = BattleNext_BasicShipAI.getActiveInstance(ship);
-		return ai != null && ai.getCurrentManeuver() instanceof data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3;
+		return ai != null && ai.getCurrentManeuver() instanceof BattleNext_EscortTargetManeuverV3;
 	}
 
 	public static boolean isShipBeingEscorted(ShipAPI ship) {
@@ -2333,8 +2307,8 @@ public class BattleNext_ShipAIHelper {
 	public static ShipAPI getEscortTarget(ShipAPI ship) {
 		BattleNext_BasicShipAI portedAI = BattleNext_BasicShipAI.getActiveInstance(ship);
 		if (portedAI != null) {
-			if (portedAI.getCurrentManeuver() instanceof data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3) {
-				return ((data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3) portedAI.getCurrentManeuver()).getTargetShip();
+			if (portedAI.getCurrentManeuver() instanceof BattleNext_EscortTargetManeuverV3) {
+				return ((BattleNext_EscortTargetManeuverV3) portedAI.getCurrentManeuver()).getTargetShip();
 			}
 			return null;
 		}

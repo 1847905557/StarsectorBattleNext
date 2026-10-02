@@ -9,6 +9,8 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_UiInputRouter;
 
+import org.lwjgl.input.Keyboard;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -143,7 +145,7 @@ public final class BattleNext_DropdownField {
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent()
-					&& event.getEventValue() == org.lwjgl.input.Keyboard.KEY_ESCAPE) {
+					&& event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				close();
 				event.consume();
 				return true;
@@ -204,7 +206,7 @@ public final class BattleNext_DropdownField {
 		}
 
 		@Override
-		public com.fs.starfarer.api.ui.PositionAPI getBounds() {
+		public PositionAPI getBounds() {
 			return panel.getPosition();
 		}
 

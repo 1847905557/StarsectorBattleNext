@@ -26,6 +26,7 @@ import org.lwjgl.opengl.GL11;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -333,8 +334,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					+ tournament.getId() + ", nodes=" + nodes.size() + ", zoom=" + zoom
 					+ ", canvas=" + canvas.getX() + "," + canvas.getY() + ","
 					+ canvas.getWidth() + "," + canvas.getHeight() + ", visible="
-					+ java.util.Arrays.toString(visible) + ", firstNode="
-					+ java.util.Arrays.toString(project(nodes.get(0).x, nodes.get(0).y)));
+					+ Arrays.toString(visible) + ", firstNode="
+					+ Arrays.toString(project(nodes.get(0).x, nodes.get(0).y)));
 		}
 	}
 

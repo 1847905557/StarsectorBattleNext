@@ -9,6 +9,8 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
+import java.util.function.BiConsumer;
+
 public class BattleNext_TableWidget {
 
 	@FunctionalInterface
@@ -21,6 +23,7 @@ public class BattleNext_TableWidget {
 	private final String[] headers;
 	private final float[] columnShares;
 	private final RowBuilder rowBuilder;
+	private final BiConsumer<Float, TooltipMakerAPI> contentBuilder;
 	private UIRect bounds;
 	private UIRect rowsBounds;
 	private TooltipMakerAPI content;
@@ -28,12 +31,21 @@ public class BattleNext_TableWidget {
 
 	public BattleNext_TableWidget(CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
 			String[] headers, float[] columnShares, int rowCount, RowBuilder rowBuilder) {
+		this(host, inputOwner, headers, columnShares, rowCount, rowBuilder, (width, content) -> {
+
+		});
+	}
+
+	public BattleNext_TableWidget(CustomPanelAPI host, CustomUIPanelPlugin inputOwner,
+			String[] headers, float[] columnShares, int rowCount, RowBuilder rowBuilder,
+			BiConsumer<Float, TooltipMakerAPI> contentBuilder) {
 		this.host = host;
 		this.inputOwner = inputOwner;
 		this.headers = headers.clone();
 		this.columnShares = columnShares.clone();
 		this.rowCount = rowCount;
 		this.rowBuilder = rowBuilder;
+		this.contentBuilder = contentBuilder;
 	}
 
 	public void attach(UIRect bounds) {
@@ -52,20 +64,22 @@ public class BattleNext_TableWidget {
 
 		float tableWidth = bounds.getWidth() - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
 		float availableHeight = Math.max(0f, bounds.getHeight() - BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		float visibleHeight = Math.min(availableHeight,
-				rowCount * BattleNext_PageLayout.TABLE_ROW_HEIGHT
-						+ BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING);
 		rowsBounds = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
 				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
 				bounds.getY() + BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
-				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, visibleHeight);
+				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
 		CustomPanelAPI rowsPanel = rowsBounds.createSubPanel(host, inputOwner).getPanel();
-		content = rowsPanel.createUIElement(rowsBounds.getWidth(), visibleHeight, true);
+		content = rowsPanel.createUIElement(rowsBounds.getWidth(), availableHeight, true);
 		float rowWidth = rowsBounds.getWidth() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
 		UIRect[] cells = columns(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
 		for (int index = 0; index < rowCount; index++) {
 			rowBuilder.build(index, rowWidth, cells, content);
 		}
+		contentBuilder.accept(rowWidth, content);
+		float visibleHeight = Math.min(availableHeight,
+				content.getHeightSoFar() + BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING);
+		rowsPanel.getPosition().setSize(rowsBounds.getWidth(), visibleHeight);
+		content.getPosition().setSize(rowsBounds.getWidth(), visibleHeight);
 		rowsPanel.addUIElement(content).inTL(0f, 0f);
 	}
 

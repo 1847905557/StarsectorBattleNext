@@ -7,12 +7,14 @@ import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import data.order.BattleNext_OrderUtils;
 import data.order.OrderSuffix;
 
+import java.util.List;
+
 public class PersistSuffix implements OrderSuffix {
 
 	private AssignmentTargetAPI lastTarget;
 
 	@Override
-	public AssignmentTargetAPI selectTarget(AssignmentTargetAPI target, java.util.List<? extends CombatEntityAPI> candidates,
+	public AssignmentTargetAPI selectTarget(AssignmentTargetAPI target, List<? extends CombatEntityAPI> candidates,
 			boolean continuing, String[] params, CombatEngineAPI engine) {
 		if (!continuing) {
 			lastTarget = null;

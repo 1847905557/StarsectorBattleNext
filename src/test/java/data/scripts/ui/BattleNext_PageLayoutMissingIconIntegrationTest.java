@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class BattleNext_PageLayoutMissingIconTest {
+class BattleNext_PageLayoutMissingIconIntegrationTest {
 	private static final Color TINT = new Color(30, 60, 90);
 
 	@Test

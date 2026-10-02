@@ -3,14 +3,11 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import org.json.JSONException;
 
@@ -19,27 +16,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class BattleNext_TournamentPage implements BattleNext_PageView {
-
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
-
-	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
-		this.inputRouter = router;
-		editor.setInputRouter(router);
-	}
-
-	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		return draftOpen && editor.handleGlobalInput(events);
-	}
-
-	public void refreshDraftValidation() {
-		if (draftOpen) editor.refreshDraftValidation();
-	}
-
-	public void closePicker() {
-		editor.closePicker();
-	}
+public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -48,16 +25,9 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RuleStore ruleStore = new BattleNext_RuleStore();
 	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
 
-	private CustomPanelAPI panel;
-	private UIRect listRect;
-	private UIRect detailRect;
 	private String selectedId = "";
 	private boolean draftOpen;
-	private LabelAPI statusLabel;
-	private ButtonAPI saveButton;
-	private String status = "";
 
 	public BattleNext_TournamentPage(Runnable backAction, Consumer<Runnable> navigation,
 			BiConsumer<String, Runnable> deletion) {
@@ -67,8 +37,12 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	}
 
 	@Override
-	public void attach(CustomPanelAPI panel) {
-		this.panel = panel;
+	protected void bindPageInput() {
+		editor.setInputRouter(inputRouter);
+	}
+
+	@Override
+	protected void loadPageState() {
 		selectedId = "";
 		draftOpen = false;
 		status = "";
@@ -87,89 +61,94 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		} catch (Exception exception) {
 			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
 		}
-		createContents();
 	}
 
 	@Override
-	public void createContents() {
-		BattleNext_PageLayout.heading(new UIRect(0f, 0f, panel.getPosition().getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
-				panel, text("page_tournaments"));
-		UIRect[] regions = BattleNext_PageLayout.managementRegions(panel);
-		listRect = regions[0];
-		detailRect = regions[1];
-		listRect.addBorder(panel, BattleNext_UiTheme.PANEL,
-				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
-		detailRect.addBorder(panel, BattleNext_UiTheme.PANEL,
-				BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
-		UIRect footerRect = regions[2];
-		String[] actions = {"add", "save", "back"};
-		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, actions.length);
-		for (int index = 0; index < actions.length; index++) {
-			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
-					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
-					text(actions[index]), actions[index], CutStyle.ALL, true);
-			if (index == 1) {
-				saveButton = button;
-				saveButton.setEnabled(tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded());
-			}
-		}
-		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
-		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
-			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
-			statusLabel = footerStatus.addPara(status, 0f);
-			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
-			footerStatus.setHeightSoFar(statusRect.getHeight());
-			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
-		}
-
-		refreshContent();
+	protected String pageTitle() {
+		return text("page_tournaments");
 	}
 
 	@Override
-	public void refreshContent() {
-		listRect.removeLatestSubPanel();
-		CustomPanelAPI listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
-		TooltipMakerAPI listContent = listPanel.createUIElement(listContentRect.getWidth(), listContentRect.getHeight(), true);
-		addList(listContent);
-		listPanel.addUIElement(listContent).inTL(listContentRect.getX() - listRect.getX(),
-				listContentRect.getY() - listRect.getY());
+	protected String[] footerActions() {
+		return new String[]{"add", "save", "back"};
+	}
 
-		detailRect.removeLatestSubPanel();
-		CustomPanelAPI detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
-		if (!draftOpen) {
-			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
-			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
-			prompt.addTitle(text("select_tournament"));
-			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
-					promptRect.getY() - detailRect.getY());
-			return;
-		}
-		BattleNext_TournamentModel selected = selectedId.isEmpty() ? null : tournamentStore.get(selectedId);
-		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
-		CustomPanelAPI editorPanel = detailPanel.createCustomPanel(editorRect.getWidth(),
-				editorRect.getHeight(), detailPanel.getPlugin());
-		detailPanel.addComponent(editorPanel).inTL(editorRect.getX() - detailRect.getX(),
-				editorRect.getY() - detailRect.getY());
-		editor.attach(editorPanel);
-		if (selected != null) {
-			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
-					text("delete"), "delete", CutStyle.ALL, true);
-			delete.setEnabled(tournamentStore.isManaged(selectedId) && tournamentStore.isLoaded());
-			if (!tournamentStore.isManaged(selectedId)) {
-				UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(detailRect);
-				TooltipMakerAPI note = detailPanel.createUIElement(noteRect.getWidth(), noteRect.getHeight(), false);
-				note.addPara(note.shortenString(text("source_unavailable_short"),
-						detailRect.getWidth() - BattleNext_PageLayout.MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE),
-						0f);
-				detailPanel.addUIElement(note).inTL(noteRect.getX(), noteRect.getY());
-			}
+	@Override
+	protected String promptText() {
+		return text("select_tournament");
+	}
+
+	@Override
+	protected boolean isListLoaded() {
+		return tournamentStore.isLoaded();
+	}
+
+	@Override
+	protected String listError() {
+		return tournamentStore.getLoadError();
+	}
+
+	@Override
+	protected boolean isListEmpty() {
+		return tournamentStore.getAll().isEmpty();
+	}
+
+	@Override
+	protected String emptyListText() {
+		return text("no_tournaments");
+	}
+
+	@Override
+	protected void buildListItems(TooltipMakerAPI listContent) {
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
+			BattleNext_PageLayout.buttonWithTooltip(listContent, tournament.getName(),
+					"tournament:select:" + tournament.getId(),
+					BattleNext_PageLayout.managementListButtonWidth(listRect));
 		}
 	}
 
 	@Override
-	public void buttonPressed(Object buttonId) {
+	protected void buildDetail(CustomPanelAPI contentPanel) {
+		editor.attach(contentPanel);
+	}
+
+	@Override
+	protected boolean isDetailOpen() {
+		return draftOpen;
+	}
+
+	@Override
+	protected boolean hasSelection() {
+		return !selectedId.isEmpty();
+	}
+
+	@Override
+	protected boolean isDetailEditable() {
+		return !editor.isReadOnly();
+	}
+
+	@Override
+	protected boolean isSaveDataLoaded() {
+		return tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded();
+	}
+
+	@Override
+	protected boolean canDelete() {
+		return tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId);
+	}
+
+	@Override
+	protected String sourceNote() {
+		return !selectedId.isEmpty() && !tournamentStore.isManaged(selectedId) ? text("source_unavailable_short") : "";
+	}
+
+	@Override
+	protected void clearPageOverlays() {
+		editor.closePicker();
+	}
+
+	@Override
+	protected void handlePageAction(Object buttonId) {
 		if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
 			String id = ((String) buttonId).substring("tournament:select:".length());
 			navigation.accept(() -> {
@@ -215,26 +194,13 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 		}
 	}
 
-	private void addList(TooltipMakerAPI listContent) {
-		listContent.addTitle(text("page_tournaments"));
-		if (!tournamentStore.isLoaded()) listContent.addPara(text("load_failed") + ": "
-				+ tournamentStore.getLoadError(), BattleNext_PageLayout.MANAGEMENT_LIST_ERROR_TOP_GAP);
-		if (tournamentStore.getAll().isEmpty()) listContent.addPara(text("no_tournaments"),
-				BattleNext_PageLayout.MANAGEMENT_LIST_EMPTY_TOP_GAP);
-		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, tournament.getName(),
-					"tournament:select:" + tournament.getId(),
-					BattleNext_PageLayout.managementListButtonWidth(listRect));
-		}
-	}
-
 	@Override
-	public boolean hasUnsavedChanges() {
+	protected boolean isPageDirty() {
 		return draftOpen && editor.hasUnsavedChanges();
 	}
 
 	@Override
-	public boolean save() {
+	protected boolean savePage() {
 		if (!draftOpen || editor.isReadOnly()) return true;
 		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
 			setStatus(text("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
@@ -276,7 +242,7 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	}
 
 	@Override
-	public void discard() {
+	protected void discardPage() {
 		if (selectedId.isEmpty()) {
 			draftOpen = false;
 			refreshContent();
@@ -286,16 +252,14 @@ public class BattleNext_TournamentPage implements BattleNext_PageView {
 	}
 
 	@Override
-	public String getStatusText() {
-		return status;
+	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		return draftOpen && editor.handleGlobalInput(events);
 	}
 
-	private void setStatus(String value) {
-		status = value;
-		if (statusLabel != null) statusLabel.setText(value);
-	}
-
-	private String text(String key) {
-		return strings.get(key);
+	@Override
+	public void advance(float amount) {
+		if (draftOpen) {
+			editor.refreshDraftValidation();
+		}
 	}
 }

@@ -1,24 +1,24 @@
 package data.scripts.battle;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
-import data.scripts.tools.BattleNext_BattleSignals;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
+import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tournament.BattleNext_TournamentEngine;
+
+import org.json.JSONException;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
 public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin {
@@ -28,7 +28,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 
 	@FunctionalInterface
 	interface ReportWriter {
-		SaveOutcome save(BattleNext_BattleReportModel report) throws IOException, org.json.JSONException;
+		SaveOutcome save(BattleNext_BattleReportModel report) throws IOException, JSONException;
 	}
 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
@@ -74,8 +74,8 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		SaveOutcome outcome;
 		try {
 			outcome = writer.save(report);
-		} catch (IOException | org.json.JSONException | RuntimeException exception) {
-			com.fs.starfarer.api.Global.getLogger(BattleNext_BattleResultRecorder.class).error("Unable to save battle report", exception);
+		} catch (IOException | JSONException | RuntimeException exception) {
+			Global.getLogger(BattleNext_BattleResultRecorder.class).error("Unable to save battle report", exception);
 			combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, messages.apply("save_failed"));
 			return;
 		}
@@ -84,7 +84,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, message);
 	}
 
-	private SaveOutcome record(BattleNext_BattleReportModel report) throws IOException, org.json.JSONException {
+	private SaveOutcome record(BattleNext_BattleReportModel report) throws IOException, JSONException {
 		if (report.getId().isEmpty()) report.setId(UUID.randomUUID().toString());
 		if (report.getCreatedAt() <= 0L) report.setCreatedAt(System.currentTimeMillis());
 		String playerLabel = playerName == null || playerName.isBlank() ? match.getPlayer() : playerName;
@@ -97,8 +97,8 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			store.reload();
 			store.save(report);
 			keepCount = BattleNext_Settings.getReportKeepCount();
-			List<BattleNext_BattleReportModel> reports = new java.util.ArrayList<>(store.getAll());
-			reports.sort(java.util.Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
+			List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
+			reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 			for (int index = keepCount; index < reports.size(); index++) {
 				store.delete(reports.get(index).getId());
 			}

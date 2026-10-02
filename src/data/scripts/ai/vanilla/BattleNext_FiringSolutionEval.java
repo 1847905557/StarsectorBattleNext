@@ -24,6 +24,8 @@ import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
 import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
+import data.scripts.battlesnext.util.annotation.PublicData;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.lwjgl.util.vector.Vector2f;
@@ -1074,7 +1076,7 @@ public class BattleNext_FiringSolutionEval {
 	 * Pure data holder for the best firing solution; public fields are allowed
 	 * by the project PublicData rule for data types.
 	 */
-	@data.scripts.battlesnext.util.annotation.PublicData
+	@PublicData
 	public static class SolutionResult {
 		private float maxDamagePerShot;
 		private float kineticDamage;

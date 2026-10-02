@@ -15,6 +15,7 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.view.BattleNext_TournamentView;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -206,7 +207,7 @@ public class BattleNext_TournamentDisplay {
 	private String bracketLabel() {
 		if (tournament.getBracketType() == null) return text("chart_unknown_bracket");
 
-		return text("bracket_" + tournament.getBracketType().name().toLowerCase(java.util.Locale.ROOT));
+		return text("bracket_" + tournament.getBracketType().name().toLowerCase(Locale.ROOT));
 	}
 
 	private String text(String key) {

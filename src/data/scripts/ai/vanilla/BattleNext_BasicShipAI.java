@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
+import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackAIModule;
@@ -624,10 +625,10 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		}
 
 		if (this.ship.getFixedLocation() != null) {
-			this.setManeuver(new data.scripts.ai.vanilla.maneuvers.BattleNext_HoldPositionManeuver(this.ship, this.flockingAI, this), 3.0F);
+			this.setManeuver(new BattleNext_HoldPositionManeuver(this.ship, this.flockingAI, this), 3.0F);
 			return;
 		} else if (this.ship.getStationSlot() != null) {
-			this.setManeuver(new data.scripts.ai.vanilla.maneuvers.BattleNext_IdleManeuver(this.ship, this.flockingAI, this), 3.0F);
+			this.setManeuver(new BattleNext_IdleManeuver(this.ship, this.flockingAI, this), 3.0F);
 			BattleNext_BestTargetEval stationTarget = BattleNext_ShipAIHelper.getBestManeuverTarget(this.ship);
 			if (stationTarget != null) {
 				this.target = stationTarget.getTarget();
@@ -713,7 +714,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 	}
 
 	private void pickFieldManeuver() {
-		com.fs.starfarer.api.combat.CombatTaskManagerAPI taskManager = BattleNext_ShipAIHelper.getEngine()
+		CombatTaskManagerAPI taskManager = BattleNext_ShipAIHelper.getEngine()
 			.getFleetManager(this.ship.getOriginalOwner()).getTaskManager(this.ship.isAlly());
 
 		// AVOID assignments: run away from the avoided entity
@@ -766,7 +767,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 					attackPoint = new Vector2f(orders.getTaskTarget().getLocation());
 				}
 
-				this.setManeuver(new data.scripts.ai.vanilla.maneuvers.BattleNext_TaskAttackManeuver(this.ship, attackPoint, this), 3.0F);
+				this.setManeuver(new BattleNext_TaskAttackManeuver(this.ship, attackPoint, this), 3.0F);
 				return;
 			}
 		}
@@ -783,7 +784,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			}
 
 			float flagDuration = 5.0F;
-			if (orderResponse != null && orderResponse.maneuver instanceof data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3) {
+			if (orderResponse != null && orderResponse.maneuver instanceof BattleNext_EscortTargetManeuverV3) {
 				borderMargin = 100.0F;
 				flagDuration = 2.0F;
 			}
@@ -805,8 +806,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 					);
 					this.setManeuver(borderStrafe, duration);
 				} else {
-					data.scripts.ai.vanilla.maneuvers.BattleNext_TaskMoveManeuver borderMove =
-						new data.scripts.ai.vanilla.maneuvers.BattleNext_TaskMoveManeuver(this.ship, this.mapCenter(), this);
+					BattleNext_TaskMoveManeuver borderMove =
+						new BattleNext_TaskMoveManeuver(this.ship, this.mapCenter(), this);
 					this.setManeuver(borderMove, flagDuration);
 				}
 
@@ -845,7 +846,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 				&& !this.ship.getHullSpec().getHints().contains(ShipTypeHints.NO_AUTO_ESCORT)
 				&& this.ship.getLaunchBaysCopy().size() >= this.ship.getMutableStats().getNumFighterBays().getModifiedValue() * 0.66F;
 			if (carrierAutoEscort && !this.ship.isRetreating()) {
-				com.fs.starfarer.api.combat.CombatTaskManagerAPI ownTaskManager = BattleNext_ShipAIHelper.getEngine()
+				CombatTaskManagerAPI ownTaskManager = BattleNext_ShipAIHelper.getEngine()
 					.getFleetManager(this.ship.getOriginalOwner()).getTaskManager(this.ship.isAlly());
 				if (ownTaskManager != null) {
 					AssignmentInfo assignment = ownTaskManager.getAssignmentFor(this.ship);
@@ -857,8 +858,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 						if (!skipForIntercept) {
 							ShipAPI escortTarget = BattleNext_ShipAIHelper.findAutoEscortTarget(this.ship, false, assignment);
 							if (escortTarget != null) {
-								data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3 escortManeuver =
-									new data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3(
+								BattleNext_EscortTargetManeuverV3 escortManeuver =
+									new BattleNext_EscortTargetManeuverV3(
 										this.ship, escortTarget, this.attackAI, this.flockingAI, this
 									);
 								this.setManeuver(escortManeuver, 2.0F + (carrierAutoEscort ? 1.0F : 0.0F));
@@ -944,7 +945,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		this.targetOverride = null;
 		if (this.target != null && !BattleNext_ShipAIHelper.isEntityVisible(this.ship.getOriginalOwner(), this.target)) {
-			data.scripts.ai.vanilla.maneuvers.BattleNext_ExploreManeuver explore = new data.scripts.ai.vanilla.maneuvers.BattleNext_ExploreManeuver(
+			BattleNext_ExploreManeuver explore = new BattleNext_ExploreManeuver(
 				this.ship, this.flockingAI, this
 			);
 			this.setManeuver(explore, 2.0F + (float) Math.random() * 2.0F);
@@ -964,7 +965,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 	}
 
 	private void pickEngagementManeuver(BattleNext_BestTargetEval bestTarget) {
-		com.fs.starfarer.api.combat.CombatTaskManagerAPI taskManager = BattleNext_ShipAIHelper.getEngine()
+		CombatTaskManagerAPI taskManager = BattleNext_ShipAIHelper.getEngine()
 			.getFleetManager(this.ship.getOriginalOwner()).getTaskManager(this.ship.isAlly());
 
 		boolean allowChase = true;
@@ -976,7 +977,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		boolean harassAssignment = false;
 		CombatFleetManagerAPI fleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(this.ship.getOriginalOwner());
 		if (fleetManager != null) {
-			com.fs.starfarer.api.combat.CombatTaskManagerAPI ownTaskManager = fleetManager.getTaskManager(this.ship.isAlly());
+			CombatTaskManagerAPI ownTaskManager = fleetManager.getTaskManager(this.ship.isAlly());
 			BattleNext_DirectOrders orders = this.orderResponseModule.getOrders();
 			if (orders != null && orders.getTaskType() != null) {
 				if (orders.getTaskType() == CombatAssignmentType.HARASS) {
@@ -1058,8 +1059,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			if (tryEscort) {
 				ShipAPI escortTarget = BattleNext_ShipAIHelper.findAutoEscortTarget(this.ship);
 				if (escortTarget != null && (escortTarget.getHullSize().ordinal() > this.ship.getHullSize().ordinal() || carrierAutoEscort)) {
-					data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3 escortManeuver =
-						new data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3(
+					BattleNext_EscortTargetManeuverV3 escortManeuver =
+						new BattleNext_EscortTargetManeuverV3(
 							this.ship, escortTarget, this.attackAI, this.flockingAI, this
 						);
 					this.setManeuver(escortManeuver, 2.0F + (carrierAutoEscort ? 1.0F : 0.0F));
@@ -1106,8 +1107,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		}
 
 		if (missileOnlyAtLongRange && this.ship.getSystem() != null && this.ship.getMutableStats() != null) {
-			com.fs.starfarer.api.combat.ShipSystemAPI system = this.ship.getSystem();
-			com.fs.starfarer.api.combat.ShipSystemSpecAPI systemSpec = system.getSpecAPI();
+			ShipSystemAPI system = this.ship.getSystem();
+			ShipSystemSpecAPI systemSpec = system.getSpecAPI();
 			if (systemSpec.getThreatAmount() > 0.0F && BattleNext_ShipAIHelper.isInArc(systemSpec.getThreatAngle(), systemSpec.getThreatArc(), 0.0F)) {
 				float systemRange = systemSpec.getThreatRange(this.ship.getMutableStats()) - this.ship.getCollisionRadius() * 0.75F;
 				systemRange *= 0.75F;
@@ -1188,7 +1189,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			bestTargetRange = bestTarget.getRange();
 		}
 
-		boolean frontShield = this.ship.getShield() != null && this.ship.getShield().getType() == com.fs.starfarer.api.combat.ShieldAPI.ShieldType.FRONT;
+		boolean frontShield = this.ship.getShield() != null && this.ship.getShield().getType() == ShieldAPI.ShieldType.FRONT;
 		float ownRadius = this.ship.getCollisionRadius();
 		float flankCheckRadius = ownRadius * 2.0F + 500.0F;
 		if (this.ship.isCruiser()) {
@@ -1339,7 +1340,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			hasInterceptTask = true;
 		}
 
-		data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponFireControlHelper fireControl = new data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponFireControlHelper();
+		BattleNext_WeaponFireControlHelper fireControl = new BattleNext_WeaponFireControlHelper();
 		fireControl.init(this.ship, this.target, this);
 		boolean notOnTargetHeading = !fireControl.isOnTargetHeading();
 		boolean doNotPursue = this.aiFlags.hasFlag(AIFlags.DO_NOT_PURSUE);
@@ -1369,7 +1370,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		// fallback is unreachable (BasicShipAI.java:1591).
 		float pursuitRange = Math.min(2000.0F, threatData.getThreatRange() + 750.0F * facingDot);
 		float targetDistance = BattleNext_ShipAIHelper.getDistance(this.ship, this.target);
-		data.scripts.ai.vanilla.maneuvers.BattleNext_PursuitAttackManeuver oldPursuit = new data.scripts.ai.vanilla.maneuvers.BattleNext_PursuitAttackManeuver(
+		BattleNext_PursuitAttackManeuver oldPursuit = new BattleNext_PursuitAttackManeuver(
 			this.ship, this.target, 0.0F, pursuitRange, targetDistance, this.flockingAI, this
 		);
 		this.setManeuver(oldPursuit, 1.0F);
@@ -1422,14 +1423,14 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 				CombatFleetManagerAPI enemyFleetManager = BattleNext_ShipAIHelper.getEngine().getFleetManager(enemyFleetOwner);
 				boolean enemyEscaping = enemyFleetManager != null
-					&& enemyFleetManager.getGoal() == com.fs.starfarer.api.fleet.FleetGoal.ESCAPE;
+					&& enemyFleetManager.getGoal() == FleetGoal.ESCAPE;
 				if (!doNotPursue
 					&& (
 						targetFacingAway
 							|| this.target.isFrigate() && !backOffWanted && ((float) Math.random() > 0.5F || enemyEscaping)
 							|| !this.threatEvalAI.isThreatHigh() && (closingInHelper() || !this.ship.isFrigate() || enemyEscaping)
 					)) {
-					BattleNext_Maneuver approachManeuver = new data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver(
+					BattleNext_Maneuver approachManeuver = new BattleNext_AssignmentBasedManeuver(
 						this.ship, this.target, speedScale, this.flockingAI, this
 					);
 					if (notOnTargetHeading) {
@@ -1462,8 +1463,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 				}
 
 				if (ALLOW_OLD_STRAFE && pursuitRange > desiredRange + 500.0F && !doNotPursue) {
-					data.scripts.ai.vanilla.maneuvers.BattleNext_PursuitAttackManeuver oldPursuit =
-						new data.scripts.ai.vanilla.maneuvers.BattleNext_PursuitAttackManeuver(
+					BattleNext_PursuitAttackManeuver oldPursuit =
+						new BattleNext_PursuitAttackManeuver(
 							this.ship, this.target, 0.0F, pursuitRange, this.flockingAI, this
 						);
 					this.setManeuver(oldPursuit, 2.0F);
@@ -1525,8 +1526,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 							);
 							this.setManeuver(backOffStrafe, 5.0F);
 						} else {
-							data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponAssistAttackManeuver assist =
-								new data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponAssistAttackManeuver(this.ship, this.target, this.flockingAI, this);
+							BattleNext_WeaponAssistAttackManeuver assist =
+								new BattleNext_WeaponAssistAttackManeuver(this.ship, this.target, this.flockingAI, this);
 							this.setManeuver(assist, 3.0F);
 						}
 
@@ -1538,7 +1539,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 							if (!doNotPursue
 								&& (!((float) Math.random() > 0.33F) && fastShip && !targetClose && !frontShield && !this.ship.isCapital() || targetFar)) {
 								if (targetFar && this.ship.isCapital() && !shipNonCombat) {
-									BattleNext_Maneuver capitalPush = new data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver(
+									BattleNext_Maneuver capitalPush = new BattleNext_AssignmentBasedManeuver(
 										this.ship, this.target, 1.0F, this.flockingAI, this
 									);
 									if (notOnTargetHeading) {
@@ -1566,8 +1567,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 						} else {
 							if (this.attackMode == BattleNext_AttackMode.HOVER) {
 								// intentionally kept dead: attackMode can only be STRAFE
-								data.scripts.ai.vanilla.maneuvers.BattleNext_ChaseAttackManeuver chase =
-									new data.scripts.ai.vanilla.maneuvers.BattleNext_ChaseAttackManeuver(
+								BattleNext_ChaseAttackManeuver chase =
+									new BattleNext_ChaseAttackManeuver(
 										this.ship, this.target, desiredRange, this.flockingAI, this
 									);
 								this.setManeuver(chase, 5.0F);
@@ -1586,7 +1587,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 						}
 
 						if (this.target.isFighter() && !((float) Math.random() > 0.5F) && !doNotPursue) {
-							BattleNext_Maneuver fighterChase = new data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver(
+							BattleNext_Maneuver fighterChase = new BattleNext_AssignmentBasedManeuver(
 								this.ship, this.target, 1.0F, this.flockingAI, this
 							);
 							if (notOnTargetHeading) {
@@ -1597,8 +1598,8 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 							this.setManeuver(fighterChase, 3.0F);
 						} else {
-							data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponAssistAttackManeuver assist =
-								new data.scripts.ai.vanilla.maneuvers.BattleNext_WeaponAssistAttackManeuver(this.ship, this.target, this.flockingAI, this);
+							BattleNext_WeaponAssistAttackManeuver assist =
+								new BattleNext_WeaponAssistAttackManeuver(this.ship, this.target, this.flockingAI, this);
 							this.setManeuver(assist, 3.0F);
 						}
 
@@ -1614,7 +1615,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			}
 
 			Math.random();
-			BattleNext_Maneuver frigateChase = new data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver(
+			BattleNext_Maneuver frigateChase = new BattleNext_AssignmentBasedManeuver(
 				this.ship, this.target, 1.0F, this.flockingAI, this
 			);
 			this.setManeuver(frigateChase, 1.0F + (float) Math.random() * 1.0F);
@@ -1624,7 +1625,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 		if (backOffWanted) {
 			// intentionally kept dead: the constructed maneuver is discarded in vanilla
 			// (BasicShipAI.java:1570)
-			new data.scripts.ai.vanilla.maneuvers.BattleNext_ChaseAttackManeuver(this.ship, this.target, desiredRange * 0.5F, this.flockingAI, this);
+			new BattleNext_ChaseAttackManeuver(this.ship, this.target, desiredRange * 0.5F, this.flockingAI, this);
 			BattleNext_StrafeTargetManeuverV2 backOffStrafe = new BattleNext_StrafeTargetManeuverV2(
 				this.ship, this.target, this.badTarget, 0.0F, Math.max(200.0F, desiredRange * 0.5F), this.flockingAI, this, allowChase
 			);
@@ -1638,7 +1639,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 			);
 			this.setManeuver(alignStrafe, 2.0F);
 		} else {
-			BattleNext_Maneuver alignCharge = new data.scripts.ai.vanilla.maneuvers.BattleNext_AssignmentBasedManeuver(
+			BattleNext_Maneuver alignCharge = new BattleNext_AssignmentBasedManeuver(
 				this.ship, this.target, 1.0F, this.flockingAI, this
 			);
 			this.setManeuver(alignCharge, 2.0F);

@@ -289,7 +289,7 @@ public class BattleNext_OptionPicker {
 		}
 
 		@Override
-		public com.fs.starfarer.api.ui.PositionAPI getBounds() {
+		public PositionAPI getBounds() {
 			return panel.getPosition();
 		}
 

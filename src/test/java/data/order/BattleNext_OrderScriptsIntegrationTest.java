@@ -18,7 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BattleNext_OrderScriptsTest {
+class BattleNext_OrderScriptsIntegrationTest {
 
 	@Test
 	void hullSizeSelectsLargestOrSmallestWithinAllowedSizes() {

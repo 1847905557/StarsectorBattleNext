@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class BattleNext_ScorekeeperReportTest {
+class BattleNext_ScorekeeperReportIntegrationTest {
 	private final Map<ShipAPI, Object[]> damageParams = new IdentityHashMap<>();
 
 	@Test

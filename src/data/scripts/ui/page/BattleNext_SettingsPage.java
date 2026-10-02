@@ -2,23 +2,16 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
 
-public class BattleNext_SettingsPage implements BattleNext_PageView {
-
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
-
-	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
-		this.inputRouter = router;
-	}
+public class BattleNext_SettingsPage extends BattleNext_PageView {
 
 	private static final float DESCRIPTION_TOP_GAP = 10f;
 	private static final float GRAPHICS_CHECKBOX_WIDTH_RESERVE = 20f;
@@ -31,9 +24,9 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 	private static final float FIELD_WIDTH_RESERVE = 20f;
 	private static final int FIELD_MAX_CHARS = 16;
 
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
-
-	private CustomPanelAPI panel;
+	private UIRect contentRect;
+	private CustomPanelAPI contentPanel;
+	private ButtonAPI saveButton;
 	private ButtonAPI fullGraphicEffect;
 	private ButtonAPI rttInBattle;
 	private TextFieldAPI battleTimeLimit;
@@ -41,75 +34,90 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 	private TextFieldAPI boostTimeMult;
 	private TextFieldAPI reportKeepCount;
 	private String savedState = "";
-	private String status = "";
-	private LabelAPI statusLabel;
 
 	@Override
-	public void attach(CustomPanelAPI panel) {
-		this.panel = panel;
-		load();
-		createContents();
+	protected void loadPageState() {
+		fullGraphicEffect = null;
+		rttInBattle = null;
+		status = "";
+		BattleNext_Settings.load();
+	}
+
+	@Override
+	protected void establishPageState() {
 		savedState = serializeState();
 	}
 
 	@Override
-	public void createContents() {
-		inputRouter.clear();
+	protected void buildPage() {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] header = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect[] rest = header[1].splitVertically(BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.HEADER_HEIGHT);
-		BattleNext_PageLayout.heading(header[0], panel, strings.get("page_settings"));
-		UIRect contentRect = rest[1];
-		TooltipMakerAPI content = BattleNext_PageLayout.column(contentRect, panel);
-		content.addTitle(strings.get("settings_heading"));
-		content.addPara(strings.get("settings_description"), DESCRIPTION_TOP_GAP);
-		fullGraphicEffect = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
-				GRAPHICS_CHECKBOX_HEIGHT,
-				strings.get("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
-				GRAPHICS_CHECKBOX_TOP_GAP);
-		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
-		rttInBattle = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
-				GRAPHICS_CHECKBOX_HEIGHT,
-				strings.get("settings_rtt_in_battle"), "rttInBattle", ButtonAPI.UICheckboxSize.SMALL,
-				GRAPHICS_CHECKBOX_TOP_GAP);
-		rttInBattle.setChecked(BattleNext_Settings.isRttInBattle());
-		battleTimeLimit = field(content, "settings_battle_time_limit", Float.toString(BattleNext_Settings.getBattleTimeLimit()));
-		defaultTimeMult = field(content, "settings_default_time_mult", Float.toString(BattleNext_Settings.getDefaultTimeMult()));
-		boostTimeMult = field(content, "settings_boost_time_mult", Float.toString(BattleNext_Settings.getBoostTimeMult()));
-		reportKeepCount = field(content, "settings_report_keep_count", Integer.toString(BattleNext_Settings.getReportKeepCount()));
-		UIRect footer = new UIRect(contentRect.getX(),
-				contentRect.getY() + contentRect.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT
+		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT),
+				panel, text("page_settings"));
+		UIRect footerRect = new UIRect(0f,
+				root.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT
 						- SETTINGS_FOOTER_BOTTOM_INSET,
-				contentRect.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT);
-		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footer, 1);
-		BattleNext_PageLayout.fixedButton(panel,
-				BattleNext_PageLayout.managementFooterButtonRect(footer, buttonWidth, 0),
-				strings.get("save"), "settings_save",
-				com.fs.starfarer.api.ui.CutStyle.ALL, true);
-		statusLabel = content.addPara(status, STATUS_TOP_GAP);
-	}
-
-	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
-		content.addPara(strings.get(labelKey), FIELD_LABEL_TOP_GAP);
-		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, content, panel,
-				Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE),
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, content);
-		field.setMaxChars(FIELD_MAX_CHARS);
-		return field;
+				root.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT);
+		contentRect = new UIRect(0f, BattleNext_PageLayout.CONTENT_TOP, root.getWidth(),
+				footerRect.getY() - BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.FOOTER_MARGIN);
+		float buttonWidth = BattleNext_PageLayout.managementFooterButtonWidth(footerRect, 1);
+		saveButton = BattleNext_PageLayout.fixedButton(panel,
+				BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, 0),
+				text("save"), "settings_save", CutStyle.ALL, true);
 	}
 
 	@Override
-	public void buttonPressed(Object buttonId) {
+	protected void refreshPage() {
+
+		boolean graphics = fullGraphicEffect == null ? BattleNext_Settings.isFullGraphicEffect() : fullGraphicEffect.isChecked();
+		boolean rtt = rttInBattle == null ? BattleNext_Settings.isRttInBattle() : rttInBattle.isChecked();
+		String[] values = fullGraphicEffect == null
+				? new String[]{Float.toString(BattleNext_Settings.getBattleTimeLimit()),
+						Float.toString(BattleNext_Settings.getDefaultTimeMult()),
+						Float.toString(BattleNext_Settings.getBoostTimeMult()),
+						Integer.toString(BattleNext_Settings.getReportKeepCount())}
+				: new String[]{battleTimeLimit.getText(), defaultTimeMult.getText(),
+						boostTimeMult.getText(), reportKeepCount.getText()};
+		contentRect.removeLatestSubPanel();
+		contentPanel = contentRect.createSubPanel(panel, panel.getPlugin()).getPanel();
+		TooltipMakerAPI content = contentPanel.createUIElement(contentRect.getWidth(), contentRect.getHeight(), true);
+		BattleNext_UiTheme.configure(content);
+		content.addTitle(text("settings_heading"));
+		content.addPara(text("settings_description"), DESCRIPTION_TOP_GAP);
+		fullGraphicEffect = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
+				GRAPHICS_CHECKBOX_HEIGHT,
+				text("settings_full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
+				GRAPHICS_CHECKBOX_TOP_GAP);
+		fullGraphicEffect.setChecked(graphics);
+		rttInBattle = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
+				GRAPHICS_CHECKBOX_HEIGHT,
+				text("settings_rtt_in_battle"), "rttInBattle", ButtonAPI.UICheckboxSize.SMALL,
+				GRAPHICS_CHECKBOX_TOP_GAP);
+		rttInBattle.setChecked(rtt);
+		battleTimeLimit = field(content, "settings_battle_time_limit", values[0]);
+		defaultTimeMult = field(content, "settings_default_time_mult", values[1]);
+		boostTimeMult = field(content, "settings_boost_time_mult", values[2]);
+		reportKeepCount = field(content, "settings_report_keep_count", values[3]);
+		statusLabel = content.addPara(status, STATUS_TOP_GAP);
+		contentPanel.addUIElement(content).inTL(0f, 0f);
+	}
+
+	@Override
+	protected void updatePageControls() {
+		saveButton.setEnabled(true);
+	}
+
+	@Override
+	protected void handlePageAction(Object buttonId) {
 		if ("settings_save".equals(buttonId)) save();
 	}
 
 	@Override
-	public boolean hasUnsavedChanges() {
+	protected boolean isPageDirty() {
 		return !serializeState().equals(savedState);
 	}
 
 	@Override
-	public boolean save() {
+	protected boolean savePage() {
 		try {
 			float timeLimit = parseNonNegative(battleTimeLimit.getText());
 			float defaultMult = parsePositive(defaultTimeMult.getText());
@@ -118,19 +126,17 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 			BattleNext_Settings.save(fullGraphicEffect.isChecked(), rttInBattle.isChecked(),
 					timeLimit, defaultMult, boostMult, keepCount);
 			savedState = serializeState();
-			status = strings.get("saved");
-			statusLabel.setText(status);
+			status = text("saved");
 			return true;
 		} catch (RuntimeException exception) {
-			status = strings.get("save_failed") + ": " + exception.getMessage();
-			statusLabel.setText(status);
+			status = text("save_failed") + ": " + exception.getMessage();
 			return false;
 		}
 	}
 
 	@Override
-	public void discard() {
-		load();
+	protected void discardPage() {
+		BattleNext_Settings.load();
 		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
 		rttInBattle.setChecked(BattleNext_Settings.isRttInBattle());
 		battleTimeLimit.setText(Float.toString(BattleNext_Settings.getBattleTimeLimit()));
@@ -138,20 +144,13 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 		boostTimeMult.setText(Float.toString(BattleNext_Settings.getBoostTimeMult()));
 		reportKeepCount.setText(Integer.toString(BattleNext_Settings.getReportKeepCount()));
 		savedState = serializeState();
-	}
-
-	@Override
-	public String getStatusText() {
-		return status;
-	}
-
-	@Override
-	public void refreshContent() {
-		if (statusLabel != null) statusLabel.setText(status);
-	}
-
-	private void load() {
-		BattleNext_Settings.load();
+	}	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
+		content.addPara(text(labelKey), FIELD_LABEL_TOP_GAP);
+		TextFieldAPI field = BattleNext_TextField.addTo(inputRouter, content, contentPanel,
+				Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE),
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, value, content);
+		field.setMaxChars(FIELD_MAX_CHARS);
+		return field;
 	}
 
 	private String serializeState() {
@@ -162,19 +161,19 @@ public class BattleNext_SettingsPage implements BattleNext_PageView {
 
 	private float parseNonNegative(String value) {
 		float result = Float.parseFloat(value.trim());
-		if (!Float.isFinite(result) || result < 0f) throw new IllegalArgumentException(strings.get("settings_invalid_number"));
+		if (!Float.isFinite(result) || result < 0f) throw new IllegalArgumentException(text("settings_invalid_number"));
 		return result;
 	}
 
 	private float parsePositive(String value) {
 		float result = Float.parseFloat(value.trim());
-		if (!Float.isFinite(result) || result <= 0f) throw new IllegalArgumentException(strings.get("settings_invalid_number"));
+		if (!Float.isFinite(result) || result <= 0f) throw new IllegalArgumentException(text("settings_invalid_number"));
 		return result;
 	}
 
 	private int parseCount(String value) {
 		int result = Integer.parseInt(value.trim());
-		if (result < 0) throw new IllegalArgumentException(strings.get("settings_invalid_number"));
+		if (result < 0) throw new IllegalArgumentException(text("settings_invalid_number"));
 		return result;
 	}
 }

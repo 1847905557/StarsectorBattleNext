@@ -2,6 +2,7 @@ package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 
@@ -23,7 +24,7 @@ public abstract class BattleNext_BaseSourceProvider implements BattleNext_Option
 
 	protected void addHeader(TooltipMakerAPI tooltip, String title, String key) {
 		tooltip.addTitle(title);
-		data.scripts.ui.BattleNext_PageLayout.addMutedIdLine(tooltip, key, KEY_GAP);
+		BattleNext_PageLayout.addMutedIdLine(tooltip, key, KEY_GAP);
 	}
 
 	protected void addExcerpt(TooltipMakerAPI tooltip, String text) {

@@ -52,6 +52,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private CustomPanelAPI panel;
 	private UIRect bodyRect;
+	private BattleNext_PageView attachedView;
 	private final ButtonAPI[] tabButtons = new ButtonAPI[BattleManagementPage.values().length];
 	private BattleManagementPage currentPage = BattleManagementPage.BATTLE_SELECTOR;
 	private String activeTournamentId = "";
@@ -92,12 +93,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
-		if (currentPage == BattleManagementPage.BATTLE_SELECTOR && battleSelectorPage != null
-				&& !confirmationDialog.isActive()) {
-			battleSelectorPage.refreshRowStatuses();
-		}
-		if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null && !confirmationDialog.isActive()) {
-			tournamentPage.refreshDraftValidation();
+		if (attachedView != null && !confirmationDialog.isActive()) {
+			attachedView.advance(amount);
 		}
 	}
 
@@ -128,31 +125,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.FLEETS && fleetPage != null
-				&& fleetPage.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.BATTLE_SELECTOR && battleSelectorPage != null
-				&& battleSelectorPage.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null
-				&& tournamentPage.handleGlobalInput(events)) return true;
-		if (!confirmationDialog.isActive() && currentPage == BattleManagementPage.RULES && rulesPage != null
-				&& rulesPage.handleGlobalInput(events)) return true;
+
+		if (!confirmationDialog.isActive() && attachedView != null && attachedView.handleGlobalInput(events)) return true;
 		if (inputRouter.handleGlobalInput(events)) return true;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
 				if (confirmationDialog.isActive()) {
 					confirmationDialog.handle("confirm_cancel");
-				} else if (currentPage == BattleManagementPage.FLEETS && fleetPage != null) {
-					fleetPage.buttonPressed("back");
-				} else if (currentPage == BattleManagementPage.REPORTS && reportPage != null) {
-					reportPage.buttonPressed("back");
-				} else if (currentPage == BattleManagementPage.VARIANTS && variantPage != null) {
-					variantPage.buttonPressed("back");
-				} else if (currentPage == BattleManagementPage.TOURNAMENTS && tournamentPage != null) {
-					tournamentPage.buttonPressed("back");
-				} else if (currentPage == BattleManagementPage.RULES && rulesPage != null) {
-					rulesPage.buttonPressed("back");
-				} else {
+				} else if (attachedView == null || !attachedView.handleEscape()) {
 					requestClose();
 				}
 				event.consume();
@@ -216,12 +197,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		if (panel == null) return;
 		BattleNext_UiInputRouter.activate(inputRouter);
 		inputRouter.clear();
-		if (battleSelectorPage != null) {
-			battleSelectorPage.closeChart();
+		if (attachedView != null) {
+			attachedView.close();
 		}
-		if (fleetPage != null) fleetPage.closePicker();
-		if (tournamentPage != null) tournamentPage.closePicker();
-		if (rulesPage != null) rulesPage.closePicker();
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(BattleManagementPage.values()[index] != currentPage);
 		}
@@ -231,6 +209,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		view.setInputRouter(inputRouter);
 		if (currentPage == BattleManagementPage.FLEETS) fleetPage.setOverlayHost(panel);
 		view.attach(body);
+		attachedView = view;
 	}
 
 	private BattleNext_PageView activeView() {
@@ -275,9 +254,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void requestPage(BattleManagementPage page) {
 		if (page == currentPage) return;
-		if (fleetPage != null) fleetPage.closePicker();
-		if (tournamentPage != null) tournamentPage.closePicker();
-		if (rulesPage != null) rulesPage.closePicker();
+		if (attachedView != null) {
+			attachedView.closeOverlays();
+		}
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
 				currentPage = page;
@@ -293,15 +272,20 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void requestClose() {
 		inputRouter.releaseFocus();
-		if (battleSelectorPage != null) {
-			battleSelectorPage.closeChart();
+		if (attachedView != null) {
+			attachedView.closeOverlays();
 		}
-		if (fleetPage != null) fleetPage.closePicker();
-		if (tournamentPage != null) tournamentPage.closePicker();
-		if (rulesPage != null) rulesPage.closePicker();
 		if (hasUnsavedChanges()) {
-			confirmationDialog.request(closeAction);
+			confirmationDialog.request(this::close);
 			return;
+		}
+		close();
+	}
+
+	private void close() {
+		if (attachedView != null) {
+			attachedView.close();
+			attachedView = null;
 		}
 		closeAction.run();
 	}
@@ -312,7 +296,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private void requestSource(String id) {
 
-		battleSelectorPage.closeDropdown();
+		battleSelectorPage.closeOverlays();
 		if (id.equals(activeTournamentId)) return;
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {

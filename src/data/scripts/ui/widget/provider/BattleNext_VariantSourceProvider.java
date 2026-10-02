@@ -6,17 +6,17 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
-import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
-
-import java.io.IOException;
 import org.json.JSONException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvider {
 	public static final String PINNED_PREFIX = "pinned:";
@@ -82,7 +82,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		Description description = descriptionId == null || descriptionId.isBlank() ? null
 				: Global.getSettings().getDescription(descriptionId, Type.SHIP);
 		if (description != null) addExcerpt(tooltip, description.getText1FirstPara(), FACT_RESERVE);
-		String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(java.util.Locale.ROOT);
+		String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
 		String facts = strings.get("refit_hull_size") + ": " + size + " - "
 				+ strings.get("refit_base_dp") + ": " + hull.getSuppliesToRecover();
 		if (tooltip.getHeightSoFar() + FACT_RESERVE <= tooltip.getPosition().getHeight()) {

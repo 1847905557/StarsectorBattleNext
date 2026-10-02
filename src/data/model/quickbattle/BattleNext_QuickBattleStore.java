@@ -2,6 +2,7 @@ package data.model.quickbattle;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
+import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.io.BattleNext_QuickBattleLegacyLoader;
 import data.model.quickbattle.io.BattleNext_QuickBattleSaver;
 import data.model.quickbattle.io.BattleNext_QuickBattleStandardLoader;
@@ -22,10 +23,10 @@ public class BattleNext_QuickBattleStore extends BattleNext_BaseStore<BattleNext
 
 	@Override
 	public void save(BattleNext_QuickBattleModel model) throws IOException, JSONException {
-		data.model.BattleNext_LoadSource source = model.getSourceType();
+		BattleNext_LoadSource source = model.getSourceType();
 		String path = model.getSourcePath();
 		super.save(model);
-		if (source != data.model.BattleNext_LoadSource.CREATED) {
+		if (source != BattleNext_LoadSource.CREATED) {
 			model.setSourceType(source);
 			model.setSourcePath(path);
 		}

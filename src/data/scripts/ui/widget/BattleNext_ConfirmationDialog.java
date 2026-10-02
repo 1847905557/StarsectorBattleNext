@@ -2,15 +2,18 @@ package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
 import org.lwjgl.input.Keyboard;
+
+import java.util.List;
 
 public class BattleNext_ConfirmationDialog {
 
@@ -173,8 +176,8 @@ public class BattleNext_ConfirmationDialog {
 		}
 
 		@Override
-		public boolean handleGlobalInput(java.util.List<com.fs.starfarer.api.input.InputEventAPI> events) {
-			for (com.fs.starfarer.api.input.InputEventAPI event : events) {
+		public boolean handleGlobalInput(List<InputEventAPI> events) {
+			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
 				if (event.isKeyboardEvent() && event.isKeyDownEvent()
 						&& event.getEventValue() == Keyboard.KEY_ESCAPE) {

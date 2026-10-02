@@ -1,14 +1,13 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
-import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.util.IntervalUtil;
+import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.TaskAttackManeuver.
@@ -31,8 +30,7 @@ public class BattleNext_TaskAttackManeuver implements BattleNext_Maneuver {
 	// vanilla shared this flag statically across maneuver instances (a static
 	// method writes it); the project rules forbid mutable statics, so the flag
 	// lives in a final atomic holder that keeps the cross-instance semantics
-	private static final java.util.concurrent.atomic.AtomicBoolean AVOIDING =
-		new java.util.concurrent.atomic.AtomicBoolean(false);
+	private static final AtomicBoolean AVOIDING = new AtomicBoolean(false);
 
 	public BattleNext_TaskAttackManeuver(ShipAPI ship, Vector2f destPoint, BattleNext_ManeuverAPI maneuverAPI) {
 		this.ship = ship;
@@ -177,7 +175,7 @@ public class BattleNext_TaskAttackManeuver implements BattleNext_Maneuver {
 				// AssignmentInfo supplies only its assigned-member list, so ownership
 				// filtering follows those currently assigned ships.
 				boolean assignedFriendly = false;
-				for (com.fs.starfarer.api.combat.DeployedFleetMemberAPI member : task.getAssignedMembers()) {
+				for (DeployedFleetMemberAPI member : task.getAssignedMembers()) {
 					ShipAPI assignedShip = member.getShip();
 					if (assignedShip != null && !BattleNext_ShipAIHelper.isShipEnemy(ship, assignedShip)) {
 						assignedFriendly = true;

@@ -12,6 +12,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -23,10 +24,10 @@ import java.util.List;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+	private BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 
 	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+	public void setInputRouter(BattleNext_UiInputRouter router) {
 		this.inputRouter = router;
 	}
 
@@ -79,12 +80,29 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
+		boolean opened = !loaded;
+		List<QuickBattleEditorRow> previous = new ArrayList<>(rows);
 		this.panel = panel;
-		if (!loaded) {
+		if (opened) {
 			load();
 		}
 		createContents();
-		if (savedFields.isEmpty()) savedFields = serializeState();
+		for (int index = 0; index < previous.size(); index++) {
+			QuickBattleEditorRow old = previous.get(index);
+			QuickBattleEditorRow current = rows.get(index);
+			if (old.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
+				current.raw.setText(old.raw.getText());
+			} else {
+				current.player.setText(old.player.getText());
+				current.enemy.setText(old.enemy.getText());
+				current.map.setText(old.map.getText());
+				current.mapScale.setText(old.mapScale.getText());
+			}
+			current.enabled.setChecked(old.enabled.isChecked());
+		}
+		if (opened) {
+			savedFields = serializeState();
+		}
 	}
 
 	@Override

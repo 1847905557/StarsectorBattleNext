@@ -2,42 +2,44 @@ package data.scripts.ui.widget.view;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
+import data.model.BattleNext_BaseStore;
+import data.model.fleet.BattleNext_FleetModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_Round;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import static org.junit.jupiter.api.Assertions.*;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.Pbuffer;
+import org.lwjgl.opengl.PixelFormat;
 
 import java.awt.Color;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_TournamentViewTest {
 
@@ -46,17 +48,17 @@ class BattleNext_TournamentViewTest {
 
 	@BeforeEach
 	void configureSettings() throws Exception {
-		org.json.JSONObject ui = new org.json.JSONObject(Files.readString(
+		JSONObject ui = new JSONObject(Files.readString(
 				Path.of("data/strings/strings.json"), StandardCharsets.UTF_8)).getJSONObject("UI");
 		translations = new HashMap<>();
-		java.util.Iterator<?> keys = ui.keys();
+		Iterator<?> keys = ui.keys();
 		while (keys.hasNext()) {
 			String key = keys.next().toString();
 			translations.put(key, ui.getString(key));
 		}
 		Global.setSettings(proxy(SettingsAPI.class, (name, args) -> switch (name) {
 			case "getString" -> translations.getOrDefault(args[1].toString(), args[1].toString());
-			case "getColor" -> args[0].toString().toLowerCase(java.util.Locale.ROOT).contains("gray")
+			case "getColor" -> args[0].toString().toLowerCase(Locale.ROOT).contains("gray")
 					? Color.GRAY : Color.CYAN;
 			case "getScreenScaleMult" -> 1f;
 			case "getFloat" -> 1f;
@@ -272,33 +274,32 @@ class BattleNext_TournamentViewTest {
 		harness.chartBounds.height = 700f;
 		BattleNext_BattleSelectorPage page = new BattleNext_BattleSelectorPage(() -> {
 
-		},
-				new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
+		}, new BaseCustomUIPanelPlugin());
 		BattleNext_TournamentModel cup = tournament(4,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3);
-		java.lang.reflect.Field selected = page.getClass().getDeclaredField("selectedId");
+		Field selected = page.getClass().getDeclaredField("selectedId");
 		selected.setAccessible(true);
 		selected.set(page, "cup");
 		for (String storeName : List.of("tournamentStore", "fleetStore", "ruleStore")) {
-			java.lang.reflect.Field field = page.getClass().getDeclaredField(storeName);
+			Field field = page.getClass().getDeclaredField(storeName);
 			field.setAccessible(true);
 			Object store = field.get(page);
-			java.lang.reflect.Field entries = data.model.BattleNext_BaseStore.class.getDeclaredField("entries");
+			Field entries = BattleNext_BaseStore.class.getDeclaredField("entries");
 			entries.setAccessible(true);
 			Map<String, Object> values = (Map<String, Object>) entries.get(store);
 			if (storeName.equals("tournamentStore")) {
 				values.put("cup", cup);
 			} else if (storeName.equals("fleetStore")) {
 				for (String id : cup.getFleetIds()) {
-					values.put(id, new data.model.fleet.BattleNext_FleetModel(id, "Fleet " + id,
+					values.put(id, new BattleNext_FleetModel(id, "Fleet " + id,
 							List.of(), List.of(), List.of()));
 				}
 			}
-			java.lang.reflect.Field error = data.model.BattleNext_BaseStore.class.getDeclaredField("loadError");
+			Field error = BattleNext_BaseStore.class.getDeclaredField("loadError");
 			error.setAccessible(true);
 			error.set(store, "");
 		}
-		java.lang.reflect.Method build = page.getClass().getDeclaredMethod("buildTournamentDetails", CustomPanelAPI.class);
+		Method build = page.getClass().getDeclaredMethod("buildTournamentDetails", CustomPanelAPI.class);
 		build.setAccessible(true);
 		String initial = cup.toJson().toString();
 		build.invoke(page, harness.panel);
@@ -312,14 +313,14 @@ class BattleNext_TournamentViewTest {
 		assertTrue(harness.buttons.get(harness.buttons.size() - 1).enabled);
 		assertEquals(initial, cup.toJson().toString());
 		engine.start(cup);
-		java.lang.reflect.Field storeField = page.getClass().getDeclaredField("tournamentStore");
+		Field storeField = page.getClass().getDeclaredField("tournamentStore");
 		storeField.setAccessible(true);
-		java.lang.reflect.Field active = data.model.tournament.BattleNext_TournamentStore.class.getDeclaredField("activeId");
+		Field active = BattleNext_TournamentStore.class.getDeclaredField("activeId");
 		active.setAccessible(true);
 		active.set(storeField.get(page), "cup");
-		java.lang.reflect.Field provider = page.getClass().getDeclaredField("provider");
+		Field provider = page.getClass().getDeclaredField("provider");
 		provider.setAccessible(true);
-		provider.set(page, new data.scripts.battle.BattleNext_BattleSourceProvider() {
+		provider.set(page, new BattleNext_BattleSourceProvider() {
 			@Override
 			public List<BattleNext_Match> load() {
 				return List.of();
@@ -346,7 +347,7 @@ class BattleNext_TournamentViewTest {
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Chart error")));
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Unknown bracket")));
 		assertTrue(harness.paragraphs.contains("Fleet F1"));
-		java.lang.reflect.Field chart = page.getClass().getDeclaredField("tournamentDisplay");
+		Field chart = page.getClass().getDeclaredField("tournamentDisplay");
 		chart.setAccessible(true);
 		assertNotNull(chart.get(page));
 		page.closeChart();
@@ -559,10 +560,10 @@ class BattleNext_TournamentViewTest {
 						cup, data, ignored -> {
 
 						});
-				java.lang.reflect.Field chart = display.getClass().getDeclaredField("chart");
+				Field chart = display.getClass().getDeclaredField("chart");
 				chart.setAccessible(true);
 				chart.set(display, view(cup));
-				java.lang.reflect.Method build = display.getClass().getDeclaredMethod("addSummary",
+				Method build = display.getClass().getDeclaredMethod("addSummary",
 						CustomPanelAPI.class, TooltipMakerAPI.class, float.class, float.class);
 				build.setAccessible(true);
 				String json = cup.toJson().toString();
@@ -634,7 +635,7 @@ class BattleNext_TournamentViewTest {
 		assertTrue(actions.isEmpty());
 		plugin.buttonPressed(action);
 		assertEquals(List.of(action), actions);
-		java.lang.reflect.Field chartField = display.getClass().getDeclaredField("chart");
+		Field chartField = display.getClass().getDeclaredField("chart");
 		chartField.setAccessible(true);
 		BattleNext_TournamentView chart = (BattleNext_TournamentView) chartField.get(display);
 		BattleNext_TournamentView.Node node = chart.nodes.get(0);
@@ -1024,33 +1025,33 @@ class BattleNext_TournamentViewTest {
 
 		Path nativePath = Path.of("../../starsector-core/native/windows").toAbsolutePath().normalize();
 		System.setProperty("org.lwjgl.librarypath", nativePath.toString());
-		org.lwjgl.opengl.Pbuffer buffer = new org.lwjgl.opengl.Pbuffer(800, 800,
-				new org.lwjgl.opengl.PixelFormat(), null, null);
+		Pbuffer buffer = new Pbuffer(800, 800,
+				new PixelFormat(), null, null);
 		try {
 			buffer.makeCurrent();
-			org.lwjgl.opengl.GL11.glViewport(0, 0, 800, 800);
-			org.lwjgl.opengl.GL11.glMatrixMode(org.lwjgl.opengl.GL11.GL_PROJECTION);
-			org.lwjgl.opengl.GL11.glLoadIdentity();
-			org.lwjgl.opengl.GL11.glOrtho(0, 800, 0, 800, -1, 1);
-			org.lwjgl.opengl.GL11.glMatrixMode(org.lwjgl.opengl.GL11.GL_MODELVIEW);
-			org.lwjgl.opengl.GL11.glLoadIdentity();
-			org.lwjgl.opengl.GL11.glClearColor(1, 0, 1, 1);
-			org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT);
-			org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
-			org.lwjgl.opengl.GL11.glScissor(0, 0, 800, 800);
+			GL11.glViewport(0, 0, 800, 800);
+			GL11.glMatrixMode(GL11.GL_PROJECTION);
+			GL11.glLoadIdentity();
+			GL11.glOrtho(0, 800, 0, 800, -1, 1);
+			GL11.glMatrixMode(GL11.GL_MODELVIEW);
+			GL11.glLoadIdentity();
+			GL11.glClearColor(1, 0, 1, 1);
+			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+			GL11.glEnable(GL11.GL_SCISSOR_TEST);
+			GL11.glScissor(0, 0, 800, 800);
 			Harness harness = new Harness();
 			BattleNext_TournamentView chart = view(tournament(2,
 					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1));
 			chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
 			chart.renderBelow(1f);
 			chart.render(1f);
-			java.nio.IntBuffer clip = org.lwjgl.BufferUtils.createIntBuffer(16);
-			org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL11.GL_SCISSOR_BOX, clip);
+			IntBuffer clip = BufferUtils.createIntBuffer(16);
+			GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
 			assertEquals(800, clip.get(2));
 			assertEquals(800, clip.get(3));
-			java.nio.ByteBuffer pixels = org.lwjgl.BufferUtils.createByteBuffer(800 * 800 * 4);
-			org.lwjgl.opengl.GL11.glReadPixels(0, 0, 800, 800, org.lwjgl.opengl.GL11.GL_RGBA,
-					org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, pixels);
+			ByteBuffer pixels = BufferUtils.createByteBuffer(800 * 800 * 4);
+			GL11.glReadPixels(0, 0, 800, 800, GL11.GL_RGBA,
+					GL11.GL_UNSIGNED_BYTE, pixels);
 			for (int x : new int[]{0, 1, 2, 100, 699, 700}) {
 				int offset = (100 * 800 + x) * 4;
 				Color expected = x == 0 || x == 1 || x == 699 ? BattleNext_UiTheme.ACCENT
@@ -1079,7 +1080,7 @@ class BattleNext_TournamentViewTest {
 				}
 			}
 			assertTrue(nodePixels >= 100, "Visible node outline pixels: " + nodePixels);
-			assertEquals(org.lwjgl.opengl.GL11.GL_NO_ERROR, org.lwjgl.opengl.GL11.glGetError());
+			assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
 		} finally {
 			buffer.destroy();
 		}

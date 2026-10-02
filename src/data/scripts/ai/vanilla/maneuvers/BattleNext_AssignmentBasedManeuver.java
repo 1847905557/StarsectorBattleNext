@@ -1,18 +1,13 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
-import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.loading.DamagingExplosionSpec;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
+import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import org.lwjgl.util.vector.Vector2f;
 
 /**
@@ -314,8 +309,8 @@ public class BattleNext_AssignmentBasedManeuver implements BattleNext_Maneuver {
 		}
 
 		boolean nonCombat = target.getVariant().isCivilian()
-			|| target.getHullSpec().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.CARRIER);
-		nonCombat &= !target.getHullSpec().getHints().contains(com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints.COMBAT);
+			|| target.getHullSpec().getHints().contains(ShipHullSpecAPI.ShipTypeHints.CARRIER);
+		nonCombat &= !target.getHullSpec().getHints().contains(ShipHullSpecAPI.ShipTypeHints.COMBAT);
 		return nonCombat;
 	}
 }

@@ -5,6 +5,7 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipSystemAPI;
 import data.scripts.ai.vanilla.BattleNext_BasicShipAI;
 import data.scripts.ai.vanilla.BattleNext_OrderResponseData;
+import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import org.lwjgl.util.vector.Vector2f;
 
 /**
@@ -28,7 +29,7 @@ public class BattleNext_DroneAI extends BattleNext_BasicShipAI {
 		// approximation: the engine DroneAI has a dedicated movement pipeline and
 		// directly writes position, velocity, and death effects. The public AI
 		// delegates those controls to the ported ship AI and drone maneuver.
-		if (mothership.isHulk() || !data.scripts.ai.vanilla.BattleNext_ShipAIHelper.getEngine().isInPlay(mothership)) {
+		if (mothership.isHulk() || !BattleNext_ShipAIHelper.getEngine().isInPlay(mothership)) {
 			getShip().setHitpoints(0.0F);
 			return;
 		}

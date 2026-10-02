@@ -1,5 +1,6 @@
 package data.model.pinnedvariant;
 
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.BattleNext_JsonModel;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.fleet.BattleNext_VariantBuilder;
@@ -26,7 +27,7 @@ public class BattleNext_PinnedVariantModel extends BattleNext_JsonModel {
 	}
 
 	public static BattleNext_PinnedVariantModel fromVariant(String pinId, String displayName,
-			com.fs.starfarer.api.combat.ShipVariantAPI variant) throws JSONException {
+			ShipVariantAPI variant) throws JSONException {
 		if (variant == null) throw new IllegalArgumentException("Variant is required");
 		return new BattleNext_PinnedVariantModel(pinId, displayName, BattleNext_VariantBuilder.fromVariant(variant).toJson());
 	}

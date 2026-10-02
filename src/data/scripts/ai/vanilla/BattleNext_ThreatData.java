@@ -7,7 +7,7 @@ import com.fs.starfarer.api.combat.ShipAPI;
  * Holds the evaluated threat one enemy ship poses to the owning AI ship.
  */
 public class BattleNext_ThreatData {
-	private com.fs.starfarer.api.combat.ShipAPI ship;
+	private ShipAPI ship;
 	private float maxDamagePerShot = 0.0F;
 	private float threatLevel = 0.0F;
 	private float systemThreat = 0.0F;

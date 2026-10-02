@@ -1,18 +1,19 @@
 package data.missions.BattleNext_pve;
 
 import com.fs.starfarer.api.fleet.FleetGoal;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.missions.BattleNext_MissionRestrictedUnlock;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.battle.BattleNext_BattleResultRecorder;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.*;
-import data.scripts.fleet.BattleNext_FleetBuilder;
-import data.scripts.fleet.BattleNext_AssembledFleet;
-import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_BattleResultRecorder;
-import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tools.BattleNext_Settings;
 
@@ -67,7 +68,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			boolean defaultAi) {
 		api.initFleet(side, "", FleetGoal.ATTACK, defaultAi, 1);
 		api.setFleetTagline(side, assembledFleet.getDefinition().getName());
-		for (com.fs.starfarer.api.fleet.FleetMemberAPI member : assembledFleet.getMembers()) {
+		for (FleetMemberAPI member : assembledFleet.getMembers()) {
 			api.addFleetMember(side, member);
 		}
 	}

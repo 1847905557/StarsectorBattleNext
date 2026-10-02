@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
+import data.model.BattleNext_LoadSource;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetModel;
@@ -14,6 +15,7 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
@@ -32,10 +34,10 @@ import java.util.Set;
 
 public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
-	private data.scripts.ui.BattleNext_UiInputRouter inputRouter = new data.scripts.ui.BattleNext_UiInputRouter();
+	private BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 
 	@Override
-	public void setInputRouter(data.scripts.ui.BattleNext_UiInputRouter router) {
+	public void setInputRouter(BattleNext_UiInputRouter router) {
 		this.inputRouter = router;
 	}
 
@@ -124,9 +126,12 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void attach(CustomPanelAPI panel) {
+		boolean opened = id == null;
 		this.panel = panel;
 		createContents();
-		savedSnapshot = serializeState();
+		if (opened) {
+			savedSnapshot = serializeState();
+		}
 	}
 
 	@Override
@@ -478,7 +483,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		for (BattleNext_VariantBuilder variant : source.getVariants()) {
 			result.putVariant(variant);
 		}
-		result.setSourceType(clone ? data.model.BattleNext_LoadSource.CREATED : source.getSourceType());
+		result.setSourceType(clone ? BattleNext_LoadSource.CREATED : source.getSourceType());
 		result.setSourcePath(clone ? "" : source.getSourcePath());
 		if (clone) result.setId(source.getId() + "_copy");
 		return result;
