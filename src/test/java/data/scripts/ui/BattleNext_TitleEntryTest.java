@@ -7,6 +7,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import org.json.JSONObject;
 import org.lwjgl.input.Keyboard;
@@ -18,12 +19,14 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipFile;
 
@@ -200,7 +203,7 @@ class BattleNext_TitleEntryTest {
 	}
 
 	@Test
-	void displayedPanelGoesToTopAndBlocksOutsideMouseEvents() throws Exception {
+	void displayedPanelPreservesLayerOrderAndBlocksOutsideMouseEvents() throws Exception {
 		SettingsAPI previous = Global.getSettings();
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
@@ -234,9 +237,130 @@ class BattleNext_TitleEntryTest {
 		} finally {
 			Global.setSettings(previous);
 		}
-		assertEquals(List.of("top"), order);
+		assertEquals(List.of(), order);
 		assertTrue(outsideConsumed.get());
 		assertFalse(insideConsumed.get());
+	}
+
+	@Test
+	void openingPanelEstablishesModalIsolationBeforeMountingAndPromotesOnce() throws Exception {
+
+		SettingsAPI previous = Global.getSettings();
+		SpriteAPI sprite = (SpriteAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SpriteAPI.class}, (instance, method, args) ->
+						"getTextureId".equals(method.getName()) ? 0 : null);
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getCurrentState" -> GameState.TITLE;
+					case "getSprite" -> sprite;
+					default -> null;
+				});
+		List<String> order = new ArrayList<>();
+		CustomPanelAPI panel = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> null);
+		UIPanelAPI screen = (UIPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{ChildrenHost.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getChildrenCopy" -> List.of();
+					case "addComponent" -> {
+						assertSame(panel, args[0]);
+						order.add("mount");
+						yield null;
+					}
+					case "bringComponentToTop" -> {
+						assertSame(panel, args[0]);
+						order.add("top");
+						yield null;
+					}
+					default -> null;
+				});
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+		setField(entry, "configurationPanel", panel);
+		setField(entry, "screenPanel", screen);
+		setField(entry, "titleModal", new BattleNext_TitleModalDialog() {
+			@Override
+			void open(UIPanelAPI owner, Object titleState) {
+				assertSame(screen, owner);
+				order.add("modal");
+			}
+		});
+		Global.setSettings(settings);
+		try {
+			setField(entry, "configurationPlugin", new BattleNext_ConfigurationPanelPlugin(() -> {}) {
+				@Override
+				public void open() {
+					order.add("open");
+				}
+			});
+			Method open = BattleNext_TitleEntry.class.getDeclaredMethod("openPanel");
+			open.setAccessible(true);
+			open.invoke(entry);
+			assertEquals(List.of("open", "modal", "mount", "top"), order);
+			entry.processInputPreCoreControls(0f, List.of());
+			assertEquals(List.of("open", "modal", "mount", "top"), order);
+		} finally {
+			Global.setSettings(previous);
+		}
+	}
+
+	@Test
+	void managementAndRefitKeepNativeTooltipAboveTheRootAcrossInputFrames() throws Exception {
+
+		SettingsAPI previous = Global.getSettings();
+		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
+						"getCurrentState".equals(method.getName()) ? GameState.TITLE : null);
+		PositionAPI bounds = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{PositionAPI.class}, (instance, method, args) -> true);
+		CustomPanelAPI configuration = (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) ->
+						"getPosition".equals(method.getName()) ? bounds : null);
+		UIComponentAPI tooltip = (UIComponentAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{UIComponentAPI.class}, (instance, method, args) -> null);
+		Global.setSettings(settings);
+		try {
+			for (boolean refit : new boolean[]{false, true}) {
+				BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(() -> {});
+				CustomPanelAPI displayed = refit ? (CustomPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[]{CustomPanelAPI.class}, (instance, method, args) -> switch (method.getName()) {
+							case "getPosition" -> bounds;
+							case "getPlugin" -> plugin;
+							default -> null;
+						}) : configuration;
+				List<UIComponentAPI> layers = new ArrayList<>(List.of(displayed, tooltip));
+				AtomicInteger promotions = new AtomicInteger();
+				UIPanelAPI screen = (UIPanelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[]{UIPanelAPI.class}, (instance, method, args) -> {
+							if ("bringComponentToTop".equals(method.getName())) {
+								layers.removeIf(component -> component == args[0]);
+								layers.add((UIComponentAPI) args[0]);
+								promotions.incrementAndGet();
+							}
+							return null;
+						});
+				BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+				setField(entry, "configurationPanel", configuration);
+				setField(entry, "displayedPanel", displayed);
+				setField(entry, "screenPanel", screen);
+				if (refit) setField(entry, "refitPanel", displayed);
+				List<String> kinds = List.of("isMouseMoveEvent", "isMouseScrollEvent", "isMouseDownEvent", "isMouseUpEvent");
+				for (int frame = 0; frame < 120; frame++) {
+					AtomicBoolean consumed = new AtomicBoolean();
+					InputEventAPI event = mouseEvent(kinds.get(frame / 2 % kinds.size()), consumed);
+					entry.processInputPreCoreControls(1f / 60f, frame % 2 == 0 ? List.of() : List.of(event));
+					assertSame(displayed, layers.get(0));
+					assertSame(tooltip, layers.get(1));
+					assertFalse(consumed.get());
+				}
+				assertEquals(0, promotions.get());
+				assertEquals(2, layers.size());
+			}
+		} finally {
+			Global.setSettings(previous);
+		}
+	}
+
+	public interface ChildrenHost extends UIPanelAPI {
+		List<?> getChildrenCopy();
 	}
 
 	@Test

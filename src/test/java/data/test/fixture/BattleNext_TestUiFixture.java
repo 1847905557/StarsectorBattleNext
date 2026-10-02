@@ -53,6 +53,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<String, Object> buttonIds = new LinkedHashMap<>();
 	protected final List<UIComponentAPI> removedComponents = new ArrayList<>();
 	protected boolean deferTooltipWidth;
+	protected float paragraphLineHeight = 20f;
 
 	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {
 		return new BattleNext_OptionPicker.OptionChoiceSource() {
@@ -143,6 +144,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private final ScrollPanelAPI scroller;
 		private float usedHeight;
 		private float mountedHeight;
+		private float heightAtMount;
 		private float textWidth;
 		private float offset;
 		private boolean mounted;
@@ -190,6 +192,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			return mountedHeight;
 		}
 
+		public float getHeightAtMount() {
+			return heightAtMount;
+		}
+
 		public boolean isMounted() {
 			return mounted;
 		}
@@ -197,6 +203,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		protected void mount(PositionAPI owner) {
 			assertFalse(mounted, "Each tooltip must be mounted once");
 			mountedHeight = usedHeight;
+			heightAtMount = position.getHeight();
 			float height = position.getHeight() == 0f ? usedHeight : position.getHeight();
 			viewport.setSize(width, height);
 			geometry.get(viewport).parent = owner;
@@ -298,7 +305,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected LabelAPI label(String text, float width) {
 		float height = 0f;
 		for (String line : text.split("\\n", -1)) {
-			height += 20f * Math.max(1, Math.ceil(line.length() * 7f / Math.max(1f, width)));
+			height += paragraphLineHeight * Math.max(1, Math.ceil(line.length() * 7f / Math.max(1f, width)));
 		}
 		PositionAPI position = position(width, height);
 		String[] value = {text};

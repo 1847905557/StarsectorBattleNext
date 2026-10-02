@@ -50,8 +50,10 @@ public class BattleNext_ExpandablePanel {
 			BodyPlugin bodyPlugin = new BodyPlugin(onBodyAction);
 			CustomPanelAPI body = root.createCustomPanel(width, bodyHeight, bodyPlugin);
 			bodyPlugin.setPosition(body.getPosition());
-			root.addComponent(body).inTL(0f, HEADER_HEIGHT);
 			buildBody.accept(body);
+			root.getPosition().setSize(width, panelHeight(true, body.getPosition().getHeight()));
+			top.getPosition().inTL(0f, 0f);
+			root.addComponent(body).inTL(0f, HEADER_HEIGHT);
 		}
 		list.addCustom(root, ROW_GAP);
 	}

@@ -9,9 +9,46 @@ import data.test.fixture.BattleNext_TestPageFixture;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
+
+	@ParameterizedTest
+	@ValueSource(ints = {72, 180, 360})
+	void rowRenderingAndActionsAreIndependentOfItsOwner(int width) throws Exception {
+		AtomicInteger backgrounds = new AtomicInteger();
+		AtomicInteger actions = new AtomicInteger();
+		CustomPanelAPI owner = panel(400f, 300f, new BaseCustomUIPanelPlugin() {
+			@Override
+			public void renderBelow(float alphaMult) {
+				backgrounds.incrementAndGet();
+			}
+
+			@Override
+			public void buttonPressed(Object buttonId) {
+				actions.incrementAndGet();
+			}
+		});
+		TooltipMakerAPI host = owner.createUIElement(width, 30f, false);
+		BattleNext_OptionField option = new BattleNext_OptionField(new BattleNext_UiInputRouter(), owner,
+				width, optionSource(), BattleNext_OptionField.OptionSelectionMode.SINGLE, host);
+		option.attach(host, owner);
+		owner.addUIElement(host).inTL(0f, 0f);
+		CustomPanelAPI row = (CustomPanelAPI) getField(option, "row");
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(option, "picker");
+		CustomPanelAPI buttonRow = (CustomPanelAPI) getField(picker, "row");
+		assertNotSame(row.getPlugin(), buttonRow.getPlugin());
+		owner.getPlugin().renderBelow(1f);
+		row.getPlugin().renderBelow(1f);
+		assertEquals(1, backgrounds.get());
+		row.getPlugin().buttonPressed("parent_action");
+		assertEquals(0, actions.get());
+		owner.getPlugin().buttonPressed("parent_action");
+		assertEquals(1, actions.get());
+		option.close();
+	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {72, 180, 360})
@@ -29,6 +66,7 @@ class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI row = (CustomPanelAPI) getField(option, "row");
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(option, "picker");
 		CustomPanelAPI buttonRow = (CustomPanelAPI) getField(picker, "row");
+		assertNotSame(owner.getPlugin(), row.getPlugin());
 		PositionAPI field = option.getField().getPosition();
 		assertEquals(width, row.getPosition().getWidth());
 		assertEquals(28f, row.getPosition().getHeight());

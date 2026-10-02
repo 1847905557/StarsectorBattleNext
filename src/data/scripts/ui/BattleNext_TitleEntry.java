@@ -135,7 +135,6 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null || displayedPanel == null) {
 			return;
 		}
-		if (screenPanel != null) screenPanel.bringComponentToTop(displayedPanel);
 		if (displayedPanel == configurationPanel && configurationPlugin != null) {
 			configurationPlugin.handleGlobalInput(events);
 		}
@@ -306,6 +305,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		}
 		titleModal.open(screenPanel, AppDriver.getInstance().getCurrentState());
 		screenPanel.addComponent(nextPanel);
+		screenPanel.bringComponentToTop(nextPanel);
 		displayedPanel = nextPanel;
 		refitDialog = nextPanel == refitPanel ? dialog : null;
 		panelCooldown = 0f;

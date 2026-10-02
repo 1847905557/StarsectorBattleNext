@@ -2,19 +2,99 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import data.test.fixture.BattleNext_TestPageFixture;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
+
+	@ParameterizedTest
+	@CsvSource({"1000, 12", "1000, 17", "1000, 20", "320, 17"})
+	void memberFieldsShareMetadataSpacingAndMeasureTheirExpandedHeight(int width, int lineHeight) throws Exception {
+		paragraphLineHeight = lineHeight;
+		deferTooltipWidth = true;
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		CustomPanelAPI root = panel(width, 700f, new BaseCustomUIPanelPlugin());
+		editor.open(null, false);
+		editor.setInputRouter(router);
+		editor.setOverlayHost(root);
+		editor.attach(root);
+		editor.buttonPressed("add_member");
+		TooltipMakerAPI metadata = (TooltipMakerAPI) getField(getField(editor, "id"), "host");
+		assertFieldFlow(metadata, 2, Set.of(5));
+		List<BattleNext_OptionField> pickers = (List<BattleNext_OptionField>) getField(editor, "memberPickers");
+		BattleNext_OptionField variant = pickers.get(0);
+		TooltipMakerAPI content = (TooltipMakerAPI) getField(variant, "host");
+		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
+		assertEquals(1L, plugins.values().stream().filter(plugin -> plugin == body.getPlugin()).count());
+		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
+		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
+		assertEquals(tooltips.get(content).getMountedHeight() + 16f, body.getPosition().getHeight());
+		PositionAPI member = geometry.get(body.getPosition()).getParent();
+		assertEquals(BattleNext_ExpandablePanel.HEADER_HEIGHT + body.getPosition().getHeight(), member.getHeight());
+		List<UIComponentAPI> components = tooltips.get(content).getComponents();
+		PositionAPI heading = components.get(0).getPosition();
+		assertEquals(member.getY() + member.getHeight() - BattleNext_ExpandablePanel.HEADER_HEIGHT - 8f,
+				heading.getY() + heading.getHeight());
+		PositionAPI bounds = tooltips.get(content).getViewport();
+		for (UIComponentAPI component : components) {
+			PositionAPI position = component.getPosition();
+			assertTrue(position.getY() >= bounds.getY());
+			assertTrue(position.getY() + position.getHeight() <= bounds.getY() + bounds.getHeight());
+		}
+		PositionAPI remove = components.get(15).getPosition();
+		assertEquals(body.getPosition().getY() + 8f, remove.getY());
+		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[0];
+		List<UIComponentAPI> memberRows = tooltips.get(viewport).getComponents();
+		assertEquals(memberRows.get(0).getPosition().getHeight() + BattleNext_ExpandablePanel.ROW_GAP
+				+ member.getHeight() + BattleNext_PageLayout.BUTTON_VERTICAL_GAP + BattleNext_PageLayout.FOOTER_HEIGHT,
+				tooltips.get(viewport).getMountedHeight());
+		List<?> members = (List<?>) getField(editor, "memberFields");
+		((TextFieldAPI) getField(members.get(0), "name")).setText("compact ship");
+		editor.buttonPressed("toggle_member:0");
+		assertEquals(7, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		editor.buttonPressed("toggle_member:0");
+		members = (List<?>) getField(editor, "memberFields");
+		assertEquals("compact ship", ((TextFieldAPI) getField(members.get(0), "name")).getText());
+		assertEquals(14, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		pickers = (List<BattleNext_OptionField>) getField(editor, "memberPickers");
+		content = (TooltipMakerAPI) getField(pickers.get(0), "host");
+		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
+		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
+	}
+
+	private void assertFieldFlow(TooltipMakerAPI content, int firstLabel, Set<Integer> pickerIndices) {
+		List<UIComponentAPI> components = tooltips.get(content).getComponents();
+		PositionAPI firstInput = components.get(firstLabel + 1).getPosition();
+		PositionAPI previous = components.get(firstLabel - 1).getPosition();
+		for (int index = 0; index < 7; index++) {
+			PositionAPI label = components.get(firstLabel + index * 2).getPosition();
+			PositionAPI input = components.get(firstLabel + index * 2 + 1).getPosition();
+			assertEquals(5f, previous.getY() - label.getY() - label.getHeight());
+			assertEquals(pickerIndices.contains(index) ? 2f : 0f,
+					label.getY() - input.getY() - input.getHeight());
+			assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT, input.getHeight());
+			assertEquals(firstInput.getX(), input.getX());
+			assertEquals(firstInput.getX() + firstInput.getWidth(), input.getX() + input.getWidth());
+			previous = input;
+		}
+	}
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {
@@ -47,7 +127,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		List<BattleNext_OptionField> members = List.copyOf((List<BattleNext_OptionField>) getField(editor, "memberPickers"));
 		assertEquals(4, members.size());
 		for (BattleNext_OptionField member : members) {
-			assertEquals(usableWidth - metaWidth - 16f, getField(member, "width"));
+			assertEquals(Math.max(72f, usableWidth - metaWidth - 16f - 24f), getField(member, "width"));
 			assertSame(root, getField(member, "overlayHost"));
 			assertEquals(1, ((com.fs.starfarer.api.ui.TooltipMakerAPI[]) getField(member, "viewports")).length);
 		}

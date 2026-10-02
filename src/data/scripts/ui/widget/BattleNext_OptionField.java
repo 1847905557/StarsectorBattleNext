@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
@@ -31,7 +32,8 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 	@Override
 	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI owner) {
 		float inputWidth = width - PICKER_BUTTON_WIDTH;
-		row = ownPanel(host, owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT, owner.getPlugin()));
+		row = ownPanel(host, owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+				new BaseCustomUIPanelPlugin()));
 		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
 		BattleNext_TextField textField = new BattleNext_TextField(inputRouter, row, inputWidth,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);

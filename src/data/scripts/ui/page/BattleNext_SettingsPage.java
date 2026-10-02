@@ -146,7 +146,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		savedState = serializeState();
 	}	private TextFieldAPI field(TooltipMakerAPI content, String labelKey, String value) {
 		content.addPara(text(labelKey), FIELD_LABEL_TOP_GAP);
-		float width = Math.min(FIELD_MAX_WIDTH, content.getPosition().getWidth() - FIELD_WIDTH_RESERVE);
+		float width = Math.min(FIELD_MAX_WIDTH, contentRect.getWidth() - FIELD_WIDTH_RESERVE);
 		BattleNext_TextField widget = new BattleNext_TextField(inputRouter, contentPanel, width,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, content);
 		widget.attach(content, contentPanel);
