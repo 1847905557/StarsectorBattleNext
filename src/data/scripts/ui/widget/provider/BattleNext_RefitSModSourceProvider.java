@@ -7,6 +7,7 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -52,20 +53,30 @@ public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourcePro
 	}
 
 	@Override
+	public float getTooltipWidth() {
+		return BattleNext_EquipmentTooltip.WIDTH;
+	}
+
+	@Override
+	public boolean isTooltipScrollable() {
+		return true;
+	}
+
+	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice choice) {
+
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
-		addHeader(tooltip, spec.getDisplayName(), choice.getId());
-		if (variant == null) return;
-		boolean effect = spec.getEffect() != null && spec.getEffect().hasSModEffect();
-		String sModText = effect && spec.getSModEffectFormat() != null
-				&& !spec.getSModEffectFormat().isBlank() ? spec.getSModDescription(variant.getHullSize()) : "";
-		if (spec.getEffect() != null) {
-			addExcerpt(tooltip, spec.getDescription(variant.getHullSize()), sModText.isBlank() ? 0f : 40f);
+		List<String> notes = new ArrayList<>();
+		if (variant != null) {
+			boolean effect = spec.getEffect() != null && spec.getEffect().hasSModEffect();
+			String text = effect && spec.getSModEffectFormat() != null && !spec.getSModEffectFormat().isBlank()
+					? BattleNext_EquipmentTooltip.firstParagraph(spec.getSModDescription(variant.getHullSize())) : "";
+			if (!text.isBlank()) notes.add(text);
+			else if (variant.getHullSpec().isBuiltInMod(choice.getId())) {
+				notes.add(refitStrings.get("s_mod_no_effect"));
+			}
 		}
-		if (!sModText.isBlank()) addExcerpt(tooltip, sModText);
-		else if (variant.getHullSpec().isBuiltInMod(choice.getId())) {
-			addExcerpt(tooltip, refitStrings.get("s_mod_no_effect"));
-		}
-	}
-}
+		BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hullmod(spec.getDisplayName(),
+				choice.getId(), spec, variant == null ? null : variant.getHullSize(), notes));
+	}}

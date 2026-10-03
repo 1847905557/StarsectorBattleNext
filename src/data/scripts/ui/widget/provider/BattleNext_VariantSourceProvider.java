@@ -3,13 +3,12 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.loading.Description;
-import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -31,8 +30,6 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	}
 
 	private static final int VARIANT_SELECTION_MAX_COUNT = 1;
-	private static final float FACT_GAP = 5f;
-	private static final float FACT_RESERVE = 26f;
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 
 	@Override
@@ -73,23 +70,34 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	}
 
 	@Override
-	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		addHeader(tooltip, option.getLabel(), option.getId());
-		ShipVariantAPI variant = loadVariant(option.getId());
-		if (variant == null || variant.getHullSpec() == null) return;
-		ShipHullSpecAPI hull = variant.getHullSpec();
-		String descriptionId = hull.getDescriptionId();
-		Description description = descriptionId == null || descriptionId.isBlank() ? null
-				: Global.getSettings().getDescription(descriptionId, Type.SHIP);
-		if (description != null) addExcerpt(tooltip, description.getText1FirstPara(), FACT_RESERVE);
-		String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
-		String facts = variantStrings.get("hull_size") + ": " + size + " - "
-				+ variantStrings.get("base_deployment_points") + ": " + hull.getSuppliesToRecover();
-		if (tooltip.getHeightSoFar() + FACT_RESERVE <= tooltip.getPosition().getHeight()) {
-			tooltip.addPara(facts, FACT_GAP);
-		}
+	public float getTooltipWidth() {
+		return BattleNext_EquipmentTooltip.WIDTH;
 	}
 
+	@Override
+	public boolean isTooltipScrollable() {
+		return true;
+	}
+
+	@Override
+	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
+
+		try {
+			ShipVariantAPI variant = resolve(option.getId());
+			if (variant == null || variant.getHullSpec() == null) {
+				throw new IllegalArgumentException("Unknown variant: " + option.getId());
+			}
+			ShipHullSpecAPI hull = variant.getHullSpec();
+			String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
+			String facts = variantStrings.get("hull_size") + ": " + size + " - "
+					+ variantStrings.get("base_deployment_points") + ": " + hull.getSuppliesToRecover();
+			BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(
+					option.getLabel(), option.getId(), hull, Global.getSettings(), List.of(facts)));
+		} catch (RuntimeException exception) {
+			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
+					option.getLabel(), option.getId(), "", List.of(exception.toString())));
+		}
+	}
 	public ShipVariantAPI resolve(String id) {
 		if (!id.startsWith(PINNED_PREFIX)) return Global.getSettings().getVariant(id);
 		if (!pinnedVariants.isLoaded()) {

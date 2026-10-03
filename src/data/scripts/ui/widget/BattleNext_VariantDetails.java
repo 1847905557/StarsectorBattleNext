@@ -6,7 +6,10 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
+import com.fs.starfarer.api.loading.FighterWingSpecAPI;
+import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
+import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -39,6 +42,9 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private static final float ROW_GAP = BattleNext_ExpandablePanel.ROW_GAP;
 	private static final float ICON_SIZE = BattleNext_ExpandablePanel.ICON_SIZE;
 	private static final float WEAPON_ROW_HEIGHT = 40f;
+	private static final float TILE_TARGET_SIZE = 120f;
+	private static final float TILE_NAME_HEIGHT = 24f;
+	private static final float TILE_BORDER_WIDTH = 2f;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private final Set<Integer> expanded = new HashSet<>();
@@ -207,20 +213,16 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 					: hull.isBuiltInMod(id) ? variantStrings.get("built_in") : "";
 			CustomPanelAPI card = card(owner, width, spec.getSpriteName(), spec.getDisplayName(), label, null);
 			list.addCustom(card, ROW_GAP);
-			String description = spec.getDescription(hull.getHullSize());
 			list.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
 				public float getTooltipWidth(Object ignored) {
-					return 360f;
+					return BattleNext_EquipmentTooltip.WIDTH;
 				}
 
 				@Override
 				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-					tooltip.addTitle(spec.getDisplayName());
-					tooltip.addPara(id, GAP);
-					if (description != null && !description.isBlank()) {
-						tooltip.addPara(description, GAP);
-					}
+					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hullmod(
+							spec.getDisplayName(), id, spec, hull.getHullSize(), List.of()));
 				}
 			}, TooltipMakerAPI.TooltipLocation.RIGHT);
 		}
@@ -229,46 +231,42 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private void buildModulesSummary(TooltipMakerAPI list, CustomPanelAPI owner, float width, JSONObject json) {
 
 		Object raw = json.opt("modules");
-		int count = 0;
+		List<DisplayTile> tiles = new ArrayList<>();
 		if (raw instanceof JSONObject object) {
-			count = object.length();
-			addModuleCards(list, owner, width, object);
+			addModuleTiles(tiles, object);
 		} else if (raw instanceof JSONArray array) {
 			for (int index = 0; index < array.length(); index++) {
 				JSONObject object = array.optJSONObject(index);
 				if (object == null) {
-					list.addPara(variantStrings.get("module_error") + ": " + index, ROW_GAP);
-					count++;
-					continue;
+					tiles.add(new DisplayTile(String.valueOf(index), "", "", null,
+							variantStrings.get("module_error") + ": " + index));
+				} else {
+					addModuleTiles(tiles, object);
 				}
-				count += object.length();
-				addModuleCards(list, owner, width, object);
 			}
 		} else if (raw != null) {
-			list.addPara(variantStrings.get("module_error") + ": " + raw, ROW_GAP);
-			return;
+			tiles.add(new DisplayTile(strings.get("unavailable"), "", "", null,
+					variantStrings.get("module_error") + ": " + raw));
 		}
-		if (count == 0) {
-			list.addPara(variantStrings.get("none"), ROW_GAP);
-		}
+		buildTileGrid(list, owner, width, tiles);
 	}
 
-	private void addModuleCards(TooltipMakerAPI list, CustomPanelAPI owner, float width, JSONObject modules) {
+	private void addModuleTiles(List<DisplayTile> tiles, JSONObject modules) {
 
 		for (String slot : keys(modules)) {
+			String hullId = "";
 			try {
 				Object raw = modules.opt(slot);
 				JSONObject module = raw instanceof JSONObject object ? object
 						: raw instanceof String id ? BattleNext_VariantBuilder.fromRegistered(id).toJson() : null;
 				if (module == null) throw new IllegalArgumentException("Invalid module: " + slot);
-				String hullId = module.optString("hullId", "");
+				hullId = module.optString("hullId", "");
 				ShipHullSpecAPI hull = Global.getSettings().getHullSpec(hullId);
 				if (hull == null) throw new IllegalArgumentException("Unknown module hull: " + hullId);
-				String variantId = module.optString("variantId", "");
-				list.addCustom(card(owner, width, hull.getSpriteName(), slot + ": " + hull.getHullName(),
-						module.optString("displayName", variantId), variantId), ROW_GAP);
+				tiles.add(new DisplayTile(hull.getHullName(), hull.getSpriteName(), hullId, hull, ""));
 			} catch (Exception exception) {
-				list.addPara(variantStrings.get("module_error") + " " + slot + ": " + exception, ROW_GAP);
+				tiles.add(new DisplayTile(slot, "", hullId, null,
+						variantStrings.get("module_error") + ": " + exception));
 			}
 		}
 	}
@@ -369,8 +367,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				tooltip.addTitle(title);
-				if (!id.isEmpty()) BattleNext_PageLayout.addMutedIdLine(tooltip, id, ROW_GAP);
+				BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(
+						weaponName, id, id, Description.Type.WEAPON, Global.getSettings(), List.of()));
 			}
 		}, TooltipMakerAPI.TooltipLocation.RIGHT);
 	}
@@ -391,29 +389,95 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 	private void buildWings(TooltipMakerAPI list, CustomPanelAPI owner, float width, JSONObject json) {
 
-		List<String> wings = values(json.optJSONArray("wings"));
-		if (wings.isEmpty()) {
+		List<DisplayTile> tiles = new ArrayList<>();
+		for (String id : values(json.optJSONArray("wings"))) {
+			if (id.isEmpty()) {
+				tiles.add(new DisplayTile(variantStrings.get("empty_slot"), "", "", null, ""));
+				continue;
+			}
+			String name = id;
+			try {
+				FighterWingSpecAPI wing = Global.getSettings().getFighterWingSpec(id);
+				if (wing == null) throw new IllegalArgumentException("Unknown fighter wing: " + id);
+				name = wing.getWingName();
+				var variant = wing.getVariant();
+				if (variant == null) throw new IllegalArgumentException("Missing fighter variant: " + id);
+				ShipHullSpecAPI hull = variant.getHullSpec();
+				if (hull == null) throw new IllegalArgumentException("Missing fighter hull: " + id);
+				tiles.add(new DisplayTile(name, hull.getSpriteName(), id, hull, ""));
+			} catch (RuntimeException exception) {
+				tiles.add(new DisplayTile(name, "", id, null, strings.get("unavailable") + ": " + exception));
+			}
+		}
+		buildTileGrid(list, owner, width, tiles);
+	}
+
+	private void buildTileGrid(TooltipMakerAPI list, CustomPanelAPI owner, float width, List<DisplayTile> tiles) {
+
+		if (tiles.isEmpty()) {
 			list.addPara(variantStrings.get("none"), ROW_GAP);
 			return;
 		}
-		int columns = Math.max(1, (int) ((width + ROW_GAP) / (110f + ROW_GAP)));
-		float cardWidth = (float) Math.floor((width - ROW_GAP * (columns - 1)) / columns);
-		for (int start = 0; start < wings.size(); start += columns) {
-			int end = Math.min(wings.size(), start + columns);
-			CustomPanelAPI row = owner.createCustomPanel(width, 0f, new BaseCustomUIPanelPlugin());
-			float height = 0f;
-			for (int index = start; index < end; index++) {
-				String id = wings.get(index);
-				float x = (index - start) * (cardWidth + ROW_GAP);
-				float itemWidth = index - start == columns - 1 ? width - x : cardWidth;
-				CustomPanelAPI card = card(row, itemWidth, "", equipmentName(id, true),
-						id.isEmpty() ? "" : "[" + id + "]", id);
-				row.addComponent(card).inTL(x, 0f);
-				height = Math.max(height, card.getPosition().getHeight());
+		int columns = Math.max(1, (int) ((width + ROW_GAP) / (TILE_TARGET_SIZE + ROW_GAP)));
+		float size = (width - ROW_GAP * (columns - 1)) / columns;
+		for (int start = 0; start < tiles.size(); start += columns) {
+			CustomPanelAPI row = owner.createCustomPanel(width, size, new BaseCustomUIPanelPlugin());
+			int count = Math.min(columns, tiles.size() - start);
+			for (int index = 0; index < count; index++) {
+				DisplayTile tile = tiles.get(start + index);
+				CustomPanelAPI card = squareCard(row, size, tile);
+				row.addComponent(card).inTL(index * (size + ROW_GAP), 0f);
 			}
-			row.getPosition().setSize(width, height);
 			list.addCustom(row, ROW_GAP);
 		}
+	}
+
+	private CustomPanelAPI squareCard(CustomPanelAPI owner, float size, DisplayTile tile) {
+
+		SpriteAPI sprite = null;
+		String error = tile.error();
+		if (tile.spriteName() != null && !tile.spriteName().isBlank()) {
+			try {
+				sprite = Global.getSettings().getSprite(tile.spriteName());
+			} catch (RuntimeException exception) {
+				error = variantStrings.get("preview_error") + ": " + exception;
+			}
+		}
+		if (sprite == null && error.isEmpty()) {
+			error = variantStrings.get("preview_error");
+		}
+		SquareCardPlugin plugin = new SquareCardPlugin(sprite);
+		CustomPanelAPI card = owner.createCustomPanel(size, size, plugin);
+		plugin.position = card.getPosition();
+		float nameWidth = Math.max(1f, size - GAP * 2f);
+		TooltipMakerAPI caption = card.createUIElement(size, size, false);
+		BattleNext_UiTheme.configure(caption);
+		caption.setTextWidthOverride(nameWidth);
+		caption.addSpacer(size).getPosition().setSize(size, size).inTL(0f, 0f);
+		String displayError = error;
+		caption.addTooltipToPrevious(new BaseTooltipCreator() {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return 360f;
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				List<String> notes = displayError.isEmpty() ? List.of() : List.of(displayError);
+				BattleNext_EquipmentTooltip.Content info = tile.hull() == null
+						? new BattleNext_EquipmentTooltip.Content(tile.name(), tile.id(), "", notes)
+						: BattleNext_EquipmentTooltip.hull(tile.name(), tile.id(), tile.hull(), Global.getSettings(), notes);
+				BattleNext_EquipmentTooltip.render(tooltip, info);
+			}
+		}, TooltipMakerAPI.TooltipLocation.RIGHT);
+		LabelAPI name = caption.addPara(caption.shortenString(tile.name(), nameWidth), 0f);
+		name.setAlignment(Alignment.MID);
+		name.getPosition().setSize(nameWidth, name.getPosition().getHeight());
+		name.getPosition().inTL(GAP, size - GAP - TILE_NAME_HEIGHT
+				+ (TILE_NAME_HEIGHT - name.getPosition().getHeight()) * 0.5f);
+		caption.setHeightSoFar(size);
+		card.addUIElement(caption).inTL(0f, 0f);
+		return card;
 	}
 
 	private CustomPanelAPI card(CustomPanelAPI owner, float width, String spriteName, String title,
@@ -448,16 +512,6 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		return card;
 	}
 
-	private String equipmentName(String id, boolean wing) {
-		try {
-			if (id.isEmpty()) return variantStrings.get("empty_slot");
-			if (wing) return Global.getSettings().getFighterWingSpec(id).getWingName();
-			return Global.getSettings().getWeaponSpec(id).getWeaponName();
-		} catch (RuntimeException exception) {
-			return strings.get("unavailable") + ": " + id;
-		}
-	}
-
 	private String pluginName(String id) {
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(id);
 		String name = id;
@@ -465,6 +519,10 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			name = spec.getDisplayName();
 		}
 		return name;
+	}
+
+	private record DisplayTile(String name, String spriteName, String id, ShipHullSpecAPI hull, String error) {
+
 	}
 
 	private record Zone(CustomPanelAPI panel, TooltipMakerAPI list, float width, float height) {
@@ -544,6 +602,40 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			BattleNext_PageLayout.renderFittedSprite(sprite, position.getX() + GAP + ICON_SIZE * 0.5f,
 					position.getY() + position.getHeight() - GAP - ICON_SIZE * 0.5f,
 					ICON_SIZE, ICON_SIZE, alphaMult);
+		}
+	}
+
+	private static class SquareCardPlugin extends BaseCustomUIPanelPlugin {
+		private final SpriteAPI sprite;
+		private PositionAPI position;
+
+		private SquareCardPlugin(SpriteAPI sprite) {
+			this.sprite = sprite;
+		}
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			BattleNext_GeometryRenderer.lineLoop(new float[]{
+					position.getX(), position.getY(),
+					position.getX() + position.getWidth(), position.getY(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight(),
+					position.getX(), position.getY() + position.getHeight()
+			}, BattleNext_UiTheme.PANEL, alphaMult, TILE_BORDER_WIDTH);
+		}
+
+		@Override
+		public void render(float alphaMult) {
+			float imageWidth = Math.max(1f, position.getWidth() - GAP * 2f);
+			float imageHeight = Math.max(1f, position.getHeight() - GAP * 2f - TILE_NAME_HEIGHT - ROW_GAP);
+			float centerX = position.getCenterX();
+			float centerY = position.getY() + position.getHeight() - GAP - imageHeight * 0.5f;
+			if (sprite != null) {
+				BattleNext_PageLayout.renderFittedSprite(sprite, centerX, centerY, imageWidth, imageHeight, alphaMult);
+			} else {
+				float size = Math.min(ICON_SIZE * 0.75f, Math.min(imageWidth, imageHeight));
+				BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(),
+						centerX - size * 0.5f, centerY - size * 0.5f, size, alphaMult);
+			}
 		}
 	}
 

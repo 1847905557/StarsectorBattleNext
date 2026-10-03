@@ -8,6 +8,7 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,19 +47,24 @@ public class BattleNext_RefitDModSourceProvider extends BattleNext_BaseSourcePro
 	}
 
 	@Override
+	public float getTooltipWidth() {
+		return BattleNext_EquipmentTooltip.WIDTH;
+	}
+
+	@Override
+	public boolean isTooltipScrollable() {
+		return true;
+	}
+
+	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice choice) {
 		ShipVariantAPI variant = variantSupplier.get();
 		HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
-		addHeader(tooltip, spec.getDisplayName(), choice.getId());
-		if (variant != null) {
-			if (spec.getEffect() != null) {
-				addExcerpt(tooltip, spec.getDescription(variant.getHullSize()), 32f);
-			}
-			addExcerpt(tooltip, refitStrings.get(isSuitableFor(variant, spec)
-					? "d_mod_suitable" : "d_mod_unsuitable"));
-		}
+		List<String> notes = variant == null ? List.of() : List.of(refitStrings.get(isSuitableFor(variant, spec)
+				? "d_mod_suitable" : "d_mod_unsuitable"));
+		BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hullmod(spec.getDisplayName(),
+				choice.getId(), spec, variant == null ? null : variant.getHullSize(), notes));
 	}
-
 	public static boolean isSuitableFor(ShipVariantAPI variant, HullModSpecAPI spec) {
 		List<HullModSpecAPI> suitable = new ArrayList<>();
 		suitable.add(spec);

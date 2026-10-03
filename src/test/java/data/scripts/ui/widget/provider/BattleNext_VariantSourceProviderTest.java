@@ -54,7 +54,9 @@ class BattleNext_VariantSourceProviderTest {
 		try {
 			new BattleNext_VariantSourceProvider().createTooltip(tooltip,
 					new OptionChoice("variant_50%_ready", "Variant"));
-			assertEquals(List.of("variant_50%_ready"), rendered);
+			assertEquals("variant_50%_ready", rendered.get(0));
+			assertEquals(2, rendered.size());
+			org.junit.jupiter.api.Assertions.assertTrue(rendered.get(1).contains("Unknown variant: variant_50%_ready"));
 		} finally {
 			Global.setSettings(previousSettings);
 			Global.setSector(previousSector);

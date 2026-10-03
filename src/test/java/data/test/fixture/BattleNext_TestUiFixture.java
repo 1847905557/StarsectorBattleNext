@@ -47,6 +47,9 @@ import static org.junit.jupiter.api.Assertions.*;
 public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 
 	protected final List<String> labels = new ArrayList<>();
+	protected final Map<PositionAPI, Alignment> labelAlignments = new IdentityHashMap<>();
+	protected final Map<PositionAPI, String> labelFonts = new IdentityHashMap<>();
+	protected final Map<PositionAPI, Color> labelColors = new IdentityHashMap<>();
 	protected final Map<String, AtomicBoolean> buttons = new LinkedHashMap<>();
 	protected final Map<String, PositionAPI> buttonPositions = new LinkedHashMap<>();
 	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
@@ -152,6 +155,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private float offset;
 		private boolean mounted;
 		private UIComponentAPI previous;
+		private String paraFont = "default";
+		private String titleFont = "default-title";
+		private Color paraColor = Color.WHITE;
+		private Color titleColor = Color.WHITE;
 
 		protected TooltipState(float width, float height, boolean scrollable) {
 			this.width = width;
@@ -229,11 +236,20 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			return switch (method) {
 				case "getExternalScroller" -> mounted && scrollable ? scroller : null;
 				case "getPosition" -> position;
+				case "setParaFontDefault" -> { paraFont = "default"; yield null; }
+				case "setParaSmallInsignia" -> { paraFont = "small-insignia"; yield null; }
+				case "setTitleSmallOrbitron" -> { titleFont = "small-orbitron"; yield null; }
+				case "setParaFontColor" -> { paraColor = (Color) args[0]; yield null; }
+				case "setTitleFontColor" -> { titleColor = (Color) args[0]; yield null; }
 				case "addTitle", "addPara", "addSectionHeading" -> {
 					String value = (String) args[0];
 					labels.add(value);
 					float pad = args[args.length - 1] instanceof Float number ? number : 0f;
 					LabelAPI label = label(value, textWidth);
+					boolean title = method.equals("addTitle");
+					labelFonts.put(label.getPosition(), title ? titleFont : paraFont);
+					labelColors.put(label.getPosition(), title ? titleColor
+							: args.length > 1 && args[1] instanceof Color color ? color : paraColor);
 					append((UIComponentAPI) label, pad);
 					yield label;
 				}
@@ -332,6 +348,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		String[] value = {text};
 		return proxy(LabelAPI.class, (method, args) -> switch (method) {
 			case "getPosition" -> position;
+			case "setAlignment" -> {
+				labelAlignments.put(position, (Alignment) args[0]);
+				yield null;
+			}
 			case "computeTextWidth" -> ((String) args[0]).length() * 7f;
 			case "computeTextHeight" -> position.getHeight();
 			case "getText" -> value[0];

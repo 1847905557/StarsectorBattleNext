@@ -52,14 +52,14 @@ public class BattleNext_TestVariantFixture extends BattleNext_TestPageFixture {
 		assertFalse(items.isEmpty());
 		PositionAPI first = items.get(0).getPosition();
 		assertEquals(4f, frame.getY() + frame.getHeight() - 18f - first.getY() - first.getHeight()
-				+ state.getScroller().getYOffset());
+				+ state.getScroller().getYOffset(), 0.001f);
 		for (int index = 0; index < items.size(); index++) {
 			PositionAPI row = items.get(index).getPosition();
-			assertEquals(8f, row.getX() - frame.getX());
-			assertEquals(8f, frame.getX() + frame.getWidth() - row.getX() - row.getWidth());
+			assertEquals(8f, row.getX() - frame.getX(), 0.001f);
+			assertEquals(8f, frame.getX() + frame.getWidth() - row.getX() - row.getWidth(), 0.001f);
 			if (index > 0) {
 				PositionAPI previous = items.get(index - 1).getPosition();
-				assertEquals(4f, previous.getY() - row.getY() - row.getHeight());
+				assertEquals(4f, previous.getY() - row.getY() - row.getHeight(), 0.001f);
 			}
 		}
 		assertEquals(8f, state.getComponents().get(state.getComponents().size() - 1).getPosition().getHeight());

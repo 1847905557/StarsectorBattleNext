@@ -62,6 +62,14 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			return false;
 		}
 
+		default float getTooltipWidth() {
+			return HOVER_MAX_WIDTH;
+		}
+
+		default boolean isTooltipScrollable() {
+			return false;
+		}
+
 		void createTooltip(TooltipMakerAPI tooltip, OptionChoice option);
 	}
 
@@ -103,6 +111,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float HOVER_MAX_WIDTH = 480f;
 	private static final float HOVER_MAX_HEIGHT = 240f;
 	private static final float HOVER_CONTENT_INSET = 6f;
+	private static final float HOVER_SCROLL_STEP = 40f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.PANEL;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
@@ -143,6 +152,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private CustomPanelAPI gridPanel;
 	private ScrollPanelAPI gridScroller;
 	private CustomPanelAPI hoverPanel;
+	private TooltipMakerAPI hoverContent;
 	private BattleNext_TextField search;
 	private String lastSearch = "";
 	private OptionChoice hoveredOption;
@@ -210,6 +220,15 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				clearOverlays();
 				event.consume();
 				return true;
+			}
+			if (event.isMouseScrollEvent() && hoverContent != null && source.isTooltipScrollable()
+					&& contains(hoverPanel, event)) {
+				ScrollPanelAPI scroller = hoverContent.getExternalScroller();
+				float limit = Math.max(0f, hoverContent.getHeightSoFar() - scroller.getPosition().getHeight());
+				float offset = scroller.getYOffset() - Math.signum(event.getEventValue()) * HOVER_SCROLL_STEP;
+				scroller.setYOffset(Math.max(0f, Math.min(limit, offset)));
+				event.consume();
+				continue;
 			}
 			if (!event.isMouseDownEvent() && !event.isMouseScrollEvent()) continue;
 			if (event.isMouseScrollEvent() && contains(row, event) && !contains(popup, event)) {
@@ -497,15 +516,32 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	}
 
 	private void updateHover(float x, float y) {
-		PositionAPI gridViewport = gridScroller == null
-				? gridPanel == null ? null : gridPanel.getPosition()
-				: gridScroller.getPosition();
-		if (popup == null || !contains(popup.getPosition(), x, y)
-				|| !contains(gridViewport, x, y)) {
+
+		if (popup == null || !contains(popup.getPosition(), x, y)) {
 			removeHover();
 			return;
 		}
-
+		if (hoverPanel != null) {
+			PositionAPI hover = hoverPanel.getPosition();
+			if (contains(hover, x, y)) return;
+			for (OptionTileHoverTarget candidate : hoverTargets) {
+				if (candidate.option != hoveredOption) continue;
+				PositionAPI tile = candidate.tile.getPosition();
+				float left = hover.getX() >= tile.getX() + tile.getWidth()
+						? tile.getX() + tile.getWidth() : hover.getX() + hover.getWidth();
+				float right = hover.getX() >= tile.getX() + tile.getWidth()
+						? hover.getX() : tile.getX();
+				float bottom = Math.max(tile.getY(), hover.getY());
+				float top = Math.min(tile.getY() + tile.getHeight(), hover.getY() + hover.getHeight());
+				if (x >= left && x <= right && y >= bottom && y <= top) return;
+			}
+		}
+		PositionAPI gridViewport = gridScroller == null
+				? gridPanel == null ? null : gridPanel.getPosition() : gridScroller.getPosition();
+		if (!contains(gridViewport, x, y)) {
+			removeHover();
+			return;
+		}
 		OptionTileHoverTarget target = null;
 		for (OptionTileHoverTarget candidate : hoverTargets) {
 			PositionAPI position = candidate.tile.getPosition();
@@ -525,21 +561,29 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private void showHover(OptionTileHoverTarget target) {
 
 		removeHover();
-		float width = Math.min(HOVER_MAX_WIDTH, popup.getPosition().getWidth() - POPUP_INSET * 2f);
+		float width = Math.min(source.getTooltipWidth(), popup.getPosition().getWidth() - POPUP_INSET * 2f);
 		float height = Math.min(HOVER_MAX_HEIGHT, popup.getPosition().getHeight() - POPUP_INSET * 2f);
 		hoverPanel = ownPanel(popup, popup.createCustomPanel(width, height, new OptionPickerHoverPlugin(target.option)));
 		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, POPUP_BORDER_THICKNESS);
 		hoveredOption = target.option;
 		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - HOVER_CONTENT_INSET * 2f,
-				height - HOVER_CONTENT_INSET * 2f, false);
+				height - HOVER_CONTENT_INSET * 2f, source.isTooltipScrollable());
+		hoverContent = tooltip;
 		tooltip.getPosition().setSize(width - HOVER_CONTENT_INSET * 2f,
 				height - HOVER_CONTENT_INSET * 2f);
 		BattleNext_UiTheme.configure(tooltip);
 		source.createTooltip(tooltip, target.option);
+		if (source.isTooltipScrollable()) {
+			float visibleHeight = Math.min(height - HOVER_CONTENT_INSET * 2f, tooltip.getHeightSoFar());
+			tooltip.getPosition().setSize(width - HOVER_CONTENT_INSET * 2f, visibleHeight);
+			height = visibleHeight + HOVER_CONTENT_INSET * 2f;
+			hoverPanel.getPosition().setSize(width, height);
+		}
 		hoverPanel.addUIElement(tooltip).inTL(HOVER_CONTENT_INSET, HOVER_CONTENT_INSET);
 		PositionAPI tile = target.tile.getPosition();
 		float localX = tile.getX() - popup.getPosition().getX();
-		float localY = tile.getY() - popup.getPosition().getY();
+		float localY = popup.getPosition().getY() + popup.getPosition().getHeight()
+				- tile.getY() - tile.getHeight();
 		float x = localX + TILE_SIZE + HOVER_CONTENT_INSET;
 		if (x + width > popup.getPosition().getWidth() - POPUP_INSET) x = localX - width - HOVER_CONTENT_INSET;
 		float y = Math.max(POPUP_INSET, Math.min(localY, popup.getPosition().getHeight() - height - POPUP_INSET));
@@ -552,6 +596,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		if (hoverPanel != null) releasePanel(hoverPanel);
 		hoverPanel = null;
+		hoverContent = null;
 		hoveredOption = null;
 	}
 
@@ -691,6 +736,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		public void processInput(List<InputEventAPI> events) {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
+				if (hoverPanel != null && contains(hoverPanel, event)) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
 				if (mode == OptionSelectionMode.SINGLE) selection.clear();
 				int max = maxCount(option.id);

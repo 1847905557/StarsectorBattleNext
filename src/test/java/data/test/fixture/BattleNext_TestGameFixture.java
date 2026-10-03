@@ -92,7 +92,21 @@ public class BattleNext_TestGameFixture {
 			case "getHullModSpec" -> ((String) args[0]).endsWith("_missing_hullmod") ? null
 					: proxy(HullModSpecAPI.class, (name, values) -> "getDisplayName".equals(name) ? "Hullmod " + args[0] : null);
 			case "getFighterWingSpec" -> ((String) args[0]).endsWith("_missing_wing") ? null
-					: proxy(FighterWingSpecAPI.class, (name, values) -> "getWingName".equals(name) ? "Wing " + args[0] : null);
+					: proxy(FighterWingSpecAPI.class, (name, values) -> switch (name) {
+						case "getWingName" -> "Wing " + args[0];
+						case "getVariant" -> proxy(ShipVariantAPI.class, (variantMethod, arguments) -> switch (variantMethod) {
+							case "getDisplayName" -> "Fighter " + args[0];
+							case "getHullVariantId" -> "fighter_" + args[0];
+							case "getHullSpec" -> proxy(ShipHullSpecAPI.class, (methodName, parameters) -> switch (methodName) {
+								case "getHullId" -> "fighter_" + args[0];
+								case "getHullName" -> "Fighter " + args[0];
+								case "getSpriteName" -> "graphics/fighter.png";
+								default -> null;
+							});
+							default -> null;
+						});
+						default -> null;
+					});
 			case "getWeaponSpec" -> proxy(WeaponSpecAPI.class, (name, values) -> "getWeaponName".equals(name) ? "Weapon " + args[0] : null);
 			case "createEmptyVariant" -> {
 				Variant variant = new Variant((String) args[0], (ShipHullSpecAPI) args[1]);

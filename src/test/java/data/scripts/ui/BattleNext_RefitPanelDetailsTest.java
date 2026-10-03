@@ -98,7 +98,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("identity", "plugins", "modules", "groups", "wings"), lists(plugin).keySet());
 		assertEquals(5, children.get(details(plugin).getPanel()).size());
 		for (String text : List.of("Hullmod ordinary", "Hullmod sm", "Hullmod built", "Hullmod d",
-				"BattleNext_variant_s_mod", "BattleNext_variant_d_mod", "module: Child", "Wing wing")) {
+				"BattleNext_variant_s_mod", "BattleNext_variant_d_mod", "Child", "Wing wing")) {
 			assertTrue(labels.contains(text), text);
 		}
 		assertEquals("LINKED", snapshot.getJSONArray("weaponGroups").getJSONObject(0).getString("mode"));

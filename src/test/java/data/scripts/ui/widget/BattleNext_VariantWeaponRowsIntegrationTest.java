@@ -92,13 +92,15 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 			int before = labels.size();
 			TooltipMakerAPI hover = tooltip(600f, 300f, false);
 			attachedTooltips.get(row).createTooltip(hover, false, null);
-			assertTrue(labels.get(before).startsWith("slot_" + index + ": "));
-			assertTrue(labels.get(before).length() >= label.getText().length());
-			if (labels.get(before).length() * 7f > text.getViewport().getWidth() - 4f) {
+			String name = labels.get(before);
+			String fullRowText = "slot_" + index + ": " + name;
+			assertFalse(name.startsWith("slot_"));
+			assertTrue(fullRowText.length() >= label.getText().length());
+			if (fullRowText.length() * 7f > text.getViewport().getWidth() - 4f) {
 				assertTrue(label.getText().endsWith("..."));
-				assertTrue(labels.get(before).length() > label.getText().length());
+				assertTrue(fullRowText.length() > label.getText().length());
 			} else {
-				assertEquals(labels.get(before), label.getText());
+				assertEquals(fullRowText, label.getText());
 			}
 			if (index < 5) assertEquals(List.of("turret", "hardpoint", "broken", "both", "unknown").get(index),
 					labels.get(before + 1));
@@ -244,6 +246,24 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 		assertEquals(40f, row.getPosition().getHeight());
 		var icon = tooltips.get(children.get(row).get(0)).getComponents().get(0);
 		assertEquals("graphics/laser_turret.png", imagePaths.get(icon));
+		for (String section : List.of("modules", "wings")) {
+			var tileRow = tooltips.get(lists(details).get(section)).getComponents().stream()
+					.filter(CustomPanelAPI.class::isInstance).map(CustomPanelAPI.class::cast).findFirst().orElseThrow();
+			var tile = (CustomPanelAPI) children.get(tileRow).get(0);
+			assertEquals(tile.getPosition().getWidth(), tile.getPosition().getHeight());
+			assertEquals("SquareCardPlugin", plugins.get(tile).getClass().getSimpleName());
+			var caption = (com.fs.starfarer.api.ui.LabelAPI) tooltips.get(children.get(tile).get(0)).getComponents().get(1);
+			assertEquals(section.equals("modules") ? "Child" : "Wing wing", caption.getText());
+			assertEquals(com.fs.starfarer.api.ui.Alignment.MID, labelAlignments.get(caption.getPosition()));
+			var captionState = tooltips.get(children.get(tile).get(0));
+			var hover = tooltip(360f, 300f, false);
+			attachedTooltips.get(captionState.getComponents().get(0)).createTooltip(hover, false, null);
+			var tooltipParts = tooltips.get(hover).getComponents();
+			assertEquals(3, tooltipParts.size());
+			var identifier = (com.fs.starfarer.api.ui.LabelAPI) tooltipParts.get(1);
+			assertEquals(section.equals("modules") ? "child" : "wing", identifier.getText());
+			assertEquals(data.scripts.ui.BattleNext_UiTheme.MUTED, labelColors.get(identifier.getPosition()));
+		}
 		JSONObject snapshot = (JSONObject) getField(details, "variantJson");
 		for (String mode : List.of("LINKED", "ALTERNATING")) {
 			snapshot.getJSONArray("weaponGroups").getJSONObject(0).put("mode", mode);

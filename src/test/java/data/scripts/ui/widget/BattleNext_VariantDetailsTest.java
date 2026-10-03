@@ -88,11 +88,20 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		details.setVariantJson(json);
 		details.attach(panel(600f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.stream().anyMatch(value -> value.contains("Child")));
-		assertTrue(labels.stream().anyMatch(value -> value.contains("child_variant")));
-		assertTrue(labels.stream().anyMatch(value -> value.contains("broken") && value.contains("Unknown module hull")));
 		TooltipState modules = tooltips.get(lists(details).get("modules"));
+		for (var component : modules.getComponents()) {
+			if (!(component instanceof CustomPanelAPI row)) continue;
+			for (Object item : children.get(row)) {
+				var card = (CustomPanelAPI) item;
+				var caption = tooltips.get(children.get(card).get(0));
+				attachedTooltips.get(caption.getComponents().get(0)).createTooltip(tooltip(600f, 400f, false), false, null);
+			}
+		}
+		assertTrue(labels.contains("child"));
+		assertTrue(labels.contains("broken"));
+		assertTrue(labels.stream().anyMatch(value -> value.contains("Unknown module hull")));
 		assertEquals(modules.getUsedHeight(), modules.getMountedHeight());
-		assertEquals(1, modules.getComponents().stream().filter(CustomPanelAPI.class::isInstance).count());
+		assertEquals(2, modules.getComponents().stream().filter(CustomPanelAPI.class::isInstance).count());
 	}
 
 	@Test
@@ -190,7 +199,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 					for (int index = 1; index < cards.size(); index++) {
 						PositionAPI left = ((CustomPanelAPI) cards.get(index - 1)).getPosition();
 						PositionAPI right = ((CustomPanelAPI) cards.get(index)).getPosition();
-						assertEquals(4f, right.getX() - left.getX() - left.getWidth());
+						assertEquals(4f, right.getX() - left.getX() - left.getWidth(), 0.001f);
 					}
 				}
 			}
@@ -198,8 +207,8 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 			for (UIComponentAPI component : state.getComponents()) {
 				if (!(component instanceof CustomPanelAPI)) continue;
 				PositionAPI row = component.getPosition();
-				assertEquals(8f, row.getX() - frame.getX());
-				assertEquals(8f, frame.getX() + frame.getWidth() - row.getX() - row.getWidth());
+				assertEquals(8f, row.getX() - frame.getX(), 0.001f);
+				assertEquals(8f, frame.getX() + frame.getWidth() - row.getX() - row.getWidth(), 0.001f);
 			}
 		}
 		TooltipState modules = tooltips.get(lists(details).get("modules"));

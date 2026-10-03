@@ -5,6 +5,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -25,6 +26,7 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.json.JSONException;
@@ -410,14 +412,32 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		content.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
 			public float getTooltipWidth(Object ignored) {
-				return 360f;
+				return BattleNext_EquipmentTooltip.WIDTH;
 			}
 
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				tooltip.addTitle(visual.name());
-				BattleNext_PageLayout.addMutedIdLine(tooltip,
-						sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+				if (source.getKind().equals("weapon")) {
+					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(visual.name(),
+							source.getId(), source.getId(), Description.Type.WEAPON, Global.getSettings(), List.of()));
+				} else if (source.getKind().equals("fighter_wing")) {
+					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.wing(
+							visual.name(), source.getId(), Global.getSettings(), List.of()));
+				} else if (source.getKind().equals("ship")) {
+					try {
+						ShipHullSpecAPI hull = Global.getSettings().getHullSpec(source.getId());
+						if (hull == null) throw new IllegalArgumentException("Unknown hull: " + source.getId());
+						BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(
+								visual.name(), source.getId(), hull, Global.getSettings(), List.of()));
+					} catch (RuntimeException exception) {
+						BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
+								visual.name(), source.getId(), "", List.of(exception.toString())));
+					}
+				} else {
+					tooltip.addTitle(visual.name());
+					BattleNext_PageLayout.addMutedIdLine(tooltip,
+							sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+				}
 			}
 		}, TooltipLocation.RIGHT);
 	}
