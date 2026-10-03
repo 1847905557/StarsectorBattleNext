@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.VariantSource;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.loading.WeaponGroupType;
+import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -165,7 +166,8 @@ public class BattleNext_VariantBuilder {
 	private void addModules(ShipVariantAPI variant, JSONObject modules, Set<String> moduleIds) throws JSONException {
 		if (modules.length() == 0) return;
 		for (String slot : JSONObject.getNames(modules)) {
-			if (!variant.getModuleSlots().contains(slot)) throw new IllegalArgumentException("Unknown module slot: " + slot);
+			WeaponSlotAPI moduleSlot = variant.getHullSpec().getWeaponSlot(slot);
+			if (moduleSlot == null || !moduleSlot.isStationModule()) throw new IllegalArgumentException("Unknown module slot: " + slot);
 			Object value = modules.get(slot);
 			JSONObject moduleJson;
 			String moduleId;

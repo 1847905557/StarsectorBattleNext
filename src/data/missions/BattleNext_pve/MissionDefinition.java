@@ -32,6 +32,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	@Override
 	public void defineMission(MissionDefinitionAPI api) {
 		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
+
 		expectedDp = BattleNext_KeyTuning.adjustVerticalClamped(expectedDp, EXPECTED_DP_STEP, MIN_EXPECTED_DP, MAX_EXPECTED_DP);
 		factionIndex = BattleNext_KeyTuning.adjustHorizontalWrapped(factionIndex, FACTION_COUNT);
 		BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
@@ -39,6 +40,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(createFleet("pve-enemy", "Faction fleet " + factionIndex, "lasher_Standard"));
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, true);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet, false);
+
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
 		api.addPlugin(new BattleNext_DeploymentPlugin());
 		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
@@ -54,6 +56,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		if (BattleNext_Settings.isRttInBattle()) {
 			api.addPlugin(new BattleNext_RttPlugin());
 		}
+		
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);
 		api.addBriefingItem("Use left/right to rotate faction selection.");
 		api.initMap(-MAP_HALF_SIZE, MAP_HALF_SIZE, -MAP_HALF_SIZE, MAP_HALF_SIZE);

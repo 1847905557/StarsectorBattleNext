@@ -11,6 +11,7 @@ import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.model.fleet.BattleNext_FleetStore;
+import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -21,6 +22,8 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
@@ -61,6 +64,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private final CustomUIPanelPlugin inputOwner;
 	private final BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
+	private final Map<String, List<String>> fleetErrors = new LinkedHashMap<>();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
@@ -166,8 +170,21 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 
 	private void load() {
 		loadError = "";
+		fleetErrors.clear();
 		try {
 			fleetStore.reload();
+			BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
+			for (var fleet : fleetStore.getAll()) {
+				List<String> errors = new ArrayList<>();
+				try {
+					for (String error : builder.build(fleet).getMemberErrors()) {
+						errors.add(fleet.getId() + " " + error);
+					}
+				} catch (RuntimeException exception) {
+					errors.add(fleet.getId() + ": " + exception.getMessage());
+				}
+				fleetErrors.put(fleet.getId(), List.copyOf(errors));
+			}
 		} catch (IOException | JSONException | RuntimeException exception) {
 			loadError = strings.get("load_failed") + ": " + exception.getMessage();
 		}
@@ -394,8 +411,22 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			return errors;
 		}
-		if (fleetStore.get(row.player.getText().trim()) == null) errors.add(battleStrings.get("invalid_player_fleet"));
-		if (fleetStore.get(row.enemy.getText().trim()) == null) errors.add(battleStrings.get("invalid_enemy_fleet"));
+		if (!fleetStore.isLoaded()) {
+			errors.add(fleetStore.getLoadError());
+			return errors;
+		}
+		String playerId = row.player.getText().trim();
+		String enemyId = row.enemy.getText().trim();
+		if (fleetStore.get(playerId) == null) {
+			errors.add(battleStrings.get("invalid_player_fleet"));
+		} else {
+			errors.addAll(fleetErrors.get(playerId));
+		}
+		if (fleetStore.get(enemyId) == null) {
+			errors.add(battleStrings.get("invalid_enemy_fleet"));
+		} else {
+			errors.addAll(fleetErrors.get(enemyId));
+		}
 		try {
 			int map = Integer.parseInt(row.map.getText().trim());
 			if (map < RANDOM_MAP_ID || map > LAST_MAP_ID) errors.add(battleStrings.get("invalid_map"));

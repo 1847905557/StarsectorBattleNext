@@ -76,6 +76,9 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			BattleNext_BattleSignals.clearAuthorization();
 		}
 
+		for (String warning : provider.getWarnings()) {
+			api.addBriefingItem(warning);
+		}
 		BattleNext_FleetStore fleets = provider.getFleetStore();
 		BattleNext_AssembledFleet assembledPlayerFleet = fleetBuilder.build(fleets.get(match.getPlayer()));
 		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(fleets.get(match.getEnemy()));

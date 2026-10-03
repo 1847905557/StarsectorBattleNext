@@ -2,6 +2,7 @@ package data.model.fleet.io;
 
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.junit.jupiter.api.Test;
 
@@ -55,5 +56,18 @@ class BattleNext_FleetLegacyPackageIntegrationTest extends BattleNext_TestFleetI
 		assertEquals("module_onslaught_armor_right_STTN", onslaught.getModuleVariant("WS 027").getHullVariantId());
 		assertEquals(2, dataReads.stream().filter(read -> read.startsWith("loadCSV:")).count());
 		assertEquals(5, dataReads.stream().filter(read -> read.startsWith("loadJSON:")).count());
+		standard("alpha", "alpha", "parent_variant");
+		standard("beta", "beta", "parent_variant");
+		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,-1,1\nbeta,alpha,-1,1\n"
+				+ "ab_player740,ab_player740,-1,1\n");
+		write("tournament/PvP_matches.csv", "player,enemy,map,size\n740,740,8,1\n");
+		var provider = new BattleNext_BattleSourceProvider();
+		var matches = provider.load();
+		assertEquals(4, matches.size(), provider.getWarnings().toString());
+		assertTrue(provider.getWarnings().isEmpty());
+		assertEquals("ab_player740", matches.get(2).getPlayer());
+		assertEquals("ab_player740", matches.get(2).getEnemy());
+		assertEquals("ab_player740", matches.get(3).getPlayer());
+		assertEquals("ab_player740", matches.get(3).getEnemy());
 	}
 }

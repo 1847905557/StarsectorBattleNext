@@ -203,7 +203,11 @@ public class BattleNext_TestGameFixture {
 			case "getHullName" -> name;
 			case "getSpriteName" -> "graphics/" + id + ".png";
 			case "getBuiltInWings" -> List.of();
-			case "getWeaponSlot" -> proxy(WeaponSlotAPI.class, (key, values) -> null);
+			case "getWeaponSlot", "getWeaponSlotAPI" -> proxy(WeaponSlotAPI.class, (key, values) -> switch (key) {
+				case "getId" -> args[0];
+				case "isStationModule" -> moduleSlots.get(hulls.get(id)).contains(args[0]);
+				default -> null;
+			});
 			default -> null;
 		});
 		hulls.put(id, hull);
@@ -253,7 +257,8 @@ public class BattleNext_TestGameFixture {
 				case "getSModdedBuiltIns" -> builtIns;
 				case "getSuppressedMods" -> suppressed;
 				case "getSMods" -> sMods;
-				case "getModuleSlots" -> moduleSlots.get(hull);
+				case "getModuleSlots" -> modules.keySet().stream()
+						.filter(slot -> hull.getWeaponSlot(slot).isStationModule()).toList();
 				case "getStationModules" -> {
 					Map<String, String> ids = new LinkedHashMap<>();
 					modules.forEach((slot, variant) -> ids.put(slot, variant == null ? "missing" : variant.getHullVariantId()));
