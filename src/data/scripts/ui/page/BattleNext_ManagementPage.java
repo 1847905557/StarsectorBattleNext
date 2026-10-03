@@ -35,7 +35,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 		for (int index = 0; index < actions.length; index++) {
 			ButtonAPI button = BattleNext_PageLayout.fixedButton(panel,
 					BattleNext_PageLayout.managementFooterButtonRect(footerRect, buttonWidth, index),
-					text(actions[index]), actions[index], CutStyle.ALL, true);
+					strings.get(actions[index]), actions[index], CutStyle.ALL, true);
 			if ("save".equals(actions[index])) {
 				saveButton = button;
 			}
@@ -80,7 +80,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 		if (hasSelection()) {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
-					text("delete"), "delete", CutStyle.ALL, true);
+					strings.get("delete"), "delete", CutStyle.ALL, true);
 			delete.setEnabled(canDelete());
 		}
 		String noteText = sourceNote();
@@ -157,7 +157,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	private void buildList(TooltipMakerAPI listContent) {
 		listContent.addTitle(listTitle());
 		if (!isListLoaded()) {
-			listContent.addPara(text("load_failed") + ": " + listError(), listErrorGap());
+			listContent.addPara(strings.get("load_failed") + ": " + listError(), listErrorGap());
 		}
 		if (isListEmpty()) {
 			listContent.addPara(emptyListText(), listEmptyGap());

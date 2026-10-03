@@ -26,7 +26,8 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	private final Runnable closeAction;
 	private final BattleNext_FleetStore store;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private CustomPanelAPI panel;
 	private CustomPanelAPI contentsPanel;
 	private BattleNext_TextField name;
@@ -57,7 +58,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			snapshot = BattleNext_CampaignFleetSnapshot.capture(Global.getSector().getPlayerFleet(),
 					Global.getSector().getPlayerPerson(), selected, variant);
 		} catch (Exception exception) {
-			status = strings.get("fleet_capture_error") + ": " + exception;
+			status = fleetStrings.get("player_save_snapshot_error") + ": " + exception;
 			Global.getLogger(getClass()).warn("Unable to capture player fleet", exception);
 		}
 	}
@@ -77,19 +78,19 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		contentsPanel = panel.createCustomPanel(width, height, new ContentsPlugin());
 		panel.addComponent(contentsPanel).inTL(0f, 0f);
 		BattleNext_PageLayout.heading(new UIRect(INSET, INSET, width - INSET * 2f,
-				BattleNext_PageLayout.HEADER_HEIGHT), contentsPanel, strings.get("fleet_capture"));
+				BattleNext_PageLayout.HEADER_HEIGHT), contentsPanel, fleetStrings.get("player_save_action"));
 		float top = INSET * 2f + BattleNext_PageLayout.HEADER_HEIGHT;
 		float contentHeight = height - top - INSET * 2f - BattleNext_PageLayout.FOOTER_HEIGHT;
 		TooltipMakerAPI content = contentsPanel.createUIElement(width - INSET * 2f, contentHeight, true);
-		content.addPara(strings.get("fleet_name"), 0f);
+		content.addPara(fleetStrings.get("name"), 0f);
 		name = new BattleNext_TextField(inputRouter, contentsPanel, width - INSET * 3f,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, content);
 		name.attach(content, contentsPanel);
 		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		name.setText(displayName);
 		if (snapshot != null) {
-			content.addPara(strings.format("fleet_capture_commander", commanderName), INSET);
-			content.addPara(strings.format("fleet_capture_members", snapshot.getMembers().size()), INSET);
+			content.addPara(fleetStrings.format("player_save_commander", commanderName), INSET);
+			content.addPara(fleetStrings.format("player_save_members", snapshot.getMembers().size()), INSET);
 		}
 		if (!status.isEmpty()) {
 			content.addPara(status, INSET);
@@ -117,7 +118,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		if (!"fleet_capture_save".equals(buttonId) || saved || snapshot == null) return;
 		String displayName = name.getText();
 		if (displayName.trim().isEmpty()) {
-			status = strings.get("fleet_capture_name_required");
+			status = fleetStrings.get("player_save_name_required");
 			rebuildContents(displayName);
 			return;
 		}
@@ -126,7 +127,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			snapshot.setName(displayName.trim());
 			store.save(snapshot);
 			saved = true;
-			status = strings.format("fleet_capture_saved", snapshot.getName(), snapshot.getSourcePath());
+			status = fleetStrings.format("player_save_saved", snapshot.getName(), snapshot.getSourcePath());
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
 			Global.getLogger(getClass()).warn("Unable to save player fleet snapshot", exception);

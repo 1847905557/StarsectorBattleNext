@@ -36,7 +36,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private static final float SECTION_HEADER_HEIGHT = BattleNext_PageLayout.TABLE_HEADER_HEIGHT;
 	private static final float ROW_GAP = BattleNext_ExpandablePanel.ROW_GAP;
 	private static final float ICON_SIZE = BattleNext_ExpandablePanel.ICON_SIZE;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private final Set<Integer> expanded = new HashSet<>();
 	private final Map<String, TooltipMakerAPI> lists = new LinkedHashMap<>();
 	private final Runnable refresh;
@@ -90,14 +91,14 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		CustomPanelAPI preview = frame(owner, new UIRect(0f, 0f, leftWidth, height), hull.getHullName());
 		buildPreview(preview, hull, json, offsets.getOrDefault("identity", 0f));
 		Zone plugins = zone(owner, new UIRect(leftWidth + GAP, 0f, centerWidth, upperHeight),
-				strings.get("variant_plugins"));
+				variantStrings.get("hullmods"));
 		Zone modules = zone(owner, new UIRect(leftWidth + GAP, upperHeight + GAP, centerWidth, lowerHeight),
-				strings.get("variant_modules"));
+				variantStrings.get("modules"));
 		float rightX = leftWidth + centerWidth + GAP * 2f;
 		Zone groups = zone(owner, new UIRect(rightX, 0f, rightWidth, upperHeight),
-				strings.get("variant_weapon_groups"));
+				variantStrings.get("weapon_groups"));
 		Zone wings = zone(owner, new UIRect(rightX, upperHeight + GAP, rightWidth, lowerHeight),
-				strings.get("variant_wings"));
+				variantStrings.get("fighter_wings"));
 
 		buildPlugins(plugins.list(), plugins.panel(), plugins.width(), hull, json);
 		buildModulesSummary(modules.list(), modules.panel(), modules.width(), json);
@@ -151,16 +152,16 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		identity.setTextWidthOverride(width);
 		String variantId = json.optString("variantId", "");
 		String variantName = json.optString("displayName", variantId);
-		identity.addPara(strings.get("variant") + ": " + variantName, GAP * 0.5f);
+		identity.addPara(variantStrings.get("label") + ": " + variantName, GAP * 0.5f);
 		BattleNext_PageLayout.addIdTooltip(identity, variantName, variantId);
-		identity.addPara(strings.get("variant_flux_capacitors") + ": " + json.optInt("fluxCapacitors", 0), GAP * 0.5f);
-		identity.addPara(strings.get("variant_flux_vents") + ": " + json.optInt("fluxVents", 0), GAP * 0.5f);
+		identity.addPara(variantStrings.get("flux_capacitors") + ": " + json.optInt("fluxCapacitors", 0), GAP * 0.5f);
+		identity.addPara(variantStrings.get("flux_vents") + ": " + json.optInt("fluxVents", 0), GAP * 0.5f);
 		identity.setParaSmallInsignia();
 		SpriteAPI sprite = null;
 		try {
 			sprite = Global.getSettings().getSprite(hull.getSpriteName());
 		} catch (RuntimeException exception) {
-			identity.addPara(strings.get("variant_preview_error") + ": " + exception, ROW_GAP);
+			identity.addPara(variantStrings.get("preview_error") + ": " + exception, ROW_GAP);
 		}
 		float identityHeight = Math.min(identityLimit, identity.getHeightSoFar());
 		identity.getPosition().setSize(width + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, identityHeight);
@@ -187,7 +188,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		}
 		List<String> sorted = ids.stream().sorted((left, right) -> pluginName(left).compareToIgnoreCase(pluginName(right))).toList();
 		if (sorted.isEmpty()) {
-			list.addPara(strings.get("variant_none"), ROW_GAP);
+			list.addPara(variantStrings.get("none"), ROW_GAP);
 			return;
 		}
 		Set<String> sMods = new HashSet<>(values(json.optJSONArray("sMods")));
@@ -198,9 +199,9 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				list.addPara(strings.get("unavailable") + ": " + id, ROW_GAP);
 				continue;
 			}
-			String label = spec.hasTag(Tags.HULLMOD_DMOD) ? strings.get("variant_dmod")
-					: sMods.contains(id) || builtInSMods.contains(id) ? strings.get("variant_smod")
-					: hull.isBuiltInMod(id) ? strings.get("variant_builtin") : "";
+			String label = spec.hasTag(Tags.HULLMOD_DMOD) ? variantStrings.get("d_mod")
+					: sMods.contains(id) || builtInSMods.contains(id) ? variantStrings.get("s_mod")
+					: hull.isBuiltInMod(id) ? variantStrings.get("built_in") : "";
 			CustomPanelAPI card = card(owner, width, spec.getSpriteName(), spec.getDisplayName(), label, null);
 			list.addCustom(card, ROW_GAP);
 			String description = spec.getDescription(hull.getHullSize());
@@ -233,7 +234,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			for (int index = 0; index < array.length(); index++) {
 				JSONObject object = array.optJSONObject(index);
 				if (object == null) {
-					list.addPara(strings.get("variant_module_error") + ": " + index, ROW_GAP);
+					list.addPara(variantStrings.get("module_error") + ": " + index, ROW_GAP);
 					count++;
 					continue;
 				}
@@ -241,11 +242,11 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				addModuleCards(list, owner, width, object);
 			}
 		} else if (raw != null) {
-			list.addPara(strings.get("variant_module_error") + ": " + raw, ROW_GAP);
+			list.addPara(variantStrings.get("module_error") + ": " + raw, ROW_GAP);
 			return;
 		}
 		if (count == 0) {
-			list.addPara(strings.get("variant_none"), ROW_GAP);
+			list.addPara(variantStrings.get("none"), ROW_GAP);
 		}
 	}
 
@@ -264,7 +265,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				list.addCustom(card(owner, width, hull.getSpriteName(), slot + ": " + hull.getHullName(),
 						module.optString("displayName", variantId), variantId), ROW_GAP);
 			} catch (Exception exception) {
-				list.addPara(strings.get("variant_module_error") + " " + slot + ": " + exception, ROW_GAP);
+				list.addPara(variantStrings.get("module_error") + " " + slot + ": " + exception, ROW_GAP);
 			}
 		}
 	}
@@ -273,13 +274,13 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 		JSONArray groups = json.optJSONArray("weaponGroups");
 		if (groups == null || groups.length() == 0) {
-			list.addPara(strings.get("variant_none"), ROW_GAP);
+			list.addPara(variantStrings.get("none"), ROW_GAP);
 			return;
 		}
 		for (int index = 0; index < groups.length(); index++) {
 			JSONObject group = groups.optJSONObject(index);
 			if (group == null) {
-				list.addPara(strings.get("variant_group_error") + ": " + index, ROW_GAP);
+				list.addPara(variantStrings.get("weapon_group_error") + ": " + index, ROW_GAP);
 				continue;
 			}
 			JSONObject weapons = group.optJSONObject("weapons");
@@ -296,7 +297,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				BattleNext_UiTheme.configure(text);
 				text.setTextWidthOverride(contentWidth);
 				if (count == 0) {
-					text.addPara(strings.get("variant_none"), ROW_GAP);
+					text.addPara(variantStrings.get("none"), ROW_GAP);
 				}
 				for (String slot : keys(weapons)) {
 					String id = weapons.optString(slot, "");
@@ -308,9 +309,9 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				body.getPosition().setSize(width, bodyHeight);
 				body.addUIElement(text).inTL(GAP - BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, contentTop);
 			}
-			String status = strings.get(group.optBoolean("autofire", false) ? "enabled" : "variant_disabled");
+			String status = variantStrings.get(group.optBoolean("autofire", false) ? "autofire_enabled" : "autofire_disabled");
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header("", false, "",
-					strings.format("variant_group_compact", index + 1, count),
+					variantStrings.format("weapon_group_summary", index + 1, count),
 					group.optString("mode", "") + " / " + status, "", "");
 			BattleNext_ExpandablePanel.add(list, owner, width, open, bodyHeight, header,
 					() -> {
@@ -329,7 +330,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 		List<String> wings = values(json.optJSONArray("wings"));
 		if (wings.isEmpty()) {
-			list.addPara(strings.get("variant_none"), ROW_GAP);
+			list.addPara(variantStrings.get("none"), ROW_GAP);
 			return;
 		}
 		int columns = Math.max(1, (int) ((width + ROW_GAP) / (110f + ROW_GAP)));
@@ -386,7 +387,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 	private String equipmentName(String id, boolean wing) {
 		try {
-			if (id.isEmpty()) return strings.get("variant_empty_slot");
+			if (id.isEmpty()) return variantStrings.get("empty_slot");
 			if (wing) return Global.getSettings().getFighterWingSpec(id).getWingName();
 			return Global.getSettings().getWeaponSpec(id).getWeaponName();
 		} catch (RuntimeException exception) {

@@ -33,7 +33,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	private static final int VARIANT_SELECTION_MAX_COUNT = 1;
 	private static final float FACT_GAP = 5f;
 	private static final float FACT_RESERVE = 26f;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 
 	@Override
 	public int getMaxCount(String id) {
@@ -83,8 +83,8 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 				: Global.getSettings().getDescription(descriptionId, Type.SHIP);
 		if (description != null) addExcerpt(tooltip, description.getText1FirstPara(), FACT_RESERVE);
 		String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
-		String facts = strings.get("refit_hull_size") + ": " + size + " - "
-				+ strings.get("refit_base_dp") + ": " + hull.getSuppliesToRecover();
+		String facts = variantStrings.get("hull_size") + ": " + size + " - "
+				+ variantStrings.get("base_deployment_points") + ": " + hull.getSuppliesToRecover();
 		if (tooltip.getHeightSoFar() + FACT_RESERVE <= tooltip.getPosition().getHeight()) {
 			tooltip.addPara(facts, FACT_GAP);
 		}

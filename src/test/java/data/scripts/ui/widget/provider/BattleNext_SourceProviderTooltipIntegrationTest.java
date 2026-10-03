@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.test.fixture.BattleNext_TestTextCatalog;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
@@ -98,7 +99,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 			case "getFloat" -> 1f;
 			case "getBoolean" -> false;
 			case "getInt" -> 1;
-			case "getString" -> args[1];
+			case "getString" -> BattleNext_TestTextCatalog.key(args[0], args[1]);
 			case "getVariant" -> variant;
 			case "getDescription" -> args[1] == Description.Type.SHIP ? shipDescription : factionDescription;
 			case "getSkillSpec" -> skill;
@@ -129,7 +130,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 		assertEquals("Wolf - Custom", view.title);
 		assertEquals("wolf_50%_custom", view.paragraphs.get(0));
 		assertTrue(view.paragraphs.stream().anyMatch(text -> text.contains("The Wolf is a fast combat frigate")));
-		assertTrue(view.paragraphs.stream().anyMatch(text -> text.contains("refit_base_dp: 5.0")));
+		assertTrue(view.paragraphs.stream().anyMatch(text -> text.contains("BattleNext_variant_base_deployment_points: 5.0")));
 	}
 
 	@Test
@@ -157,7 +158,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 
 		assertTrue(faction.paragraphs.stream().anyMatch(text -> text.contains("Domain fleet")));
 		assertEquals("graphics/portraits/custom.png", custom.paragraphs.get(0));
-		assertTrue(custom.paragraphs.contains("BattleNext_ui_refit_custom_portrait"));
+		assertTrue(custom.paragraphs.contains("BattleNext_member_custom_portrait"));
 	}
 
 	@Test
@@ -172,7 +173,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 		assertTrue(sMod.paragraphs.contains("Reduces shield damage by 20%."));
 		assertTrue(sMod.paragraphs.contains("Elite shield effect, 50% stronger."));
 		assertTrue(dMod.paragraphs.contains("Reduces shield damage by 20%."));
-		assertTrue(dMod.paragraphs.contains("BattleNext_ui_refit_suitable"));
+		assertTrue(dMod.paragraphs.contains("BattleNext_refit_d_mod_suitable"));
 	}
 
 	private interface Call {

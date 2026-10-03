@@ -46,7 +46,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_VariantSourceProvider variantSource = new BattleNext_VariantSourceProvider();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
+	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
+	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private final List<FleetMemberEditorFields> memberFields = new ArrayList<>();
 	private final Set<Integer> expandedMembers = new HashSet<>();
 	private CustomPanelAPI panel;
@@ -196,28 +199,28 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	}
 
 	private void fillMeta(TooltipMakerAPI metaContent, float width) {
-		metaContent.addTitle(text("fleet_section_details"));
-		status = metaContent.addPara(text("ready"), EDITOR_STATUS_GAP);
-		id = field(metaContent, text("fleet_id"), draft.getId(), width, metaContent);
-		folderName = field(metaContent, text("fleet_folder_name"), draft.getFolderName(), width, metaContent);
-		name = field(metaContent, text("fleet_name"), draft.getName(), width, metaContent);
-		author = field(metaContent, text("fleet_author"), draft.getAuthor(), width, metaContent);
-		description = field(metaContent, text("fleet_description"), draft.getDescription(), width, metaContent);
+		metaContent.addTitle(fleetStrings.get("details_heading"));
+		status = metaContent.addPara(strings.get("ready"), EDITOR_STATUS_GAP);
+		id = field(metaContent, fleetStrings.get("id"), draft.getId(), width, metaContent);
+		folderName = field(metaContent, fleetStrings.get("folder_name"), draft.getFolderName(), width, metaContent);
+		name = field(metaContent, fleetStrings.get("name"), draft.getName(), width, metaContent);
+		author = field(metaContent, fleetStrings.get("author"), draft.getAuthor(), width, metaContent);
+		description = field(metaContent, fleetStrings.get("description"), draft.getDescription(), width, metaContent);
 		skillsPicker = new BattleNext_OptionField(inputRouter, overlayHost, Math.max(PICKER_MIN_WIDTH, width - FIELD_SIDE_RESERVE),
 				new BattleNext_CommanderSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, metaContent);
-		skills = optionField(metaContent, panel, text("fleet_skills"), skillsPicker,
+		skills = optionField(metaContent, panel, fleetStrings.get("commander_skills"), skillsPicker,
 				String.join(",", draft.getSkills()));
-		tags = field(metaContent, text("fleet_tags"), String.join(",", draft.getTags()), width, metaContent);
+		tags = field(metaContent, fleetStrings.get("tags"), String.join(",", draft.getTags()), width, metaContent);
 	}
 
 	private void fillMembers(TooltipMakerAPI memberContent, float width) {
-		memberContent.addTitle(text("fleet_section_members"));
+		memberContent.addTitle(fleetStrings.get("members_heading"));
 		memberFields.clear();
 		memberPickers.clear();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			addMember(index, draft.getMembers().get(index), memberContent, width);
 		}
-		BattleNext_PageLayout.button(memberContent, text("add_member"), "add_member",
+		BattleNext_PageLayout.button(memberContent, fleetStrings.get("add_member"), "add_member",
 				Math.min(MEMBER_BUTTON_MAX_WIDTH, width - MEMBER_BUTTON_SIDE_RESERVE));
 	}
 
@@ -225,7 +228,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		boolean expanded = expandedMembers.contains(index);
 		ShipHullSpecAPI hull = hullSpec(member.getVariantId());
 		String hullName = hull == null ? member.getVariantId() : hull.getHullName();
-		if (hullName == null || hullName.isEmpty()) hullName = text("missing_variant");
+		if (hullName == null || hullName.isEmpty()) hullName = variantStrings.get("missing");
 		BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 				hull == null ? "" : hull.getSpriteName(), true, member.getPortrait(),
 				hullName, member.getName(), "", "");
@@ -236,30 +239,30 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			float detailWidth = width - MEMBER_DETAIL_INSET * 2f;
 			float pickerWidth = Math.max(PICKER_MIN_WIDTH, detailWidth - FIELD_SIDE_RESERVE);
 			TooltipMakerAPI content = bodyPanel.createUIElement(detailWidth, 0f, false);
-			content.addPara(text("member") + " " + (index + 1), 0f);
+			content.addPara(memberStrings.get("label") + " " + (index + 1), 0f);
 			BattleNext_OptionField variantPicker = new BattleNext_OptionField(inputRouter,
 					overlayHost, pickerWidth, variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
-			fields.variant = optionField(content, bodyPanel, text("variant"), variantPicker, member.getVariantId());
+			fields.variant = optionField(content, bodyPanel, variantStrings.get("label"), variantPicker, member.getVariantId());
 			memberPickers.add(variantPicker);
-			fields.name = field(content, bodyPanel, text("member_name"), member.getName(), detailWidth, memberContent);
+			fields.name = field(content, bodyPanel, memberStrings.get("ship_name"), member.getName(), detailWidth, memberContent);
 			BattleNext_OptionField personalityPicker = new BattleNext_OptionField(inputRouter,
 					overlayHost, pickerWidth, new BattleNext_PersonalitySourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
-			fields.personality = optionField(content, bodyPanel, text("personality"), personalityPicker,
+			fields.personality = optionField(content, bodyPanel, memberStrings.get("captain_personality"), personalityPicker,
 					member.getPersonality());
 			memberPickers.add(personalityPicker);
 			BattleNext_OptionField memberSkills = new BattleNext_OptionField(inputRouter,
 					overlayHost, pickerWidth, new BattleNext_OfficerSkillSourceProvider(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, memberContent);
-			fields.skills = optionField(content, bodyPanel, text("member_skills"), memberSkills,
+			fields.skills = optionField(content, bodyPanel, memberStrings.get("captain_skills"), memberSkills,
 					String.join(",", member.getSkills()));
 			memberPickers.add(memberSkills);
 			BattleNext_OptionField portraitPicker = new BattleNext_OptionField(inputRouter,
 					overlayHost, pickerWidth, new BattleNext_PortraitSourceProvider(), BattleNext_OptionField.OptionSelectionMode.SINGLE, memberContent);
-			fields.portrait = optionField(content, bodyPanel, text("portrait"), portraitPicker, member.getPortrait());
+			fields.portrait = optionField(content, bodyPanel, memberStrings.get("captain_portrait"), portraitPicker, member.getPortrait());
 			memberPickers.add(portraitPicker);
-			fields.orders = field(content, bodyPanel, text("orders"), member.getOrders(), detailWidth, memberContent);
-			fields.tags = field(content, bodyPanel, text("member_tags"), String.join(",", member.getTags()),
+			fields.orders = field(content, bodyPanel, memberStrings.get("orders"), member.getOrders(), detailWidth, memberContent);
+			fields.tags = field(content, bodyPanel, memberStrings.get("tags"), String.join(",", member.getTags()),
 					detailWidth, memberContent);
-			BattleNext_PageLayout.button(content, text("remove_member"), "remove_member:" + index,
+			BattleNext_PageLayout.button(content, fleetStrings.get("remove_member"), "remove_member:" + index,
 					Math.min(MEMBER_BUTTON_MAX_WIDTH, detailWidth - MEMBER_BUTTON_SIDE_RESERVE));
 			float contentHeight = content.getHeightSoFar();
 			content.getPosition().setSize(detailWidth, contentHeight);
@@ -317,13 +320,13 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		try {
 			store.save(draft);
 		} catch (Exception exception) {
-			setStatus(text("save_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 		savedSnapshot = serializeState();
 		baseline = copy(draft, false);
 		baselineClone = false;
-		setStatus(text("saved"));
+		setStatus(strings.get("saved"));
 		return true;
 	}
 
@@ -361,7 +364,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		if (id == null) return true;
 		String fleetId = id.getText().trim();
 		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetId)) {
-			setStatus(text("invalid_fleet_id"));
+			setStatus(fleetStrings.get("invalid_id"));
 			return false;
 		}
 		String fleetFolderName = folderName.getText().trim();
@@ -370,7 +373,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			folderName.setText(fleetFolderName);
 		}
 		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetFolderName)) {
-			setStatus(text("invalid_fleet_folder"));
+			setStatus(fleetStrings.get("invalid_folder"));
 			return false;
 		}
 		draft.setId(fleetId);
@@ -386,7 +389,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			BattleNext_MemberModel existing = draft.getMembers().get(index);
 			String variantId = value(fields == null ? null : fields.variant, existing.getVariantId()).trim();
 			if (validate && variantId.isEmpty()) {
-				setStatus(text("invalid_variant"));
+				setStatus(variantStrings.get("invalid_reference"));
 				return false;
 			}
 			if (!variantId.isEmpty()) {
@@ -400,7 +403,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 					if (draft.getVariant(variantId) == null) draft.putVariant(BattleNext_VariantBuilder.fromRegistered(variantId));
 				} catch (Exception exception) {
 					if (variantId.startsWith(BattleNext_VariantSourceProvider.PINNED_PREFIX) && validate) {
-						setStatus(text("invalid_variant") + ": " + exception.getMessage());
+						setStatus(variantStrings.get("invalid_reference") + ": " + exception.getMessage());
 						return false;
 					}
 					// Keep references to variants unavailable in the current game setup.
@@ -445,10 +448,6 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 	private void setStatus(String value) {
 		statusText = value;
 		status.setText(value);
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 
 	private static final class FleetMemberEditorFields {

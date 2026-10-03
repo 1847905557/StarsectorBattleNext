@@ -41,7 +41,10 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private final BattleNext_TournamentModel tournament;
 	private final Details details;
 	private final Consumer<Object> onAction;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private BattleNext_TournamentView chart;
 
 	public BattleNext_TournamentDisplay(BattleNext_UiInputRouter inputRouter,
@@ -102,7 +105,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		TooltipMakerAPI title = summary.createUIElement(columnWidth, 0f, false);
 		BattleNext_UiTheme.configure(title);
 		title.setBgAlpha(0f);
-		title.addTitle(text("tournament_summary"));
+		title.addTitle(tournamentStrings.get("summary"));
 		TooltipMakerAPI overview = summary.createUIElement(columnWidth, 0f, false);
 		BattleNext_UiTheme.configure(overview);
 		overview.setBgAlpha(0f);
@@ -113,7 +116,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		TooltipMakerAPI fleetTitle = summary.createUIElement(columnWidth, 0f, false);
 		BattleNext_UiTheme.configure(fleetTitle);
 		fleetTitle.setBgAlpha(0f);
-		fleetTitle.addTitle(text("fleet_ids"));
+		fleetTitle.addTitle(tournamentStrings.get("participant_fleets"));
 		for (String fleetId : tournament.getFleetIds()) {
 			float pad = fleetId.equals(tournament.getFleetIds().get(0)) ? 0f : FLEET_GAP;
 			String name = fleetLabel(fleetId);
@@ -142,34 +145,34 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	private void addOverview(TooltipMakerAPI content, float width) {
 
-		content.addPara(text("status") + ": " + tournamentStatus(), 0f);
-		content.addPara(text("tournament_format") + ": " + bracketLabel()
-				+ " / " + strings.format("bo", tournament.getBoCount()), DETAIL_GAP);
-		content.addPara(strings.format("chart_finished_matches", completedMatches(tournament),
+		content.addPara(strings.get("status") + ": " + tournamentStatus(), 0f);
+		content.addPara(tournamentStrings.get("format") + ": " + bracketLabel()
+				+ " / " + battleStrings.format("best_of_format", tournament.getBoCount()), DETAIL_GAP);
+		content.addPara(tournamentStrings.format("chart_finished_matches", completedMatches(tournament),
 				tournament.getPlayableMatchTotal()), DETAIL_GAP);
 		if (tournament.isCompleted()) {
 			String winnerId = tournament.getChampionFleetId();
-			String winner = text("winner") + ": " + fleetLabel(winnerId);
+			String winner = strings.get("winner") + ": " + fleetLabel(winnerId);
 			content.addPara(winner, DETAIL_GAP);
 			BattleNext_PageLayout.addIdTooltip(content, winner, winnerId);
 		}
-		content.addPara(text("tournament_rules") + ": "
-				+ (tournament.getRuleId().isEmpty() ? text("rules_unbound")
-						: text(details.ruleAvailable() ? "tournament_rules_ready" : "tournament_rules_unavailable")), DETAIL_GAP);
-		content.addPara(text("battle_map_short") + ": "
-				+ (tournament.getMapId() < 0 ? text("chart_random_map") : tournament.getMapId())
-				+ " / " + text("battle_map_scale_short") + ": 1", DETAIL_GAP);
+		content.addPara(tournamentStrings.get("rules") + ": "
+				+ (tournament.getRuleId().isEmpty() ? ruleStrings.get("none_assigned")
+						: tournamentStrings.get(details.ruleAvailable() ? "rules_ready" : "rules_unavailable")), DETAIL_GAP);
+		content.addPara(battleStrings.get("map_label") + ": "
+				+ (tournament.getMapId() < 0 ? tournamentStrings.get("chart_random_map") : tournament.getMapId())
+				+ " / " + battleStrings.get("map_scale_label") + ": 1", DETAIL_GAP);
 		if (!details.loadError().isEmpty()) {
 			content.addPara(details.loadError(), WARNING_GAP);
 		}
 		for (String error : chart.errors()) {
-			content.addPara(text("chart_error") + ": " + error, WARNING_GAP);
+			content.addPara(tournamentStrings.get("chart_error") + ": " + error, WARNING_GAP);
 		}
 		BattleNext_Match next = details.currentMatch();
 		if (next == null) {
-			content.addPara(text("no_pending_match"), MATCH_GAP);
+			content.addPara(battleStrings.get("no_pending_match"), MATCH_GAP);
 		} else {
-			String match = text("next_match") + ": " + fleetLabel(next.getPlayer())
+			String match = battleStrings.get("next_match") + ": " + fleetLabel(next.getPlayer())
 					+ " vs " + fleetLabel(next.getEnemy());
 			content.addPara(match, MATCH_GAP);
 			BattleNext_PageLayout.addMetadataTooltip(content, match,
@@ -179,11 +182,11 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 			content.addPara(warning, WARNING_GAP);
 		}
 		if (details.authorizeAvailable()) {
-			BattleNext_PageLayout.button(content, text("rules_force_start"), "tournament:authorize",
+			BattleNext_PageLayout.button(content, ruleStrings.get("force_start_match"), "tournament:authorize",
 					Math.min(ACTION_BUTTON_WIDTH, width));
 		}
 		if (!tournament.isStarted()) {
-			ButtonAPI start = BattleNext_PageLayout.button(content, text("tournament_start"),
+			ButtonAPI start = BattleNext_PageLayout.button(content, tournamentStrings.get("start"),
 					"tournament:start", Math.min(ACTION_BUTTON_WIDTH, width));
 			start.setEnabled(details.startEnabled());
 		}
@@ -203,26 +206,22 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private String fleetLabel(String id) {
 		String name = details.fleetNames().get(id);
 		if (name == null) {
-			return text("invalid_player") + " [" + id + "]";
+			return tournamentStrings.get("invalid_participant_fleet") + " [" + id + "]";
 		}
 		return name;
 	}
 
 	private String tournamentStatus() {
-		if (tournament.isCompleted()) return text("tournament_completed");
-		if (tournament.isStarted()) return text("tournament_in_progress");
+		if (tournament.isCompleted()) return tournamentStrings.get("status_completed");
+		if (tournament.isStarted()) return tournamentStrings.get("status_in_progress");
 
-		return text("tournament_not_started");
+		return tournamentStrings.get("status_not_started");
 	}
 
 	private String bracketLabel() {
-		if (tournament.getBracketType() == null) return text("chart_unknown_bracket");
+		if (tournament.getBracketType() == null) return tournamentStrings.get("chart_unknown_bracket");
 
-		return text("bracket_" + tournament.getBracketType().name().toLowerCase(Locale.ROOT));
-	}
-
-	private String text(String key) {
-		return strings.get(key);
+		return tournamentStrings.get("bracket_" + tournament.getBracketType().name().toLowerCase(Locale.ROOT));
 	}
 
 	private class ActionPlugin extends BaseCustomUIPanelPlugin {

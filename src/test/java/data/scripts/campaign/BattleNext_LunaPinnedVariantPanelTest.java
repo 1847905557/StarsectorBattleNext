@@ -252,7 +252,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
 		name(display).setText("   ");
 		display.buttonPressed("pin_save");
-		assertTrue(labels.contains("BattleNext_ui_pin_name_required"));
+		assertTrue(labels.contains("BattleNext_variant_pin_name_required"));
 		assertEquals("   ", name(display).getText());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		name(display).setText("Named snapshot");

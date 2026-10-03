@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.tools.BattleNext_EntryId;
@@ -17,6 +18,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
+
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -65,7 +69,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String pageTitle() {
-		return text("page_tournaments");
+		return managementStrings.get("page_tournaments");
 	}
 
 	@Override
@@ -75,7 +79,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String promptText() {
-		return text("select_tournament");
+		return tournamentStrings.get("select_prompt");
 	}
 
 	@Override
@@ -95,7 +99,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String emptyListText() {
-		return text("no_tournaments");
+		return tournamentStrings.get("empty");
 	}
 
 	@Override
@@ -139,7 +143,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String sourceNote() {
-		return !selectedId.isEmpty() && !tournamentStore.isManaged(selectedId) ? text("source_unavailable_short") : "";
+		return !selectedId.isEmpty() && !tournamentStore.isManaged(selectedId) ? strings.get("source_unavailable_short") : "";
 	}
 
 	@Override
@@ -180,10 +184,10 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 					tournamentStore.delete(selectedId);
 					selectedId = "";
 					draftOpen = false;
-					setStatus(text("deleted"));
+					setStatus(strings.get("deleted"));
 					refreshContent();
 				} catch (Exception exception) {
-					setStatus(text("save_failed") + ": " + exception.getMessage());
+					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 				}
 			});
 		} else if ("back".equals(buttonId)) {
@@ -203,23 +207,23 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	protected boolean savePage() {
 		if (!draftOpen || editor.isReadOnly()) return true;
 		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
-			setStatus(text("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
+			setStatus(strings.get("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
 					: !fleetStore.isLoaded() ? fleetStore.getLoadError() : ruleStore.getLoadError()));
 			return false;
 		}
 		String id = editor.getDraftId();
 		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(text("invalid_tournament_id"));
+			setStatus(tournamentStrings.get("invalid_id"));
 			return false;
 		}
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, tournament.getId()) && !tournament.getId().equals(selectedId)) {
-				setStatus(text("duplicate_id")); return false;
+				setStatus(strings.get("duplicate_id")); return false;
 			}
 		}
 		if (!selectedId.isEmpty() && BattleNext_EntryId.sameFileName(id, selectedId)
 				&& !tournamentStore.isManaged(selectedId)) {
-			setStatus(text("source_unavailable")); return false;
+			setStatus(strings.get("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) {
 			setStatus(editor.getStatusText());
@@ -232,11 +236,11 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 				setStatus(editor.getStatusText());
 				return false;
 			}
-			setStatus(text("saved"));
+			setStatus(strings.get("saved"));
 			refreshContent();
 			return true;
 		} catch (Exception exception) {
-			setStatus(text("save_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 	}

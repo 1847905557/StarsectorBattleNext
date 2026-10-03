@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 public class BattleNext_RefitDModSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final Supplier<ShipVariantAPI> variantSupplier;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
 
 	public BattleNext_RefitDModSourceProvider(Supplier<ShipVariantAPI> variantSupplier) {
 		this.variantSupplier = variantSupplier;
@@ -54,8 +54,8 @@ public class BattleNext_RefitDModSourceProvider extends BattleNext_BaseSourcePro
 			if (spec.getEffect() != null) {
 				addExcerpt(tooltip, spec.getDescription(variant.getHullSize()), 32f);
 			}
-			addExcerpt(tooltip, strings.get(isSuitableFor(variant, spec)
-					? "refit_suitable" : "refit_unsuitable"));
+			addExcerpt(tooltip, refitStrings.get(isSuitableFor(variant, spec)
+					? "d_mod_suitable" : "d_mod_unsuitable"));
 		}
 	}
 

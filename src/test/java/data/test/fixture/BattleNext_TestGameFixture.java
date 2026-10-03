@@ -73,7 +73,7 @@ public class BattleNext_TestGameFixture {
 		});
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> switch (method) {
 			case "getModManager" -> mods;
-			case "getString" -> args[1];
+			case "getString" -> BattleNext_TestTextCatalog.key(args[0], args[1]);
 			case "getColor" -> Color.GRAY;
 			case "getFloat" -> 1f;
 			case "getScreenWidth" -> 1600f;

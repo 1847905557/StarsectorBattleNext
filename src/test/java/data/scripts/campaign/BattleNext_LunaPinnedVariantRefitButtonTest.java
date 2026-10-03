@@ -136,8 +136,8 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 		refit.setMember(null);
 		context = BattleNext_CampaignRefitContext.from(core, host);
 		assertNull(context.member());
-		assertEquals("BattleNext_ui_pin_module", BattleNext_LunaPinnedVariantRefitButton.contextError(null, context.variant()));
-		assertEquals("BattleNext_ui_refit_no_member", BattleNext_LunaPinnedVariantRefitButton.contextError(null, null));
+		assertEquals("BattleNext_variant_pin_return_to_parent", BattleNext_LunaPinnedVariantRefitButton.contextError(null, context.variant()));
+		assertEquals("BattleNext_refit_no_ship_selected", BattleNext_LunaPinnedVariantRefitButton.contextError(null, null));
 		assertThrows(IllegalStateException.class,
 				() -> BattleNext_CampaignRefitContext.from(new Core(new Tab(List.of())), host));
 	}

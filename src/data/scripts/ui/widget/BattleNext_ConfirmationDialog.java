@@ -43,7 +43,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	}
 
 	private final ConfirmationDialogHost host;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private CustomPanelAPI parent;
 	private CustomPanelAPI confirmation;
 	private TooltipMakerAPI confirmationStatusContent;
@@ -152,6 +152,9 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		statusRect.addTooltip();
 		String[] actions = deleteDescription == null
 				? new String[]{"save", "discard", "cancel"} : new String[]{"confirm", "cancel"};
+		String[] labels = deleteDescription == null
+				? new String[]{strings.get("save"), strings.get("discard"), strings.get("cancel")}
+				: new String[]{strings.get("delete"), strings.get("cancel")};
 		float buttonWidth = Math.min(DIALOG_BUTTON_MAX_WIDTH,
 				(width - DIALOG_BUTTON_WIDTH_RESERVE) / actions.length);
 		float firstX = (width - (buttonWidth * actions.length
@@ -160,7 +163,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 			BattleNext_PageLayout.fixedButton(confirmation,
 					new UIRect(firstX + index * (buttonWidth + DIALOG_BUTTON_GAP), DIALOG_BUTTON_TOP,
 							buttonWidth, DIALOG_BUTTON_HEIGHT),
-					strings.get((deleteDescription == null ? "unsaved_" : "delete_") + actions[index]),
+					labels[index],
 					(deleteDescription == null ? "confirm_" : "delete_") + actions[index], CutStyle.ALL, false);
 		}
 		parent.addComponent(confirmation).inMid();

@@ -69,6 +69,7 @@ dependencies {
 		compileOnly fileTree(dir: dir, include: ["*.jar"])
 	}
 	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+	testImplementation "com.github.javaparser:javaparser-symbol-solver-core:3.26.4"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 	testImplementation fileTree(dir: "${gameRoot}/starsector-core", include: ["*.jar"])
 	modJarDirs.each { dir ->

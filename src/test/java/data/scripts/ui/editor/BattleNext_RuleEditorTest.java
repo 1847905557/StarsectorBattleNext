@@ -43,7 +43,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		float rowWidth = table.getContent().getWidthSoFar() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
 		assertEquals(Math.min(190f, rowWidth), getField(picker, "buttonWidth"));
 		assertEquals(28f, getField(picker, "buttonHeight"));
-		assertEquals("BattleNext_ui_rules_add_restriction", buttonLabels.get("TOGGLE"));
+		assertEquals("BattleNext_rule_add_restriction", buttonLabels.get("TOGGLE"));
 		assertSame(root, getField(picker, "overlayHost"));
 		TooltipMakerAPI[] viewports = (TooltipMakerAPI[]) getField(picker, "viewports");
 		assertEquals(2, viewports.length);

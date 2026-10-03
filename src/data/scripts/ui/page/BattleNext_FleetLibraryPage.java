@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.BattleNext_LoadSource;
@@ -16,6 +17,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
+
+	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -44,7 +48,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 		try {
 			store.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
-			status = text("load_failed") + ": " + exception.getMessage();
+			status = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		selectedId = "";
 		draftOpen = false;
@@ -52,7 +56,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String pageTitle() {
-		return text("page_fleets");
+		return managementStrings.get("page_fleets");
 	}
 
 	@Override
@@ -62,7 +66,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String promptText() {
-		return text("select_fleet");
+		return fleetStrings.get("select_prompt");
 	}
 
 	@Override
@@ -82,7 +86,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String emptyListText() {
-		return text("no_fleets");
+		return fleetStrings.get("empty");
 	}
 
 	@Override
@@ -121,7 +125,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String sourceNote() {
-		return !selectedId.isEmpty() && !store.isManaged(selectedId) ? text("source_unavailable_short") : "";
+		return !selectedId.isEmpty() && !store.isManaged(selectedId) ? strings.get("source_unavailable_short") : "";
 	}
 
 	@Override
@@ -156,10 +160,10 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 						store.delete(selected.getId());
 						selectedId = "";
 						draftOpen = false;
-						status = text("deleted");
+						status = strings.get("deleted");
 						refreshContent();
 					} catch (IOException | JSONException | RuntimeException exception) {
-						setStatus(text("save_failed") + ": " + exception.getMessage());
+						setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 					}
 				});
 			}
@@ -180,36 +184,36 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	protected boolean savePage() {
 		if (!draftOpen) return true;
 		if (!store.isLoaded()) {
-			setStatus(text("load_failed") + ": " + store.getLoadError());
+			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
 			return false;
 		}
 		String id = editor.getDraftId();
 		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(text("invalid_fleet_id"));
+			setStatus(fleetStrings.get("invalid_id"));
 			return false;
 		}
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, fleet.getId()) && !fleet.getId().equals(selectedId)) {
-				setStatus(text("duplicate_id")); return false;
+				setStatus(strings.get("duplicate_id")); return false;
 			}
 		}
 		String folderName = editor.getDraftFolderName();
 		if (folderName.isEmpty()) folderName = id;
 		if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
-			setStatus(text("invalid_fleet_folder"));
+			setStatus(fleetStrings.get("invalid_folder"));
 			return false;
 		}
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			if (BattleNext_EntryId.sameFileName(folderName, fleet.getFolderName())
 					&& !fleet.getId().equals(selectedId)) {
-				setStatus(text("duplicate_fleet_folder"));
+				setStatus(fleetStrings.get("duplicate_folder"));
 				return false;
 			}
 		}
 		BattleNext_FleetModel original = selectedId.isEmpty() ? null : store.get(selectedId);
 			if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
 					&& original.getSourceType() == BattleNext_LoadSource.LEGACY) {
-			setStatus(text("source_unavailable")); return false;
+			setStatus(strings.get("source_unavailable")); return false;
 		}
 		if (!editor.serialize()) {
 			setStatus(editor.getStatusText());
@@ -218,11 +222,11 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 		try {
 			store.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
-			setStatus(text("load_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
 			return false;
 		}
 		selectedId = id;
-		status = text("saved");
+		status = strings.get("saved");
 		refreshContent();
 		return true;
 	}

@@ -30,7 +30,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private enum BattleManagementPage {
 		BATTLE_SELECTOR("page_battle_selector"),
 		FLEETS("page_fleets"),
-		VARIANTS("page_variants"),
+		VARIANTS("page_pinned_variants"),
 		REPORTS("page_reports"),
 		TOURNAMENTS("page_tournaments"),
 		RULES("page_rules"),
@@ -45,7 +45,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private BattleNext_StatusBar statusBar;
@@ -173,7 +176,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
 				shellWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
 
-		BattleNext_PageLayout.heading(headingRect, panel, text("panel_heading"));
+		BattleNext_PageLayout.heading(headingRect, panel, managementStrings.get("heading"));
 
 		float tabWidth = (tabsRect.getWidth() - SHELL_TAB_GAP * (tabButtons.length - 1)) / tabButtons.length;
 		for (int index = 0; index < tabButtons.length; index++) {
@@ -181,7 +184,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			UIRect tabRect = new UIRect(tabsRect.getX() + index * (tabWidth + SHELL_TAB_GAP),
 					tabsRect.getY(), tabWidth, tabsRect.getHeight());
 			tabButtons[index] = BattleNext_PageLayout.fixedButton(panel, tabRect,
-					text(page.titleKey), page, CutStyle.TOP, false);
+					managementStrings.get(page.titleKey), page, CutStyle.TOP, false);
 		}
 
 		float closeWidth = Math.min(SHELL_CLOSE_MAX_WIDTH, footerRect.getWidth() * SHELL_CLOSE_WIDTH_SHARE);
@@ -193,7 +196,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth,
 						footerRect.getY(), closeWidth, footerRect.getHeight()),
-				text("close"), "close", CutStyle.BOTTOM, false);
+				strings.get("close"), "close", CutStyle.BOTTOM, false);
 	}
 
 	private void showPage() {
@@ -330,14 +333,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		try {
 			tournamentStore.reload();
 			if (!id.isEmpty() && tournamentStore.get(id) == null) {
-				throw new IllegalArgumentException(text("tournament_missing"));
+				throw new IllegalArgumentException(tournamentStrings.get("missing"));
 			}
 			tournamentStore.setActiveId(id);
 			BattleNext_BattleSignals.clearAuthorization();
 			refreshState();
 			return true;
 		} catch (Exception exception) {
-			statusBar.showError(text("source_save_failed") + ": " + exception.getMessage());
+			statusBar.showError(battleStrings.get("source_save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 	}
@@ -349,7 +352,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			tournamentStore.reload();
 			activeTournamentId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			error = text("load_failed") + ": " + exception.getMessage();
+			error = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		statusBar.update(error, activeTournamentId, pendingResult);
 	}
@@ -369,7 +372,4 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		activeView().discard();
 	}
 
-	private String text(String key) {
-		return strings.get(key);
-	}
 }

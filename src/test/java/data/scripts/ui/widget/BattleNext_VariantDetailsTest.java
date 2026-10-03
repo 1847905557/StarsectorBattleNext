@@ -145,7 +145,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		details.setVariantJson(json);
 		details.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.contains("Parent"));
-		assertEquals(4, labels.stream().filter("BattleNext_ui_variant_none"::equals).count());
+		assertEquals(4, labels.stream().filter("BattleNext_variant_none"::equals).count());
 		for (String key : List.of("plugins", "modules", "groups", "wings")) {
 			TooltipState state = tooltips.get(lists(details).get(key));
 			assertEquals(state.getUsedHeight(), state.getMountedHeight());

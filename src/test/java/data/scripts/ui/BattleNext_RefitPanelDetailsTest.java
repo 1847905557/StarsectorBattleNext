@@ -53,15 +53,15 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertSame(root.getPosition(), geometry.get(right.getPosition()).getParent());
 		assertNotSame(plugins.get(root), plugins.get(left));
 		assertNotSame(plugins.get(left), plugins.get(right));
-		assertEquals(width * 0.61f, left.getPosition().getWidth());
+		assertEquals(width * 0.60f, left.getPosition().getWidth());
 		assertEquals(width * 0.18f, right.getPosition().getWidth());
 		assertEquals(560f, left.getPosition().getHeight());
 		assertEquals(560f, right.getPosition().getHeight());
-		assertEquals(width * 0.09f, left.getPosition().getX());
-		assertEquals(width * 0.03f, right.getPosition().getX() - left.getPosition().getX()
+		assertEquals(width * 0.10f, left.getPosition().getX());
+		assertEquals(width * 0.02f, right.getPosition().getX() - left.getPosition().getX()
 				- left.getPosition().getWidth(), 0.0001f);
-		assertEquals(width * 0.09f, width - right.getPosition().getX() - right.getPosition().getWidth(), 0.0001f);
-		assertEquals(63f, root.getPosition().getY() + 700f - left.getPosition().getY() - 560f);
+		assertEquals(width * 0.10f, width - right.getPosition().getX() - right.getPosition().getWidth(), 0.0001f);
+		assertEquals(70f, root.getPosition().getY() + 700f - left.getPosition().getY() - 560f);
 		assertEquals(left.getPosition().getY(), right.getPosition().getY());
 		assertSame(getField(plugin, "inputRouter"), getField(details(plugin), "inputRouter"));
 		for (String key : List.of("sModPicker", "dModPicker")) {
@@ -73,7 +73,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			assertEquals(right.getPosition().getX(), button.getX());
 			assertEquals(key.equals("sModPicker") ? 0f : 36f,
 					right.getPosition().getY() + 560f - button.getY() - 30f);
-			assertEquals(key.equals("sModPicker") ? "BattleNext_ui_refit_smods" : "BattleNext_ui_refit_dmods",
+			assertEquals(key.equals("sModPicker") ? "BattleNext_refit_s_mods" : "BattleNext_refit_d_mods",
 					getField(picker, "title"));
 		}
 		assertEquals(width - 8f - 160f, buttonPositions.get("close").getX());
@@ -98,7 +98,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("identity", "plugins", "modules", "groups", "wings"), lists(plugin).keySet());
 		assertEquals(5, children.get(details(plugin).getPanel()).size());
 		for (String text : List.of("Hullmod ordinary", "Hullmod sm", "Hullmod built", "Hullmod d",
-				"BattleNext_ui_variant_smod", "BattleNext_ui_variant_dmod", "module: Child", "Wing wing")) {
+				"BattleNext_variant_s_mod", "BattleNext_variant_d_mod", "module: Child", "Wing wing")) {
 			assertTrue(labels.contains(text), text);
 		}
 		assertEquals("LINKED", snapshot.getJSONArray("weaponGroups").getJSONObject(0).getString("mode"));
@@ -289,7 +289,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(children.get(left).isEmpty());
 		assertNull(getField(details(plugin), "variantJson"));
 		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
-		assertTrue(status(plugin).startsWith("BattleNext_ui_save_failed:"));
+		assertTrue(status(plugin).startsWith("BattleNext_common_save_failed:"));
 		plugin.open(member(current), new Refit(member(current), current.api));
 		assertEquals(5, children.get(left).size());
 		plugin.close();
@@ -304,13 +304,13 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(children.get(left).isEmpty());
 		assertNull(getField(plugin, "draft"));
 		assertNull(getField(details(plugin), "variantJson"));
-		assertEquals("BattleNext_ui_save_failed: InvocationTargetException", status(plugin));
+		assertEquals("BattleNext_common_save_failed: InvocationTargetException", status(plugin));
 		plugin.open(member(current), new Refit(member(current), current.api));
 		setField(plugin, "refitScreen", new FailingRefit());
 		plugin.discardCurrentPage();
 		assertTrue(children.get(left).isEmpty());
 		assertNull(details(plugin).getPanel());
-		assertEquals("BattleNext_ui_save_failed: InvocationTargetException", status(plugin));
+		assertEquals("BattleNext_common_save_failed: InvocationTargetException", status(plugin));
 		plugin.close();
 	}
 
@@ -333,7 +333,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("sm", "built", "mod_0_with_a_long_name"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
 		assertEquals(80f, lists(plugin).get("groups").getExternalScroller().getYOffset());
-		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("BattleNext_common_saved", status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
 				getField(details(plugin), "variantJson"));
@@ -357,7 +357,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failBuild = true, new AtomicBoolean()));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("BattleNext_common_saved", status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertNull(details(plugin).getPanel());
@@ -377,7 +377,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failRead.set(true), failRead));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals("BattleNext_ui_saved", status(plugin));
+		assertEquals("BattleNext_common_saved", status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertEquals(Set.of("ordinary", "sm", "built"), getField(plugin, "savedSMods"));
 		assertNull(details(plugin).getPanel());

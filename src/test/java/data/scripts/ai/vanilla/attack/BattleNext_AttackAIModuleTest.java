@@ -46,7 +46,6 @@ class BattleNext_AttackAIModuleTest {
 		return (BattleNext_AutofireManager) field.get(attack);
 	}
 
-
 	@Test
 	void acceptsMissileSpecWithoutProjectileSpecInterface() {
 		MissileSpecAPI spec = (MissileSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),

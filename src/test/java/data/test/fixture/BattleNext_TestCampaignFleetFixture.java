@@ -104,10 +104,11 @@ public class BattleNext_TestCampaignFleetFixture extends BattleNext_TestVariantF
 				return Files.readString(directory.resolve((String) args[0]), StandardCharsets.UTF_8);
 			}
 			if ("getString".equals(method.getName())) {
+				BattleNext_TestTextCatalog.key(args[0], args[1]);
 				return switch ((String) args[1]) {
-					case "BattleNext_ui_fleet_capture_saved" -> "Saved %s at %s";
-					case "BattleNext_ui_fleet_capture_members" -> "Members: %d";
-					case "BattleNext_ui_fleet_capture_commander" -> "Commander: %s";
+					case "BattleNext_fleet_player_save_saved" -> "Saved %s at %s";
+					case "BattleNext_fleet_player_save_members" -> "Members: %d";
+					case "BattleNext_fleet_player_save_commander" -> "Commander: %s";
 					default -> args[1];
 				};
 			}

@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -27,6 +28,11 @@ import java.util.List;
 import java.util.Map;
 
 public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
+
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private static final float SOURCE_HEADER_HEIGHT = 88f;
 	private static final float SOURCE_LABEL_MAX_WIDTH = 175f;
@@ -85,7 +91,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		UIRect[] sections = root.splitVertically(SOURCE_HEADER_HEIGHT);
 		contentRect = sections[1];
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel,
-				text("page_battle_selector"));
+				managementStrings.get("page_battle_selector"));
 
 		float labelWidth = Math.min(SOURCE_LABEL_MAX_WIDTH, root.getWidth() * SOURCE_LABEL_WIDTH_SHARE);
 		float buttonWidth = Math.min(SOURCE_BUTTON_MAX_WIDTH, root.getWidth() * SOURCE_BUTTON_WIDTH_SHARE);
@@ -94,7 +100,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				labelWidth, SOURCE_CONTROL_HEIGHT);
 		TooltipMakerAPI sourceLabel = labelRect.beginTooltip(panel, false);
 		sourceLabel.setParaOrbitronLarge();
-		sourceLabel.addPara(text("battle_source"), 0f)
+		sourceLabel.addPara(battleStrings.get("source_label"), 0f)
 				.getPosition().inTL(0f, SOURCE_LABEL_TEXT_TOP_INSET);
 		sourceLabel.setHeightSoFar(labelRect.getHeight());
 		labelRect.addTooltip();
@@ -151,7 +157,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				provider.load();
 				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
 					BattleNext_BattleSignals.authorizeMatch(tournament.getId(), next.getId());
-					loadError = text("rules_authorized");
+					loadError = ruleStrings.get("next_briefing_authorized");
 				}
 				refreshContent();
 			}
@@ -210,23 +216,23 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			tournamentStore.reload();
 			selectedId = tournamentStore.getActiveId();
 		} catch (Exception exception) {
-			loadError = text("load_failed") + ": " + exception.getMessage();
+			loadError = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		try {
 			ruleStore.reload();
 		} catch (Exception exception) {
-			loadError += (loadError.isEmpty() ? "" : " | ") + text("load_failed") + ": " + exception.getMessage();
+			loadError += (loadError.isEmpty() ? "" : " | ") + strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		try {
 			fleetStore.reload();
 		} catch (Exception exception) {
-			loadError += (loadError.isEmpty() ? "" : " | ") + text("load_failed") + ": " + exception.getMessage();
+			loadError += (loadError.isEmpty() ? "" : " | ") + strings.get("load_failed") + ": " + exception.getMessage();
 		}
 	}
 
 	private List<BattleNext_DropdownField.DropdownChoice> sourceOptions() {
 		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
-		options.add(new BattleNext_DropdownField.DropdownChoice("", text("quick_battle")));
+		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("quick_battle")));
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			options.add(new BattleNext_DropdownField.DropdownChoice(tournament.getId(),
 					tournament.getName()));
@@ -241,8 +247,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			UIRect messageRect = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight());
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
 			BattleNext_UiTheme.configure(message);
-			message.addTitle(text("tournament_missing"));
-			message.addPara(text("tournament_missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP);
+			message.addTitle(tournamentStrings.get("missing"));
+			message.addPara(tournamentStrings.get("missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP);
 			messageRect.addTooltip();
 			return;
 		}
@@ -271,7 +277,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	private void startTournament() {
 		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
-			loadError = text("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
+			loadError = strings.get("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
 					: !fleetStore.isLoaded() ? fleetStore.getLoadError() : ruleStore.getLoadError());
 			refreshContent();
 			return;
@@ -282,13 +288,13 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				|| source.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 				|| source.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
 				|| source.getMapId() < RANDOM_MAP_ID || source.getMapId() > LAST_MAP_ID) {
-			loadError = text("invalid_tournament_format");
+			loadError = tournamentStrings.get("invalid_configuration");
 			refreshContent();
 			return;
 		}
 		if (source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 				|| source.getFleetIds().size() > source.getMaxFleet()) {
-			loadError = text("tournament_need_fleets");
+			loadError = tournamentStrings.get("need_fleets");
 			refreshContent();
 			return;
 		}
@@ -302,7 +308,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			return;
 		}
 		if (!tournament.getRuleId().isEmpty() && ruleStore.get(tournament.getRuleId()) == null) {
-			loadError = text("tournament_rules_unavailable");
+			loadError = tournamentStrings.get("rules_unavailable");
 			refreshContent();
 			return;
 		}
@@ -316,7 +322,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		}
 		for (String fleet : tournament.getFleetIds()) {
 			if (fleetStore.get(fleet) == null) {
-				loadError = text("invalid_player") + ": " + fleet;
+				loadError = tournamentStrings.get("invalid_participant_fleet") + ": " + fleet;
 				refreshContent();
 				return;
 			}
@@ -325,7 +331,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			tournamentEngine.start(tournament);
 			tournamentStore.save(tournament);
 			tournamentStore.setActiveId(tournament.getId());
-			loadError = text("tournament_started");
+			loadError = tournamentStrings.get("started");
 		} catch (Exception exception) {
 			loadError = exception.getMessage();
 		}

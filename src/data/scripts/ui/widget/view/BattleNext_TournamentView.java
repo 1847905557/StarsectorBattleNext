@@ -51,7 +51,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	protected final List<Edge> edges = new ArrayList<>();
 	private final Map<String, String> fleetNames;
 	private final List<LabelAPI> labels = new ArrayList<>();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private CustomPanelAPI panel;
 	private PositionAPI viewport;
 	private BattleNext_UiInputRouter inputRouter;
@@ -95,14 +98,14 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		try {
 			if (tournament.getBracketType() == null) {
-				throw new IllegalArgumentException(text("chart_missing_bracket"));
+				throw new IllegalArgumentException(tournamentStrings.get("chart_missing_bracket"));
 			}
 			List<String> fleets = tournament.getFleetIds();
 
 			if (fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 					|| fleets.size() > BattleNext_TournamentModel.MAX_FLEET_COUNT
 					|| new HashSet<>(fleets).size() != fleets.size() || fleets.contains("")) {
-				throw new IllegalArgumentException(text("chart_invalid_participants"));
+				throw new IllegalArgumentException(tournamentStrings.get("chart_invalid_participants"));
 			}
 			buildLayout();
 		} catch (RuntimeException exception) {
@@ -131,7 +134,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		}
 
 		if (!layoutError.isEmpty()) {
-			errorLabel = host.createLabel(text("chart_error") + ": " + layoutError,
+			errorLabel = host.createLabel(tournamentStrings.get("chart_error") + ": " + layoutError,
 					Misc.getNegativeHighlightColor(), width - 48f);
 		}
 		tooltipTarget = host.createRect(TOOLTIP_TARGET_COLOR, 0f);
@@ -150,10 +153,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		host.getPosition().setSize(width, height);
 		panel.addUIElement(host).inTL(0f, 0f);
 		fitButton = BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(width - 194f, 8f, 100f, 24f), text("chart_fit"),
+				new UIRect(width - 194f, 8f, 100f, 24f), tournamentStrings.get("chart_fit"),
 				"view:fit", CutStyle.ALL, false);
 		resetButton = BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(width - 86f, 8f, 78f, 24f), text("chart_reset"),
+				new UIRect(width - 86f, 8f, 78f, 24f), tournamentStrings.get("chart_zoom_100"),
 				"view:reset", CutStyle.ALL, false);
 		panel.getPosition().setSize(width, height);
 		CustomPanelAPI row = owner.createCustomPanel(availableWidth, height, null);
@@ -226,10 +229,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		String error = "";
 
 		if (player.known && !player.fleetId.isEmpty() && !fleetNames.containsKey(player.fleetId)) {
-			error = strings.format("chart_missing_fleet", player.fleetId);
+			error = tournamentStrings.format("chart_missing_fleet", player.fleetId);
 		}
 		if (enemy.known && !enemy.fleetId.isEmpty() && !fleetNames.containsKey(enemy.fleetId)) {
-			error += (error.isEmpty() ? "" : "; ") + strings.format("chart_missing_fleet", enemy.fleetId);
+			error += (error.isEmpty() ? "" : "; ") + tournamentStrings.format("chart_missing_fleet", enemy.fleetId);
 		}
 
 		nodes.add(new Node(id, stage, player, enemy, match, x, y, width, height, error, ""));
@@ -299,7 +302,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			Participant player = new Participant(match.getPlayer(), "", false, true);
 			Participant enemy = new Participant(match.getEnemy(), "", false, true);
 			nodes.add(new Node(match.getId(), match.getStage(), player, enemy, match,
-					20f, y, NODE_WIDTH, NODE_HEIGHT, strings.format("chart_unmapped_match", match.getId()), ""));
+					20f, y, NODE_WIDTH, NODE_HEIGHT, tournamentStrings.format("chart_unmapped_match", match.getId()), ""));
 			y += NODE_HEIGHT + 20f;
 		}
 	}
@@ -653,10 +656,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	}
 
 	protected String participantText(Participant participant) {
-		if (participant.known && participant.fleetId.isEmpty()) return text("stage_bye");
+		if (participant.known && participant.fleetId.isEmpty()) return tournamentStrings.get("stage_bye");
 		if (participant.known) return fleetNames.getOrDefault(participant.fleetId, participant.fleetId);
 
-		return strings.format(participant.loser ? "chart_loser_of" : "chart_winner_of", participant.sourceId);
+		return tournamentStrings.format(participant.loser ? "chart_loser_of" : "chart_winner_of", participant.sourceId);
 	}
 
 	private String nodeText(Node node, TooltipMakerAPI host) {
@@ -664,13 +667,13 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		String player = host.shortenString(participantText(node.player), node.width - 12f);
 		String enemy = host.shortenString(participantText(node.enemy), node.width - 12f);
-		String score = text("chart_predicted");
+		String score = tournamentStrings.get("chart_predicted");
 		if (node.match != null) {
 			score = scoreText(node);
 		} else if (node.stage == BattleNext_Match.MatchStage.BYE) {
-			score = text("stage_bye");
+			score = tournamentStrings.get("stage_bye");
 		} else if (node.stage == BattleNext_Match.MatchStage.GRAND_FINAL_RESET) {
-			score = text(tournament.isCompleted() ? "chart_reset_unused" : "chart_conditional_short");
+			score = tournamentStrings.get(tournament.isCompleted() ? "chart_reset_unused" : "chart_reset_required_short");
 		}
 		return host.shortenString(node.id, node.width - 12f) + "\n" + player + "\n" + enemy + "\n"
 				+ host.shortenString(score, node.width - 12f);
@@ -685,7 +688,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	}
 
 	public String scoreText(Node node) {
-		if (node.match == null) return text("chart_predicted");
+		if (node.match == null) return tournamentStrings.get("chart_predicted");
 
 		int player = node.match.getPlayerWins();
 		int enemy = node.match.getEnemyWins();
@@ -699,46 +702,46 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 	public String tooltipText(Node node) {
 
-		StringBuilder result = new StringBuilder(text("stage_" + node.stage.name().toLowerCase(Locale.ROOT)))
+		StringBuilder result = new StringBuilder(tournamentStrings.get("stage_" + node.stage.name().toLowerCase(Locale.ROOT)))
 				.append(" / ").append(node.id).append('\n');
 		result.append(participantText(node.player)).append(" [").append(node.player.fleetId).append("]\n")
 				.append(participantText(node.enemy)).append(" [").append(node.enemy.fleetId).append("]\n");
-		result.append(text("chart_score")).append(": ").append(scoreText(node)).append('\n');
+		result.append(tournamentStrings.get("chart_score")).append(": ").append(scoreText(node)).append('\n');
 		if (node.match != null) {
-			result.append(text("status")).append(": ")
-					.append(text("match_status_" + node.match.getStatus().name().toLowerCase(Locale.ROOT)))
-					.append('\n').append(text("battle_map_short")).append(": ").append(node.match.getMap())
-					.append(" / ").append(text("battle_map_scale_short")).append(": ")
+			result.append(strings.get("status")).append(": ")
+					.append(tournamentStrings.get("match_status_" + node.match.getStatus().name().toLowerCase(Locale.ROOT)))
+					.append('\n').append(battleStrings.get("map_label")).append(": ").append(node.match.getMap())
+					.append(" / ").append(battleStrings.get("map_scale_label")).append(": ")
 					.append(BattleNext_I18nSection.buildFactor(node.match.getMapScale())).append('\n');
 			for (int index = 0; index < node.match.getRounds().size(); index++) {
 				BattleNext_Round round = node.match.getRounds().get(index);
 				String winner = round.getWinnerFleetId();
-				result.append(text("round")).append(' ').append(index + 1).append(": ")
-						.append(winner.isEmpty() ? text("round_draw") : fleetNames.getOrDefault(winner, winner)
+				result.append(tournamentStrings.get("round")).append(' ').append(index + 1).append(": ")
+						.append(winner.isEmpty() ? tournamentStrings.get("round_draw") : fleetNames.getOrDefault(winner, winner)
 								+ " [" + winner + "]")
-						.append(" / ").append(text("page_reports")).append(": ")
-						.append(text(round.getReport().getId().isEmpty() ? "unavailable" : "available")).append('\n');
+						.append(" / ").append(managementStrings.get("page_reports")).append(": ")
+						.append(strings.get(round.getReport().getId().isEmpty() ? "unavailable" : "available")).append('\n');
 			}
 			if (!node.match.getDependencies().isEmpty()) {
-				result.append(text("chart_sources")).append(": ")
+				result.append(tournamentStrings.get("chart_sources")).append(": ")
 						.append(String.join(", ", node.match.getDependencies())).append('\n');
 			}
 		} else {
-			result.append(text("chart_predicted")).append('\n').append(text("battle_map_short"))
+			result.append(tournamentStrings.get("chart_predicted")).append('\n').append(battleStrings.get("map_label"))
 					.append(": ").append(tournament.getMapId()).append(" / ")
-					.append(text("battle_map_scale_short")).append(": 1\n");
+					.append(battleStrings.get("map_scale_label")).append(": 1\n");
 		}
 		for (Participant participant : List.of(node.player, node.enemy)) {
 			if (participant.sourceId.isEmpty()) continue;
 
-			result.append(strings.format(participant.loser ? "chart_loser_of" : "chart_winner_of",
+			result.append(tournamentStrings.format(participant.loser ? "chart_loser_of" : "chart_winner_of",
 					participant.sourceId)).append('\n');
 		}
 		if (node.stage == BattleNext_Match.MatchStage.GRAND_FINAL_RESET && node.match == null) {
-			result.append(text(tournament.isCompleted() ? "chart_reset_unused" : "chart_conditional")).append('\n');
+			result.append(tournamentStrings.get(tournament.isCompleted() ? "chart_reset_unused" : "chart_reset_required")).append('\n');
 		}
 		if (!node.error.isEmpty()) {
-			result.append(text("chart_error")).append(": ").append(node.error);
+			result.append(tournamentStrings.get("chart_error")).append(": ").append(node.error);
 		}
 		return result.toString();
 	}
@@ -755,10 +758,6 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			result.add(node.id + ": " + node.error);
 		}
 		return List.copyOf(result);
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 
 	@PublicData

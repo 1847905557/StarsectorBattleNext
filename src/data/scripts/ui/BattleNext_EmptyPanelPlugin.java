@@ -46,7 +46,7 @@ public class BattleNext_EmptyPanelPlugin extends BaseCustomUIPanelPlugin {
 				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
 				closeWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
 		BattleNext_PageLayout.fixedButton(panel, closeRect,
-				BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_").get("close"),
+				BattleNext_I18nSection.getInstance("Common", "BattleNext_common_").get("close"),
 				"close", CutStyle.BOTTOM, false);
 	}
 

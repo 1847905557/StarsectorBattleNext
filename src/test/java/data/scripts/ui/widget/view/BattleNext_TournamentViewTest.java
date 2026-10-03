@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.view;
 
+import data.test.fixture.BattleNext_TestTextCatalog;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -45,20 +46,11 @@ import java.util.function.BiFunction;
 class BattleNext_TournamentViewTest {
 
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
-	private Map<String, String> translations;
 
 	@BeforeEach
 	void configureSettings() throws Exception {
-		JSONObject ui = new JSONObject(Files.readString(
-				Path.of("data/strings/strings.json"), StandardCharsets.UTF_8)).getJSONObject("UI");
-		translations = new HashMap<>();
-		Iterator<?> keys = ui.keys();
-		while (keys.hasNext()) {
-			String key = keys.next().toString();
-			translations.put(key, ui.getString(key));
-		}
 		Global.setSettings(proxy(SettingsAPI.class, (name, args) -> switch (name) {
-			case "getString" -> translations.getOrDefault(args[1].toString(), args[1].toString());
+			case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
 			case "getColor" -> args[0].toString().toLowerCase(Locale.ROOT).contains("gray")
 					? Color.GRAY : Color.CYAN;
 			case "getScreenScaleMult" -> 1f;

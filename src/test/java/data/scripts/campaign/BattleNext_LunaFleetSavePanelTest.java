@@ -49,7 +49,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		assertEquals("Player", store.getAll().get(0).getAuthor());
 		assertEquals(42, store.getAll().get(0).getVariants().get(0).toJson().getInt("fluxVents"));
 		assertFalse(buttons.get("fleet_capture_save").get());
-		assertEquals("BattleNext_ui_saved", buttonLabels.get("fleet_capture_save"));
+		assertEquals("BattleNext_common_saved", buttonLabels.get("fleet_capture_save"));
 		assertEquals("  Named fleet  ", ((BattleNext_TextField) getField(display, "name")).getText());
 		assertTrue(((String) getField(display, "status")).contains("tournament/" + id + "/fleet_data.json"));
 		assertEquals(1, children.get(root).size());
@@ -66,7 +66,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		((BattleNext_TextField) getField(first, "name")).setText("   ");
 		first.buttonPressed("fleet_capture_save");
 		assertEquals("   ", ((BattleNext_TextField) getField(first, "name")).getText());
-		assertEquals("BattleNext_ui_fleet_capture_name_required", getField(first, "status"));
+		assertEquals("BattleNext_fleet_player_save_name_required", getField(first, "status"));
 		assertFalse(Files.exists(directory.resolve("tournament")));
 		((BattleNext_TextField) getField(first, "name")).setText("Same name");
 		first.buttonPressed("fleet_capture_save");
@@ -119,7 +119,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		assertNull(getField(display, "snapshot"));
 		assertFalse(buttons.get("fleet_capture_save").get());
 		assertTrue(((String) getField(display, "status")).contains("context".equals(failure)
-				? "Specific context error" : "BattleNext_ui_fleet_capture_error"));
+				? "Specific context error" : "BattleNext_fleet_player_save_snapshot_error"));
 		display.buttonPressed("fleet_capture_save");
 		assertFalse(Files.exists(directory.resolve("tournament")));
 		display.close();

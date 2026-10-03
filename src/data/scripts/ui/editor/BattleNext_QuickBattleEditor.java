@@ -61,7 +61,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	private final CustomUIPanelPlugin inputOwner;
 	private final BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
 	private final List<QuickBattleEditorRow> rows = new ArrayList<>();
 	private CustomPanelAPI panel;
@@ -118,11 +119,11 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public boolean serialize() {
 		if (!fleetStore.isLoaded()) {
-			setStatus(text("load_failed") + ": " + fleetStore.getLoadError());
+			setStatus(strings.get("load_failed") + ": " + fleetStore.getLoadError());
 			return false;
 		}
 		if (!store.isLoaded()) {
-			setStatus(text("load_failed") + ": " + store.getLoadError());
+			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
 			return false;
 		}
 		if (!captureFields()) return false;
@@ -133,11 +134,11 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				store.save(entry);
 			}
 		} catch (IOException | JSONException | RuntimeException exception) {
-			setStatus(text("save_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 		savedFields = serializeState();
-		setStatus(text("saved"));
+		setStatus(strings.get("saved"));
 		return true;
 	}
 
@@ -168,12 +169,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		try {
 			fleetStore.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
-			loadError = text("load_failed") + ": " + exception.getMessage();
+			loadError = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		try {
 			store.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
-			loadError = text("load_failed") + ": " + exception.getMessage();
+			loadError = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 		entries.clear();
 		entries.addAll(store.getAll());
@@ -187,8 +188,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
 				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		String[] labels = {"#", text("battle_player_short"), text("battle_enemy_short"), text("battle_map_short"),
-				text("battle_map_scale_short"), text("status"), text("enabled"), text("actions")};
+		String[] labels = {"#", battleStrings.get("player_fleet_id_label"), battleStrings.get("enemy_fleet_id_label"), battleStrings.get("map_label"),
+				battleStrings.get("map_scale_label"), strings.get("status"), strings.get("enabled"), strings.get("actions")};
 		UIRect tableRect = new UIRect(0f, table[0].getY(), table[0].getWidth(),
 				table[0].getHeight() + table[1].getHeight());
 		CustomPanelAPI tablePanel = tableRect.createSubPanel(panel, inputOwner).getPanel();
@@ -201,22 +202,22 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				(footerRect.getWidth() - FOOTER_BUTTON_GAP * (FOOTER_BUTTON_COUNT - 1)) / FOOTER_BUTTON_COUNT);
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX(), footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
-				text("add"), "add", CutStyle.ALL, true);
+				strings.get("add"), "add", CutStyle.ALL, true);
 		ButtonAPI saveButton = BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + buttonWidth + FOOTER_BUTTON_GAP,
 						footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
-				text("save"), "save", CutStyle.ALL, true);
+				strings.get("save"), "save", CutStyle.ALL, true);
 		saveButton.setEnabled(fleetStore.isLoaded());
 		BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + 2f * (buttonWidth + FOOTER_BUTTON_GAP),
 						footerRect.getY(), buttonWidth, BattleNext_PageLayout.FOOTER_HEIGHT),
-				text("back"), "back", CutStyle.ALL, true);
+				strings.get("back"), "back", CutStyle.ALL, true);
 		float statusX = footerRect.getX() + FOOTER_BUTTON_COUNT * (buttonWidth + FOOTER_BUTTON_GAP);
 		float statusWidth = footerRect.getWidth() - (statusX - footerRect.getX());
 		statusContent = panel.createUIElement(statusWidth - STATUS_CONTENT_WIDTH_RESERVE,
 				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		status = statusContent.addPara(statusContent.shortenString(
-				loadError.isEmpty() ? text("ready") : loadError, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
+				loadError.isEmpty() ? strings.get("ready") : loadError, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
 				0f);
 		status.getPosition().inTL(0f, STATUS_TOP_INSET);
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
@@ -265,7 +266,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
 		state.setParaSmallInsignia();
 		row.statusContent = state;
-		row.status = state.addPara(text("unavailable"), 0f);
+		row.status = state.addPara(strings.get("unavailable"), 0f);
 		row.status.setAlignment(Alignment.MID);
 		row.status.getPosition().setSize(statusLabelWidth, row.status.getPosition().getHeight());
 		row.status.getPosition().inTL(0f, Math.max(0f,
@@ -285,7 +286,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				List<String> errors = validationErrors(row);
 				if (errors.isEmpty()) {
-					tooltip.addPara(text("available"), 0f);
+					tooltip.addPara(strings.get("available"), 0f);
 				} else {
 					for (String error : errors) {
 						tooltip.addPara(error, STATUS_TOOLTIP_LINE_GAP);
@@ -316,7 +317,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				new UIRect(actionsRect.getX() + (actionsRect.getWidth() - buttonWidth) * 0.5f,
 						(BattleNext_PageLayout.TABLE_ROW_HEIGHT - BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT) * 0.5f,
 						buttonWidth, BattleNext_PageLayout.TABLE_ACTION_BUTTON_HEIGHT),
-				text("delete"), "delete:" + index, CutStyle.ALL, true);
+				strings.get("delete"), "delete:" + index, CutStyle.ALL, true);
 
 		content.addCustom(card, 0f);
 		rows.add(row);
@@ -359,12 +360,12 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		}
 		for (QuickBattleEditorRow row : rows) {
 			if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-				row.status.setText(text("raw_row"));
+				row.status.setText(battleStrings.get("raw_row_status"));
 				row.status.setColor(BattleNext_UiTheme.PANEL);
 				continue;
 			}
 			boolean available = validationErrors(row).isEmpty();
-			String label = text(available ? "available" : "unavailable");
+			String label = strings.get(available ? "available" : "unavailable");
 			if (!label.equals(row.status.getText())) {
 				row.status.setText(label);
 				row.status.setColor(available ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.PANEL);
@@ -393,19 +394,19 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		if (row.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			return errors;
 		}
-		if (fleetStore.get(row.player.getText().trim()) == null) errors.add(text("invalid_player"));
-		if (fleetStore.get(row.enemy.getText().trim()) == null) errors.add(text("invalid_enemy"));
+		if (fleetStore.get(row.player.getText().trim()) == null) errors.add(battleStrings.get("invalid_player_fleet"));
+		if (fleetStore.get(row.enemy.getText().trim()) == null) errors.add(battleStrings.get("invalid_enemy_fleet"));
 		try {
 			int map = Integer.parseInt(row.map.getText().trim());
-			if (map < RANDOM_MAP_ID || map > LAST_MAP_ID) errors.add(text("invalid_map"));
+			if (map < RANDOM_MAP_ID || map > LAST_MAP_ID) errors.add(battleStrings.get("invalid_map"));
 		} catch (NumberFormatException exception) {
-			errors.add(text("invalid_map"));
+			errors.add(battleStrings.get("invalid_map"));
 		}
 		try {
 			float mapScale = Float.parseFloat(row.mapScale.getText().trim());
-			if (!Float.isFinite(mapScale) || mapScale <= 0f) errors.add(text("invalid_map_scale"));
+			if (!Float.isFinite(mapScale) || mapScale <= 0f) errors.add(battleStrings.get("invalid_map_scale"));
 		} catch (NumberFormatException exception) {
-			errors.add(text("invalid_map_scale"));
+			errors.add(battleStrings.get("invalid_map_scale"));
 		}
 		return errors;
 	}
@@ -435,7 +436,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				float mapScale = Float.parseFloat(row.mapScale.getText().trim());
 				if (row.player.getText().trim().isEmpty() || row.enemy.getText().trim().isEmpty()
 						|| map < RANDOM_MAP_ID || map > LAST_MAP_ID || !Float.isFinite(mapScale) || mapScale <= 0f) {
-					setStatus(text("invalid_map_scale_combined"));
+					setStatus(battleStrings.get("invalid_map_settings"));
 					return false;
 				}
 				model.setPlayer(row.player.getText());
@@ -446,7 +447,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE
 						: model.getRowType());
 			} catch (NumberFormatException exception) {
-				setStatus(text("invalid_map_scale_combined"));
+				setStatus(battleStrings.get("invalid_map_settings"));
 				return false;
 			}
 		}
@@ -503,10 +504,6 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			status.setText(statusContent.shortenString(value,
 					statusContent.getPosition().getWidth() - STATUS_CONTENT_WIDTH_RESERVE));
 		}
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 
 	private static final class QuickBattleEditorRow {

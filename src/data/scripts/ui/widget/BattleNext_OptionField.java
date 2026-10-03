@@ -70,7 +70,6 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 		this.viewports = viewports;
 	}
 
-
 	@Override
 	protected void clearOverlays() {
 		if (picker != null) picker.closeOverlays();

@@ -66,7 +66,10 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	private final BattleNext_TournamentStore store;
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_RuleStore ruleStore;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private CustomPanelAPI panel;
 	private UIRect contentRect;
 	private BattleNext_TournamentModel baseline;
@@ -106,7 +109,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			statusText = "";
 			return true;
 		} catch (Exception exception) {
-			statusText = text("load_failed") + ": " + exception.getMessage();
+			statusText = strings.get("load_failed") + ": " + exception.getMessage();
 			return false;
 		}
 	}
@@ -197,10 +200,10 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	}
 
 	private void addDetails(TooltipMakerAPI content) {
-		content.addTitle(isReadOnly() ? text("tournament_locked") : text("tournament_editable"));
-		idField = field(content, text("tournament_id"), draft.getId(), content);
-		nameField = field(content, text("tournament_name"), draft.getName(), content);
-		content.addPara(text("tournament_bracket"), BRACKET_LABEL_GAP);
+		content.addTitle(isReadOnly() ? tournamentStrings.get("locked_message") : tournamentStrings.get("editor_title"));
+		idField = field(content, tournamentStrings.get("id"), draft.getId(), content);
+		nameField = field(content, tournamentStrings.get("name"), draft.getName(), content);
+		content.addPara(tournamentStrings.get("bracket"), BRACKET_LABEL_GAP);
 		bracketGroup = new CheckBoxGroup();
 		if (isReadOnly()) {
 			content.addPara(bracketLabel(draft.getBracketType()), READ_ONLY_BRACKET_GAP);
@@ -216,11 +219,11 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			bracketGroup.tryCheckValue(draft.getBracketType());
 			bracketGroup.updateCheck();
 		}
-		boField = field(content, text("tournament_bo"), Integer.toString(draft.getBoCount()), content);
-		maxFleetField = field(content, text("tournament_max_fleet"), Integer.toString(draft.getMaxFleet()), content);
-		ruleField = field(content, text("tournament_rules"), draft.getRuleId(), content);
-		mapField = field(content, text("battle_map"), Integer.toString(draft.getMapId()), content);
-		content.addPara(text("fleet_ids"), FLEET_SECTION_GAP);
+		boField = field(content, tournamentStrings.get("best_of_count"), Integer.toString(draft.getBoCount()), content);
+		maxFleetField = field(content, tournamentStrings.get("max_fleets"), Integer.toString(draft.getMaxFleet()), content);
+		ruleField = field(content, tournamentStrings.get("rules"), draft.getRuleId(), content);
+		mapField = field(content, battleStrings.get("map_number_label"), Integer.toString(draft.getMapId()), content);
+		content.addPara(tournamentStrings.get("participant_fleets"), FLEET_SECTION_GAP);
 		if (isReadOnly()) {
 			for (String fleet : draft.getFleetIds()) content.addPara(fleet, FLEET_ENTRY_GAP);
 		} else {
@@ -231,7 +234,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			fleetField = fleetPicker.getField();
 			fleetField.setText(String.join(",", draft.getFleetIds()));
 			fleetField.setMaxChars(FLEET_SELECTOR_MAX_CHARS);
-			BattleNext_PageLayout.button(content, text("apply_fleet_selection"), "fleet:apply",
+			BattleNext_PageLayout.button(content, tournamentStrings.get("apply_participant_selection"), "fleet:apply",
 					FLEET_APPLY_BUTTON_WIDTH);
 			for (int index = 0; index < draft.getFleetIds().size(); index++) {
 				String fleetId = draft.getFleetIds().get(index);
@@ -239,19 +242,19 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 				String label = (index + 1) + ". " + (fleet == null ? fleetId : fleet.getName());
 				content.addPara(label, FLEET_ENTRY_GAP);
 				BattleNext_PageLayout.addIdTooltip(content, label, fleetId);
-				if (index > 0) BattleNext_PageLayout.button(content, text("move_up"), "fleet:up:" + index,
+				if (index > 0) BattleNext_PageLayout.button(content, strings.get("move_up"), "fleet:up:" + index,
 						FLEET_ORDER_BUTTON_WIDTH);
 				if (index + 1 < draft.getFleetIds().size()) {
-					BattleNext_PageLayout.button(content, text("move_down"), "fleet:down:" + index,
+					BattleNext_PageLayout.button(content, strings.get("move_down"), "fleet:down:" + index,
 							FLEET_ORDER_BUTTON_WIDTH);
 				}
 			}
 		}
 		if (isReadOnly()) {
-			content.addPara(text("matches"), MATCH_SECTION_GAP);
+			content.addPara(tournamentStrings.get("matches"), MATCH_SECTION_GAP);
 			for (BattleNext_Match match : draft.getMatches()) {
 				content.addPara(match.getId() + " " + match.getPlayer() + " / " + match.getEnemy()
-						+ " [" + text("match_status_" + match.getStatus().name().toLowerCase(Locale.ROOT))
+						+ " [" + tournamentStrings.get("match_status_" + match.getStatus().name().toLowerCase(Locale.ROOT))
 						+ "]", MATCH_ENTRY_GAP);
 			}
 		}
@@ -274,13 +277,13 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		if (!ruleId.isEmpty()) {
 			BattleNext_RuleModel rule = ruleStore.get(ruleId);
 			if (rule == null) {
-				reasons.add(text("tournament_rules_unavailable") + ": " + ruleId);
+				reasons.add(tournamentStrings.get("rules_unavailable") + ": " + ruleId);
 			} else {
 				reasons.addAll(rulesCheck.missingRestrictions(rule));
 				for (String fleetId : selectedFleets()) {
 					BattleNext_FleetModel fleet = fleetStore.get(fleetId);
 					if (fleet == null) {
-						reasons.add(text("invalid_player") + ": " + fleetId);
+						reasons.add(tournamentStrings.get("invalid_participant_fleet") + ": " + fleetId);
 						continue;
 					}
 					BattleNext_AssembledFleet assembledFleet = fleetBuilder.build(fleet);
@@ -292,15 +295,15 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		if (validationContent != null) validationPanel.removeComponent(validationContent);
 		validationContent = validationPanel.createUIElement(validationPanel.getPosition().getWidth(),
 				VALIDATION_PANEL_HEIGHT, true);
-		validationContent.addTitle(text("rules_validation"));
-		if (reasons.isEmpty()) validationContent.addPara(text("rules_validation_clear"), VALIDATION_REASON_GAP);
+		validationContent.addTitle(ruleStrings.get("fleet_validation"));
+		if (reasons.isEmpty()) validationContent.addPara(ruleStrings.get("validation_clear"), VALIDATION_REASON_GAP);
 		for (String reason : reasons) validationContent.addPara(reason,
 				VALIDATION_REASON_GAP);
 		validationPanel.addUIElement(validationContent).inTL(0f, 0f);
 	}
 
 	private String bracketLabel(TournamentBracketType type) {
-		return text("bracket_" + type.name().toLowerCase(Locale.ROOT));
+		return tournamentStrings.get("bracket_" + type.name().toLowerCase(Locale.ROOT));
 	}
 
 	private TextFieldAPI field(TooltipMakerAPI host, String label, String value, TooltipMakerAPI... viewports) {
@@ -356,7 +359,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	public boolean serialize() {
 		if (isReadOnly()) return true;
 		if (!store.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
-			statusText = text("load_failed");
+			statusText = strings.get("load_failed");
 			return false;
 		}
 		int boCount;
@@ -367,7 +370,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			maxFleet = Integer.parseInt(maxFleetField.getText().trim());
 			map = Integer.parseInt(mapField.getText().trim());
 		} catch (NumberFormatException exception) {
-			statusText = text("invalid_tournament_format");
+			statusText = tournamentStrings.get("invalid_configuration");
 			return false;
 		}
 		List<String> fleets = selectedFleets();
@@ -377,12 +380,12 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT || fleets.size() > maxFleet
 				|| new HashSet<>(fleets).size() != fleets.size()
 				|| map < RANDOM_MAP_ID || map > LAST_MAP_ID) {
-			statusText = text("invalid_tournament_format");
+			statusText = tournamentStrings.get("invalid_configuration");
 			return false;
 		}
 		for (String fleet : fleets) {
 			if (fleetStore.get(fleet) == null) {
-				statusText = text("invalid_player") + ": " + fleet;
+				statusText = tournamentStrings.get("invalid_participant_fleet") + ": " + fleet;
 				return false;
 			}
 		}
@@ -397,10 +400,10 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			store.save(draft);
 			baseline = nextBaseline;
 			savedSnapshot = serializeState();
-			statusText = text("saved");
+			statusText = strings.get("saved");
 			return true;
 		} catch (Exception exception) {
-			statusText = text("save_failed") + ": " + exception.getMessage();
+			statusText = strings.get("save_failed") + ": " + exception.getMessage();
 			return false;
 		}
 	}
@@ -415,10 +418,6 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 	@Override
 	public String getStatusText() {
 		return statusText;
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 
 	private class TournamentFleetOptionSource implements BattleNext_OptionPicker.OptionChoiceSource {

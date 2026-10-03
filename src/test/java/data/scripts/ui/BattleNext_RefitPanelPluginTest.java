@@ -57,7 +57,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 			assertEquals(right.getPosition().getX(), row.getX());
 			float top = right.getPosition().getY() + right.getPosition().getHeight() - row.getY() - row.getHeight();
 			assertEquals(picker == sMods ? 0f : 36f, top);
-			assertEquals(picker == sMods ? "BattleNext_ui_refit_smods" : "BattleNext_ui_refit_dmods", getField(picker, "title"));
+			assertEquals(picker == sMods ? "BattleNext_refit_s_mods" : "BattleNext_refit_d_mods", getField(picker, "title"));
 			picker.close();
 		}
 	}

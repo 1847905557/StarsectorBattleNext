@@ -11,7 +11,8 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	private static final float STATUS_TEXT_RIGHT_RESERVE = 10f;
 	private static final float STATUS_TEXT_TOP_INSET = 5f;
 
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private TooltipMakerAPI content;
 	private LabelAPI statusLabel;
 	private float textWidth;
@@ -38,9 +39,9 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 		if (!error.isEmpty()) {
 			text.append(error);
 		} else if (!activeTournamentId.isEmpty()) {
-			text.append(strings.get("tournament_active")).append(": ").append(activeTournamentId);
+			text.append(managementStrings.get("active_tournament")).append(": ").append(activeTournamentId);
 		} else if (pendingResult) {
-			text.append(strings.get("result_updated"));
+			text.append(managementStrings.get("report_updated"));
 		} else {
 			text.append(strings.get("ready"));
 		}

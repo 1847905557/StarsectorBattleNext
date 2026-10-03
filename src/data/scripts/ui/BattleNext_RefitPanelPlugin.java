@@ -47,7 +47,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
 	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, inputRouter);
 
 	private UIBorderObject border;
@@ -116,11 +117,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	private void buildPickers(float width) {
-		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, strings.get("refit_smods"), 0f,
+		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, refitStrings.get("s_mods"), 0f,
 				new BattleNext_RefitSModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(sModsOf(draft)), this::selectSMods);
-		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, strings.get("refit_dmods"), 0f,
+		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, refitStrings.get("d_mods"), 0f,
 				new BattleNext_RefitDModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(dModsOf(draft)), this::selectDMods);
@@ -203,7 +204,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	@Override
 	public boolean saveCurrentPage() {
 		if (draft == null || refitScreen == null || member == null) {
-			saveError = strings.get("refit_no_member");
+			saveError = refitStrings.get("no_ship_selected");
 			statusLabel.setText(saveError);
 			return false;
 		}

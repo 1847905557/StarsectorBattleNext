@@ -109,7 +109,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final OptionChoiceSource source;
 	private final OptionSelectionMode mode;
 	private final Supplier<List<String>> initialSelection;
@@ -264,11 +264,11 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		BattleNext_PageLayout.fixedButton(popup,
 				new UIRect(width - 2f * buttonWidth - 2f * POPUP_INSET, buttonY,
 						buttonWidth, POPUP_ACTION_BUTTON_HEIGHT),
-				strings.get("picker_confirm"), OptionPickerAction.CONFIRM, CutStyle.ALL, false);
+				strings.get("confirm"), OptionPickerAction.CONFIRM, CutStyle.ALL, false);
 		BattleNext_PageLayout.fixedButton(popup,
 				new UIRect(width - buttonWidth - POPUP_INSET, buttonY,
 						buttonWidth, POPUP_ACTION_BUTTON_HEIGHT),
-				strings.get("picker_cancel"), OptionPickerAction.CANCEL, CutStyle.ALL, false);
+				strings.get("cancel"), OptionPickerAction.CANCEL, CutStyle.ALL, false);
 		overlayHost.addComponent(popup).inTL(x, y);
 		overlayHost.bringComponentToTop(popup);
 		popupOverlay = new PopupOverlay(popup);

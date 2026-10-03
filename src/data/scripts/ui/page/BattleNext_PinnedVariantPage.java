@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
@@ -16,6 +17,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
+
+	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -53,13 +56,13 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 		try {
 			store.reload();
 		} catch (Exception exception) {
-			status = text("load_failed") + ": " + exception;
+			status = strings.get("load_failed") + ": " + exception;
 		}
 	}
 
 	@Override
 	protected String pageTitle() {
-		return text("pinned_variants");
+		return variantStrings.get("pinned_list_title");
 	}
 
 	@Override
@@ -69,7 +72,7 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String promptText() {
-		return text("select_pinned_variant");
+		return variantStrings.get("select_pinned");
 	}
 
 	@Override
@@ -89,13 +92,13 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String emptyListText() {
-		return text("no_pinned_variants");
+		return variantStrings.get("no_pinned");
 	}
 
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (CatalogEntry entry : sorted(store.getCatalog())) {
-			BattleNext_PageLayout.button(listContent, (entry.error().isEmpty() ? "" : text("variant_error_marker") + " ")
+			BattleNext_PageLayout.button(listContent, (entry.error().isEmpty() ? "" : variantStrings.get("error_marker") + " ")
 					+ entry.name(), "pin:" + entry.path(), BattleNext_PageLayout.managementListButtonWidth(listRect));
 			listContent.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
@@ -141,7 +144,7 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 				area.getWidth() + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataLimit, true);
 		content.setTextWidthOverride(area.getWidth());
 		content.addTitle(selected.name());
-		content.addPara(text("pin_name"), 8f);
+		content.addPara(variantStrings.get("pin_name"), 8f);
 		if (selected.model() != null && store.isLoaded()) {
 			BattleNext_TextField nameWidget = new BattleNext_TextField(inputRouter, metadataPanel, area.getWidth(),
 					BattleNext_PageLayout.FORM_FIELD_HEIGHT, content);
@@ -150,8 +153,8 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 			name = nameWidget;
 			name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		}
-		content.addPara(text("variant_pin_id") + ": " + selected.pinId(), 8f);
-		content.addPara(text("variant_source") + ": " + selected.path(), 8f);
+		content.addPara(variantStrings.get("pin_id") + ": " + selected.pinId(), 8f);
+		content.addPara(variantStrings.get("source_file") + ": " + selected.path(), 8f);
 		if (!selected.error().isEmpty()) {
 			content.addPara(selected.error(), 8f);
 		}
@@ -245,10 +248,10 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 					name = null;
 					metadata = null;
 					details.clear();
-					setStatus(text("deleted"));
+					setStatus(strings.get("deleted"));
 					refreshContent();
 				} catch (Exception exception) {
-					setStatus(text("save_failed") + ": " + exception);
+					setStatus(strings.get("save_failed") + ": " + exception);
 				}
 			});
 		}
@@ -267,7 +270,7 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 		if (!store.isLoaded() || entry.model() == null || name == null) return false;
 		String next = name.getText().trim();
 		if (next.isEmpty()) {
-			setStatus(text("pin_name_required"));
+			setStatus(variantStrings.get("pin_name_required"));
 			return false;
 		}
 		try {
@@ -275,11 +278,11 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 			baseline = next;
 			name.setText(next);
 			store.reload();
-			setStatus(text("saved"));
+			setStatus(strings.get("saved"));
 			refreshContent();
 			return true;
 		} catch (Exception exception) {
-			setStatus(text("save_failed") + ": " + exception);
+			setStatus(strings.get("save_failed") + ": " + exception);
 			return false;
 		}
 	}

@@ -6,7 +6,6 @@ import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
 import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.order.BattleNext_OrderRegistry;
 import data.restriction.BattleNext_RestrictionRegistry;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.campaign.BattleNext_LunaPinnedVariantRefitButton;
 import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
@@ -14,8 +13,6 @@ import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
 public class BattleNextModPlugin extends BaseModPlugin {
 
 	public static final String CLASS_MARK = "BattleNextModPlugin";
-
-	public static final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_");
 
 	private boolean afterApplicationLoad = true;
 	private boolean afterNewGameLoad = true;

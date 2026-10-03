@@ -18,7 +18,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 	private static final int PORTRAIT_SELECTION_MAX_COUNT = 1;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 
 	@Override
 	public int getMaxCount(String id) {
@@ -106,6 +106,6 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 			if (description != null) addExcerpt(tooltip, description.getText1FirstPara());
 			return;
 		}
-		addExcerpt(tooltip, strings.get("refit_custom_portrait"));
+		addExcerpt(tooltip, memberStrings.get("custom_portrait"));
 	}
 }

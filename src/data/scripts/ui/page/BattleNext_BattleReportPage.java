@@ -62,6 +62,9 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
+	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private final List<BattleReportListItem> entries = new ArrayList<>();
 	private final Set<MemberRow> expandedMembers = new HashSet<>();
@@ -101,7 +104,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String pageTitle() {
-		return text("page_reports");
+		return managementStrings.get("page_reports");
 	}
 
 	@Override
@@ -111,7 +114,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String promptText() {
-		return text("select_report");
+		return reportStrings.get("select_prompt");
 	}
 
 	@Override
@@ -131,7 +134,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String emptyListText() {
-		return text("no_reports");
+		return reportStrings.get("empty");
 	}
 
 	@Override
@@ -204,10 +207,10 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 					detailOpen = false;
 					nameField = null;
 					expandedMembers.clear();
-					status = text("deleted");
+					status = strings.get("deleted");
 					refreshContent();
 				} catch (Exception exception) {
-					setStatus(text("save_failed") + ": " + exception.getMessage());
+					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 				}
 			});
 			if (hasUnsavedChanges()) navigation.accept(action);
@@ -234,7 +237,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		if (nameField == null || entry(selectedId) == null) return true;
 		String nextName = nameField.getText().trim();
 		if (nextName.isEmpty()) {
-			setStatus(text("invalid_report_name"));
+			setStatus(reportStrings.get("name_required"));
 			return false;
 		}
 		BattleReportListItem selected = entry(selectedId);
@@ -242,11 +245,11 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 			persistName(selected.report, selected.tournament, reportStore, tournamentStore, nextName);
 			savedName = nextName;
 			nameField.setText(nextName);
-			setStatus(text("saved"));
+			setStatus(strings.get("saved"));
 			refreshContent();
 			return true;
 		} catch (Exception exception) {
-			setStatus(text("save_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 	}
@@ -254,14 +257,6 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	@Override
 	protected void discardPage() {
 		if (nameField != null) nameField.setText(savedName);
-	}
-
-	@Override
-	protected String text(String key) {
-		if (key.equals("damage_dealt") || key.equals("damage_taken") || key.equals("winner")
-				|| key.equals("duration") || key.equals("status") || key.equals("hull") || key.equals("shield")
-				|| key.equals("armor") || key.equals("emp") || key.equals("final_hull") || key.equals("final_cr")) return reportStrings.get(key);
-		return super.text(key);
 	}
 
 	private void load() {
@@ -289,7 +284,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		if (selected == null) return;
 		BattleNext_BattleReportModel report = selected.report;
 		detailContent.addTitle(report.getName());
-		detailContent.addPara(text("report_name"), REPORT_SUMMARY_TOP_GAP);
+		detailContent.addPara(reportStrings.get("name"), REPORT_SUMMARY_TOP_GAP);
 		BattleNext_TextField nameWidget = new BattleNext_TextField(inputRouter, detailPanel,
 				detailControlWidth(contentWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT, detailContent);
 		nameWidget.attach(detailContent, detailPanel);
@@ -298,13 +293,13 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		nameField.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		detailContent.addPara(report.getId(), REPORT_CONTEXT_TOP_GAP);
 		String time = timeText(report);
-		detailContent.addPara((time.isEmpty() ? "" : time + " / ") + text("winner") + ": " + report.getWinner()
-				+ " / " + text("duration") + ": " + report.getDurationMillis() + " ms",
+		detailContent.addPara((time.isEmpty() ? "" : time + " / ") + strings.get("winner") + ": " + report.getWinner()
+				+ " / " + reportStrings.get("duration") + ": " + report.getDurationMillis() + " ms",
 				REPORT_SUMMARY_TOP_GAP);
 		if (!selected.context.isEmpty()) detailContent.addPara(selected.context, REPORT_CONTEXT_TOP_GAP);
-		detailContent.addPara(text("damage_dealt"), REPORT_SECTION_TOP_GAP);
+		detailContent.addPara(reportStrings.get("damage_dealt"), REPORT_SECTION_TOP_GAP);
 		appendMembers(detailContent, detailPanel, contentWidth, sorted(report, true), true);
-		detailContent.addPara(text("damage_taken"), REPORT_SECTION_TOP_GAP);
+		detailContent.addPara(reportStrings.get("damage_taken"), REPORT_SECTION_TOP_GAP);
 		appendMembers(detailContent, detailPanel, contentWidth, sorted(report, false), false);
 	}
 
@@ -323,8 +318,8 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 					hull.spritePath(), false, "", shipName, hull.name(),
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
-					text("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
-							+ "  " + text("final_cr") + ": " + formatPercent(member.getFinalCr()));
+					reportStrings.get("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
+							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()));
 			BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
@@ -347,7 +342,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 			CustomPanelAPI empty = body.createCustomPanel(contentWidth, SOURCE_ROW_HEIGHT,
 					new BaseCustomUIPanelPlugin());
 			TooltipMakerAPI emptyHost = empty.createUIElement(contentWidth, SOURCE_ROW_HEIGHT, false);
-			emptyHost.addPara(text("no_damage_sources"), 0f)
+			emptyHost.addPara(reportStrings.get("no_damage_sources"), 0f)
 					.getPosition().inTL(0f, 10f);
 			emptyHost.setHeightSoFar(SOURCE_ROW_HEIGHT);
 			empty.addUIElement(emptyHost).inTL(0f, 0f);
@@ -413,7 +408,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	}
 
 	private void addDamageColumns(TooltipMakerAPI host, float y, float width, double[] values) {
-		String[] labels = {text("hull"), text("armor"), text("shield"), text("emp")};
+		String[] labels = {reportStrings.get("hull"), reportStrings.get("armor"), reportStrings.get("shield"), reportStrings.get("emp")};
 		float columnWidth = width / values.length;
 		for (int index = 0; index < values.length; index++) {
 			String value = labels[index] + ": " + formatDamage(values[index]);
@@ -494,7 +489,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	}
 
 	private String totalLabel(MemberRow row) {
-		return (row.dealt() ? text("damage_dealt") : text("damage_taken")) + ": "
+		return (row.dealt() ? reportStrings.get("damage_dealt") : reportStrings.get("damage_taken")) + ": "
 				+ formatDamage(row.dealt() ? row.member().getDamageDealt() : row.member().getDamageTaken());
 	}
 
@@ -580,10 +575,10 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	private String context(BattleNext_TournamentModel tournament, String matchId, int roundNumber) {
 		BattleNext_Match match = tournament.findMatch(matchId);
 		if (match == null || match.getEnemy().isEmpty()) {
-			return text("tournament_context") + " " + tournament.getId() + " / " + matchId;
+			return tournamentStrings.get("context_label") + " " + tournament.getId() + " / " + matchId;
 		}
-		return text("tournament_context") + " " + tournament.getId() + " / "
-				+ BattleNext_MatchProgress.tournament(tournament, match, roundNumber).format(strings);
+		return tournamentStrings.get("context_label") + " " + tournament.getId() + " / "
+				+ BattleNext_MatchProgress.tournament(tournament, match, roundNumber).format(battleStrings);
 	}
 
 	private String listLabel(BattleReportListItem entry) {

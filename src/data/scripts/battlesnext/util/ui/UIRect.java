@@ -137,7 +137,6 @@ public class UIRect {
 		return height;
 	}
 
-
 	private CustomPanelAPI rootPanel;
 	private TooltipMakerAPI latestTooltip;
 	private UIPanelManager latestSubPanelManager;

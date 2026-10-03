@@ -329,7 +329,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertFalse(page.hasUnsavedChanges());
 		page.refreshContent();
 		assertFalse(buttons.get("save").get());
-		assertTrue(labels.contains("BattleNext_ui_tournament_locked"));
+		assertTrue(labels.contains("BattleNext_tournament_locked_message"));
 	}
 
 	@Test

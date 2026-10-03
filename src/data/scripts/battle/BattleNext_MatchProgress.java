@@ -38,6 +38,6 @@ public final class BattleNext_MatchProgress {
 	public String format(BattleNext_I18nSection strings) {
 		String result = strings.format("match_progress", matchIndex, matchTotal) + ", "
 				+ strings.format("round_progress", roundIndex, roundTotal);
-		return boCount < 0 ? result : result + ", " + strings.format("bo", boCount);
+		return boCount < 0 ? result : result + ", " + strings.format("best_of_format", boCount);
 	}
 }

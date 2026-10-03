@@ -54,7 +54,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 	private static final float RESTRICTION_TOOLTIP_WIDTH = 320f;
 	private static final float RESTRICTION_TOOLTIP_META_GAP = 5f;
 
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Misc", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 	private final BattleNext_RuleStore store;
 	private final Map<String, ButtonAPI> enabledFields = new LinkedHashMap<>();
 	private final Map<String, TextFieldAPI> valueFields = new LinkedHashMap<>();
@@ -136,22 +137,22 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		float leftWidth = (float) Math.floor(usableWidth * BattleNext_PageLayout.EDITOR_LEFT_COLUMN_SHARE);
 		float rightWidth = usableWidth - leftWidth;
 		TooltipMakerAPI details = contentPanel.createUIElement(leftWidth, contentRect.getHeight(), true);
-		details.addTitle(text("rules_editable"));
+		details.addTitle(ruleStrings.get("editor_title"));
 		statusLabel = details.addPara(status, STATUS_LINE_GAP);
-		idField = field(details, panel, text("rules_id"), idValue,
+		idField = field(details, panel, ruleStrings.get("id"), idValue,
 				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
-		nameField = field(details, panel, text("rules_name"), nameValue,
+		nameField = field(details, panel, ruleStrings.get("name"), nameValue,
 				leftWidth - DETAILS_FIELD_RIGHT_INSET, details);
 		contentPanel.addUIElement(details).inTL(0f, 0f);
 
 		TooltipMakerAPI restrictions = contentPanel.createUIElement(rightWidth, contentRect.getHeight(), true);
-		restrictions.addTitle(text("rules_restrictions"));
+		restrictions.addTitle(ruleStrings.get("restrictions"));
 		contentPanel.addUIElement(restrictions).inTL(leftWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, 0f);
 		float tableY = RESTRICTION_TITLE_HEIGHT;
 		float tableHeight = Math.max(1f, contentRect.getHeight() - tableY);
 		CustomPanelAPI tablePanel = panel.createCustomPanel(rightWidth, tableHeight, panel.getPlugin());
 		restrictions.addComponent(tablePanel).inTL(0f, tableY);
-		String[] labels = {text("rules_restriction"), text("rules_value_items"), text("enabled"), text("actions")};
+		String[] labels = {ruleStrings.get("restriction"), ruleStrings.get("value_or_items"), strings.get("enabled"), strings.get("actions")};
 		enabledFields.clear();
 		valueFields.clear();
 		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), labels, COLUMN_SHARES,
@@ -159,7 +160,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 				(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, restrictions),
 				(rowWidth, content) -> {
 					restrictionPicker = new BattleNext_OptionPicker(inputRouter, panel, Math.min(190f, rowWidth),
-							BattleNext_PageLayout.FORM_FIELD_HEIGHT, text("rules_add_restriction"), 2f,
+							BattleNext_PageLayout.FORM_FIELD_HEIGHT, ruleStrings.get("add_restriction"), 2f,
 							new RestrictionChoiceSource(), BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 							List::of, this::addRestrictions, content, restrictions);
 					restrictionPicker.attach(content, panel);
@@ -176,7 +177,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			TooltipMakerAPI content, TooltipMakerAPI restrictions) {
 		BattleNext_RuleRestriction restriction = draft.getRestrictions().get(index);
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
-		String description = spec == null ? text("rules_missing_restriction") : spec.getDescription();
+		String description = spec == null ? ruleStrings.get("missing_restriction") : spec.getDescription();
 		CustomPanelAPI row = Global.getSettings().createCustom(tableWidth,
 				BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
 		new UIRect(0f, 0f, tableWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBoarder(row,
@@ -268,7 +269,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		return field;
 	}
 
-
 	@Override
 	public void buttonPressed(Object buttonId) {
 		if (!(buttonId instanceof String action)) return;
@@ -351,10 +351,10 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			store.save(draft);
 			baseline = copy(draft);
 			savedSnapshot = serializeState();
-			setStatus(text("saved"));
+			setStatus(strings.get("saved"));
 			return true;
 		} catch (IOException | JSONException | RuntimeException exception) {
-			setStatus(text("save_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
 	}
@@ -368,7 +368,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			refreshContent();
 			savedSnapshot = serializeState();
 		} catch (JSONException exception) {
-			setStatus(text("load_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
 		}
 	}
 
@@ -428,10 +428,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		result.setSourceType(source.getSourceType());
 		result.setSourcePath(source.getSourcePath());
 		return result;
-	}
-
-	private String text(String key) {
-		return strings.get(key);
 	}
 
 	private class RestrictionTooltip extends BaseTooltipCreator {

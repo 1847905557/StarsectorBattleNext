@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.rule.BattleNext_RuleModel;
@@ -13,6 +14,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_RulesPage extends BattleNext_ManagementPage {
+
+	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 
 	private static final float RULE_LIST_ERROR_TOP_GAP = 5f;
 	private static final float RULE_LIST_EMPTY_TOP_GAP = 8f;
@@ -45,13 +49,13 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 		try {
 			store.reload();
 		} catch (Exception exception) {
-			status = text("load_failed") + ": " + exception.getMessage();
+			status = strings.get("load_failed") + ": " + exception.getMessage();
 		}
 	}
 
 	@Override
 	protected String pageTitle() {
-		return text("page_rules");
+		return managementStrings.get("page_rules");
 	}
 
 	@Override
@@ -61,12 +65,12 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String promptText() {
-		return text("rules_select");
+		return ruleStrings.get("select_prompt");
 	}
 
 	@Override
 	protected String listTitle() {
-		return text("rules_heading");
+		return ruleStrings.get("management_heading");
 	}
 
 	@Override
@@ -86,7 +90,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected String emptyListText() {
-		return text("rules_empty");
+		return ruleStrings.get("empty");
 	}
 
 	@Override
@@ -160,10 +164,10 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 					store.delete(selectedId);
 					selectedId = "";
 					draftOpen = false;
-					setStatus(text("deleted"));
+					setStatus(strings.get("deleted"));
 					refreshContent();
 				} catch (Exception exception) {
-					setStatus(text("save_failed") + ": " + exception.getMessage());
+					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 				}
 			});
 			return;
@@ -189,17 +193,17 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	protected boolean savePage() {
 		if (!draftOpen) return true;
 		if (!store.isLoaded()) {
-			setStatus(text("load_failed") + ": " + store.getLoadError());
+			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
 			return false;
 		}
 		String id = editor.getDraftId();
 		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(text("invalid_rules_id"));
+			setStatus(ruleStrings.get("invalid_id"));
 			return false;
 		}
 		for (BattleNext_RuleModel rule : store.getAll()) {
 			if (BattleNext_EntryId.sameFileName(id, rule.getId()) && !rule.getId().equals(selectedId)) {
-				setStatus(text("duplicate_id"));
+				setStatus(strings.get("duplicate_id"));
 				return false;
 			}
 		}
@@ -210,11 +214,11 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 		try {
 			store.reload();
 			selectedId = id;
-			setStatus(text("saved"));
+			setStatus(strings.get("saved"));
 			refreshContent();
 			return true;
 		} catch (Exception exception) {
-			setStatus(text("load_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
 			return false;
 		}
 	}
@@ -238,7 +242,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 			draftOpen = true;
 			refreshContent();
 		} catch (Exception exception) {
-			setStatus(text("load_failed") + ": " + exception.getMessage());
+			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
 		}
 	}
 }

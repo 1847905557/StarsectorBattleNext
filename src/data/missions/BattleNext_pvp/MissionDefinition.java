@@ -29,7 +29,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Briefing", "BattleNext_ui_");
+	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 
 	private static int quickBattleCurrentIndex = 0;
 
@@ -68,7 +69,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 					+ " Round " + (match.getRounds().size() + 1);
 			if (!provider.getRuleWarnings().isEmpty()
 					&& !BattleNext_BattleSignals.consumeAuthorization(tournament.getId(), match.getId())) {
-				showBlocked(api, strings.get("rules_blocked"), provider.getRuleWarnings());
+				showBlocked(api, ruleStrings.get("match_blocked"), provider.getRuleWarnings());
 				api.addBriefingItem(progress);
 				return;
 			}
@@ -82,9 +83,9 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
 			api.setFleetTagline(FleetSide.PLAYER, assembledPlayerFleet.isComplete()
-					? assembledPlayerFleet.getDefinition().getName() : strings.get("invalid_player"));
+					? assembledPlayerFleet.getDefinition().getName() : strings.get("invalid_player_fleet"));
 			api.setFleetTagline(FleetSide.ENEMY, assembledEnemyFleet.isComplete()
-					? assembledEnemyFleet.getDefinition().getName() : strings.get("invalid_enemy"));
+					? assembledEnemyFleet.getDefinition().getName() : strings.get("invalid_enemy_fleet"));
 			api.addBriefingItem(strings.get("invalid_battle_assembly"));
 			api.addBriefingItem(progress);
 			BattleNext_MissionBattleMap.apply(api, 0, 1f);
@@ -93,7 +94,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet);
 		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet);
-		api.addBriefingItem(strings.format("map_briefing", match.getMap(), match.getMapScale()));
+		api.addBriefingItem(strings.format("map_summary", match.getMap(), match.getMapScale()));
 		api.addBriefingItem(progress);
 		BattleNext_MissionBattleMap.apply(api, BattleNext_MissionBattleMap.resolve(match.getMap(), mapIndex), match.getMapScale());
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();

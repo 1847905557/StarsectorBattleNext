@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final Supplier<ShipVariantAPI> variantSupplier;
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
 
 	public BattleNext_RefitSModSourceProvider(Supplier<ShipVariantAPI> variantSupplier) {
 		this.variantSupplier = variantSupplier;
@@ -65,7 +65,7 @@ public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourcePro
 		}
 		if (!sModText.isBlank()) addExcerpt(tooltip, sModText);
 		else if (variant.getHullSpec().isBuiltInMod(choice.getId())) {
-			addExcerpt(tooltip, strings.get("refit_smod_no_effect"));
+			addExcerpt(tooltip, refitStrings.get("s_mod_no_effect"));
 		}
 	}
 }

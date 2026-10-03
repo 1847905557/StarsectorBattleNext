@@ -17,7 +17,7 @@ import lunalib.lunaRefit.LunaRefitManager;
 
 public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton implements EveryFrameScript {
 
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private CustomPanelAPI background;
 	private CustomPanelAPI content;
 	private UIPanelAPI host;
@@ -46,7 +46,7 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 
 	@Override
 	public String getButtonName(FleetMemberAPI member, ShipVariantAPI variant) {
-		return strings.get("fleet_capture");
+		return fleetStrings.get("player_save_action");
 	}
 
 	@Override
@@ -82,8 +82,8 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 
 	@Override
 	public void addTooltip(TooltipMakerAPI tooltip, FleetMemberAPI member, ShipVariantAPI variant, MarketAPI market) {
-		tooltip.addPara(strings.get(member == null && variant != null ? "fleet_capture_module"
-				: isClickable(member, variant, market) ? "fleet_capture_description" : "fleet_capture_context_error"), 0f);
+		tooltip.addPara(fleetStrings.get(member == null && variant != null ? "player_save_return_to_parent"
+				: isClickable(member, variant, market) ? "player_save_description" : "player_save_context_error"), 0f);
 	}
 
 	@Override
@@ -115,10 +115,10 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 				throw new IllegalStateException("Refit selection changed before opening the fleet save panel");
 			}
 			if (!isClickable(member, variant, market)) {
-				error = strings.get(member == null ? "fleet_capture_module" : "fleet_capture_context_error");
+				error = fleetStrings.get(member == null ? "player_save_return_to_parent" : "player_save_context_error");
 			}
 		} catch (Throwable exception) {
-			error = strings.get("fleet_capture_context_error") + ": " + exception;
+			error = fleetStrings.get("player_save_context_error") + ": " + exception;
 			Global.getLogger(getClass()).warn("Unable to read player fleet refit context", exception);
 		}
 		display = new BattleNext_LunaFleetSavePanel(this::dismiss);

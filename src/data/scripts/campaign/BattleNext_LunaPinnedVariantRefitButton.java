@@ -19,7 +19,8 @@ import java.util.List;
 
 public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton implements EveryFrameScript {
 
-	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	private static final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
+	private static final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private CustomPanelAPI background;
 	private UIPanelAPI host;
 	private BattleNext_CampaignRefitContext openedContext;
@@ -48,7 +49,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 
 	@Override
 	public String getButtonName(FleetMemberAPI member, ShipVariantAPI variant) {
-		return strings.get("pin_variant");
+		return variantStrings.get("pin_current_action");
 	}
 
 	@Override
@@ -73,7 +74,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 
 	@Override
 	public void addTooltip(TooltipMakerAPI tooltip, FleetMemberAPI member, ShipVariantAPI variant, MarketAPI market) {
-		tooltip.addPara(strings.get(member == null && variant != null ? "pin_module" : "pin_description"), 0f);
+		tooltip.addPara(variantStrings.get(member == null && variant != null ? "pin_return_to_parent" : "pin_description"), 0f);
 	}
 
 	@Override
@@ -110,7 +111,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 				selected = openedContext.variant();
 			}
 		} catch (Throwable exception) {
-			error = strings.get("pin_context_error") + ": " + exception;
+			error = variantStrings.get("pin_context_error") + ": " + exception;
 			Global.getLogger(getClass()).warn("Unable to capture campaign refit context", exception);
 		}
 		display = new BattleNext_LunaPinnedVariantPanel(this::dismiss);
@@ -123,12 +124,11 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 	}
 
 	static String contextError(FleetMemberAPI member, ShipVariantAPI variant) {
-		BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 
-		if (variant == null) return strings.get("refit_no_member");
+		if (variant == null) return refitStrings.get("no_ship_selected");
 		// Vanilla refit panels have no fleet member while editing a module.
-		if (member == null) return strings.get("pin_module");
-		if (variant.isFighter() || variant.getHullSpec() == null) return strings.get("invalid_variant");
+		if (member == null) return variantStrings.get("pin_return_to_parent");
+		if (variant.isFighter() || variant.getHullSpec() == null) return variantStrings.get("invalid_reference");
 		return "";
 	}
 

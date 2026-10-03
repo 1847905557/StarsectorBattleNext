@@ -12,7 +12,7 @@ public abstract class BattleNext_PageView {
 
 	protected CustomPanelAPI panel;
 	protected BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
-	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
+	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	protected String status = "";
 	protected LabelAPI statusLabel;
 	private CustomPanelAPI owner;
@@ -153,10 +153,6 @@ public abstract class BattleNext_PageView {
 	protected final void setStatus(String value) {
 		status = value;
 		updateStatus();
-	}
-
-	protected String text(String key) {
-		return strings.get(key);
 	}
 
 	private void releasePanel() {
