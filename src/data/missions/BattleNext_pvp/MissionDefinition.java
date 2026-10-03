@@ -17,6 +17,7 @@ import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.*;
 import data.scripts.tools.BattleNext_BattleSignals;
@@ -84,8 +85,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_AssembledFleet assembledPlayerFleet = fleetBuilder.build(fleets.get(match.getPlayer()));
 		BattleNext_AssembledFleet assembledEnemyFleet = fleetBuilder.build(fleets.get(match.getEnemy()));
 		if (!assembledPlayerFleet.isComplete() || !assembledEnemyFleet.isComplete()) {
-			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
-			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
+			api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
+			api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 999);
 			api.setFleetTagline(FleetSide.PLAYER, assembledPlayerFleet.isComplete()
 					? assembledPlayerFleet.getDefinition().getName() : strings.get("invalid_player_fleet"));
 			api.setFleetTagline(FleetSide.ENEMY, assembledEnemyFleet.isComplete()
@@ -146,5 +147,6 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		for (FleetMemberAPI member : assembledFleet.getMembers()) {
 			api.addFleetMember(side, member);
 		}
+		BattleNext_PersonSkills.apply(api.getDefaultCommander(side), definition.getSkills());
 	}
 }

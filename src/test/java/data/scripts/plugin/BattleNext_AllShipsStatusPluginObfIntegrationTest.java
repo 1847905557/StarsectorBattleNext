@@ -4,7 +4,10 @@ import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.SimpleName;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -47,22 +50,25 @@ class BattleNext_AllShipsStatusPluginObfIntegrationTest {
 	}
 
 	@Test
-	void runtimeDefinitionRemainsIndependentOfRegistrationAndOtherCallers() throws Exception {
+	void runtimeCallersUseCombatPluginRegistrationAndDataKeepStandaloneDefinition() throws Exception {
 
 		String name = "BattleNext_AllShipsStatusPlugin";
 		Path definition = Path.of("src/data/scripts/plugin", name + ".java");
 		JavaParser parser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		List<String> references = new ArrayList<>();
 		try (Stream<Path> paths = Files.walk(Path.of("src"))) {
 			for (Path path : paths.filter(file -> file.toString().endsWith(".java"))
 					.filter(file -> !file.startsWith(Path.of("src/test")) && !file.equals(definition)).sorted().toList()) {
 				var result = parser.parse(path);
 				assertTrue(result.isSuccessful(), path + ": " + result.getProblems());
 				var unit = result.getResult().orElseThrow();
-				if (unit.findAll(SimpleName.class).stream().anyMatch(identifier -> identifier.asString().equals(name))
-						|| unit.getImports().stream().anyMatch(entry -> entry.getNameAsString().endsWith("." + name))) {
-					references.add(path.toString());
+				for (SimpleName identifier : unit.findAll(SimpleName.class).stream()
+						.filter(value -> value.asString().equals(name)).toList()) {
+					var type = assertInstanceOf(ClassOrInterfaceType.class, identifier.getParentNode().orElseThrow(), path.toString());
+					var creation = assertInstanceOf(ObjectCreationExpr.class, type.getParentNode().orElseThrow(), path.toString());
+					var registration = assertInstanceOf(MethodCallExpr.class, creation.getParentNode().orElseThrow(), path.toString());
+					assertEquals("addPlugin", registration.getNameAsString(), path.toString());
+					assertTrue(registration.getArguments().contains(creation), path.toString());
 				}
 			}
 		}
@@ -73,11 +79,8 @@ class BattleNext_AllShipsStatusPluginObfIntegrationTest {
 					path.toString().substring(path.toString().lastIndexOf('.') + 1))).sorted().toList());
 		}
 		for (Path path : configs) {
-			if (Files.readString(path, StandardCharsets.UTF_8).contains(name)) {
-				references.add(path.toString());
-			}
+			assertFalse(Files.readString(path, StandardCharsets.UTF_8).contains(name), path.toString());
 		}
-		assertEquals(List.of(), references);
 	}
 
 	public static class Probe {

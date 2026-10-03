@@ -13,9 +13,6 @@ import java.util.List;
 public class BattleNext_EnvironmentPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final int MAX_FLEET_POINTS = 999;
-	private static final float COMMAND_POINTS = 999f;
-	private static final float FOG_REVEAL_RADIUS = 90000f;
-	private static final String COMMAND_POINT_MODIFIER = "BattleNext_EnvironmentPlugin";
 
 	private final float timeLimit;
 	private CombatEngineAPI engine;
@@ -52,10 +49,8 @@ public class BattleNext_EnvironmentPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getContext().fightToTheLast = true;
 		engine.getFleetManager(side).setCanForceShipsToEngageWhenBattleClearlyLost(true);
 		engine.getFleetManager(side).getTaskManager(false).setPreventFullRetreat(true);
-		engine.getFleetManager(side).getTaskManager(false).getCommandPointsStat().modifyFlat(COMMAND_POINT_MODIFIER, COMMAND_POINTS);
 		if (side == FleetSide.PLAYER) {
 			engine.getFleetManager(side).getTaskManager(true).setPreventFullRetreat(true);
-			engine.getFleetManager(side).getTaskManager(true).getCommandPointsStat().modifyFlat(COMMAND_POINT_MODIFIER, COMMAND_POINTS);
 		}
 	}
 
@@ -71,7 +66,8 @@ public class BattleNext_EnvironmentPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(false).setFullAssault(true);
 		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(true).setFullAssault(true);
 		engine.getFleetManager(FleetSide.ENEMY).getTaskManager(false).setFullAssault(true);
-		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
-		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
+		float mapSize = engine.getMapWidth() * 2f + engine.getMapHeight() * 2f;
+		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, mapSize);
+		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, mapSize);
 	}
 }

@@ -19,8 +19,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	public void defineMission(MissionDefinitionAPI api) {
 		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
 
-		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
-		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, false, 1);
+		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
+		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, false, 999);
 
 		api.addBriefingItem("TEST");
 		api.setFleetTagline(FleetSide.PLAYER, "1");

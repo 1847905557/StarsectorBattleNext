@@ -1,3 +1,16 @@
-BattleNext PvE
+时间：未知
+地点：英仙座星域外围
 
-Use the arrow keys to adjust the expected enemy fleet and faction selection.
+按住左右键单击任务从而在不同的目标势力之间切换。
+按住上下键单击任务从而提高或降低目标舰队的舰队点。
+
+按住 A/D 键单击任务从而在不同的我方舰队直接切换。
+我方舰队固定从 Quick Battle 中选取。
+
+按下 "右侧 Control" 键可以在战斗之中切换自由视角。
+在自由视角模式，按住 WASD 键控制镜头上下左右移动。
+鼠标滚轮可以放大、缩小场景。
+
+按住 "左侧 Shift" 键让比赛加速进行。
+
+在一定时间后，战争迷雾会解除，并且所有的舰船都会变得鲁莽。

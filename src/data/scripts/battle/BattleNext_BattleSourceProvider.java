@@ -80,6 +80,25 @@ public class BattleNext_BattleSourceProvider {
 			return next == null ? List.of() : validate(List.of(next), "tournament " + activeId);
 		}
 
+		return loadQuickBattleMatches();
+	}
+
+	public List<BattleNext_Match> loadQuickBattles() {
+		warnings.clear();
+		ruleWarnings.clear();
+		activeTournament = null;
+		try {
+			fleetStore.reload();
+		} catch (Exception exception) {
+			BattleNext_Logger.error(BattleNext_BattleSourceProvider.class, "battle.sources.load.failed",
+					BattleNext_Logger.fields().put("source", "quick battle").put("fleet_load_error", fleetStore.getLoadError()).build(), exception);
+			warnings.add("Unable to load battle sources: " + exception.getMessage());
+			return List.of();
+		}
+		return loadQuickBattleMatches();
+	}
+
+	private List<BattleNext_Match> loadQuickBattleMatches() {
 		BattleNext_QuickBattleStore quickBattleStore = new BattleNext_QuickBattleStore();
 		try {
 			quickBattleStore.reload();
