@@ -195,6 +195,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		}
 		captureTextFields();
 		draft.setFleetIds(fleets);
+		fleetField.setText(String.join(",", fleets));
 		refreshContent();
 		TextFieldAPI[] current = {idField, nameField, boField, maxFleetField, ruleField, mapField};
 		for (int field = 0; field < current.length; field++) current[field].setText(fields[field]);

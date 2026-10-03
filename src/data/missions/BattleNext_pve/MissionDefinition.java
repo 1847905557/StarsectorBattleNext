@@ -53,6 +53,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
+		api.addPlugin(new BattleNext_AllShipsStatusPlugin());
 		if (BattleNext_Settings.isRttInBattle()) {
 			api.addPlugin(new BattleNext_RttPlugin());
 		}

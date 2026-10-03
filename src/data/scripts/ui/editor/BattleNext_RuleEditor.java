@@ -115,6 +115,12 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
+		if (idField != null) captureInputs(false);
+		rebuildContent();
+	}
+
+	private void rebuildContent() {
+
 		String idValue = idField == null ? draft.getId() : idField.getText();
 		String nameValue = nameField == null ? draft.getName() : nameField.getText();
 		Map<String, String> values = new LinkedHashMap<>();
@@ -122,7 +128,6 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			for (var entry : valueFields.entrySet()) {
 				values.put(entry.getKey(), entry.getValue().getText());
 			}
-			captureInputs(false);
 		}
 		closePicker();
 		if (restrictionPicker != null) restrictionPicker.close();
@@ -291,7 +296,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			Collections.swap(restrictions, index, target);
 		}
 		draft.setRestrictions(restrictions);
-		refreshContent();
+		rebuildContent();
 	}
 
 	private void addRestrictions(List<String> ids) {
@@ -311,7 +316,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			restrictions.add(restriction);
 		}
 		draft.setRestrictions(restrictions);
-		refreshContent();
+		rebuildContent();
 	}
 
 	private void captureInputs(boolean validate) {
@@ -320,16 +325,15 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		draft.setName(nameField.getText());
 		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>();
 		for (BattleNext_RuleRestriction current : draft.getRestrictions()) {
-			BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(current.getId());
-			if (spec == null) {
+			if (!enabledFields.containsKey(current.getId())) {
 				restrictions.add(current);
 				continue;
 			}
-			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(current.getId(), spec.getType());
+			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(current.getId(), current.getType());
 			restriction.setEnabled(enabledFields.get(current.getId()).isChecked());
 			String input = valueFields.get(current.getId()).getText().trim();
 			try {
-				if ("number".equals(spec.getType())) {
+				if ("number".equals(current.getType())) {
 					restriction.setValue(Double.parseDouble(input));
 				} else if (!input.isEmpty()) {
 					List<String> items = new ArrayList<>();
@@ -338,9 +342,13 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 				}
 			} catch (RuntimeException exception) {
 				BattleNext_Logger.warn(BattleNext_RuleEditor.class, "rule.restriction.input.rejected",
-				BattleNext_Logger.fields().put("rule_id", draft.getId()).put("restriction_id", current.getId()).put("input", input).put("type", spec.getType()).put("validate", validate).put("fallback", current).build(), exception);
+				BattleNext_Logger.fields().put("rule_id", draft.getId()).put("restriction_id", current.getId()).put("input", input).put("type", current.getType()).put("validate", validate).put("fallback", current).build(), exception);
 				if (validate) throw new IllegalArgumentException(current.getId() + ": " + exception.getMessage(), exception);
-				restriction = current;
+				if ("number".equals(current.getType())) {
+					restriction.setValue(current.getValue());
+				} else {
+					restriction.setItems(current.getItems());
+				}
 			}
 			restrictions.add(restriction);
 		}

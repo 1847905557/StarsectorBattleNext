@@ -4,8 +4,10 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionField;
@@ -17,6 +19,38 @@ import java.util.List;
 import java.util.Map;
 
 class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
+
+	@Test
+	void participantReorderUpdatesSelectorAndPersistsNewOrder() throws Exception {
+
+		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
+		BattleNext_FleetStore fleets = new BattleNext_FleetStore();
+		BattleNext_RuleStore rules = new BattleNext_RuleStore();
+		tournaments.reload();
+		fleets.reload();
+		rules.reload();
+		for (String id : List.of("first", "second", "third")) {
+			fleets.save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
+		}
+		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournaments, fleets, rules);
+		editor.open(null);
+		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		((TextFieldAPI) getField(editor, "idField")).setText("cup");
+		((TextFieldAPI) getField(editor, "maxFleetField")).setText("3");
+		((TextFieldAPI) getField(editor, "fleetField")).setText("first,second,third");
+		editor.buttonPressed("fleet:apply");
+		((TextFieldAPI) getField(editor, "boField")).setText("pending");
+		editor.buttonPressed("fleet:up:2");
+		List<String> expected = List.of("first", "third", "second");
+		assertEquals(String.join(",", expected), ((TextFieldAPI) getField(editor, "fleetField")).getText());
+		assertEquals(expected, ((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
+		assertEquals("pending", ((TextFieldAPI) getField(editor, "boField")).getText());
+		editor.refreshContent();
+		((TextFieldAPI) getField(editor, "boField")).setText("3");
+		assertTrue(editor.save(), editor.getStatusText());
+		tournaments.reload();
+		assertEquals(expected, tournaments.get("cup").getFleetIds());
+	}
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {

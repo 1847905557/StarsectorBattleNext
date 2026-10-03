@@ -12,12 +12,49 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.member.BattleNext_MemberModel;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
+
+	@ParameterizedTest
+	@CsvSource({"0,false", "1,false", "0,true", "1,true"})
+	void memberRemovalKeepsSurvivorFieldsBoundToTheirOwnData(int removed, boolean collapsed) throws Exception {
+
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
+		editor.open(null, false);
+		editor.setInputRouter(router);
+		editor.setOverlayHost(root);
+		editor.attach(root);
+		for (int index = 0; index < 3; index++) {
+			editor.buttonPressed("add_member");
+		}
+		List<?> fields = (List<?>) getField(editor, "memberFields");
+		List<String> names = List.of("first", "second", "third");
+		for (int index = 0; index < names.size(); index++) {
+			((TextFieldAPI) getField(fields.get(index), "name")).setText(names.get(index));
+			((TextFieldAPI) getField(fields.get(index), "orders")).setText("orders_" + names.get(index));
+		}
+		if (collapsed) editor.buttonPressed("toggle_member:2");
+		editor.buttonPressed("remove_member:" + removed);
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
+		List<String> expected = IntStream.range(0, names.size()).filter(index -> index != removed)
+				.mapToObj(names::get).toList();
+		assertEquals(expected, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(expected.stream().map(name -> "orders_" + name).toList(),
+				draft.getMembers().stream().map(BattleNext_MemberModel::getOrders).toList());
+		editor.refreshContent();
+		editor.closePicker();
+		assertEquals(expected, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertTrue(router.isEmpty());
+	}
 
 	@ParameterizedTest
 	@CsvSource({"1000, 12", "1000, 17", "1000, 20", "320, 17"})

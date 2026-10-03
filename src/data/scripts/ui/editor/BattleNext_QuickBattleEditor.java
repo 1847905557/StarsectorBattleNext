@@ -23,6 +23,7 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,25 +88,11 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public void attach(CustomPanelAPI panel) {
 		boolean opened = !loaded;
-		List<QuickBattleEditorRow> previous = new ArrayList<>(rows);
 		this.panel = panel;
 		if (opened) {
 			load();
 		}
 		createContents();
-		for (int index = 0; index < previous.size(); index++) {
-			QuickBattleEditorRow old = previous.get(index);
-			QuickBattleEditorRow current = rows.get(index);
-			if (old.model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-				current.raw.setText(old.raw.getText());
-			} else {
-				current.player.setText(old.player.getText());
-				current.enemy.setText(old.enemy.getText());
-				current.map.setText(old.map.getText());
-				current.mapScale.setText(old.mapScale.getText());
-			}
-			current.enabled.setChecked(old.enabled.isChecked());
-		}
 		if (opened) {
 			savedFields = serializeState();
 		}
@@ -204,6 +191,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	@Override
 	public void createContents() {
 
+		Map<BattleNext_QuickBattleModel, RowInput> inputs = captureRowInputs();
+		rows.clear();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
 		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
@@ -243,16 +232,42 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
 		panel.addUIElement(statusContent).inTL(statusX, footerRect.getY());
 
-		refreshContent();
+		rebuildContent(inputs);
 	}
 
 	@Override
 	public void refreshContent() {
 		if (panel == null) return;
+		rebuildContent(captureRowInputs());
+	}
+
+	private Map<BattleNext_QuickBattleModel, RowInput> captureRowInputs() {
+		Map<BattleNext_QuickBattleModel, RowInput> inputs = new IdentityHashMap<>();
+		for (QuickBattleEditorRow row : rows) {
+			boolean raw = row.raw != null;
+			List<String> values = raw ? List.of(row.raw.getText())
+					: List.of(row.player.getText(), row.enemy.getText(), row.map.getText(), row.mapScale.getText());
+			inputs.put(row.model, new RowInput(raw, values, row.enabled.isChecked()));
+		}
+		return inputs;
+	}
+
+	private void rebuildContent(Map<BattleNext_QuickBattleModel, RowInput> inputs) {
+
 		inputRouter.clear();
 		rows.clear();
 		tableWidget.setRowCount(entries.size());
 		tableWidget.refresh();
+		for (QuickBattleEditorRow row : rows) {
+			RowInput input = inputs.get(row.model);
+			if (input == null || input.raw() != (row.raw != null)) continue;
+			TextFieldAPI[] fields = input.raw() ? new TextFieldAPI[]{row.raw}
+					: new TextFieldAPI[]{row.player, row.enemy, row.map, row.mapScale};
+			for (int index = 0; index < fields.length; index++) {
+				fields[index].setText(input.values().get(index));
+			}
+			row.enabled.setChecked(input.enabled());
+		}
 
 		refreshRowStatuses();
 	}
@@ -401,8 +416,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			BattleNext_QuickBattleModel parsed = BattleNext_QuickBattleModel.parseLine(
 					row.raw.getText(), row.model.usesLegacyIds());
 			if (parsed != null && parsed.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
+				Map<BattleNext_QuickBattleModel, RowInput> inputs = captureRowInputs();
 				row.model.promoteRaw(row.raw.getText());
-				refreshContent();
+				rebuildContent(inputs);
 				return true;
 			}
 		}
@@ -455,14 +471,17 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 	}
 
 	private boolean captureFields(int skipIndex) {
+
+		List<BattleNext_QuickBattleModel> parsed = new ArrayList<>();
 		for (int index = 0; index < rows.size(); index++) {
 			if (index == skipIndex) {
 				continue;
 			}
 			QuickBattleEditorRow row = rows.get(index);
-			BattleNext_QuickBattleModel model = row.model;
-			if (model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
+			BattleNext_QuickBattleModel model = row.model.copy();
+			if (row.raw != null) {
 				model.promoteRaw(row.raw.getText());
+				parsed.add(model);
 				continue;
 			}
 			try {
@@ -482,6 +501,7 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				model.setEnabled(row.enabled.isChecked());
 				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE
 						: model.getRowType());
+				parsed.add(model);
 			} catch (NumberFormatException exception) {
 				BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
 				BattleNext_Logger.fields().put("index", index).put("player", row.player.getText()).put("enemy", row.enemy.getText()).put("map", row.map.getText()).put("scale", row.mapScale.getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
@@ -489,9 +509,19 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				return false;
 			}
 		}
-		if (skipIndex >= 0) {
-			entries.remove(skipIndex);
+		entries.clear();
+		entries.addAll(parsed);
+		boolean changedShape = false;
+		int target = 0;
+		for (int index = 0; index < rows.size(); index++) {
+			if (index == skipIndex) continue;
+			QuickBattleEditorRow row = rows.get(index);
+			row.model = parsed.get(target++);
+			if (row.raw != null && row.model.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
+				changedShape = true;
+			}
 		}
+		if (changedShape) rebuildContent(captureRowInputs());
 		return true;
 	}
 
@@ -542,6 +572,10 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 			status.setText(statusContent.shortenString(value,
 					statusContent.getPosition().getWidth() - STATUS_CONTENT_WIDTH_RESERVE));
 		}
+	}
+
+	private record RowInput(boolean raw, List<String> values, boolean enabled) {
+
 	}
 
 	private static final class QuickBattleEditorRow {

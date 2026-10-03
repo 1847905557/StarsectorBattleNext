@@ -100,6 +100,10 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	public void closePicker() {
 		captureDraft(false);
+		closeOverlays();
+	}
+
+	private void closeOverlays() {
 		if (skillsPicker != null) skillsPicker.closeOverlays();
 		for (BattleNext_OptionField picker : memberPickers) {
 			picker.closeOverlays();
@@ -144,7 +148,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			members.add(new BattleNext_MemberModel());
 			draft.setMembers(members);
 			expandedMembers.add(members.size() - 1);
-			refreshContent();
+			rebuildContent();
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("remove_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("remove_member:".length()));
 			if (!captureDraft(false)) return;
@@ -159,12 +163,12 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			}
 			expandedMembers.clear();
 			expandedMembers.addAll(adjusted);
-			refreshContent();
+			rebuildContent();
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("toggle_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("toggle_member:".length()));
 			if (!captureDraft(false)) return;
 			if (!expandedMembers.add(index)) expandedMembers.remove(index);
-			refreshContent();
+			rebuildContent();
 		}
 	}
 
@@ -176,7 +180,13 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 
 	@Override
 	public void refreshContent() {
-		closePicker();
+		captureDraft(false);
+		rebuildContent();
+	}
+
+	private void rebuildContent() {
+
+		closeOverlays();
 		if (skillsPicker != null) skillsPicker.close();
 		for (BattleNext_OptionField picker : memberPickers) {
 			picker.close();
