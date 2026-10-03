@@ -5,6 +5,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.ai.rtt.BattleNext_RttGeometry;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
 import data.scripts.order.BattleNext_OrderField;
+import data.scripts.tools.BattleNext_CombatInput;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.util.vector.Vector2f;
 
@@ -29,6 +30,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	private final Map<ShipAPI, BattleNext_RttShipAI> controlled = new IdentityHashMap<>();
 	private final Map<ShipAPI, ShipAIPlugin> previousAis = new IdentityHashMap<>();
 	private CombatEngineAPI engine;
+
 	private boolean pressing;
 	private boolean dragging;
 	private boolean addSelection;
@@ -47,13 +49,12 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
+
 		if (engine == null || engine.isCombatOver()) return;
-		prune();
+
+		updateControlState();
 		boolean active = acceptsMouseInput();
-		if (!active) {
-			pressing = false;
-			dragging = false;
-		}
+
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isControlDownEvent(AUTOPILOT_CONTROL) && releaseSelected()) {
@@ -113,12 +114,32 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
+
 		if (engine == null) return;
 		if (engine.isCombatOver()) {
 			cleanup();
 			return;
 		}
+		updateControlState();
+	}
+
+	private void updateControlState() {
 		prune();
+		if (!acceptsMouseInput()) {
+			pressing = false;
+			dragging = false;
+			addSelection = false;
+		}
+	}
+
+	private boolean acceptsMouseInput() {
+		return acceptsMouseInput(engine);
+	}
+
+	static boolean acceptsMouseInput(CombatEngineAPI engine) {
+		return !BattleNext_CombatInput.isPlayerPlaying(engine)
+				&& engine.getViewport().isExternalControl()
+				&& !BattleNext_CombatInput.isUiCovered(engine);
 	}
 
 	@Override
@@ -260,19 +281,6 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 		return ship.isAlive() && !ship.isExpired() && engine.getShips().contains(ship)
 				&& ship.getOwner() == 0 && ship.getOriginalOwner() == 0
 				&& !ship.isFighter() && !ship.isDrone() && !ship.isStation() && !ship.isStationModule();
-	}
-
-	private boolean acceptsMouseInput() {
-		return acceptsMouseInput(engine);
-	}
-
-	static boolean acceptsMouseInput(CombatEngineAPI engine) {
-		ShipAPI player = engine.getPlayerShip();
-		return (!player.isAlive() || player.isShuttlePod())
-				&& engine.getViewport().isExternalControl()
-				&& !engine.getCombatUI().isShowingCommandUI()
-				&& !engine.getCombatUI().isShowingDeploymentDialog()
-				&& !engine.isUIShowingDialog();
 	}
 
 	private void circle(Vector2f center, float radius, Color color) {

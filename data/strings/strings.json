@@ -171,8 +171,9 @@
 		"BattleNext_settings_boost_time_mult": "Boost time multiplier",
 		"BattleNext_settings_default_time_mult": "Default time multiplier",
 		"BattleNext_settings_description": "Interface and battle settings.",
-		"BattleNext_settings_full_graphic_effect": "Full graphic effects",
+		"BattleNext_settings_full_graphic_effect": "Enable full graphic effects",
 		"BattleNext_settings_heading": "Settings management",
+		"BattleNext_settings_info_log": "Enable info log",
 		"BattleNext_settings_invalid_number": "Enter a valid nonnegative limit or count and positive time multipliers",
 		"BattleNext_settings_report_keep_count": "Reports to keep",
 		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in Mission Battle"

@@ -38,7 +38,7 @@ class BattleNext_I18nSectionTest {
 				Map.entry("Battle", 22), Map.entry("Combat", 4), Map.entry("Common", 30),
 				Map.entry("Fleet", 25), Map.entry("Management", 10), Map.entry("Member", 8),
 				Map.entry("Refit", 6), Map.entry("Report", 26), Map.entry("Rule", 18),
-				Map.entry("Settings", 9), Map.entry("Tournament", 63), Map.entry("Variant", 38));
+				Map.entry("Settings", 10), Map.entry("Tournament", 63), Map.entry("Variant", 38));
 		Map<String, Integer> counts = new TreeMap<>();
 		String raw = BattleNext_TestTextCatalog.source();
 		List<String> ordered = new ArrayList<>();
@@ -53,7 +53,7 @@ class BattleNext_I18nSectionTest {
 			ordered.add(key.id());
 		}
 		assertEquals(expected, counts);
-		assertEquals(259, ordered.size());
+		assertEquals(260, ordered.size());
 		List<String> rawOrder = Pattern.compile("\"(BattleNext_[a-z0-9_]+)\"\\s*:")
 				.matcher(raw).results().map(match -> match.group(1)).toList();
 		assertEquals(ordered, rawOrder);
@@ -71,7 +71,7 @@ class BattleNext_I18nSectionTest {
 			consumed.add(read.key());
 		}
 		assertEquals(BattleNext_TestTextCatalog.entries().keySet(), consumed);
-		assertTrue(reads.size() >= 259);
+		assertTrue(reads.size() >= 260);
 	}
 
 	@Test

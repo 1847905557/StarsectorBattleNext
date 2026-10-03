@@ -1,10 +1,16 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
+import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,8 +18,69 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
+
+	@Test
+	void infoLogCheckboxFollowsGraphicsAndPersistsThroughSaveRefreshDiscardAndReopen() throws Exception {
+
+		SettingsAPI delegate = Global.getSettings();
+		Field valuesField = BattleNext_Settings.class.getDeclaredField("values");
+		valuesField.setAccessible(true);
+		Object previousValues = valuesField.get(null);
+		AtomicReference<JSONObject> stored = new AtomicReference<>(new JSONObject());
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "readJSONFromCommon" -> stored.get();
+					case "writeJSONToCommon" -> {
+						stored.set(new JSONObject(((JSONObject) args[1]).toString()));
+						yield null;
+					}
+					default -> method.invoke(delegate, args);
+				}));
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
+		try {
+			page.attach(root);
+			ButtonAPI logging = (ButtonAPI) getField(page, "infoLog");
+			assertFalse(logging.isChecked());
+			assertEquals("Enable full graphic effects", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("fullGraphicEffect")));
+			assertEquals("Enable info log", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("infoLog")));
+			assertEquals(36f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
+			assertEquals(36f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
+			logging.setChecked(true);
+			assertTrue(page.hasUnsavedChanges());
+			assertFalse(BattleNext_Settings.isInfoLogEnabled());
+			page.refreshContent();
+			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			assertTrue(page.hasUnsavedChanges());
+			page.discard();
+			assertFalse(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			assertFalse(page.hasUnsavedChanges());
+			((ButtonAPI) getField(page, "infoLog")).setChecked(true);
+			assertTrue(page.save());
+			assertTrue(stored.get().getBoolean("infoLog"));
+			assertTrue(BattleNext_Settings.isInfoLogEnabled());
+			assertFalse(page.hasUnsavedChanges());
+			page.attach(root);
+			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			((ButtonAPI) getField(page, "infoLog")).setChecked(false);
+			page.discard();
+			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			((ButtonAPI) getField(page, "infoLog")).setChecked(false);
+			assertTrue(page.save());
+			assertFalse(BattleNext_Settings.isInfoLogEnabled());
+			page.attach(root);
+			assertFalse(((ButtonAPI) getField(page, "infoLog")).isChecked());
+		} finally {
+			page.close();
+			Global.setSettings(delegate);
+			valuesField.set(null, previousValues);
+		}
+	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {180, 1400})

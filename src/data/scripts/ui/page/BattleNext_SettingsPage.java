@@ -28,6 +28,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	private CustomPanelAPI contentPanel;
 	private ButtonAPI saveButton;
 	private ButtonAPI fullGraphicEffect;
+	private ButtonAPI infoLog;
 	private ButtonAPI rttInBattle;
 	private TextFieldAPI battleTimeLimit;
 	private TextFieldAPI defaultTimeMult;
@@ -38,6 +39,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	@Override
 	protected void loadPageState() {
 		fullGraphicEffect = null;
+		infoLog = null;
 		rttInBattle = null;
 		status = "";
 		BattleNext_Settings.load();
@@ -69,6 +71,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	protected void refreshPage() {
 
 		boolean graphics = fullGraphicEffect == null ? BattleNext_Settings.isFullGraphicEffect() : fullGraphicEffect.isChecked();
+		boolean logging = infoLog == null ? BattleNext_Settings.isInfoLogEnabled() : infoLog.isChecked();
 		boolean rtt = rttInBattle == null ? BattleNext_Settings.isRttInBattle() : rttInBattle.isChecked();
 		String[] values = fullGraphicEffect == null
 				? new String[]{Float.toString(BattleNext_Settings.getBattleTimeLimit()),
@@ -88,6 +91,11 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 				settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", ButtonAPI.UICheckboxSize.SMALL,
 				GRAPHICS_CHECKBOX_TOP_GAP);
 		fullGraphicEffect.setChecked(graphics);
+		infoLog = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
+				GRAPHICS_CHECKBOX_HEIGHT,
+				settingsStrings.get("info_log"), "infoLog", ButtonAPI.UICheckboxSize.SMALL,
+				GRAPHICS_CHECKBOX_TOP_GAP);
+		infoLog.setChecked(logging);
 		rttInBattle = content.addCheckbox(contentRect.getWidth() - GRAPHICS_CHECKBOX_WIDTH_RESERVE,
 				GRAPHICS_CHECKBOX_HEIGHT,
 				settingsStrings.get("rtt_in_battle"), "rttInBattle", ButtonAPI.UICheckboxSize.SMALL,
@@ -123,7 +131,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 			float defaultMult = parsePositive(defaultTimeMult.getText());
 			float boostMult = parsePositive(boostTimeMult.getText());
 			int keepCount = parseCount(reportKeepCount.getText());
-			BattleNext_Settings.save(fullGraphicEffect.isChecked(), rttInBattle.isChecked(),
+			BattleNext_Settings.save(fullGraphicEffect.isChecked(), infoLog.isChecked(), rttInBattle.isChecked(),
 					timeLimit, defaultMult, boostMult, keepCount);
 			savedState = serializeState();
 			status = strings.get("saved");
@@ -138,6 +146,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	protected void discardPage() {
 		BattleNext_Settings.load();
 		fullGraphicEffect.setChecked(BattleNext_Settings.isFullGraphicEffect());
+		infoLog.setChecked(BattleNext_Settings.isInfoLogEnabled());
 		rttInBattle.setChecked(BattleNext_Settings.isRttInBattle());
 		battleTimeLimit.setText(Float.toString(BattleNext_Settings.getBattleTimeLimit()));
 		defaultTimeMult.setText(Float.toString(BattleNext_Settings.getDefaultTimeMult()));
@@ -158,7 +167,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 
 	private String serializeState() {
 		if (fullGraphicEffect == null) return "";
-		return fullGraphicEffect.isChecked() + "|" + rttInBattle.isChecked() + "|" + battleTimeLimit.getText() + "|"
+		return fullGraphicEffect.isChecked() + "|" + infoLog.isChecked() + "|" + rttInBattle.isChecked() + "|" + battleTimeLimit.getText() + "|"
 				+ defaultTimeMult.getText() + "|" + boostTimeMult.getText() + "|" + reportKeepCount.getText();
 	}
 

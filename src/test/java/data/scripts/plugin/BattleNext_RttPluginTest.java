@@ -25,6 +25,52 @@ class BattleNext_RttPluginTest {
 	}
 
 	@Test
+	void advanceClearsUiCoveredGestureWhilePreservingSelectedShips() throws ReflectiveOperationException {
+
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
+		ShipAPI ship = commandShip(new AtomicInteger(), new AtomicInteger());
+		plugin.init(commandEngine(List.of(ship), true, new AtomicInteger()));
+		select(plugin, ship);
+		for (String name : List.of("pressing", "dragging", "addSelection")) {
+			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.setBoolean(plugin, true);
+		}
+		plugin.advance(0f, List.of());
+		for (String name : List.of("pressing", "dragging", "addSelection")) {
+			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
+			field.setAccessible(true);
+			assertFalse(field.getBoolean(plugin), name);
+		}
+		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
+		selected.setAccessible(true);
+		assertEquals(Set.of(ship), selected.get(plugin));
+	}
+
+	@Test
+	void advancePreservesUncoveredGestureAndSelection() throws ReflectiveOperationException {
+
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
+		ShipAPI ship = commandShip(new AtomicInteger(), new AtomicInteger());
+		plugin.init(commandEngine(List.of(ship), false, new AtomicInteger()));
+		select(plugin, ship);
+		for (String name : List.of("pressing", "dragging", "addSelection")) {
+			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.setBoolean(plugin, true);
+		}
+		plugin.advance(0f, List.of());
+		for (String name : List.of("pressing", "dragging", "addSelection")) {
+			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
+			field.setAccessible(true);
+			assertTrue(field.getBoolean(plugin), name);
+		}
+		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
+		selected.setAccessible(true);
+		assertEquals(Set.of(ship), selected.get(plugin));
+	}
+
+	@Test
 	void ventOrdersEverySelectedShipWithoutReplacingAi() throws ReflectiveOperationException {
 		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		AtomicInteger firstCommands = new AtomicInteger();

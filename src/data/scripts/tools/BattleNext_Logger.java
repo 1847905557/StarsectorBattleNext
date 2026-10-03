@@ -78,6 +78,7 @@ public class BattleNext_Logger {
 	}
 
 	private static void emit(Level level, Class<?> source, String event, String phase, Fields fields, Throwable exception) {
+		if (level == Level.INFO && !BattleNext_Settings.isInfoLogEnabled()) return;
 		try {
 			LOGGER.log(level, format(source, event, phase, fields, exception));
 		} catch (Exception failure) {

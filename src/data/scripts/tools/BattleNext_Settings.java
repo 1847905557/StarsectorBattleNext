@@ -10,6 +10,7 @@ public class BattleNext_Settings {
 
 	private static final String PATH = "AI_Battles_Next/settings.json";
 	private static final boolean DEFAULT_FULL_GRAPHIC_EFFECT = true;
+	private static final boolean DEFAULT_INFO_LOG = false;
 	private static final boolean DEFAULT_RTT_IN_BATTLE = false;
 	private static final float DEFAULT_BATTLE_TIME_LIMIT = 500f;
 	private static final float DEFAULT_TIME_MULT = 1f;
@@ -45,6 +46,10 @@ public class BattleNext_Settings {
 		return values.optBoolean("fullGraphicEffect", DEFAULT_FULL_GRAPHIC_EFFECT);
 	}
 
+	public static boolean isInfoLogEnabled() {
+		return values != null && values.optBoolean("infoLog", DEFAULT_INFO_LOG);
+	}
+
 	public static boolean isRttInBattle() {
 		ensureLoaded();
 		return values.optBoolean("rttInBattle", DEFAULT_RTT_IN_BATTLE);
@@ -70,10 +75,10 @@ public class BattleNext_Settings {
 		return values.optInt("reportKeepCount", DEFAULT_REPORT_KEEP_COUNT);
 	}
 
-	public static void save(boolean fullGraphicEffect, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
+	public static void save(boolean fullGraphicEffect, boolean infoLog, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
 			float boostTimeMult, int reportKeepCount) {
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("full_graphic_effect", fullGraphicEffect)
-				.put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
+				.put("info_log", infoLog).put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
 				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).build();
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.save", input);
 		try {
@@ -83,6 +88,7 @@ public class BattleNext_Settings {
 			if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
 			JSONObject next = defaults();
 			put(next, "fullGraphicEffect", fullGraphicEffect);
+			put(next, "infoLog", infoLog);
 			put(next, "rttInBattle", rttInBattle);
 			put(next, "battleTimeLimit", battleTimeLimit);
 			put(next, "defaultTimeMult", defaultTimeMult);
@@ -133,6 +139,7 @@ public class BattleNext_Settings {
 	private static JSONObject defaults() {
 		JSONObject result = new JSONObject();
 		put(result, "fullGraphicEffect", DEFAULT_FULL_GRAPHIC_EFFECT);
+		put(result, "infoLog", DEFAULT_INFO_LOG);
 		put(result, "rttInBattle", DEFAULT_RTT_IN_BATTLE);
 		put(result, "battleTimeLimit", DEFAULT_BATTLE_TIME_LIMIT);
 		put(result, "defaultTimeMult", DEFAULT_TIME_MULT);
@@ -145,6 +152,7 @@ public class BattleNext_Settings {
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.merge",
 				BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
+		putIf(values, "infoLog", stored.has("infoLog") ? stored.optBoolean("infoLog") : null);
 		putIf(values, "rttInBattle", stored.has("rttInBattle") ? stored.optBoolean("rttInBattle") : null);
 		putIf(values, "battleTimeLimit", validNumber(stored, "battleTimeLimit", false));
 		putIf(values, "defaultTimeMult", validNumber(stored, "defaultTimeMult", true));
