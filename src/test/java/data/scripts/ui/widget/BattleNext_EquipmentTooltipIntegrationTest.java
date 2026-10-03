@@ -1,5 +1,9 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.ui.page.BattleNext_BattleReportPage;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.HullModEffect;
@@ -126,7 +130,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		var details = new BattleNext_VariantDetails(() -> {});
 		((Set<Integer>) getField(details, "expanded")).add(0);
 		details.setVariantJson(snapshot);
-		details.attach(panel(1000f, 601f, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin()));
+		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
 		var hover = tooltip(360f, 80f, false);
 		if (kind.equals("hullmod")) {
 			var card = tooltips.get(lists(details).get("plugins")).getComponents().get(0);
@@ -178,14 +182,14 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	void reportEquipmentSourcesUseTheSameDescriptionsAndRawIdentifiers(String kind) throws Exception {
 
 		String id = kind.equals("ship") ? "child" : kind.equals("weapon") ? "laser" : "wing";
-		var page = new data.scripts.ui.page.BattleNext_BattleReportPage(() -> {}, Runnable::run,
+		var page = new BattleNext_BattleReportPage(() -> {}, Runnable::run,
 				(description, action) -> {});
-		var body = panel(600f, 100f, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
+		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
 		var list = body.createUIElement(600f, 100f, false);
 		var method = page.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
-				TooltipMakerAPI.class, data.scripts.report.BattleNext_DamageSourceReport.class, float.class);
+				TooltipMakerAPI.class, BattleNext_DamageSourceReport.class, float.class);
 		method.setAccessible(true);
-		method.invoke(page, body, list, new data.scripts.report.BattleNext_DamageSourceReport(kind, id), 600f);
+		method.invoke(page, body, list, new BattleNext_DamageSourceReport(kind, id), 600f);
 		var row = tooltips.get(list).getComponents().get(0);
 		var hover = tooltip(360f, 80f, false);
 		attachedTooltips.get(row).createTooltip(hover, false, null);

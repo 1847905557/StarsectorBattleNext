@@ -12,7 +12,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		data.scripts.ui.editor.BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
+		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		
 		editor.setInputRouter(new BattleNext_UiInputRouter());
 		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());

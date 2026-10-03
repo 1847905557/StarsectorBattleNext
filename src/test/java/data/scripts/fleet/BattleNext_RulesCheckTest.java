@@ -1,19 +1,21 @@
-package data.model.rule;
+package data.scripts.fleet;
 
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.rule.BattleNext_RuleModel;
+import data.model.rule.BattleNext_RuleRestriction;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.restriction.BattleNext_RestrictionRegistry;
-import data.restriction.BattleNext_RestrictionSpec;
 import data.restriction.BattleNext_RestrictionScript;
-import data.scripts.tools.BattleNext_CsvLine;
-import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.restriction.BattleNext_RestrictionSpec;
 import data.scripts.member.BattleNext_MemberModel;
-import org.json.JSONObject;
+import data.scripts.tools.BattleNext_CsvLine;
 import org.json.JSONArray;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,13 +23,7 @@ import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 class BattleNext_RulesCheckTest {
 

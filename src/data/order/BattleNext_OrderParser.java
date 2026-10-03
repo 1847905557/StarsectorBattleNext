@@ -51,9 +51,15 @@ public class BattleNext_OrderParser {
 	public static List<OrderParseResult> parseScript(String script, BattleNext_OrderRegistry registry) {
 		if (script == null) return List.of();
 		List<OrderParseResult> results = new ArrayList<>();
+		int lineNumber = 0;
 		for (String line : script.split("\\R")) {
+			lineNumber++;
 			for (String expression : line.split(";", -1)) {
-				if (!expression.trim().isEmpty()) results.add(parse(expression, registry));
+				if (expression.trim().isEmpty()) continue;
+				OrderParseResult result = parse(expression, registry);
+				result.instructionNumber = results.size() + 1;
+				result.lineNumber = lineNumber;
+				results.add(result);
 			}
 		}
 		return results;
@@ -132,6 +138,8 @@ public class BattleNext_OrderParser {
 
 		private final ParsedOrderCommand command;
 		private final String error;
+		private int instructionNumber = 1;
+		private int lineNumber = 1;
 
 		private OrderParseResult(ParsedOrderCommand command, String error) {
 			this.command = command;
@@ -148,6 +156,14 @@ public class BattleNext_OrderParser {
 
 		public boolean isValid() {
 			return command != null;
+		}
+
+		public int getInstructionNumber() {
+			return instructionNumber;
+		}
+
+		public int getLineNumber() {
+			return lineNumber;
 		}
 
 		public ParsedOrderCommand getCommand() {

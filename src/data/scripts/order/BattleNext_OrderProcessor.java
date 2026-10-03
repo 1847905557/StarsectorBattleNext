@@ -6,53 +6,56 @@ import data.order.BattleNext_OrderParser;
 import data.order.BattleNext_OrderRegistry;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class BattleNext_OrderProcessor {
 
-	private final List<BattleNext_OrderThread> threads = new ArrayList<>();
+	private final List<Instruction> instructions = new ArrayList<>();
 	private final String shipLabel;
 	private final Consumer<String> report;
-	private BattleNext_OrderThread lastThread;
 
 	public BattleNext_OrderProcessor(String script, String shipLabel, BattleNext_OrderRegistry registry, Consumer<String> report) {
 
 		this.shipLabel = shipLabel;
 		this.report = report;
-		List<BattleNext_OrderParser.OrderParseResult> parsed = BattleNext_OrderParser.parseScript(script, registry);
-		for (int index = 0; index < parsed.size(); index++) {
-			BattleNext_OrderParser.OrderParseResult result = parsed.get(index);
-			if (!result.isValid()) {
-				report.accept(shipLabel + " instruction " + (index + 1) + ": " + result.getError());
+		for (BattleNext_OrderParser.OrderParseResult parsed : BattleNext_OrderParser.parseScript(script, registry)) {
+			String location = shipLabel + " instruction " + parsed.getInstructionNumber() + " line " + parsed.getLineNumber();
+			if (!parsed.isValid()) {
+				report.accept(location + ": " + parsed.getError());
 				continue;
 			}
 			try {
-				threads.add(new BattleNext_OrderThread(result.getCommand(), registry));
-			} catch (RuntimeException exception) {
-				report.accept(shipLabel + " instruction " + (index + 1) + ": " + exception.getMessage());
+				instructions.add(new Instruction(parsed.getInstructionNumber(), parsed.getLineNumber(),
+						new BattleNext_OrderThread(parsed.getCommand(), registry)));
+			} catch (BattleNext_OrderThread.OrderScriptExecutionException exception) {
+				report.accept(location + " script " + exception.getScriptId() + ": " + exception.getCause());
 			}
 		}
 	}
 
 	public boolean isEmpty() {
-		return threads.isEmpty();
+		return instructions.isEmpty();
 	}
 
 	public void advance(ShipAPI ship, CombatEngineAPI engine, BattleNext_OrderField field) {
 
-		if (field.hasPlayerForcedAssignment(ship)) return;
-		for (int index = 0; index < threads.size(); index++) {
-			BattleNext_OrderThread thread = threads.get(index);
+		if (field.hasExternalAssignment(ship)) return;
+		Iterator<Instruction> iterator = instructions.iterator();
+		while (iterator.hasNext()) {
+			Instruction instruction = iterator.next();
 			try {
-				if (!thread.advance(ship, engine, field, lastThread == thread)) continue;
-				lastThread = thread;
-				return;
+				if (instruction.thread.advance(ship, engine, field)) return;
 			} catch (BattleNext_OrderThread.OrderScriptExecutionException exception) {
-				report.accept(shipLabel + " instruction " + (index + 1) + " script " + exception.getScriptId()
-						+ ": " + exception.getCause());
+				report.accept(shipLabel + " instruction " + instruction.number + " line " + instruction.line
+						+ " script " + exception.getScriptId() + ": " + exception.getCause());
+				iterator.remove();
+				field.releaseShip(ship);
 			}
 		}
-		lastThread = null;
+		field.releaseShip(ship);
 	}
+
+	private record Instruction(int number, int line, BattleNext_OrderThread thread) { }
 }

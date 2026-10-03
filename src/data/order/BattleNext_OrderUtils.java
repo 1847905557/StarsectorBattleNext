@@ -1,16 +1,17 @@
 package data.order;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.AssignmentTargetAPI;
 import com.fs.starfarer.api.combat.BattleObjectiveAPI;
+import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
+import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 
-import org.lazywizard.lazylib.combat.AIUtils;
-
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,82 +23,102 @@ public class BattleNext_OrderUtils {
 	public static final String HULL_TYPE_ANY = "any";
 	public static final String HULL_TYPE_PHASE = "phase";
 	public static final String HULL_TYPE_CARRIER = "carrier";
-	private static final Map<String, HullSize> HULL_SIZES = new HashMap<>();
-
-	static {
-		HULL_SIZES.put("frigate", HullSize.FRIGATE);
-		HULL_SIZES.put("destroyer", HullSize.DESTROYER);
-		HULL_SIZES.put("cruiser", HullSize.CRUISER);
-		HULL_SIZES.put("capital", HullSize.CAPITAL_SHIP);
-	}
+	private static final Map<String, HullSize> HULL_SIZES = Map.of(
+			"frigate", HullSize.FRIGATE, "destroyer", HullSize.DESTROYER,
+			"cruiser", HullSize.CRUISER, "capital", HullSize.CAPITAL_SHIP);
 
 	private BattleNext_OrderUtils() {
+
 	}
 
 	public static HullSize hullSize(String value) {
 		return HULL_SIZES.get(value);
 	}
 
-	public static List<ShipAPI> enemies(ShipAPI source) {
-		return valid(AIUtils.getEnemiesOnMap(source));
+	public static List<ShipAPI> enemies(ShipAPI source, CombatEngineAPI engine) {
+		return ships(source, engine, false);
 	}
 
-	public static List<ShipAPI> allies(ShipAPI source) {
-		return valid(AIUtils.getAlliesOnMap(source));
+	public static List<ShipAPI> allies(ShipAPI source, CombatEngineAPI engine) {
+		return ships(source, engine, true);
 	}
 
-	private static List<ShipAPI> valid(List<ShipAPI> ships) {
+	private static List<ShipAPI> ships(ShipAPI source, CombatEngineAPI engine, boolean allied) {
 		List<ShipAPI> result = new ArrayList<>();
-		for (ShipAPI ship : ships) {
-			if (isValid(ship)) {
-				result.add(ship);
-			}
+		for (ShipAPI ship : engine.getShips()) {
+			if (ship == source) continue;
+			if (!isValid(ship, engine)) continue;
+			if (ship.getOwner() == 100) continue;
+			if ((ship.getOwner() == source.getOwner()) != allied) continue;
+			if (toTarget(ship, engine) == null) continue;
+			result.add(ship);
 		}
 		return result;
 	}
 
-	public static boolean isValid(ShipAPI ship) {
-		return ship.isAlive() && !ship.isFighter() && !ship.isDrone() && !ship.isStationModule();
+	public static boolean isValid(ShipAPI ship, CombatEngineAPI engine) {
+		return ship.isAlive() && !ship.isExpired() && !ship.isFighter() && !ship.isDrone()
+				&& !ship.isStationModule() && engine.isEntityInPlay(ship);
 	}
 
-	public static List<BattleObjectiveAPI> enemyObjectives(ShipAPI source) {
+	public static List<BattleObjectiveAPI> enemyObjectives(ShipAPI source, CombatEngineAPI engine) {
 		List<BattleObjectiveAPI> result = new ArrayList<>();
-		for (BattleObjectiveAPI objective : Global.getCombatEngine().getObjectives()) {
-			if (objective.getOwner() != source.getOwner()) {
-				result.add(objective);
-			}
+		for (BattleObjectiveAPI objective : engine.getObjectives()) {
+			if (objective.getOwner() != source.getOwner()) result.add(objective);
 		}
 		return result;
 	}
 
-	public static List<BattleObjectiveAPI> allyObjectives(ShipAPI source) {
+	public static List<BattleObjectiveAPI> allyObjectives(ShipAPI source, CombatEngineAPI engine) {
 		List<BattleObjectiveAPI> result = new ArrayList<>();
-		for (BattleObjectiveAPI objective : Global.getCombatEngine().getObjectives()) {
-			if (objective.getOwner() == source.getOwner()) {
-				result.add(objective);
-			}
+		for (BattleObjectiveAPI objective : engine.getObjectives()) {
+			if (objective.getOwner() == source.getOwner()) result.add(objective);
 		}
 		return result;
 	}
 
-	public static float factor(String value) {
-		char last = value.charAt(value.length() - 1);
-		return (last == '%' || last == '﹪') ? Float.parseFloat(value.substring(0, value.length() - 1)) * .01f : Float.parseFloat(value);
+	public static void requireCount(List<String> params, int min, int max) {
+		if (params.size() < min || params.size() > max) {
+			throw new IllegalArgumentException("Expected " + min + ".." + max + " parameters, received " + params.size());
+		}
 	}
 
-	public static float self(String value, float alternative) {
-		return SELF.equals(value) ? alternative : Float.parseFloat(value);
+	public static float number(String text) {
+		float value = Float.parseFloat(text);
+		if (!Float.isFinite(value)) throw new IllegalArgumentException("Expected a finite number: " + text);
+		return value;
 	}
 
-	public static boolean percent(float value) {
-		return value <= 1f;
+	public static AssignmentTargetAPI toTarget(CombatEntityAPI entity, CombatEngineAPI engine) {
+		if (entity instanceof ShipAPI ship) {
+			return engine.getFleetManager(ship.getOwner()).getDeployedFleetMember(ship);
+		}
+		return (AssignmentTargetAPI) entity;
 	}
 
-	public static int assignmentCount(AssignmentTargetAPI target, CombatTaskManagerAPI tasks) {
+	public static CombatEntityAPI toEntity(AssignmentTargetAPI target) {
+		return target instanceof DeployedFleetMemberAPI member ? member.getShip() : (CombatEntityAPI) target;
+	}
+
+	public static boolean isValidTarget(AssignmentTargetAPI target, CombatEngineAPI engine) {
+		if (target instanceof DeployedFleetMemberAPI member) {
+			ShipAPI ship = member.getShip();
+			return ship != null && isValid(ship, engine) && toTarget(ship, engine) == member;
+		}
+		return engine.getObjectives().contains(target);
+	}
+
+	public static int assignmentCount(AssignmentTargetAPI target, CombatAssignmentType type,
+			CombatTaskManagerAPI tasks, CombatEngineAPI engine) {
+
 		int count = 0;
-		for (ShipAPI ship : Global.getCombatEngine().getShips()) {
-			if (tasks.getAssignmentFor(ship) != null && tasks.getAssignmentFor(ship).getTarget() == target) {
-				count++;
+		for (AssignmentInfo assignment : tasks.getAllAssignments()) {
+			if (assignment.getTarget() != target) continue;
+			if (type != null && assignment.getType() != type) continue;
+			for (DeployedFleetMemberAPI member : assignment.getAssignedMembers()) {
+				ShipAPI ship = member.getShip();
+				if (ship == null || !ship.isAlive() || !engine.isEntityInPlay(ship)) continue;
+				if (tasks.getAssignmentFor(ship) == assignment) count++;
 			}
 		}
 		return count;

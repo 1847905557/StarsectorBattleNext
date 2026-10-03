@@ -80,6 +80,7 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
+	inputs.file file("data/config/BattleNext_orders.csv")
 }
 
 // Compilation

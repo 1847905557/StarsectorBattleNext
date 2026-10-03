@@ -48,41 +48,62 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
+
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
-		setId(json.optString("id", ""));
-		setName(json.optString("name", ""));
+		String parsedId = json.optString("id", "");
+		String parsedName = json.optString("name", "");
+		TournamentBracketType parsedBracket;
 		try {
-			bracketType = TournamentBracketType.valueOf(json.getString("bracketType"));
+			parsedBracket = TournamentBracketType.valueOf(json.getString("bracketType"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid tournament.bracketType: " + json.getString("bracketType"), exception);
 		}
-		boCount = json.getInt("boCount");
-		maxFleet = json.getInt("maxFleet");
-		if (boCount < 1 || maxFleet < MIN_FLEET_COUNT || maxFleet > MAX_FLEET_COUNT) {
+		int parsedBo = json.getInt("boCount");
+		int parsedMaxFleet = json.getInt("maxFleet");
+		if (parsedBo < 1 || parsedMaxFleet < MIN_FLEET_COUNT || parsedMaxFleet > MAX_FLEET_COUNT) {
 			throw new IllegalArgumentException("Invalid tournament limits");
 		}
-		ruleId = json.optString("ruleId", "");
-		mapId = json.optInt("mapId", -1);
-		started = json.optBoolean("started", false);
-		completed = json.optBoolean("completed", false);
-		championFleetId = json.optString("championFleetId", "");
-		pendingMatchId = json.optString("pendingMatchId", "");
-		fleetIds.clear();
+		String parsedRule = json.optString("ruleId", "");
+		int parsedMap = json.optInt("mapId", -1);
+		boolean parsedStarted = json.optBoolean("started", false);
+		boolean parsedCompleted = json.optBoolean("completed", false);
+		String parsedChampion = json.optString("championFleetId", "");
+		String parsedPending = json.optString("pendingMatchId", "");
+		List<String> parsedFleets = new ArrayList<>();
 		JSONArray teamValues = json.getJSONArray("fleetIds");
 		for (int index = 0; index < teamValues.length(); index++) {
-			fleetIds.add(teamValues.getString(index));
+			parsedFleets.add(teamValues.getString(index));
 		}
-		if (fleetIds.size() > maxFleet) throw new IllegalArgumentException("fleetIds exceeds maxFleet");
-		matches.clear();
+		if (parsedFleets.size() > parsedMaxFleet) throw new IllegalArgumentException("fleetIds exceeds maxFleet");
+		List<BattleNext_Match> parsedMatches = new ArrayList<>();
 		JSONArray matchValues = json.optJSONArray("matches");
 		if (matchValues != null) {
 			for (int index = 0; index < matchValues.length(); index++) {
 				if (matchValues.optJSONObject(index) != null) {
-					matches.add(BattleNext_Match.fromJson(matchValues.optJSONObject(index)));
+					BattleNext_Match match = BattleNext_Match.fromJson(matchValues.optJSONObject(index));
+					match.setSourceType(getSourceType());
+					match.setSourcePath(getSourcePath());
+					parsedMatches.add(match);
 				}
 			}
 		}
+
+		setId(parsedId);
+		setName(parsedName);
+		bracketType = parsedBracket;
+		boCount = parsedBo;
+		maxFleet = parsedMaxFleet;
+		ruleId = parsedRule;
+		mapId = parsedMap;
+		started = parsedStarted;
+		completed = parsedCompleted;
+		championFleetId = parsedChampion;
+		pendingMatchId = parsedPending;
+		fleetIds.clear();
+		fleetIds.addAll(parsedFleets);
+		matches.clear();
+		matches.addAll(parsedMatches);
 	}
 
 	@Override
@@ -224,10 +245,12 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public void setFleetIds(List<String> values) {
 		if (started) throw new IllegalStateException("Started tournament teams are locked");
-		fleetIds.clear();
+		List<String> parsed = new ArrayList<>();
 		for (String value : values) {
-			fleetIds.add(value == null ? "" : value.trim());
+			parsed.add(value == null ? "" : value.trim());
 		}
+		fleetIds.clear();
+		fleetIds.addAll(parsed);
 	}
 
 	public List<BattleNext_Match> getMatches() {
@@ -269,12 +292,16 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public void addMatch(BattleNext_Match match) {
 		if (match != null && !started) {
+			match.setSourceType(getSourceType());
+			match.setSourcePath(getSourcePath());
 			matches.add(match);
 		}
 	}
 
 	public void addGeneratedMatch(BattleNext_Match match) {
 		if (match != null) {
+			match.setSourceType(getSourceType());
+			match.setSourcePath(getSourcePath());
 			matches.add(match);
 		}
 	}

@@ -18,6 +18,7 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.scripts.campaign.BattleNext_LunaPinnedVariantPanel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_CsvLine;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
@@ -50,6 +51,8 @@ public class BattleNext_TestGameFixture {
 	protected SettingsAPI previousSettings;
 	protected SectorAPI previousSector;
 	protected final Map<String, ShipHullSpecAPI> hulls = new LinkedHashMap<>();
+	protected final Map<String, ShipVariantAPI> registeredVariants = new LinkedHashMap<>();
+	protected final List<String> dataReads = new ArrayList<>();
 	protected final Map<ShipHullSpecAPI, List<String>> moduleSlots = new IdentityHashMap<>();
 	protected final List<float[]> spriteCenters = new ArrayList<>();
 	protected final List<float[]> spriteSizes = new ArrayList<>();
@@ -85,8 +88,17 @@ public class BattleNext_TestGameFixture {
 			case "getInt" -> 1;
 			case "getAllVariantIds", "getAllSkillIds", "getAllFactionSpecs" -> List.of();
 			case "getMergedSpreadsheetData" -> new JSONArray();
-			case "loadJSON" -> new JSONObject(Files.readString(directory.resolve((String) args[0]), StandardCharsets.UTF_8));
+			case "loadJSON" -> {
+				dataReads.add("loadJSON:" + args[0]);
+				yield new JSONObject(Files.readString(directory.resolve((String) args[0]), StandardCharsets.UTF_8));
+			}
+			case "loadCSV" -> {
+				dataReads.add("loadCSV:" + args[0]);
+				yield readCsv(directory.resolve((String) args[0]));
+			}
 			case "loadText" -> "player,enemy,-1,1";
+			case "getVariant" -> registeredVariants.get(args[0]);
+			case "doesVariantExist" -> registeredVariants.containsKey(args[0]);
 			case "createCustom" -> panel((Float) args[0], (Float) args[1], (CustomUIPanelPlugin) args[2]);
 			case "getHullSpec" -> failBuild ? null : hulls.get(args[0]);
 			case "getHullModSpec" -> ((String) args[0]).endsWith("_missing_hullmod") ? null
@@ -163,6 +175,26 @@ public class BattleNext_TestGameFixture {
 	protected void restoreGameServices() {
 		Global.setSettings(previousSettings);
 		Global.setSector(previousSector);
+	}
+
+	protected JSONArray readCsv(Path path) throws IOException, JSONException {
+
+		JSONArray rows = new JSONArray();
+		List<String> columns = null;
+		for (String line : Files.readAllLines(path, StandardCharsets.UTF_8)) {
+			if (line.isBlank() || line.trim().startsWith("#")) continue;
+			List<String> values = BattleNext_CsvLine.parse(line);
+			if (columns == null) {
+				columns = values;
+				continue;
+			}
+			JSONObject row = new JSONObject();
+			for (int index = 0; index < columns.size(); index++) {
+				row.put(columns.get(index), index < values.size() ? values.get(index) : "");
+			}
+			rows.put(row);
+		}
+		return rows;
 	}
 
 	protected ShipHullSpecAPI hull(String id, String name, List<String> slots) {

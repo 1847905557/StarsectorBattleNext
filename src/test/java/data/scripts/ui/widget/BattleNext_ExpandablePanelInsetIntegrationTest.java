@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.input.InputEventAPI;
+
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -84,7 +86,7 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 			}
 			AtomicBoolean consumed = new AtomicBoolean();
 			AtomicBoolean toggled = new AtomicBoolean();
-			var event = proxy(com.fs.starfarer.api.input.InputEventAPI.class, (name, args) -> switch (name) {
+			var event = proxy(InputEventAPI.class, (name, args) -> switch (name) {
 				case "isConsumed" -> consumed.get();
 				case "isLMBDownEvent" -> true;
 				case "getX" -> (int) top.getPosition().getX() + 1;

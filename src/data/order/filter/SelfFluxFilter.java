@@ -3,28 +3,29 @@ package data.order.filter;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.BattleNext_OrderUtils;
-import data.order.OrderFilter;
+import data.order.BattleNext_OrderFilter;
+import data.order.BattleNext_OrderRange;
+import data.order.BattleNext_OrderStarter.TargetKind;
+
 import java.util.List;
 
-public class SelfFluxFilter implements OrderFilter {
+public class SelfFluxFilter implements BattleNext_OrderFilter {
+
+	private BattleNext_OrderRange range;
 
 	@Override
-	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
-		float minFlux = -1f;
-		float maxFlux = params.length == 1 ? BattleNext_OrderUtils.factor(params[0]) : BattleNext_OrderUtils.factor(params[1]);
-		if (params.length > 1) {
-			minFlux = BattleNext_OrderUtils.factor(params[0]);
-		}
-		if (maxFlux <= 0f) {
-			targets.clear();
-			return;
-		}
-		if (BattleNext_OrderUtils.percent(maxFlux) ? source.getFluxLevel() > maxFlux : source.getCurrFlux() > maxFlux) {
-			targets.clear();
-			return;
-		}
-		if (minFlux >= 0f && (BattleNext_OrderUtils.percent(minFlux) ? source.getFluxLevel() < minFlux : source.getCurrFlux() < minFlux)) {
+	public TargetKind getTargetKind() {
+		return TargetKind.ANY;
+	}
+
+	@Override
+	public void configure(List<String> params) {
+		range = BattleNext_OrderRange.compile(params, true, false);
+	}
+
+	@Override
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatEngineAPI engine) {
+		if (!range.contains(source.getCurrFlux(), source.getFluxLevel(), 0f)) {
 			targets.clear();
 		}
 	}

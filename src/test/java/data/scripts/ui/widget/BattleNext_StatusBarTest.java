@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.ui.LabelAPI;
+
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -21,6 +23,6 @@ class BattleNext_StatusBarTest extends BattleNext_TestPageFixture {
 		assertEquals(250f, getField(bar, "textWidth"));
 		assertEquals(30f, tooltips.get(host).getUsedHeight());
 		bar.showError("error");
-		assertEquals("error", ((com.fs.starfarer.api.ui.LabelAPI) getField(bar, "statusLabel")).getText());
+		assertEquals("error", ((LabelAPI) getField(bar, "statusLabel")).getText());
 	}
 }

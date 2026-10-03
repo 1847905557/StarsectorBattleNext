@@ -5,19 +5,16 @@ import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.OrderPicker;
+import data.order.BattleNext_OrderPicker;
+import data.order.BattleNext_OrderUtils;
 import org.lazywizard.lazylib.CollectionUtils;
 import java.util.List;
 
-public class NearestPicker implements OrderPicker {
+public class NearestPicker implements BattleNext_OrderPicker {
 
 	@Override
 	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
 		targets.sort(new CollectionUtils.SortEntitiesByDistance(source.getLocation()));
-		CombatEntityAPI picked = targets.get(0);
-		if (picked instanceof ShipAPI) {
-			return engine.getFleetManager(picked.getOwner()).getDeployedFleetMember((ShipAPI)picked);
-		}
-		return (AssignmentTargetAPI)picked;
+			return BattleNext_OrderUtils.toTarget(targets.get(0), engine);
 	}
 }

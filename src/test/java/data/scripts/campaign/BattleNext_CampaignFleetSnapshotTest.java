@@ -1,5 +1,7 @@
 package data.scripts.campaign;
 
+import com.fs.starfarer.api.Global;
+
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
@@ -77,7 +79,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		moduleSlots.put(childHull, List.of("nested"));
 		var grandHull = hull("grandchild", "Grandchild", List.of());
 		ShipVariantAPI module = activeVariant.getModules().get("module");
-		module.setModuleVariant("nested", com.fs.starfarer.api.Global.getSettings().createEmptyVariant("parent_variant", grandHull));
+		module.setModuleVariant("nested", Global.getSettings().createEmptyVariant("parent_variant", grandHull));
 		BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
 		JSONObject root = snapshot.getVariants().get(0).toJson();
 		JSONObject child = root.getJSONObject("modules").getJSONObject("module");
@@ -156,7 +158,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 
 	@Test
 	void personSkillsRoundTripNormalAndEliteLevels() {
-		var target = person("Target", "", "steady", false, false, false, java.util.Map.of());
+		var target = person("Target", "", "steady", false, false, false, Map.of());
 		BattleNext_PersonSkills.apply(target, BattleNext_PersonSkills.capture(player));
 		assertEquals(2f, target.getStats().getSkillLevel("combat"));
 		assertEquals(1f, target.getStats().getSkillLevel("fleet"));

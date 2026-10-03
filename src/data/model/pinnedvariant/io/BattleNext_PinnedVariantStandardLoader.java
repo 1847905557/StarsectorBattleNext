@@ -1,5 +1,6 @@
 package data.model.pinnedvariant.io;
 
+import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
@@ -31,7 +32,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 	@Override
 	public List<BattleNext_PinnedVariantModel> load() throws IOException, JSONException {
 
-		loadErrors.clear();
+		List<String> errors = new ArrayList<>();
 		List<BattleNext_PinnedVariantModel> result = new ArrayList<>();
 		Set<String> ids = new HashSet<>();
 		List<CatalogEntry> entries = new ArrayList<>();
@@ -40,7 +41,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 			String pinId = "";
 			String hullId = "";
 			try {
-				JSONObject json = new JSONObject(BattleNext_ModFileManager.readText(path));
+				JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
 				name = json.optString("displayName", name);
 				if (name.isBlank()) {
 					name = path.substring(path.lastIndexOf('/') + 1);
@@ -60,11 +61,13 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 				entries.add(new CatalogEntry(path, name, pinId, hullId, model, ""));
 			} catch (IOException | JSONException | RuntimeException exception) {
 				String error = exception.toString();
-				loadErrors.add(path + ": " + error);
+				errors.add(path + ": " + error);
 				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error));
 			}
 		}
 		catalog = List.copyOf(entries);
+		loadErrors.clear();
+		loadErrors.addAll(errors);
 		return result;
 	}
 
@@ -80,7 +83,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 	@Override
 	protected BattleNext_PinnedVariantModel parse(String path) throws IOException, JSONException {
 		BattleNext_PinnedVariantModel model = new BattleNext_PinnedVariantModel();
-		model.fromJson(new JSONObject(BattleNext_ModFileManager.readText(path)));
+		model.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
 		return model;
 	}
 

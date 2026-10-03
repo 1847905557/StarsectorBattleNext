@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.order.*;
+import data.order.BattleNext_OrderStarter.TargetKind;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,27 +14,51 @@ import java.util.List;
 public class BattleNext_OrderThread {
 
 	private final String starterId;
-	private final OrderStarter starter;
-	private final List<OrderScriptBinding<OrderFilter>> filters = new ArrayList<>();
+	private final BattleNext_OrderStarter starter;
+	private final List<OrderScriptBinding<BattleNext_OrderFilter>> filters = new ArrayList<>();
 	private final String pickerId;
-	private final OrderPicker picker;
-	private final List<OrderScriptBinding<OrderSuffix>> suffixes = new ArrayList<>();
+	private final BattleNext_OrderPicker picker;
+	private final List<OrderScriptBinding<BattleNext_OrderSuffix>> suffixes = new ArrayList<>();
 
 	public BattleNext_OrderThread(BattleNext_OrderParser.ParsedOrderCommand command, BattleNext_OrderRegistry registry) {
 
 		starterId = command.getStarter();
-		starter = (OrderStarter)registry.create(starterId);
+		try {
+			starter = (BattleNext_OrderStarter) registry.create(starterId);
+		} catch (RuntimeException exception) {
+			throw new OrderScriptExecutionException(starterId, exception);
+		}
 		for (BattleNext_OrderParser.OrderScriptInvocation part : command.getFilters()) {
-			filters.add(new OrderScriptBinding<>(part.getId(), (OrderFilter)registry.create(part.getId()), part.getParams()));
+			try {
+				BattleNext_OrderFilter filter = (BattleNext_OrderFilter) registry.create(part.getId());
+				if (filter.getTargetKind() != TargetKind.ANY && filter.getTargetKind() != starter.getTargetKind()) {
+					throw new IllegalArgumentException("Filter requires " + filter.getTargetKind()
+							+ " targets, starter supplies " + starter.getTargetKind());
+				}
+				filter.configure(part.getParams());
+				filters.add(new OrderScriptBinding<>(part.getId(), filter));
+			} catch (RuntimeException exception) {
+				throw new OrderScriptExecutionException(part.getId(), exception);
+			}
 		}
 		pickerId = command.getPicker();
-		picker = (OrderPicker)registry.create(pickerId);
+		try {
+			picker = (BattleNext_OrderPicker) registry.create(pickerId);
+		} catch (RuntimeException exception) {
+			throw new OrderScriptExecutionException(pickerId, exception);
+		}
 		for (BattleNext_OrderParser.OrderScriptInvocation part : command.getSuffixes()) {
-			suffixes.add(new OrderScriptBinding<>(part.getId(), (OrderSuffix)registry.create(part.getId()), part.getParams()));
+			try {
+				BattleNext_OrderSuffix suffix = (BattleNext_OrderSuffix) registry.create(part.getId());
+				suffix.configure(part.getParams());
+				suffixes.add(new OrderScriptBinding<>(part.getId(), suffix));
+			} catch (RuntimeException exception) {
+				throw new OrderScriptExecutionException(part.getId(), exception);
+			}
 		}
 	}
 
-	public boolean advance(ShipAPI ship, CombatEngineAPI engine, BattleNext_OrderField field, boolean continuing) {
+	public boolean advance(ShipAPI ship, CombatEngineAPI engine, BattleNext_OrderField field) {
 
 		List<CombatEntityAPI> targets;
 		CombatAssignmentType type;
@@ -43,10 +68,10 @@ public class BattleNext_OrderThread {
 		} catch (RuntimeException exception) {
 			throw new OrderScriptExecutionException(starterId, exception);
 		}
-		for (OrderScriptBinding<OrderFilter> step : filters) {
+		for (OrderScriptBinding<BattleNext_OrderFilter> step : filters) {
 			if (targets.isEmpty()) return false;
 			try {
-				step.script.filterTargets(ship, targets, step.params, engine);
+				step.script.filterTargets(ship, targets, engine);
 			} catch (RuntimeException exception) {
 				throw new OrderScriptExecutionException(step.id, exception);
 			}
@@ -59,32 +84,25 @@ public class BattleNext_OrderThread {
 			throw new OrderScriptExecutionException(pickerId, exception);
 		}
 		if (target == null) return false;
+		AssignmentTargetAPI previous = field.getCommandTarget(ship, this);
 		float priority = 0f;
-		for (OrderScriptBinding<OrderSuffix> step : suffixes) {
+		for (OrderScriptBinding<BattleNext_OrderSuffix> step : suffixes) {
 			try {
-				target = step.script.selectTarget(target, targets, continuing, step.params, engine);
+				target = step.script.selectTarget(target, targets, previous, engine);
 				if (target == null) return false;
-				priority = step.script.resolvePriority(priority, target, step.params, engine);
+				priority = step.script.resolvePriority(priority, target, engine);
 			} catch (RuntimeException exception) {
 				throw new OrderScriptExecutionException(step.id, exception);
 			}
 		}
-		field.apply(ship, type, target, priority);
-		return true;
-	}
-
-	private static class OrderScriptBinding<T> {
-
-		private final String id;
-		private final T script;
-		private final String[] params;
-
-		private OrderScriptBinding(String id, T script, List<String> params) {
-			this.id = id;
-			this.script = script;
-			this.params = params.toArray(new String[0]);
+		try {
+			return field.apply(ship, starter.getAction(), type, target, priority, this);
+		} catch (RuntimeException exception) {
+			throw new OrderScriptExecutionException(starterId, exception);
 		}
 	}
+
+	private record OrderScriptBinding<T>(String id, T script) { }
 
 	public static class OrderScriptExecutionException extends RuntimeException {
 

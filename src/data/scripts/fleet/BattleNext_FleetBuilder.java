@@ -30,8 +30,7 @@ public class BattleNext_FleetBuilder {
 			try {
 				String variantId = definition.getMembers().get(index).getVariantId();
 				BattleNext_VariantBuilder localVariant = definition.getVariant(variantId);
-				if (definition.hasLocalVariants()) {
-					if (localVariant == null) throw new IllegalArgumentException("Missing local variant: " + variantId);
+				if (localVariant != null) {
 					ShipVariantAPI variant = localVariant.build();
 					members.add(memberBuilder.build(definition.getMembers().get(index), variant));
 				} else {

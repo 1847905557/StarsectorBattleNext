@@ -1,6 +1,5 @@
 package data.scripts.ui.page;
 
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -8,12 +7,13 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
-import data.model.rule.BattleNext_RulesCheck;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.fleet.BattleNext_RulesCheck;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_PageLayout;

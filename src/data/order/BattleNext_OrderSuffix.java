@@ -6,10 +6,12 @@ import com.fs.starfarer.api.combat.CombatEntityAPI;
 
 import java.util.List;
 
-public interface OrderSuffix {
+public interface BattleNext_OrderSuffix {
+
+	void configure(List<String> params);
 
 	AssignmentTargetAPI selectTarget(AssignmentTargetAPI target, List<? extends CombatEntityAPI> candidates,
-			boolean continuing, String[] params, CombatEngineAPI engine);
+			AssignmentTargetAPI previousTarget, CombatEngineAPI engine);
 
-	float resolvePriority(float current, AssignmentTargetAPI target, String[] params, CombatEngineAPI engine);
+	float resolvePriority(float current, AssignmentTargetAPI target, CombatEngineAPI engine);
 }

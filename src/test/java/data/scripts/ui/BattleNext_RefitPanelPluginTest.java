@@ -1,5 +1,8 @@
 package data.scripts.ui;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -40,11 +43,11 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI right = panel(180f, 560f, new BaseCustomUIPanelPlugin());
 		root.addComponent(right).inTL(700f, 63f);
 		for (String name : List.of("panel", "rightPanel")) {
-			java.lang.reflect.Field field = BattleNext_RefitPanelPlugin.class.getDeclaredField(name);
+			Field field = BattleNext_RefitPanelPlugin.class.getDeclaredField(name);
 			field.setAccessible(true);
 			field.set(plugin, "panel".equals(name) ? root : right);
 		}
-		java.lang.reflect.Method build = BattleNext_RefitPanelPlugin.class.getDeclaredMethod("buildPickers", float.class);
+		Method build = BattleNext_RefitPanelPlugin.class.getDeclaredMethod("buildPickers", float.class);
 		build.setAccessible(true);
 		build.invoke(plugin, 180f);
 		BattleNext_OptionPicker sMods = (BattleNext_OptionPicker) getField(plugin, "sModPicker");

@@ -32,14 +32,16 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 		if (json.getInt("formatVersion") != FORMAT_VERSION) {
 			throw new IllegalArgumentException("Unsupported rule formatVersion");
 		}
-		id = json.getString("id").trim();
-		name = json.getString("name").trim();
+		String parsedId = json.getString("id").trim();
+		String parsedName = json.getString("name").trim();
 		JSONArray values = json.getJSONArray("restrictions");
 		List<BattleNext_RuleRestriction> parsed = new ArrayList<>();
 		for (int index = 0; index < values.length(); index++) {
 			parsed.add(BattleNext_RuleRestriction.fromJson(values.getJSONObject(index)));
 		}
 		setRestrictions(parsed);
+		id = parsedId;
+		name = parsedName;
 	}
 
 	@Override
@@ -87,7 +89,8 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 				throw new IllegalArgumentException("Duplicate restriction ID: " + restriction.getId());
 			}
 		}
+		List<BattleNext_RuleRestriction> parsed = new ArrayList<>(values);
 		restrictions.clear();
-		restrictions.addAll(values);
+		restrictions.addAll(parsed);
 	}
 }

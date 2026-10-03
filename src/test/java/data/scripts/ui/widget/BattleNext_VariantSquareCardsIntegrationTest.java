@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -209,7 +211,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		if (failure.equals("wing")) snapshot.put("wings", new JSONArray().put("aaa_missing_wing"));
 		if (failure.equals("image")) failedImages.addAll(List.of("graphics/child.png", "graphics/fighter.png"));
 		if (failure.equals("no_path")) {
-			hulls.put("child", proxy(com.fs.starfarer.api.combat.ShipHullSpecAPI.class, (method, arguments) -> switch (method) {
+			hulls.put("child", proxy(ShipHullSpecAPI.class, (method, arguments) -> switch (method) {
 				case "getHullId" -> "child";
 				case "getHullName" -> "Child";
 				default -> null;

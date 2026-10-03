@@ -41,4 +41,9 @@ public class BattleNext_QuickBattleStore extends BattleNext_BaseStore<BattleNext
 	protected List<BattleNext_BaseLoader<BattleNext_QuickBattleModel>> sources() {
 		return List.of(standardLoader, legacyLoader);
 	}
+
+	@Override
+	protected boolean isManaged(BattleNext_QuickBattleModel model) {
+		return model != null;
+	}
 }

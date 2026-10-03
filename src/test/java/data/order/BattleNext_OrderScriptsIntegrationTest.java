@@ -2,83 +2,165 @@ package data.order;
 
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.FluxTrackerAPI;
-import data.order.filter.HullSizeFilter;
-import data.order.filter.SelfHpFilter;
-import data.order.filter.TargetFluxFilter;
-import data.order.filter.TargetHpFilter;
-import data.order.filter.TargetSpeedFilter;
-import data.order.starter.EscortStarter;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import data.scripts.order.BattleNext_OrderThread;
+import data.test.fixture.BattleNext_TestOrderFixture;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BattleNext_OrderScriptsIntegrationTest {
+class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture {
 
-	@Test
-	void hullSizeSelectsLargestOrSmallestWithinAllowedSizes() {
-		ShipAPI frigate = ship(ShipAPI.HullSize.FRIGATE, .4f, 400f, 100f, 100f);
-		ShipAPI destroyer = ship(ShipAPI.HullSize.DESTROYER, .6f, 600f, 80f, 80f);
-		ShipAPI cruiser = ship(ShipAPI.HullSize.CRUISER, .8f, 800f, 60f, 60f);
-		HullSizeFilter filter = new HullSizeFilter();
-		List<CombatEntityAPI> targets = new ArrayList<>(List.of(frigate, destroyer, cruiser));
-		filter.filterTargets(null, targets, new String[]{"frigate", "cruiser", BattleNext_OrderUtils.HULL_SIZE_LARGEST}, null);
-		assertEquals(List.of(cruiser), targets);
-		targets = new ArrayList<>(List.of(frigate, destroyer, cruiser));
-		filter.filterTargets(null, targets, new String[]{"frigate", "cruiser", BattleNext_OrderUtils.HULL_SIZE_SMALLEST}, null);
-		assertEquals(List.of(frigate), targets);
-		targets = new ArrayList<>(List.of(frigate, destroyer, cruiser));
-		filter.filterTargets(null, targets, new String[]{"FRIGATE"}, null);
-		assertTrue(targets.isEmpty());
+	@ParameterizedTest
+	@CsvSource({"targetHp,4000,1", "targetHp,1,0", "targetHp,50%,1", "targetHp,0,0",
+			"targetFlux,2000,1", "targetFlux,1,0", "targetFlux,20%,1", "targetFlux,150%,1",
+			"selfHp,4000,1", "selfHp,1,0", "selfHp,50%,1", "selfHp,0,0",
+			"selfFlux,2000,1", "selfFlux,1,0", "selfFlux,20%,1", "selfFlux,150%,1"})
+	void singleBoundsKeepTheirDeclaredUnitAndIncludeUpperEndpoint(String id, String bound, int count) {
+		ShipState ship = world.ship(0, 0f);
+		assertEquals(count, filtered(id, List.of(bound), ship, List.of(ship.getApi())).size());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"targetHp", "selfHp", "targetFlux", "selfFlux"})
+	void zeroUpperBoundMatchesExactlyZero(String id) {
+		ShipState ship = world.ship(0, 0f);
+		ship.setHp(0f, 0f);
+		ship.setFlux(0f, 0f);
+		assertEquals(List.of(ship.getApi()), filtered(id, List.of("0"), ship, List.of(ship.getApi())));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"targetHp", "selfHp", "targetFlux", "selfFlux"})
+	void mixedBoundsCompareAbsoluteAndRelativeEndpointsIndependently(String id) {
+		ShipState ship = world.ship(0, 0f);
+		ship.setHp(1500f, 0.4f);
+		ship.setFlux(1500f, 0.4f);
+		assertEquals(1, filtered(id, List.of("1000", "50%"), ship, List.of(ship.getApi())).size());
+		assertEquals(1, filtered(id, List.of("30%", "1500"), ship, List.of(ship.getApi())).size());
+		assertTrue(filtered(id, List.of("1600", "50%"), ship, List.of(ship.getApi())).isEmpty());
+		assertTrue(filtered(id, List.of("30%", "1400"), ship, List.of(ship.getApi())).isEmpty());
 	}
 
 	@Test
-	void numericFiltersRemoveEveryViolatingTarget() {
-		ShipAPI low = ship(ShipAPI.HullSize.FRIGATE, .2f, 200f, 30f, 30f);
-		ShipAPI middle = ship(ShipAPI.HullSize.DESTROYER, .5f, 500f, 60f, 60f);
-		ShipAPI high = ship(ShipAPI.HullSize.CRUISER, .9f, 900f, 90f, 90f);
-		List<CombatEntityAPI> targets = new ArrayList<>(List.of(low, middle, high));
-		new TargetHpFilter().filterTargets(null, targets, new String[]{"30%", "70%"}, null);
-		assertEquals(List.of(middle), targets);
-		targets = new ArrayList<>(List.of(low, middle, high));
-		new TargetFluxFilter().filterTargets(null, targets, new String[]{"30%", "70%"}, null);
-		assertEquals(List.of(middle), targets);
-		targets = new ArrayList<>(List.of(low, middle, high));
-		new TargetSpeedFilter().filterTargets(low, targets, new String[]{"40", "80"}, null);
-		assertEquals(List.of(middle), targets);
+	void numericFiltersRemoveEveryViolatingTargetAndIncludeBothEndpoints() {
+		ShipState source = world.ship(0, 0f);
+		ShipState low = world.ship(1, 20f);
+		ShipState middle = world.ship(1, 40f);
+		ShipState high = world.ship(1, 60f);
+		low.setHp(200f, 0.2f);
+		middle.setHp(500f, 0.5f);
+		high.setHp(900f, 0.9f);
+		low.setFlux(200f, 0.2f);
+		middle.setFlux(500f, 0.5f);
+		high.setFlux(900f, 0.9f);
+		List<CombatEntityAPI> candidates = List.of(low.getApi(), middle.getApi(), high.getApi());
+		assertEquals(List.of(middle.getApi()), filtered("targetHp", List.of("30%", "70%"), source, candidates));
+		assertEquals(List.of(middle.getApi()), filtered("targetFlux", List.of("30%", "70%"), source, candidates));
+		assertEquals(List.of(low.getApi(), middle.getApi()),
+				filtered("targetHp", List.of("200", "500"), source, candidates));
+		assertEquals(List.of(low.getApi(), middle.getApi()),
+				filtered("targetFlux", List.of("20%", "50%"), source, candidates));
 	}
 
 	@Test
-	void nonpositiveUpperBoundLeavesFollowingInstructionAvailable() {
-		ShipAPI source = ship(ShipAPI.HullSize.FRIGATE, .4f, 400f, 100f, 100f);
-		List<CombatEntityAPI> targets = new ArrayList<>(List.of(source));
-		new SelfHpFilter().filterTargets(source, targets, new String[]{"0"}, null);
-		assertTrue(targets.isEmpty());
-		assertEquals(CombatAssignmentType.LIGHT_ESCORT, new EscortStarter().getCombatAssignmentType());
+	void overloadStillUsesTheDeclaredFluxRange() {
+		ShipState source = world.ship(0, 0f);
+		ShipState enemy = world.ship(1, 20f);
+		enemy.setOverloaded(true);
+		enemy.setFlux(9500f, 0.95f);
+		assertTrue(filtered("targetFlux", List.of("30%", "70%"), source, List.of(enemy.getApi())).isEmpty());
+		assertEquals(1, filtered("targetFlux", List.of("100%"), source, List.of(enemy.getApi())).size());
 	}
 
-	private ShipAPI ship(ShipAPI.HullSize size, float level, float hp, float flux, float speed) {
-		FluxTrackerAPI tracker = (FluxTrackerAPI)Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[]{FluxTrackerAPI.class}, (proxy, method, args) -> {
-					if ("isOverloaded".equals(method.getName())) return false;
-					return null;
-				});
-		return (ShipAPI)Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[]{ShipAPI.class}, (proxy, method, args) -> switch (method.getName()) {
-					case "getHullSize" -> size;
-					case "getHullLevel", "getFluxLevel" -> level;
-					case "getHitpoints" -> hp;
-					case "getCurrFlux" -> flux;
-					case "getMaxSpeed" -> speed;
-					case "getFluxTracker" -> tracker;
-					case "equals" -> proxy == args[0];
-					case "hashCode" -> System.identityHashCode(proxy);
-					default -> null;
-				});
+	@Test
+	void distanceAndMaximumSpeedSupportInclusiveZeroAndSelfBounds() {
+		ShipState source = world.ship(0, 0f);
+		ShipState zero = world.ship(1, 0f);
+		ShipState near = world.ship(1, 100f);
+		ShipState far = world.ship(1, 200f);
+		zero.setSpeed(0f);
+		near.setSpeed(100f);
+		far.setSpeed(120f);
+		List<CombatEntityAPI> candidates = List.of(zero.getApi(), near.getApi(), far.getApi());
+		assertEquals(List.of(zero.getApi()), filtered("distance", List.of("0"), source, candidates));
+		assertEquals(List.of(near.getApi(), far.getApi()), filtered("distance", List.of("100", "200"), source, candidates));
+		assertEquals(List.of(zero.getApi()), filtered("targetSpeed", List.of("0"), source, candidates));
+		assertEquals(List.of(zero.getApi(), near.getApi()), filtered("targetSpeed", List.of("self"), source, candidates));
+		assertEquals(List.of(near.getApi(), far.getApi()), filtered("targetSpeed", List.of("self", "120"), source, candidates));
+	}
+
+	@ParameterizedTest
+	@CsvSource({"largest,CRUISER", "smallest,FRIGATE"})
+	void hullSizeSelectsLargestOrSmallestWithinAllowedSizes(String extremum, String size) {
+		ShipState source = world.ship(0, 0f);
+		ShipState frigate = world.ship(1, 10f);
+		ShipState destroyer = world.ship(1, 20f);
+		ShipState cruiser = world.ship(1, 30f);
+		destroyer.setHullSize(ShipAPI.HullSize.DESTROYER);
+		cruiser.setHullSize(ShipAPI.HullSize.CRUISER);
+		var selected = filtered("hullsize", List.of("frigate", "cruiser", extremum), source,
+				List.of(frigate.getApi(), destroyer.getApi(), cruiser.getApi()));
+		assertEquals(1, selected.size());
+		assertEquals(ShipAPI.HullSize.valueOf(size), ((ShipAPI) selected.get(0)).getHullSize());
+		assertEquals(List.of(frigate.getApi(), cruiser.getApi()),
+				filtered("hullsize", List.of("largest", "smallest"), source,
+						List.of(frigate.getApi(), destroyer.getApi(), cruiser.getApi())));
+	}
+
+	@Test
+	void hullTypeMatchesTheUnionAndAnyRestoresAllCandidates() {
+		ShipState source = world.ship(0, 0f);
+		ShipState phase = world.ship(1, 10f);
+		ShipState carrier = world.ship(1, 20f);
+		ShipState ordinary = world.ship(1, 30f);
+		phase.getHints().add(ShipHullSpecAPI.ShipTypeHints.PHASE);
+		carrier.getHints().add(ShipHullSpecAPI.ShipTypeHints.CARRIER);
+		List<CombatEntityAPI> candidates = List.of(phase.getApi(), carrier.getApi(), ordinary.getApi());
+		assertEquals(List.of(phase.getApi(), carrier.getApi()), filtered("hulltype", List.of("phase", "carrier"), source, candidates));
+		assertEquals(candidates, filtered("hulltype", List.of("any"), source, candidates));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"engage.targetHp.nearest", "engage.targetHp().nearest", "engage.targetHp(1,2,3).nearest",
+			"engage.targetHp(NaN).nearest", "engage.targetHp(Infinity).nearest", "engage.targetHp(-1).nearest",
+			"engage.targetHp(10,5).nearest", "engage.targetFlux(70%,30%).nearest", "engage.distance(50%).nearest",
+			"engage.targetSpeed(50%).nearest", "engage.hullsize(FRIGATE).nearest", "engage.hullsize().nearest",
+			"engage.hulltype(any,unknown).nearest", "assault.targetHp(4000).nearest",
+			"capture.hullsize(frigate).nearest", "defend.targetSpeed(self).nearest", "control.hulltype(any).nearest",
+			"engage.nearest.priority", "engage.nearest.priority(NaN)", "engage.nearest.priority(1,2)",
+			"engage.nearest.persist(1)"})
+	void compilationRejectsInvalidParametersAndTargetKinds(String expression) {
+		var registry = BattleNext_OrderRegistry.getInstance();
+		var parsed = BattleNext_OrderParser.parse(expression, registry);
+		assertTrue(parsed.isValid(), parsed.getError());
+		assertThrows(BattleNext_OrderThread.OrderScriptExecutionException.class,
+				() -> new BattleNext_OrderThread(parsed.getCommand(), registry));
+	}
+
+	@Test
+	void registeredStarterKindsAndActionsCompileAgainstEveryPicker() {
+		var registry = BattleNext_OrderRegistry.getInstance();
+		for (var starter : registry.getByType("starter")) {
+			for (var picker : registry.getByType("picker")) {
+				assertDoesNotThrow(() -> new BattleNext_OrderThread(
+						BattleNext_OrderParser.parse(starter.getId() + "." + picker.getId()).getCommand(), registry));
+			}
+		}
+	}
+
+	private List<CombatEntityAPI> filtered(String id, List<String> params, ShipState source,
+			List<? extends CombatEntityAPI> candidates) {
+		var filter = (BattleNext_OrderFilter) BattleNext_OrderRegistry.getInstance().create(id);
+		filter.configure(params);
+		var result = new ArrayList<CombatEntityAPI>(candidates);
+		filter.filterTargets(source.getApi(), result, world.getEngine());
+		return result;
 	}
 }

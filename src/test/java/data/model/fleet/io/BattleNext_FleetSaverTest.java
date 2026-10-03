@@ -1,6 +1,7 @@
 package data.model.fleet.io;
 
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.BattleNext_LoadSource;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
@@ -169,6 +170,39 @@ class BattleNext_FleetSaverTest {
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(
 				new JSONObject("{\"variantId\":\"" + variantId + "\",\"hullId\":\"hull\"}"), variantId));
 		return fleet;
+	}
+
+	@Test
+	void directLegacyExportRequiresNewIdentityAndProtectsTheSourceDirectory() throws Exception {
+
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/package/player01_data.csv", "metadata");
+		files.put("tournament/package/player01_fleet.csv", "members");
+		files.put("tournament/package/old.variant", "original");
+		BattleNext_FleetModel fleet = fleet("ab_player01", "exported", "current");
+		fleet.setSourceType(BattleNext_LoadSource.LEGACY);
+		fleet.setSourcePath("tournament/package/player01_data.csv");
+		BattleNext_FleetSaver saver = new BattleNext_FleetSaver(files);
+		assertThrows(IOException.class, () -> saver.save(fleet));
+		fleet.setId("exported");
+		fleet.setFolderName("PACKAGE");
+		assertThrows(IOException.class, () -> saver.save(fleet));
+		assertEquals(3, files.size());
+		fleet.setFolderName("exported");
+		saver.save(fleet);
+		assertEquals("original", files.text("tournament/package/old.variant"));
+		assertEquals("metadata", files.text("tournament/package/player01_data.csv"));
+		assertTrue(files.contains("tournament/exported/current.variant"));
+	}
+
+	@Test
+	void createdFleetCannotClaimAnExistingLegacyPackage() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/package/player1_data.csv", "metadata");
+		files.put("tournament/package/player1_fleet.csv", "members");
+		BattleNext_FleetModel fleet = fleet("created", "package", "current");
+		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals(2, files.size());
 	}
 
 	private static class MemoryFiles implements BattleNext_FleetSaver.FileOperations {

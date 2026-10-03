@@ -5,18 +5,15 @@ import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.OrderPicker;
+import data.order.BattleNext_OrderPicker;
+import data.order.BattleNext_OrderUtils;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class RandomPicker implements OrderPicker {
+public class RandomPicker implements BattleNext_OrderPicker {
 
 	@Override
 	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
-		CombatEntityAPI picked = targets.get(new Random().nextInt(targets.size()));
-		if (picked instanceof ShipAPI) {
-			return engine.getFleetManager(picked.getOwner()).getDeployedFleetMember((ShipAPI)picked);
-		}
-		return (AssignmentTargetAPI)picked;
+		return BattleNext_OrderUtils.toTarget(targets.get(ThreadLocalRandom.current().nextInt(targets.size())), engine);
 	}
 }

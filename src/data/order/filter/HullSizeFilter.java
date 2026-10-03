@@ -3,38 +3,54 @@ package data.order.filter;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
+import data.order.BattleNext_OrderFilter;
+import data.order.BattleNext_OrderStarter.TargetKind;
 import data.order.BattleNext_OrderUtils;
-import data.order.OrderFilter;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
 
-public class HullSizeFilter implements OrderFilter {
+public class HullSizeFilter implements BattleNext_OrderFilter {
+
+	private final Set<ShipAPI.HullSize> sizes = EnumSet.noneOf(ShipAPI.HullSize.class);
+	private boolean largest;
+	private boolean smallest;
 
 	@Override
-	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
-		Set<ShipAPI.HullSize> sizes = EnumSet.noneOf(ShipAPI.HullSize.class);
+	public TargetKind getTargetKind() {
+		return TargetKind.SHIP;
+	}
+
+	@Override
+	public void configure(List<String> params) {
+		BattleNext_OrderUtils.requireCount(params, 1, Integer.MAX_VALUE);
+		sizes.clear();
+		largest = params.contains(BattleNext_OrderUtils.HULL_SIZE_LARGEST);
+		smallest = params.contains(BattleNext_OrderUtils.HULL_SIZE_SMALLEST);
 		for (String param : params) {
-			ShipAPI.HullSize hullSize = BattleNext_OrderUtils.hullSize(param);
-			if (hullSize != null) {
-				sizes.add(hullSize);
-			}
+			if (param.equals(BattleNext_OrderUtils.HULL_SIZE_LARGEST)) continue;
+			if (param.equals(BattleNext_OrderUtils.HULL_SIZE_SMALLEST)) continue;
+			ShipAPI.HullSize size = BattleNext_OrderUtils.hullSize(param);
+			if (size == null) throw new IllegalArgumentException("Unknown hull size: " + param);
+			sizes.add(size);
 		}
-		if (Arrays.asList(params).contains(BattleNext_OrderUtils.HULL_SIZE_LARGEST) || Arrays.asList(params).contains(BattleNext_OrderUtils.HULL_SIZE_SMALLEST)) {
-			Set<ShipAPI.HullSize> eligible = EnumSet.noneOf(ShipAPI.HullSize.class);
-			for (CombatEntityAPI target : targets) {
-				ShipAPI.HullSize size = ((ShipAPI)target).getHullSize();
-				if (sizes.isEmpty() || sizes.contains(size)) eligible.add(size);
-			}
-			if (!eligible.isEmpty()) {
-				ShipAPI.HullSize selected = Arrays.asList(params).contains(BattleNext_OrderUtils.HULL_SIZE_LARGEST)
-						? eligible.stream().max(Comparator.comparingInt(Enum::ordinal)).get()
-						: eligible.stream().min(Comparator.comparingInt(Enum::ordinal)).get();
-				sizes.clear();
-				sizes.add(selected);
-			} else {
-				sizes.clear();
-			}
+	}
+
+	@Override
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatEngineAPI engine) {
+
+		if (!sizes.isEmpty()) targets.removeIf(target -> !sizes.contains(((ShipAPI) target).getHullSize()));
+		if (!largest && !smallest) return;
+		if (targets.isEmpty()) return;
+		Set<ShipAPI.HullSize> eligible = EnumSet.noneOf(ShipAPI.HullSize.class);
+		for (CombatEntityAPI target : targets) {
+			eligible.add(((ShipAPI) target).getHullSize());
 		}
-		targets.removeIf(target -> !sizes.contains(((ShipAPI)target).getHullSize()));
+		Set<ShipAPI.HullSize> selected = EnumSet.noneOf(ShipAPI.HullSize.class);
+		if (largest) selected.add(eligible.stream().max(Comparator.comparingInt(Enum::ordinal)).orElseThrow());
+		if (smallest) selected.add(eligible.stream().min(Comparator.comparingInt(Enum::ordinal)).orElseThrow());
+		targets.removeIf(target -> !selected.contains(((ShipAPI) target).getHullSize()));
 	}
 }

@@ -1,5 +1,7 @@
 package data.test.fixture;
 
+import java.util.Arrays;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -70,6 +72,6 @@ public class BattleNext_TestTextCatalog {
 	private static List<String> keys(JSONObject json) {
 		String[] keys = JSONObject.getNames(json);
 		assertNotNull(keys);
-		return java.util.Arrays.stream(keys).sorted().toList();
+		return Arrays.stream(keys).sorted().toList();
 	}
 }

@@ -97,10 +97,6 @@ public class BattleNext_ModFileManager {
 		return result;
 	}
 
-	public static String readText(String relativePath) throws IOException {
-		return new String(readBytes(relativePath), StandardCharsets.UTF_8);
-	}
-
 	public static List<String> list(String directory, boolean recursive) throws IOException {
 		ReflectiveModFileOperations bridge = createBridge(directory);
 		return listRoot(bridge, normalizePath(directory), recursive);
@@ -275,10 +271,12 @@ public class BattleNext_ModFileManager {
 			if (!samePath(canonical, absolute)) {
 				throw new IOException("Symbolic links are not allowed in recursive deletion: " + relativePath);
 			}
-			Object[] children = (Object[]) bridge.listFiles.invoke(target);
-			if (children == null) throw new IOException("Unable to list directory: " + relativePath);
-			for (Object child : children) {
-				deleteTree(bridge, child, rootCanonical, relativePath);
+			if ((boolean) bridge.directoryCheck.invoke(target)) {
+				Object[] children = (Object[]) bridge.listFiles.invoke(target);
+				if (children == null) throw new IOException("Unable to list directory: " + relativePath);
+				for (Object child : children) {
+					deleteTree(bridge, child, rootCanonical, relativePath);
+				}
 			}
 			deleteTarget(bridge, target, relativePath);
 		} catch (IOException exception) {

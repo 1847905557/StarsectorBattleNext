@@ -1,6 +1,7 @@
 package data.model.fleet.io;
 
 import data.model.BattleNext_BaseSaver;
+import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_EntryId;
@@ -50,6 +51,26 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 
 		String directory = BASE_ROOT + fleet.getFolderName();
 		String path = directory + "/" + DATA_FILE;
+		if (fleet.getSourceType() == BattleNext_LoadSource.LEGACY) {
+			String source = fleet.getSourcePath().replace('\\', '/');
+			String file = source.substring(source.lastIndexOf('/') + 1);
+			String number = file.replaceAll("^player(\\d+)_data\\.csv$", "$1");
+			if (fleet.getId().equals("ab_player" + number)
+					|| directory.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
+				throw new IOException("Legacy fleet requires a new ID and target directory: " + source);
+			}
+		}
+		if (files.exists(directory) && !files.exists(path)) {
+			List<String> targetFiles = files.list(directory, false);
+			for (String target : targetFiles) {
+				String file = target.substring(target.lastIndexOf('/') + 1);
+				if (!file.matches("player\\d+_data\\.csv")) continue;
+				String number = file.replaceAll("^player(\\d+)_data\\.csv$", "$1");
+				if (targetFiles.contains(directory + "/player" + number + "_fleet.csv")) {
+					throw new IOException("Legacy fleet directory is reserved: " + directory);
+				}
+			}
+		}
 		String oldFolder = previousFolder(fleet.getSourcePath());
 		String oldDirectory = oldFolder == null ? null : BASE_ROOT + oldFolder;
 		if (oldDirectory != null && !oldDirectory.equals(directory) && files.exists(path)) {

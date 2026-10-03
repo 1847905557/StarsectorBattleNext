@@ -20,7 +20,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		data.scripts.ui.editor.BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_FleetStore(), new BattleNext_RuleStore());
+		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_FleetStore(), new BattleNext_RuleStore());
 		editor.open(null);
 		editor.setInputRouter(new BattleNext_UiInputRouter());
 		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());

@@ -74,10 +74,10 @@ public class BattleNext_OrderRegistry {
 	}
 
 	private Class<?> contractFor(String type) {
-		if ("starter".equals(type)) return OrderStarter.class;
-		if ("filter".equals(type)) return OrderFilter.class;
-		if ("picker".equals(type)) return OrderPicker.class;
-		if ("suffix".equals(type)) return OrderSuffix.class;
+		if ("starter".equals(type)) return BattleNext_OrderStarter.class;
+		if ("filter".equals(type)) return BattleNext_OrderFilter.class;
+		if ("picker".equals(type)) return BattleNext_OrderPicker.class;
+		if ("suffix".equals(type)) return BattleNext_OrderSuffix.class;
 		throw new IllegalArgumentException("Unknown order type: " + type);
 	}
 

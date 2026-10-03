@@ -1,5 +1,7 @@
 package data.scripts.ui;
 
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -442,7 +444,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 	}
 
 	@Override
-	protected CustomPanelAPI panel(float width, float height, com.fs.starfarer.api.campaign.CustomUIPanelPlugin plugin) {
+	protected CustomPanelAPI panel(float width, float height, CustomUIPanelPlugin plugin) {
 		if (panelsBeforeFailure == 0) throw new IllegalStateException("Panel build failure");
 		if (panelsBeforeFailure > 0) {
 			panelsBeforeFailure--;

@@ -1,5 +1,8 @@
 package data.scripts.campaign;
 
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.CoreUITabId;
@@ -91,7 +94,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 
 	@Test
 	void sharedContextUsesActualParentAndSelectedMotherVariant() throws Throwable {
-		CustomPanelAPI actual = panel(800f, 600f, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
+		CustomPanelAPI actual = panel(800f, 600f, new BaseCustomUIPanelPlugin());
 		ParentHost background = proxy(ParentHost.class, (method, args) -> "getParent".equals(method) ? actual : null);
 		assertSame(actual, BattleNext_CampaignRefitContext.parentOf(background));
 		Refit refit = new Refit(selected, activeVariant.getApi());
@@ -106,8 +109,8 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 	@ValueSource(strings = {"callback", "reload", "leave", "detached", "left", "right", "switch"})
 	void ownerCleansMountedContentsAndInputAcrossLifecyclePaths(String path) throws Exception {
 
-		CustomPanelAPI root = panel(800f, 600f, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
-		CustomPanelAPI background = root.createCustomPanel(560f, 300f, new com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin());
+		CustomPanelAPI root = panel(800f, 600f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI background = root.createCustomPanel(560f, 300f, new BaseCustomUIPanelPlugin());
 		root.addComponent(background).inTL(0f, 0f);
 		BattleNext_LunaFleetSavePanel display = new BattleNext_LunaFleetSavePanel(() -> {});
 		display.open(selected, activeVariant.getApi(), "");
@@ -119,7 +122,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(display, "inputRouter");
 		ChildrenHost host = proxy(ChildrenHost.class, (method, args) -> {
 			if ("getChildrenCopy".equals(method)) return children.get(root);
-			if ("removeComponent".equals(method)) root.removeComponent((com.fs.starfarer.api.ui.UIComponentAPI) args[0]);
+			if ("removeComponent".equals(method)) root.removeComponent((UIComponentAPI) args[0]);
 			return null;
 		});
 		setField(button, "background", background);

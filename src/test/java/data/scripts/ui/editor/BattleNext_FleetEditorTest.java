@@ -98,7 +98,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		data.scripts.ui.editor.BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		editor.open(null, false);
 		editor.setInputRouter(new BattleNext_UiInputRouter());
 		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
@@ -129,7 +129,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		for (BattleNext_OptionField member : members) {
 			assertEquals(Math.max(72f, usableWidth - metaWidth - 16f - 24f), getField(member, "width"));
 			assertSame(root, getField(member, "overlayHost"));
-			assertEquals(1, ((com.fs.starfarer.api.ui.TooltipMakerAPI[]) getField(member, "viewports")).length);
+			assertEquals(1, ((TooltipMakerAPI[]) getField(member, "viewports")).length);
 		}
 		assertEquals(14, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
 		editor.closePicker();

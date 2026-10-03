@@ -8,27 +8,31 @@ import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.util.Misc;
+import data.order.BattleNext_OrderStarter.Action;
+import data.order.BattleNext_OrderUtils;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class BattleNext_OrderField {
 
 	public static final String KEY_PREFIX = "BattleNext_OrderField_";
+	private final CombatEngineAPI engine;
+	private final int owner;
+	private final boolean ally;
 	private final CombatFleetManagerAPI manager;
 	private final CombatTaskManagerAPI tasks;
-	private final Map<ShipAPI, AutomatedAssignmentInfo> automation = new HashMap<>();
-	private final List<AssignmentInfo> generated = new ArrayList<>();
-	private final Set<ShipAPI> visited = new HashSet<>();
+	private final Map<AssignmentTargetAPI, OwnedTask> targets = new IdentityHashMap<>();
+	private final Map<ShipAPI, Participation> participants = new IdentityHashMap<>();
+	private final Map<ShipAPI, Retreat> retreats = new IdentityHashMap<>();
 
 	private BattleNext_OrderField(CombatEngineAPI engine, int owner, boolean ally) {
+		this.engine = engine;
+		this.owner = owner;
+		this.ally = ally;
 		manager = engine.getFleetManager(owner);
 		tasks = manager.getTaskManager(ally);
 	}
@@ -37,195 +41,204 @@ public class BattleNext_OrderField {
 	public static BattleNext_OrderField getInstance(CombatEngineAPI engine, int owner, boolean ally) {
 		String key = KEY_PREFIX + owner + (ally ? "_ally" : "");
 		Object value = engine.getCustomData().get(key);
-		if (value instanceof BattleNext_OrderField) return (BattleNext_OrderField)value;
+		if (value instanceof BattleNext_OrderField field) return field;
 		BattleNext_OrderField field = new BattleNext_OrderField(engine, owner, ally);
 		engine.getCustomData().put(key, field);
 		return field;
 	}
 
-	public boolean hasPlayerForcedAssignment(ShipAPI ship) {
+	private boolean belongs(ShipAPI ship) {
+		return ship.getOwner() == owner && ship.isAlly() == ally;
+	}
+
+	public boolean hasExternalAssignment(ShipAPI ship) {
 		AssignmentInfo current = tasks.getAssignmentFor(ship);
-		if (current == null) return false;
-		AutomatedAssignmentInfo generatedInfo = automation.get(ship);
-		if (generatedInfo == null) return true;
-		return !sameAssignment(generatedInfo.assignment, current);
+		Participation participant = participants.get(ship);
+		if (participant != null && current == participant.task.assignment) return false;
+		Retreat retreat = retreats.get(ship);
+		if (retreat != null && ownsRetreat(ship, retreat)) return false;
+		return current != null || ship.isRetreating();
 	}
 
-	public void reconcileShip(ShipAPI ship) {
-		AutomatedAssignmentInfo generatedInfo = automation.get(ship);
-		if (generatedInfo != null && !sameAssignment(generatedInfo.assignment, tasks.getAssignmentFor(ship))) {
-			automation.remove(ship);
+	public AssignmentTargetAPI getCommandTarget(ShipAPI ship, Object command) {
+		Participation participant = participants.get(ship);
+		if (participant != null && participant.command == command
+				&& tasks.getAssignmentFor(ship) == participant.task.assignment) {
+			return participant.task.assignment.getTarget();
 		}
-	}
-
-	public AssignmentInfo getInfoFor(ShipAPI ship) {
-		return tasks.getAssignmentFor(ship);
-	}
-
-	public CombatAssignmentType getAssignmentTypeOnTarget(AssignmentTargetAPI target) {
-		for (AssignmentInfo info : tasks.getAllAssignments()) {
-			if (info.getTarget() == target) {
-				return info.getType();
-			}
+		Retreat retreat = retreats.get(ship);
+		if (retreat != null && retreat.command == command && ownsRetreat(ship, retreat)) {
+			return manager.getDeployedFleetMember(ship);
 		}
 		return null;
 	}
 
-	public AutomatedAssignmentInfo getOneAutomationInfoOnTarget(AssignmentTargetAPI target) {
-		for (AutomatedAssignmentInfo info : automation.values()) {
-			if (info.assignment.getTarget() == target) {
-				return info;
-			}
+	public float getPriorityOnTarget(AssignmentTargetAPI target) {
+		OwnedTask task = targets.get(target);
+		float priority = Float.NEGATIVE_INFINITY;
+		for (Participation participant : participants.values()) {
+			if (participant.task == task) priority = Math.max(priority, participant.priority);
 		}
-		return null;
+		return priority;
 	}
 
-	public void assignToAutomationInfo(ShipAPI ship, CombatAssignmentType type, AssignmentTargetAPI target, float priority) {
-		if (type == null) {
-			tasks.orderSearchAndDestroy(manager.getDeployedFleetMember(ship), false);
-			automation.remove(ship);
-			return;
-		}
-		AssignmentInfo info;
-		if (type == CombatAssignmentType.RETREAT) {
-			DeployedFleetMemberAPI member = (DeployedFleetMemberAPI)target;
-			tasks.orderRetreat(member, false, false);
-			info = new RetreatAssignmentInfo(member);
-		} else {
-			info = tasks.createAssignment(type, target, false);
-			tasks.giveAssignment(manager.getDeployedFleetMember(ship), info, false);
-		}
-		generated.add(info);
-		automation.put(ship, new AutomatedAssignmentInfo(info, priority));
-	}
+	public boolean apply(ShipAPI ship, Action action, CombatAssignmentType type,
+			AssignmentTargetAPI target, float priority, Object command) {
 
-	public void assignToAutomationInfo(ShipAPI ship, AutomatedAssignmentInfo info) {
-		tasks.giveAssignment(manager.getDeployedFleetMember(ship), info.assignment, false);
-		automation.put(ship, info);
-	}
-
-	public boolean apply(ShipAPI ship, CombatAssignmentType type, AssignmentTargetAPI target, float priority) {
-		if (hasPlayerForcedAssignment(ship)) return false;
-		if (type == null) {
-			assignToAutomationInfo(ship, null, null, priority);
+		if (hasExternalAssignment(ship)) return false;
+		if (action == Action.CLEAN) {
+			releaseShip(ship);
 			return true;
 		}
-		if (target == null) return false;
-		AutomatedAssignmentInfo own = automation.get(ship);
-		if (own != null && own.assignment.getType() == type && own.assignment.getTarget() == target) {
-			automation.put(ship, new AutomatedAssignmentInfo(own.assignment, priority));
-			return true;
-		}
-		CombatAssignmentType existingType = getAssignmentTypeOnTarget(target);
-		if (existingType == null) {
-			assignToAutomationInfo(ship, type, target, priority);
-			return true;
-		}
-		AutomatedAssignmentInfo existingAutomation = getOneAutomationInfoOnTarget(target);
-		if (existingAutomation == null) {
-			if (ship.getOwner() != Misc.OWNER_PLAYER) {
-				assignToAutomationInfo(ship, type, target, priority);
+		DeployedFleetMemberAPI member = manager.getDeployedFleetMember(ship);
+		if (member == null) return false;
+		if (action == Action.RETREAT) {
+			if (!member.canBeGivenRetreatOrders()) return false;
+			Retreat previous = retreats.get(ship);
+			if (previous != null && ownsRetreat(ship, previous)) {
+				retreats.put(ship, new Retreat(previous.assignment, command));
 				return true;
 			}
-			return false;
-		}
-		if (existingAutomation.assignment.getType() == type) {
-			if (type != CombatAssignmentType.RETREAT) {
-				assignToAutomationInfo(ship, existingAutomation);
-			}
+			releaseShip(ship);
+			tasks.orderRetreat(member, false, false);
+			retreats.put(ship, new Retreat(tasks.getAssignmentFor(ship), command));
 			return true;
 		}
-		if (priority <= existingAutomation.priority) return false;
-		clearAllAutomationInfoOnTarget(target);
-		assignToAutomationInfo(ship, type, target, priority);
+		if (!member.canBeGivenOrders()) return false;
+		if (!BattleNext_OrderUtils.isValidTarget(target, engine)) return false;
+		OwnedTask existing = targets.get(target);
+		for (AssignmentInfo assignment : tasks.getAllAssignments()) {
+			if (assignment.getTarget() != target) continue;
+			if (existing == null || assignment != existing.assignment) return false;
+		}
+		if (existing != null && existing.assignment.getType() != type) {
+			if (hasExternalParticipants(existing)) return false;
+			if (priority <= getPriorityOnTarget(target)) return false;
+			List<ShipAPI> displaced = new ArrayList<>();
+			for (var entry : participants.entrySet()) {
+				if (entry.getValue().task == existing) displaced.add(entry.getKey());
+			}
+			for (ShipAPI displacedShip : displaced) {
+				releaseShip(displacedShip);
+			}
+			existing = null;
+		}
+		Participation own = participants.get(ship);
+		if (own != null && own.task == existing) {
+			participants.put(ship, new Participation(existing, priority, command));
+			return true;
+		}
+		releaseShip(ship);
+		if (existing == null) {
+			AssignmentInfo assignment = tasks.createAssignment(type, target, false);
+			if (assignment == null) return false;
+			existing = new OwnedTask(assignment);
+			targets.put(target, existing);
+		}
+		tasks.giveAssignment(member, existing.assignment, false);
+		if (tasks.getAssignmentFor(ship) != existing.assignment) return false;
+		participants.put(ship, new Participation(existing, priority, command));
 		return true;
 	}
 
-	public void clearAllAutomationInfoOnTarget(AssignmentTargetAPI target) {
-		Iterator<Map.Entry<ShipAPI, AutomatedAssignmentInfo>> iterator = automation.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Map.Entry<ShipAPI, AutomatedAssignmentInfo> entry = iterator.next();
-			if (entry.getValue().assignment.getTarget() == target) {
-				tasks.orderSearchAndDestroy(manager.getDeployedFleetMember(entry.getKey()), false);
-				iterator.remove();
-			}
+	private boolean hasExternalParticipants(OwnedTask task) {
+		for (DeployedFleetMemberAPI member : task.assignment.getAssignedMembers()) {
+			ShipAPI ship = member.getShip();
+			if (ship == null || !engine.isEntityInPlay(ship)) continue;
+			if (!belongs(ship)) continue;
+			if (tasks.getAssignmentFor(ship) != task.assignment) continue;
+			Participation participant = participants.get(ship);
+			if (participant == null || participant.task != task) return true;
 		}
+		return false;
 	}
 
-	public void registerShip(ShipAPI ship) {
-		visited.add(ship);
+	private boolean ownsRetreat(ShipAPI ship, Retreat retreat) {
+		AssignmentInfo current = tasks.getAssignmentFor(ship);
+		return retreat.assignment != null ? current == retreat.assignment
+				: current == null && ship.isRetreating();
 	}
 
 	public void releaseShip(ShipAPI ship) {
-		AutomatedAssignmentInfo info = automation.remove(ship);
-		if (info == null) return;
-		if (sameAssignment(info.assignment, tasks.getAssignmentFor(ship))) {
-			tasks.orderSearchAndDestroy(manager.getDeployedFleetMember(ship), false);
+		Participation participant = participants.remove(ship);
+		Retreat retreat = retreats.remove(ship);
+		boolean writable = !tasks.isInFullRetreat() && !tasks.isFullAssault();
+		DeployedFleetMemberAPI member = manager.getDeployedFleetMemberEvenIfDisabled(ship);
+		if (writable && member != null && participant != null
+				&& tasks.getAssignmentFor(ship) == participant.task.assignment) {
+			tasks.orderSearchAndDestroy(member, false);
 		}
+		if (writable && member != null && retreat != null && ownsRetreat(ship, retreat)) {
+			tasks.orderSearchAndDestroy(member, false);
+			ship.setRetreating(false, false);
+			if (retreat.assignment != null && retreat.assignment.getAssignedMembers().isEmpty()
+					&& tasks.getAllAssignments().contains(retreat.assignment)) {
+				tasks.removeAssignment(retreat.assignment);
+			}
+		}
+		pruneAssignments();
+	}
+
+	public void reconcile(List<ShipAPI> eligible) {
+
+		List<AssignmentInfo> current = tasks.getAllAssignments();
+		for (ShipAPI ship : new ArrayList<>(participants.keySet())) {
+			Participation participant = participants.get(ship);
+			if (!eligible.contains(ship) || !belongs(ship)
+					|| tasks.getAssignmentFor(ship) != participant.task.assignment
+					|| !current.contains(participant.task.assignment)
+					|| !BattleNext_OrderUtils.isValidTarget(participant.task.assignment.getTarget(), engine)) {
+				releaseShip(ship);
+			}
+		}
+		for (ShipAPI ship : new ArrayList<>(retreats.keySet())) {
+			if (!eligible.contains(ship) || !belongs(ship) || !ownsRetreat(ship, retreats.get(ship))) {
+				releaseShip(ship);
+			}
+		}
+		pruneAssignments();
 	}
 
 	public void pruneAssignments() {
-		automation.keySet().removeIf(ship -> !visited.contains(ship));
-		List<AssignmentInfo> remove = new ArrayList<>();
-		for (AssignmentInfo info : tasks.getAllAssignments()) {
-			boolean assignedToVisited = false;
-			for (ShipAPI ship : visited) {
-				if (sameAssignment(tasks.getAssignmentFor(ship), info)) {
-					assignedToVisited = true;
-					break;
-				}
+		List<AssignmentInfo> current = tasks.getAllAssignments();
+		for (var entry : new ArrayList<>(targets.entrySet())) {
+			OwnedTask task = entry.getValue();
+			if (!current.contains(task.assignment)) {
+				participants.values().removeIf(participant -> participant.task == task);
+				targets.remove(entry.getKey());
+				continue;
 			}
-			if (!assignedToVisited && generated.contains(info)) remove.add(info);
-		}
-		for (AssignmentInfo info : remove) {
-			tasks.removeAssignment(info);
-		}
-		generated.removeAll(remove);
-		visited.clear();
-	}
-
-	private static boolean sameAssignment(AssignmentInfo first, AssignmentInfo second) {
-		if (first == null || second == null) return false;
-		if (first.getType() == CombatAssignmentType.RETREAT && second.getType() == CombatAssignmentType.RETREAT) return true;
-		return first.getType() == second.getType() && first.getTarget() == second.getTarget();
-	}
-
-	public static class AutomatedAssignmentInfo {
-
-		private final AssignmentInfo assignment;
-		private final float priority;
-
-		public AutomatedAssignmentInfo(AssignmentInfo assignment, float priority) {
-			this.assignment = assignment;
-			this.priority = priority;
-		}
-
-		public AssignmentInfo getAssignment() {
-			return assignment;
-		}
-
-		public float getPriority() {
-			return priority;
+			if (participants.values().stream().anyMatch(participant -> participant.task == task)) continue;
+			if (!hasExternalParticipants(task)) tasks.removeAssignment(task.assignment);
+			targets.remove(entry.getKey());
 		}
 	}
 
-	private static class RetreatAssignmentInfo implements AssignmentInfo {
-
-		private final DeployedFleetMemberAPI member;
-		private RetreatAssignmentInfo(DeployedFleetMemberAPI member) {
-			this.member = member;
+	public void cleanup() {
+		for (ShipAPI ship : new ArrayList<>(participants.keySet())) {
+			releaseShip(ship);
 		}
-
-		public CombatAssignmentType getType() {
-			return CombatAssignmentType.RETREAT;
+		for (ShipAPI ship : new ArrayList<>(retreats.keySet())) {
+			releaseShip(ship);
 		}
-
-		public AssignmentTargetAPI getTarget() {
-			return member;
-		}
-
-		public List<DeployedFleetMemberAPI> getAssignedMembers() {
-			return List.of(member);
-		}
+		pruneAssignments();
+		String key = KEY_PREFIX + owner + (ally ? "_ally" : "");
+		if (engine.getCustomData().get(key) == this) engine.getCustomData().remove(key);
 	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj);
+	}
+
+	private record OwnedTask(AssignmentInfo assignment) { }
+
+	private record Participation(OwnedTask task, float priority, Object command) { }
+
+	private record Retreat(AssignmentInfo assignment, Object command) { }
 }

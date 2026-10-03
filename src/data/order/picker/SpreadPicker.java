@@ -9,26 +9,25 @@ import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.order.BattleNext_OrderUtils;
 import org.lazywizard.lazylib.CollectionUtils;
+
 import java.util.List;
 
 public class SpreadPicker extends NearestPicker {
 
 	@Override
-	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
+	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets,
+			CombatAssignmentType type, CombatEngineAPI engine) {
 		targets.sort(new CollectionUtils.SortEntitiesByDistance(source.getLocation()));
 		CombatTaskManagerAPI tasks = engine.getFleetManager(source.getOwner()).getTaskManager(source.isAlly());
+		AssignmentInfo current = tasks.getAssignmentFor(source);
+		if (current != null && current.getType() == type
+				&& targets.contains(BattleNext_OrderUtils.toEntity(current.getTarget()))
+				&& BattleNext_OrderUtils.assignmentCount(current.getTarget(), null, tasks, engine) == 1) {
+			return current.getTarget();
+		}
 		for (CombatEntityAPI target : targets) {
-			AssignmentTargetAPI assignmentTarget = target instanceof ShipAPI
-					? engine.getFleetManager(target.getOwner()).getDeployedFleetMember((ShipAPI)target)
-					: (AssignmentTargetAPI)target;
-			AssignmentInfo current = tasks.getAssignmentFor(source);
-			if (current != null && current.getTarget() == assignmentTarget && current.getType() == type
-					&& BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) <= 1) {
-				return assignmentTarget;
-			}
-			if (BattleNext_OrderUtils.assignmentCount(assignmentTarget, tasks) == 0) {
-				return assignmentTarget;
-			}
+			AssignmentTargetAPI assignmentTarget = BattleNext_OrderUtils.toTarget(target, engine);
+			if (BattleNext_OrderUtils.assignmentCount(assignmentTarget, null, tasks, engine) == 0) return assignmentTarget;
 		}
 		return super.pick(source, targets, type, engine);
 	}

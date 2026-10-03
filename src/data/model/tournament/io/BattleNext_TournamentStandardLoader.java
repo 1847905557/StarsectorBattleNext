@@ -43,7 +43,7 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 
 	public String loadActiveId() throws IOException, JSONException {
 		if (!BattleNext_ModFileManager.exists(META_PATH)) return "";
-		JSONObject meta = new JSONObject(BattleNext_ModFileManager.readText(META_PATH));
+		JSONObject meta = Global.getSettings().loadJSON(META_PATH, MOD_ID);
 		int version = meta.optInt("formatVersion", BattleNext_TournamentModel.META_FORMAT_VERSION);
 		if (version != BattleNext_TournamentModel.META_FORMAT_VERSION) return "";
 		return meta.optString("activeTournamentId", "");

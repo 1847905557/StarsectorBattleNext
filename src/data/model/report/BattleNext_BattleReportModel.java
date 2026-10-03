@@ -26,13 +26,21 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	public void fromJson(JSONObject json) throws JSONException {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
-		id = json.optString("id", "");
-		name = json.getString("name");
-		winner = json.optString("winner", "draw");
-		durationMillis = json.optLong("durationMillis", 0L);
-		createdAt = json.optLong("createdAt", 0L);
-		parseMembers(json.getJSONArray("playerMembers"), playerMembers);
-		parseMembers(json.getJSONArray("enemyMembers"), enemyMembers);
+		String parsedId = json.optString("id", "");
+		String parsedName = json.getString("name");
+		String parsedWinner = json.optString("winner", "draw");
+		long parsedDuration = json.optLong("durationMillis", 0L);
+		long parsedCreatedAt = json.optLong("createdAt", 0L);
+		List<BattleNext_MemberReport> parsedPlayers = parseMembers(json.getJSONArray("playerMembers"));
+		List<BattleNext_MemberReport> parsedEnemies = parseMembers(json.getJSONArray("enemyMembers"));
+
+		id = parsedId;
+		name = parsedName;
+		winner = parsedWinner;
+		durationMillis = parsedDuration;
+		createdAt = parsedCreatedAt;
+		playerMembers = parsedPlayers;
+		enemyMembers = parsedEnemies;
 	}
 
 	@Override
@@ -106,11 +114,13 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		if (member != null) enemyMembers.add(member);
 	}
 
-	private static void parseMembers(JSONArray array, List<BattleNext_MemberReport> target) throws JSONException {
+	private static List<BattleNext_MemberReport> parseMembers(JSONArray array) throws JSONException {
+		List<BattleNext_MemberReport> target = new ArrayList<>();
 		for (int index = 0; index < array.length(); index++) {
 			JSONObject member = array.optJSONObject(index);
 			if (member != null) target.add(BattleNext_MemberReport.fromJson(member));
 		}
+		return target;
 	}
 
 	private JSONArray membersToJson(List<BattleNext_MemberReport> members) throws JSONException {

@@ -112,6 +112,50 @@ class BattleNext_PinnedVariantStoreTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
+	void saveRenameResolveAndDeleteKeepTheSnapshotImmutable() throws Exception {
+
+		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
+		assertThrows(IllegalStateException.class, () -> store.resolve("unknown"));
+		store.reload();
+		var pin = store.saveVariant("Original", source().getApi());
+		byte[] original = Files.readAllBytes(directory.resolve(pin.getSourcePath()));
+		JSONObject changed = pin.getVariantJson().put("fluxVents", 99);
+		assertThrows(IllegalArgumentException.class, () -> store.save(new BattleNext_PinnedVariantModel(pin.getPinId(), "Changed", changed)));
+		assertArrayEquals(original, Files.readAllBytes(directory.resolve(pin.getSourcePath())));
+		assertThrows(IllegalArgumentException.class, () -> store.rename(pin.getPinId(), " "));
+		assertEquals("Original", store.get(pin.getPinId()).getDisplayName());
+		store.rename(pin.getPinId(), "Renamed");
+		assertEquals(pin.getVariantJson().toString(), store.get(pin.getPinId()).getVariantJson().toString());
+		var first = store.resolve(pin.getPinId());
+		first.setNumFluxVents(100);
+		assertNotEquals(100, store.resolve(pin.getPinId()).toJSONObject().optInt("fluxVents"));
+		store.reload();
+		assertEquals("Renamed", store.get(pin.getPinId()).getDisplayName());
+		store.delete(pin.getPinId());
+		assertNull(store.get(pin.getPinId()));
+		assertFalse(Files.exists(directory.resolve(pin.getSourcePath())));
+		assertThrows(IllegalArgumentException.class, () -> store.resolve(pin.getPinId()));
+	}
+
+	@Test
+	void persistedCollisionKeepsTheCatalogAndSnapshotUnchanged() throws Exception {
+		var store = new BattleNext_PinnedVariantStore();
+		store.reload();
+		var collision = BattleNext_PinnedVariantModel.fromVariant("collision", "First", source().getApi());
+		Files.createDirectories(directory.resolve("tournament/_pinnedVariants"));
+		Files.writeString(directory.resolve("tournament/_pinnedVariants/collision.json"), collision.toJson().toString(), StandardCharsets.UTF_8);
+		assertThrows(IllegalArgumentException.class, () -> store.save(collision));
+		assertNull(store.get("collision"));
+		store.reload();
+		var before = store.get("collision");
+		Files.createDirectory(directory.resolve("tournament/_pinnedVariants/blocked.json"));
+		var blocked = BattleNext_PinnedVariantModel.fromVariant("blocked", "Blocked", source().getApi());
+		assertThrows(IllegalArgumentException.class, () -> store.save(blocked));
+		assertSame(before, store.get("collision"));
+		assertNull(store.get("blocked"));
+	}
+
+	@Test
 	void catalogSortUsesNameIdAndPath() {
 		var a = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("z", "Same", "b", "", null, "");
 		var b = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("a", "Same", "b", "", null, "");

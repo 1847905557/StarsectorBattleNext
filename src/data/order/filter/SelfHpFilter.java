@@ -3,28 +3,29 @@ package data.order.filter;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.BattleNext_OrderUtils;
-import data.order.OrderFilter;
+import data.order.BattleNext_OrderFilter;
+import data.order.BattleNext_OrderRange;
+import data.order.BattleNext_OrderStarter.TargetKind;
+
 import java.util.List;
 
-public class SelfHpFilter implements OrderFilter {
+public class SelfHpFilter implements BattleNext_OrderFilter {
+
+	private BattleNext_OrderRange range;
 
 	@Override
-	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
-		float minHp = -1f;
-		float maxHp = params.length == 1 ? BattleNext_OrderUtils.factor(params[0]) : BattleNext_OrderUtils.factor(params[1]);
-		if (params.length > 1) {
-			minHp = BattleNext_OrderUtils.factor(params[0]);
-		}
-		if (maxHp <= 0f) {
-			targets.clear();
-			return;
-		}
-		if (BattleNext_OrderUtils.percent(maxHp) ? source.getHullLevel() > maxHp : source.getHitpoints() > maxHp) {
-			targets.clear();
-			return;
-		}
-		if (minHp >= 0f && (BattleNext_OrderUtils.percent(minHp) ? source.getHullLevel() < minHp : source.getHitpoints() < minHp)) {
+	public TargetKind getTargetKind() {
+		return TargetKind.ANY;
+	}
+
+	@Override
+	public void configure(List<String> params) {
+		range = BattleNext_OrderRange.compile(params, true, false);
+	}
+
+	@Override
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatEngineAPI engine) {
+		if (!range.contains(source.getHitpoints(), source.getHullLevel(), 0f)) {
 			targets.clear();
 		}
 	}

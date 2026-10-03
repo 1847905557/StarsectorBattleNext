@@ -1,5 +1,9 @@
 package data.scripts.battlesnext.util;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
+import java.lang.reflect.Proxy;
+
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match.MatchStage;
 import data.scripts.battle.BattleNext_Match.MatchStatus;
@@ -156,10 +160,10 @@ class BattleNext_I18nSectionTest {
 	@Test
 	void actualLookupAndFormattingUseTheDeclaredDomain() {
 
-		var previous = com.fs.starfarer.api.Global.getSettings();
+		var previous = Global.getSettings();
 		try {
-			com.fs.starfarer.api.Global.setSettings((com.fs.starfarer.api.SettingsAPI) java.lang.reflect.Proxy.newProxyInstance(
-					getClass().getClassLoader(), new Class<?>[]{com.fs.starfarer.api.SettingsAPI.class},
+			Global.setSettings((SettingsAPI) Proxy.newProxyInstance(
+					getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 					(instance, method, arguments) -> method.getName().equals("getString")
 							? BattleNext_TestTextCatalog.text(arguments[0], arguments[1]) : null));
 			BattleNext_I18nSection fleet = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
@@ -169,7 +173,7 @@ class BattleNext_I18nSectionTest {
 					fleet.format("player_save_saved", "Example", "tournament/id/fleet_data.json"));
 			assertSame(fleet, BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_"));
 		} finally {
-			com.fs.starfarer.api.Global.setSettings(previous);
+			Global.setSettings(previous);
 		}
 	}
 

@@ -1,5 +1,7 @@
 package data.scripts.ui.integration;
 
+import java.lang.reflect.Method;
+
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
@@ -124,7 +126,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			case "getY" -> (int) rowPosition.getCenterY();
 			default -> null;
 		});
-		java.lang.reflect.Method hitTest = BattleNext_OptionPicker.class.getDeclaredMethod("isInsideViewports", InputEventAPI.class);
+		Method hitTest = BattleNext_OptionPicker.class.getDeclaredMethod("isInsideViewports", InputEventAPI.class);
 		hitTest.setAccessible(true);
 		assertEquals(false, hitTest.invoke(picker, clippedClick));
 		plugins.get(popup).advance(0f);

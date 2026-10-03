@@ -4,14 +4,14 @@ import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
-import data.model.rule.BattleNext_RulesCheck;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
-import data.scripts.fleet.BattleNext_FleetBuilder;
-import data.scripts.fleet.BattleNext_AssembledFleet;
-import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_RulesCheck;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 
 import java.util.ArrayList;
 import java.util.Collections;

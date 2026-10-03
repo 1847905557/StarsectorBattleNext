@@ -3,28 +3,31 @@ package data.order.filter;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.BattleNext_OrderUtils;
-import data.order.OrderFilter;
+import data.order.BattleNext_OrderFilter;
+import data.order.BattleNext_OrderRange;
+import data.order.BattleNext_OrderStarter.TargetKind;
+
 import java.util.List;
 
-public class TargetSpeedFilter implements OrderFilter {
+public class TargetSpeedFilter implements BattleNext_OrderFilter {
+
+	private BattleNext_OrderRange range;
 
 	@Override
-	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, String[] params, CombatEngineAPI engine) {
-		float minSpeed = -1f;
-		float maxSpeed = params.length == 1 ? BattleNext_OrderUtils.self(params[0], source.getMaxSpeed()) : BattleNext_OrderUtils.self(params[1], source.getMaxSpeed());
-		if (params.length > 1) {
-			minSpeed = BattleNext_OrderUtils.self(params[0], source.getMaxSpeed());
-		}
-		if (maxSpeed <= 0f) {
-			targets.clear();
-			return;
-		}
-		final float lowerBound = minSpeed;
-		final float upperBound = maxSpeed;
+	public TargetKind getTargetKind() {
+		return TargetKind.SHIP;
+	}
+
+	@Override
+	public void configure(List<String> params) {
+		range = BattleNext_OrderRange.compile(params, false, true);
+	}
+
+	@Override
+	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatEngineAPI engine) {
 		targets.removeIf(target -> {
-			ShipAPI ship = (ShipAPI)target;
-			return ship.getMaxSpeed() > upperBound || ship.getMaxSpeed() < lowerBound;
+			ShipAPI ship = (ShipAPI) target;
+			return !range.contains(ship.getMaxSpeed(), 0f, source.getMaxSpeed());
 		});
 	}
 }

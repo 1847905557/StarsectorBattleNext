@@ -20,7 +20,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		data.scripts.ui.editor.BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
+		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 		editor.open(null);
 		editor.setInputRouter(new BattleNext_UiInputRouter());
 		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());

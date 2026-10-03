@@ -1,5 +1,8 @@
 package data.test.fixture;
 
+import java.util.Iterator;
+import java.util.List;
+
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
@@ -68,13 +71,13 @@ public class BattleNext_TestSpriteCatalog {
 	private static Map<String, String> load() {
 		try {
 			Map<String, String> result = new LinkedHashMap<>();
-			for (Path path : java.util.List.of(Path.of("..", "..", "starsector-core", "data/config/settings.json"),
+			for (Path path : List.of(Path.of("..", "..", "starsector-core", "data/config/settings.json"),
 					Path.of("data/config/settings.json"))) {
 				JSONObject graphics = read(path).getJSONObject("graphics");
-				for (java.util.Iterator<?> categories = graphics.keys(); categories.hasNext();) {
+				for (Iterator<?> categories = graphics.keys(); categories.hasNext();) {
 					String category = categories.next().toString();
 					JSONObject entries = graphics.getJSONObject(category);
-					for (java.util.Iterator<?> keys = entries.keys(); keys.hasNext();) {
+					for (Iterator<?> keys = entries.keys(); keys.hasNext();) {
 						String key = keys.next().toString();
 						result.put(category + "/" + key, entries.getString(key));
 					}

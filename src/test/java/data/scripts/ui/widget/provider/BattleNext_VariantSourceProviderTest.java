@@ -1,5 +1,7 @@
 package data.scripts.ui.widget.provider;
 
+import org.junit.jupiter.api.Assertions;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
@@ -56,7 +58,7 @@ class BattleNext_VariantSourceProviderTest {
 					new OptionChoice("variant_50%_ready", "Variant"));
 			assertEquals("variant_50%_ready", rendered.get(0));
 			assertEquals(2, rendered.size());
-			org.junit.jupiter.api.Assertions.assertTrue(rendered.get(1).contains("Unknown variant: variant_50%_ready"));
+			Assertions.assertTrue(rendered.get(1).contains("Unknown variant: variant_50%_ready"));
 		} finally {
 			Global.setSettings(previousSettings);
 			Global.setSector(previousSector);

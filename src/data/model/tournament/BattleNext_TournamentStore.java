@@ -52,7 +52,11 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 	}
 
 	public boolean isManaged(String id) {
-		BattleNext_TournamentModel tournament = get(id);
+		return isManaged(get(id));
+	}
+
+	@Override
+	protected boolean isManaged(BattleNext_TournamentModel tournament) {
 		return tournament != null && tournament.getSourceType() != BattleNext_LoadSource.CREATED;
 	}
 }

@@ -4,11 +4,9 @@ import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,48 +22,29 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		List<BattleNext_FleetModel> result = new ArrayList<>();
 		List<String> paths = BattleNext_ModFileManager.list(BASE_FOLDER, true);
-		List<String> variantPaths = paths.stream().filter(path -> path.endsWith(".variant")).toList();
 		List<String> dataPaths = paths.stream().filter(BattleNext_FleetStandardLoader::isFleetDataPath)
 				.filter(path -> !BattleNext_EntryId.isReservedFolder(fleetFolder(path))).toList();
 		for (String path : dataPaths) {
 			try {
-				result.add(read(path, variantPaths));
+				result.add(read(path, paths));
 			} catch (IOException | JSONException exception) {
-				throw new IllegalStateException("Unable to load standard fleet: " + path, exception);
+				throw new IllegalStateException("Unable to load standard fleet: " + path + ": " + exception.getMessage(), exception);
 			}
 		}
 		return result;
 	}
 
-	private BattleNext_FleetModel read(String path, List<String> variantPaths) throws IOException, JSONException {
-		JSONObject json = new JSONObject(Global.getSettings().loadText(path, MOD_ID));
+	private BattleNext_FleetModel read(String path, List<String> paths) throws IOException, JSONException {
 		String normalizedPath = path.replace("\\", "/");
 		String folderName = fleetFolder(normalizedPath);
 		if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
 			throw new IOException("Invalid fleet folder name: " + folderName);
 		}
 		BattleNext_FleetModel fleet = new BattleNext_FleetModel();
-		fleet.fromJson(json);
+		fleet.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
 		fleet.setFolderName(folderName);
 		markSource(fleet, path);
-		String folderPrefix = normalizedPath.substring(0, normalizedPath.lastIndexOf('/') + 1);
-		for (String variantPath : variantPaths) {
-			String normalizedVariant = variantPath.replace("\\", "/");
-			if (!normalizedVariant.startsWith(folderPrefix) || !normalizedVariant.endsWith(".variant")) continue;
-			if (normalizedVariant.indexOf('/', folderPrefix.length()) >= 0) continue;
-			String variantId = normalizedVariant.substring(folderPrefix.length(), normalizedVariant.length() - ".variant".length());
-			try {
-				String text = Global.getSettings().loadText(variantPath, MOD_ID);
-				fleet.putVariant(BattleNext_VariantBuilder.fromJson(new JSONObject(text), variantId));
-			} catch (IOException | JSONException exception) {
-				throw new IllegalStateException("Unable to load variant " + variantPath + ": " + exception.getMessage(), exception);
-			}
-		}
-		if (fleet.hasLocalVariants()) {
-			for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
-				if (fleet.getVariant(variantId) == null) fleet.addLoadError("Missing variant " + variantId + " in " + path);
-			}
-		}
+		BattleNext_FleetVariantLoader.load(fleet, paths);
 		return fleet;
 	}
 

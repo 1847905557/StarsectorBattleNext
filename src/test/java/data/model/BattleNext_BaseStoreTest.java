@@ -1,15 +1,10 @@
 package data.model;
 
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_BaseStoreTest {
 
@@ -77,6 +72,10 @@ class BattleNext_BaseStoreTest {
 		private List<Entry> loaded = List.of();
 		private IOException failure;
 		private boolean failSave;
+		private boolean failDelete;
+		private boolean failState;
+		private String removedId = "";
+
 		private final BattleNext_BaseLoader<Entry> loader = new BattleNext_BaseLoader<>() {
 			@Override
 			public List<Entry> load() throws IOException {
@@ -89,6 +88,7 @@ class BattleNext_BaseStoreTest {
 				return BattleNext_LoadSource.STANDARD;
 			}
 		};
+
 		private final BattleNext_BaseSaver<Entry> writer = new BattleNext_BaseSaver<>() {
 			@Override
 			public String save(Entry model) throws IOException {
@@ -97,7 +97,8 @@ class BattleNext_BaseStoreTest {
 			}
 
 			@Override
-			public void delete(Entry model) {
+			public void delete(Entry model) throws IOException {
+				if (failDelete) throw new IOException("delete failed");
 			}
 		};
 
@@ -114,5 +115,86 @@ class BattleNext_BaseStoreTest {
 		protected List<BattleNext_BaseLoader<Entry>> sources() {
 			return List.of(loader);
 		}
+
+		@Override
+		protected void loadState() throws IOException {
+			if (failState) throw new IOException("state failed");
+		}
+
+		@Override
+		protected void onEntryRemoved(String id) {
+			removedId = id;
+		}
+	}
+
+	@Test
+	void stateFailureKeepsOldEntriesAndSuccessfulReloadClearsTheError() throws Exception {
+		MemoryStore store = new MemoryStore();
+		Entry original = new Entry("original");
+		store.loaded = List.of(original);
+		store.reload();
+		store.loaded = List.of(new Entry("replacement"));
+		store.failState = true;
+		assertThrows(IOException.class, store::reload);
+		assertSame(original, store.get("original"));
+		assertNull(store.get("replacement"));
+		store.failState = false;
+		store.reload();
+		assertNull(store.get("original"));
+		assertEquals("replacement", store.getAll().get(0).getId());
+		assertEquals("", store.getLoadError());
+	}
+
+	@Test
+	void saveFailurePreservesExistingEntryAndInputSourceMetadata() throws Exception {
+		MemoryStore store = new MemoryStore();
+		Entry original = new Entry("entry");
+		store.loaded = List.of(original);
+		store.reload();
+		Entry replacement = new Entry("entry");
+		replacement.setSourceType(BattleNext_LoadSource.STANDARD);
+		replacement.setSourcePath("original.json");
+		store.failSave = true;
+		assertThrows(IOException.class, () -> store.save(replacement));
+		assertSame(original, store.get("entry"));
+		assertEquals(BattleNext_LoadSource.STANDARD, replacement.getSourceType());
+		assertEquals("original.json", replacement.getSourcePath());
+		store.failSave = false;
+		store.save(replacement);
+		assertSame(replacement, store.get("entry"));
+		assertEquals(BattleNext_LoadSource.CREATED, replacement.getSourceType());
+	}
+
+	@Test
+	void deletionPublishesAfterPersistenceAndInvokesTheRemovalHook() throws Exception {
+		MemoryStore store = new MemoryStore();
+		assertThrows(IllegalStateException.class, () -> store.delete("entry"));
+		Entry entry = new Entry("entry");
+		store.loaded = List.of(entry);
+		store.reload();
+		List<Entry> snapshot = store.getAll();
+		assertThrows(UnsupportedOperationException.class, snapshot::clear);
+		store.failDelete = true;
+		assertThrows(IOException.class, () -> store.delete("entry"));
+		assertSame(entry, store.get("entry"));
+		assertEquals("", store.removedId);
+		store.failDelete = false;
+		store.delete("entry");
+		assertEquals("entry", store.removedId);
+		assertEquals(List.of(), store.getAll());
+		assertEquals(List.of(entry), snapshot);
+		assertThrows(IllegalStateException.class, () -> store.delete("unknown"));
+	}
+
+	@Test
+	void sourceManagementAndInvalidSaveIdentityAreCheckedBeforePersistence() throws Exception {
+		MemoryStore store = new MemoryStore();
+		Entry standard = new Entry("standard");
+		standard.setSourceType(BattleNext_LoadSource.STANDARD);
+		store.loaded = List.of(standard);
+		store.reload();
+		assertThrows(IllegalStateException.class, () -> store.delete("standard"));
+		assertThrows(IllegalArgumentException.class, () -> store.save(new Entry("../invalid")));
+		assertSame(standard, store.get("standard"));
 	}
 }

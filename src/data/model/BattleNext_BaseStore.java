@@ -23,7 +23,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			Map<String, T> loaded = new LinkedHashMap<>();
 			for (BattleNext_BaseLoader<T> loader : sources()) {
 				for (T model : loader.load()) {
-					loaded.put(model.getId(), model);
+					mergeLoaded(loaded, model);
 				}
 			}
 			loadState();
@@ -77,6 +77,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	protected abstract BattleNext_BaseSaver<T> saver();
 
 	protected abstract List<BattleNext_BaseLoader<T>> sources();
+
+	protected void mergeLoaded(Map<String, T> loaded, T model) throws IOException {
+		loaded.put(model.getId(), model);
+	}
 
 	protected boolean isManaged(T model) {
 		return model != null && model.getSourceType() == BattleNext_LoadSource.CREATED;
