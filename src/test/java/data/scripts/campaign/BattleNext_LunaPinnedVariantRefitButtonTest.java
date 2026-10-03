@@ -85,8 +85,8 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 	void registrationAndLoadCleanupAreIdempotentAndMenuIsAlwaysVisible() {
 
 		var registry = LunaRefitManager.INSTANCE.getButtons();
-		var previous = registry.stream().filter(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton).toList();
-		registry.removeAll(previous);
+		var previous = List.copyOf(registry);
+		registry.removeIf(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton);
 		List<EveryFrameScript> scripts = new ArrayList<>();
 		Global.setSector(proxy(SectorAPI.class, (method, args) -> {
 			if ("addTransientScript".equals(method)) {
@@ -115,7 +115,7 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 			BattleNext_LunaPinnedVariantRefitButton.onGameLoad();
 			assertEquals(List.of(button), scripts);
 		} finally {
-			registry.removeIf(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton);
+			registry.clear();
 			registry.addAll(previous);
 		}
 	}
@@ -128,18 +128,18 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 		UIPanelAPI host = panel(640f, 560f, new BaseCustomUIPanelPlugin());
 		Refit refit = new Refit(member, variant.getApi());
 		Core core = new Core(new Tab(List.of(new Object(), refit)));
-		var context = BattleNext_LunaPinnedVariantRefitButton.contextFrom(core, host);
+		var context = BattleNext_CampaignRefitContext.from(core, host);
 		assertSame(member, context.member());
 		assertSame(variant.getApi(), context.variant());
 		assertSame(refit, context.refitPanel());
 		assertEquals("", BattleNext_LunaPinnedVariantRefitButton.contextError(member, variant.getApi()));
 		refit.setMember(null);
-		context = BattleNext_LunaPinnedVariantRefitButton.contextFrom(core, host);
+		context = BattleNext_CampaignRefitContext.from(core, host);
 		assertNull(context.member());
 		assertEquals("BattleNext_ui_pin_module", BattleNext_LunaPinnedVariantRefitButton.contextError(null, context.variant()));
 		assertEquals("BattleNext_ui_refit_no_member", BattleNext_LunaPinnedVariantRefitButton.contextError(null, null));
 		assertThrows(IllegalStateException.class,
-				() -> BattleNext_LunaPinnedVariantRefitButton.contextFrom(new Core(new Tab(List.of())), host));
+				() -> BattleNext_CampaignRefitContext.from(new Core(new Tab(List.of())), host));
 	}
 
 	@ParameterizedTest

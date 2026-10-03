@@ -7,9 +7,6 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 public class BattleNext_MemberBuilder {
 
 	public FleetMemberAPI build(BattleNext_MemberModel definition) {
@@ -49,7 +46,7 @@ public class BattleNext_MemberBuilder {
 			captain.setPortraitSprite(definition.getPortrait());
 		}
 
-		applySkills(captain, definition);
+		BattleNext_PersonSkills.apply(captain, definition.getSkills());
 		member.setCaptain(captain);
 
 		member.getRepairTracker().setMothballed(false);
@@ -57,17 +54,6 @@ public class BattleNext_MemberBuilder {
 		member.getCrewComposition().setCrew(member.getMaxCrew());
 		member.updateStats();
 		member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
-	}
-
-	private void applySkills(PersonAPI captain, BattleNext_MemberModel definition) {
-		Map<String, Integer> counts = new LinkedHashMap<>();
-		for (String skill : definition.getSkills()) {
-			counts.put(skill, counts.getOrDefault(skill, 0) + 1);
-		}
-		for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-			float level = entry.getValue() > 1 ? 2f : 1f;
-			captain.getStats().setSkillLevel(entry.getKey(), level);
-		}
 	}
 
 	private void validate(BattleNext_MemberModel definition) {

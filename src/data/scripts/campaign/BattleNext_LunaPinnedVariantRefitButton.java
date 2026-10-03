@@ -10,13 +10,10 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.campaign.CampaignState;
-import com.fs.state.AppDriver;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
 import lunalib.lunaRefit.BaseRefitButton;
 import lunalib.lunaRefit.LunaRefitManager;
-import org.boxutil.backends.reflect.BUtil_RefMethod;
 
 import java.util.List;
 
@@ -25,7 +22,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("UI", "BattleNext_ui_");
 	private CustomPanelAPI background;
 	private UIPanelAPI host;
-	private RefitContext openedContext;
+	private BattleNext_CampaignRefitContext openedContext;
 	private BattleNext_LunaPinnedVariantPanel display;
 
 	private BattleNext_LunaPinnedVariantRefitButton() {
@@ -102,9 +99,9 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 		String error = "";
 		ShipVariantAPI selected = null;
 		try {
-			host = (UIPanelAPI) invoke(backgroundPanel, "getParent");
+			host = BattleNext_CampaignRefitContext.parentOf(backgroundPanel);
 			if (host == null) throw new IllegalStateException("Collection panel is not attached to the campaign UI");
-			openedContext = currentContext();
+			openedContext = BattleNext_CampaignRefitContext.current();
 			error = contextError(openedContext.member(), openedContext.variant());
 			if (error.isEmpty()) {
 				if (openedContext.member() != member || openedContext.variant() != variant) {
@@ -159,12 +156,12 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 			return;
 		}
 		try {
-			if (host == null || !((List<?>) invoke(host, "getChildrenCopy")).contains(background)) {
+			if (host == null || !BattleNext_CampaignRefitContext.childrenOf(host).contains(background)) {
 				cleanup();
 				return;
 			}
 			if (openedContext == null) return;
-			RefitContext current = currentContext();
+			BattleNext_CampaignRefitContext current = BattleNext_CampaignRefitContext.current();
 			if (!openedContext.equals(current)) {
 				cleanup();
 			}
@@ -192,44 +189,4 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 		openedContext = null;
 	}
 
-	static RefitContext currentContext() throws Throwable {
-
-		Object state = AppDriver.getInstance().getCurrentState();
-		if (!(state instanceof CampaignState)) throw new IllegalStateException("Campaign refit is not active");
-		Object dialog = invoke(state, "getEncounterDialog");
-		Object core = dialog == null ? invoke(state, "getCore") : invoke(dialog, "getCoreUI");
-		return contextFrom(core, dialog == null ? (UIPanelAPI) core : (UIPanelAPI) dialog);
-	}
-
-	static RefitContext contextFrom(Object core, UIPanelAPI host) throws Throwable {
-
-		Object tab = invoke(core, "getCurrentTab");
-		for (Object child : (List<?>) invoke(tab, "getChildrenCopy")) {
-			if (!hasMethod(child, "syncWithCurrentVariant")) continue;
-			FleetMemberAPI member = (FleetMemberAPI) invoke(child, "getMember");
-			Object shipDisplay = invoke(child, "getShipDisplay");
-			ShipVariantAPI variant = (ShipVariantAPI) invoke(shipDisplay, "getCurrentVariant");
-			return new RefitContext(host, child, member, variant);
-		}
-		throw new IllegalStateException("Campaign refit panel is unavailable");
-	}
-
-	private static boolean hasMethod(Object target, String name) throws Throwable {
-		for (Object method : target.getClass().getMethods()) {
-			if (BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals(name)) return true;
-		}
-		return false;
-	}
-
-	private static Object invoke(Object target, String name) throws Throwable {
-		for (Object method : target.getClass().getMethods()) {
-			if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals(name)) continue;
-			return BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, target);
-		}
-		throw new NoSuchMethodException(name);
-	}
-
-	record RefitContext(UIPanelAPI host, Object refitPanel, FleetMemberAPI member, ShipVariantAPI variant) {
-
-	}
 }

@@ -6,6 +6,7 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberBuilder;
+import data.scripts.member.BattleNext_PersonSkills;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,9 +50,7 @@ public class BattleNext_FleetBuilder {
 
 	private PersonAPI createCommander(BattleNext_FleetModel definition) {
 		PersonAPI commander = Global.getSettings().createPerson();
-		for (String skill : definition.getSkills()) {
-			commander.getStats().setSkillLevel(skill, 1f);
-		}
+		BattleNext_PersonSkills.apply(commander, definition.getSkills());
 		return commander;
 	}
 }

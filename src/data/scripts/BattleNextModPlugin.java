@@ -9,6 +9,7 @@ import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.campaign.BattleNext_LunaPinnedVariantRefitButton;
+import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
 
 public class BattleNextModPlugin extends BaseModPlugin {
 
@@ -24,6 +25,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 		BattleNext_Settings.load();
 		BattleNext_LunaPinnedVariantRefitButton.register();
+		BattleNext_LunaFleetSaveRefitButton.register();
 
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
 			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 AI Battles Next");
@@ -49,6 +51,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 		BattleNext_MissionRestrictedUnlock.getInstance().forget();
 		BattleNext_LunaPinnedVariantRefitButton.onGameLoad();
+		BattleNext_LunaFleetSaveRefitButton.onGameLoad();
 
 		boolean classLoad = false;
 		if (Global.getSector().getPersistentData().containsKey(CLASS_MARK)) {
