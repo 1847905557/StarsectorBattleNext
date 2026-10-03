@@ -1,14 +1,7 @@
 package data.order;
 
-import com.fs.starfarer.api.combat.AssignmentTargetAPI;
-import com.fs.starfarer.api.combat.BattleObjectiveAPI;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 
 import java.util.ArrayList;

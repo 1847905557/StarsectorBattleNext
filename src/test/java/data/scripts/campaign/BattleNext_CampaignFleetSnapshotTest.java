@@ -1,7 +1,6 @@
 package data.scripts.campaign;
 
 import com.fs.starfarer.api.Global;
-
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
@@ -10,19 +9,14 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_PersonSkills;
 import data.test.fixture.BattleNext_TestCampaignFleetFixture;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetFixture {
 

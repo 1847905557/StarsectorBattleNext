@@ -1,13 +1,14 @@
 package data.scripts.ui.page;
 
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.tools.BattleNext_EntryId;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import org.json.JSONException;

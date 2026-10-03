@@ -1,12 +1,9 @@
 package data.order.picker;
 
-import com.fs.starfarer.api.combat.AssignmentTargetAPI;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import data.order.BattleNext_OrderPicker;
 import data.order.BattleNext_OrderUtils;
+
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 

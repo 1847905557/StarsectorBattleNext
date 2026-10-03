@@ -1,13 +1,10 @@
 package data.model.quickbattle.io;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import data.scripts.tools.BattleNext_ModFileManager;
-
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
 import java.io.IOException;

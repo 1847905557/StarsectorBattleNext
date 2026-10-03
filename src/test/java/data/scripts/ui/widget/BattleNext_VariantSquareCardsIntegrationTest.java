@@ -1,21 +1,20 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,8 +33,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVariantFixture {
 

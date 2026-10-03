@@ -1,35 +1,23 @@
 package data.scripts.ai.vanilla.attack;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.FluxTrackerAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
+import java.util.*;
 
 class BattleNext_FighterAutofireManagerTest {
 	@Test

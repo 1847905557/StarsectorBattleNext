@@ -1,47 +1,27 @@
 package data.test.fixture;
 
-import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.ModManagerAPI;
-import com.fs.starfarer.api.ModSpecAPI;
-import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.SectorAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.graphics.SpriteAPI;
-import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.loading.*;
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIPanelAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
-import data.scripts.campaign.BattleNext_LunaPinnedVariantPanel;
-import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
-import data.scripts.ui.widget.BattleNext_VariantDetails;
-import java.awt.Color;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
-import org.lwjgl.input.Keyboard;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 

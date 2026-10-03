@@ -1,12 +1,11 @@
 package data.scripts.ui;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_PageLayoutSoundIntegrationTest {
 

@@ -2,12 +2,10 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.test.fixture.BattleNext_TestPageFixture;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
 
 class BattleNext_PinnedVariantPageTest extends BattleNext_TestPageFixture {
 

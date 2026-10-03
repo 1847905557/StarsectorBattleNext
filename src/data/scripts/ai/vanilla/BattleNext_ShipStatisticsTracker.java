@@ -3,8 +3,9 @@ package data.scripts.ai.vanilla;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import com.fs.starfarer.api.util.Misc;
+import data.scripts.battlesnext.util.annotation.PublicData;
+
 import java.util.ArrayList;
 import java.util.List;
 

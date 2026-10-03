@@ -1,18 +1,8 @@
 package data.scripts.ui.widget.view;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.BaseTooltipCreator;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
@@ -21,18 +11,14 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin {
 

@@ -1,11 +1,6 @@
 package data.scripts.report;
 
-import com.fs.starfarer.api.combat.BeamAPI;
-import com.fs.starfarer.api.combat.DamagingProjectileAPI;
-import com.fs.starfarer.api.combat.EmpArcEntityAPI;
-import com.fs.starfarer.api.combat.FighterWingAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 

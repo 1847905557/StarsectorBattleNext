@@ -1,37 +1,32 @@
 package data.scripts.ui;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShieldAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.ShieldAPI;
-import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
-import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
-import data.test.fixture.BattleNext_TestPageFixture;
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
+import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.Proxy;
-import java.awt.Color;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.lwjgl.input.Keyboard;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.awt.Color;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 

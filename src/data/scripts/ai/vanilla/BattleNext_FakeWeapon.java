@@ -1,28 +1,16 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.AnimationAPI;
-import com.fs.starfarer.api.combat.AmmoTrackerAPI;
-import com.fs.starfarer.api.combat.BeamAPI;
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DamageAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.EveryFrameWeaponEffectPlugin;
-import com.fs.starfarer.api.combat.MissileRenderDataAPI;
-import com.fs.starfarer.api.combat.MutableShipStatsAPI;
-import com.fs.starfarer.api.combat.MutableStat;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipSystemSpecAPI;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.MuzzleFlashSpec;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Minimal port of engine class com.fs.starfarer.combat.ai.FakeWeapon.

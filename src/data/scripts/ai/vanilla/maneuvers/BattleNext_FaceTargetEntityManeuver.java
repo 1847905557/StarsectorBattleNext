@@ -3,8 +3,9 @@ package data.scripts.ai.vanilla.maneuvers;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import java.util.List;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.List;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.FaceTargetEntityManeuver.

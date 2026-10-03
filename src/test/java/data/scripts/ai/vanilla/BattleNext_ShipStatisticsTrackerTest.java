@@ -2,12 +2,10 @@ package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.combat.FluxTrackerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import java.lang.reflect.Proxy;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.reflect.Proxy;
 
 class BattleNext_ShipStatisticsTrackerTest {
 

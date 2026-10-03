@@ -5,15 +5,12 @@ import com.fs.starfarer.api.SettingsAPI;
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleModel.QuickBattleRowType;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_QuickBattleLoadingIntegrationTest {
 

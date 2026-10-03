@@ -8,14 +8,13 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_MissionRestrictedUnlockTest {
 

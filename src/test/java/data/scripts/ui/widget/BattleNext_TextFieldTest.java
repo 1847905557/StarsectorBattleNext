@@ -4,23 +4,19 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.input.Keyboard;
 import sun.misc.Unsafe;
-
-import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.function.Consumer;
 
 class BattleNext_TextFieldTest {
 	private final List<String> sounds = new ArrayList<>();

@@ -1,7 +1,5 @@
 package data.test.fixture;
 
-import java.util.Arrays;
-
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
 import org.json.JSONObject;
@@ -9,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 
 public class BattleNext_TestFleetIoFixture extends BattleNext_TestCampaignFleetFixture {

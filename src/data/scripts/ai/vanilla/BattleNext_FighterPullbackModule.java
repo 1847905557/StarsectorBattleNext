@@ -1,19 +1,9 @@
 package data.scripts.ai.vanilla;
 
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.FighterLaunchBayAPI;
-import com.fs.starfarer.api.combat.FighterWingAPI;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
@@ -21,6 +11,7 @@ import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import data.scripts.battlesnext.util.annotation.PublicData;
+
 import java.util.ArrayList;
 
 /**

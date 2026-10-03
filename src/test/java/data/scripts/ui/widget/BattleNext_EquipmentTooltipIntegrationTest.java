@@ -1,16 +1,9 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import data.scripts.report.BattleNext_DamageSourceReport;
-import data.scripts.ui.page.BattleNext_BattleReportPage;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.combat.HullModEffect;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.ShieldAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
@@ -19,15 +12,18 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.page.BattleNext_BattleReportPage;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -37,8 +33,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantFixture {
 

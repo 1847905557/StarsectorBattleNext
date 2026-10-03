@@ -1,10 +1,10 @@
 package data.scripts.ai.rtt;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.Global;
 import data.scripts.ai.vanilla.BattleNext_BasicShipAI;
 import data.scripts.ai.vanilla.BattleNext_OrderResponseData;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_TaskMoveManeuver;

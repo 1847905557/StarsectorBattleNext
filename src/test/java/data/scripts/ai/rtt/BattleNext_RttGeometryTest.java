@@ -1,6 +1,7 @@
 package data.scripts.ai.rtt;
 
 import com.fs.starfarer.api.combat.ShipAPI;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
 
@@ -8,11 +9,6 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_RttGeometryTest {
 

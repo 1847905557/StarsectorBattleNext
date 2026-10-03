@@ -5,11 +5,7 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.characters.SkillSpecAPI;
-import com.fs.starfarer.api.combat.HullModEffect;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.ShieldAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
@@ -35,6 +31,7 @@ import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -45,8 +42,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVariantFixture {
 

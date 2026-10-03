@@ -1,12 +1,11 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
+import data.scripts.tools.BattleNext_Logger;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.concurrent.atomic.AtomicBoolean;

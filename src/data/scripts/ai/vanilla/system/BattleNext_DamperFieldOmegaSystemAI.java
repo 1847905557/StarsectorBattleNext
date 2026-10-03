@@ -1,12 +1,8 @@
 package data.scripts.ai.vanilla.system;
 
 import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.impl.combat.DamperFieldStats;
 import com.fs.starfarer.api.loading.DamagingExplosionSpec;
 import com.fs.starfarer.api.util.IntervalUtil;

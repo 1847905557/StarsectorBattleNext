@@ -1,9 +1,8 @@
 package data.scripts.ui;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import data.scripts.tools.BattleNext_Logger;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;

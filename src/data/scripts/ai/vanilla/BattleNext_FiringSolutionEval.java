@@ -1,34 +1,19 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.BeamAPI;
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DamageAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.DamagingProjectileAPI;
-import com.fs.starfarer.api.combat.GuidedMissileAI;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.MutableShipStatsAPI;
-import com.fs.starfarer.api.combat.PhaseCloakSystemAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
 import com.fs.starfarer.api.combat.ShipSystemAPI.SystemState;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.battlesnext.util.annotation.PublicData;
+import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.FiringSolutionEval.

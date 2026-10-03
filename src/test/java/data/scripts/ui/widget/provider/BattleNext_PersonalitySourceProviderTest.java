@@ -2,12 +2,11 @@ package data.scripts.ui.widget.provider;
 
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class BattleNext_PersonalitySourceProviderTest {
 

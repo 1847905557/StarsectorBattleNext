@@ -1,16 +1,12 @@
 package data.model.quickbattle;
 
-import data.scripts.tools.BattleNext_CsvLine;
-
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel.QuickBattleRowType;
+import data.scripts.tools.BattleNext_CsvLine;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_QuickBattleModelTest {
 

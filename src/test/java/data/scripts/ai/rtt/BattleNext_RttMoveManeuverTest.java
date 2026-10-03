@@ -4,17 +4,12 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_TaskMoveManeuver;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_RttMoveManeuverTest {
 

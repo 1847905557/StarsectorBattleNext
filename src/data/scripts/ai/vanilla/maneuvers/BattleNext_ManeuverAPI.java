@@ -1,6 +1,5 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAIConfig;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipwideAIFlags;
@@ -10,8 +9,8 @@ import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackAIModule;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackingGroup;
 import data.scripts.ai.vanilla.attack.BattleNext_WeaponGroupEvaluation;
-import data.scripts.ai.vanilla.shields.BattleNext_ShieldAI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import data.scripts.ai.vanilla.shields.BattleNext_ShieldAI;
 import org.lwjgl.util.vector.Vector2f;
 
 /**

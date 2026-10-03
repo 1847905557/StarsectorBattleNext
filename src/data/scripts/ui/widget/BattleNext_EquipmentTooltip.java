@@ -1,7 +1,5 @@
 package data.scripts.ui.widget;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -9,6 +7,7 @@ import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 

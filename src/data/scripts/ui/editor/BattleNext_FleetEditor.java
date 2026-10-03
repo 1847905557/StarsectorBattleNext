@@ -1,7 +1,5 @@
 package data.scripts.ui.editor;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -18,6 +16,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;

@@ -1,9 +1,8 @@
 package data.scripts.plugin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_BattleClockPluginTest {
 

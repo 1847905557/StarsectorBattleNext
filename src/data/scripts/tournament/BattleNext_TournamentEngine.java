@@ -1,7 +1,5 @@
 package data.scripts.tournament;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -9,13 +7,9 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Match.MatchStage;
 import data.scripts.battle.BattleNext_Match.MatchStatus;
 import data.scripts.battle.BattleNext_Round;
+import data.scripts.tools.BattleNext_Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BattleNext_TournamentEngine {
 

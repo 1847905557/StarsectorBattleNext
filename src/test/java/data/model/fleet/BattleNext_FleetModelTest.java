@@ -4,13 +4,12 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetModelTest {
 

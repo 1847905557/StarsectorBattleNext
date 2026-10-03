@@ -3,13 +3,10 @@ package data.scripts.report;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_Round;
-import org.json.JSONObject;
 import org.json.JSONException;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_MemberReportTest {
 

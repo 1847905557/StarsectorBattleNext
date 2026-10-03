@@ -1,11 +1,11 @@
 package data.scripts.ai.vanilla.maneuvers;
 
 import com.fs.starfarer.api.combat.ShipAPI;
-import java.lang.reflect.Proxy;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
 
 class BattleNext_StrafeTargetManeuverV2Test {
 	@Test

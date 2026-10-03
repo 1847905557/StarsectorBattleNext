@@ -1,7 +1,5 @@
 package data.scripts.ui.widget.provider;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.characters.FullName.Gender;
@@ -10,12 +8,15 @@ import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProvider {
 

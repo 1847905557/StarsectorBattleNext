@@ -1,7 +1,5 @@
 package data.scripts.fleet;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -9,6 +7,7 @@ import com.fs.starfarer.api.loading.VariantSource;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.loading.WeaponGroupType;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
+import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

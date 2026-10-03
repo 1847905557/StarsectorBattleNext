@@ -1,23 +1,17 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
-import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.VentModule.

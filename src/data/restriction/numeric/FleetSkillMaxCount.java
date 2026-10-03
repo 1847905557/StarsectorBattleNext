@@ -1,8 +1,8 @@
 package data.restriction.numeric;
 
 import data.model.rule.BattleNext_RuleRestriction;
-import data.restriction.BattleNext_RestrictionUtils;
 import data.restriction.BattleNext_RestrictionScript;
+import data.restriction.BattleNext_RestrictionUtils;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 
 import java.util.HashSet;

@@ -1,7 +1,5 @@
 package data.scripts.ui.editor;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -12,6 +10,7 @@ import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionSpec;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;

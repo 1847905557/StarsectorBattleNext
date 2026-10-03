@@ -5,7 +5,6 @@ import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 
 public class BattleNext_MemberBuilder {
 

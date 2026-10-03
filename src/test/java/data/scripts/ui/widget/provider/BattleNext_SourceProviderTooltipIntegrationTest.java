@@ -1,26 +1,24 @@
 package data.scripts.ui.widget.provider;
 
-import data.test.fixture.BattleNext_TestTextCatalog;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.characters.SkillSpecAPI;
-import com.fs.starfarer.api.combat.HullModEffect;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.ShieldAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,9 +27,6 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_SourceProviderTooltipIntegrationTest {
 

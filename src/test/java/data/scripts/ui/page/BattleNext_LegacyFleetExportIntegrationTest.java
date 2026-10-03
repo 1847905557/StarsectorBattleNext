@@ -1,17 +1,15 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_LegacyFleetExportIntegrationTest extends BattleNext_TestFleetIoFixture {
 

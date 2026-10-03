@@ -1,7 +1,5 @@
 package data.scripts.plugin;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
@@ -11,11 +9,12 @@ import com.fs.starfarer.api.combat.listeners.DamageListener;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
-import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.report.BattleNext_BattleReportModel;
-import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.report.BattleNext_DamageAttribution;
+import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.tools.BattleNext_Logger;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;

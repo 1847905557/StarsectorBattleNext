@@ -22,6 +22,7 @@ import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.test.fixture.BattleNext_TestOrderFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
@@ -31,8 +32,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture {
 

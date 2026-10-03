@@ -2,37 +2,20 @@ package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.combat.FluxTrackerAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
-import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.MutableShipStatsAPI;
-import com.fs.starfarer.api.combat.MutableStat;
+import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
-import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_RetreatPositionEvaluator;
-import java.util.List;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import org.lwjgl.util.vector.Vector2f;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.reflect.Proxy;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_ShipAIHelperTest {
 	@Test

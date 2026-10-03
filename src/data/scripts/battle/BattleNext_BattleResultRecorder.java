@@ -1,8 +1,5 @@
 package data.scripts.battle;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -13,9 +10,9 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tournament.BattleNext_TournamentEngine;
-
 import org.json.JSONException;
 
 import java.io.IOException;

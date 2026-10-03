@@ -1,11 +1,8 @@
 package data.scripts.ui.widget.provider;
 
-import data.scripts.tools.BattleNext_ModFileManager;
-
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.json.JSONArray;
 import org.json.JSONException;

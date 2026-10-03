@@ -1,16 +1,16 @@
 package data.model.quickbattle.io;
 
-import data.model.quickbattle.io.BattleNext_QuickBattleStandardLoader;
-import data.test.fixture.BattleNext_TestGameFixture;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import java.io.IOException;
-import java.util.List;
+import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.io.IOException;
+import java.util.List;
 
 class BattleNext_QuickBattleStandardLoaderTest extends BattleNext_TestGameFixture {
 

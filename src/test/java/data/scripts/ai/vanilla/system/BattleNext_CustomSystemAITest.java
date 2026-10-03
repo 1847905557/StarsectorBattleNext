@@ -1,24 +1,16 @@
 package data.scripts.ai.vanilla.system;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipSystemAIScript;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipSystemSpecAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
+import com.fs.starfarer.api.combat.*;
 import org.json.JSONException;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BattleNext_CustomSystemAITest {
 

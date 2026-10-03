@@ -1,7 +1,5 @@
 package data.scripts.campaign;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -10,16 +8,12 @@ import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.member.BattleNext_PersonSkills;
+import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class BattleNext_CampaignFleetSnapshot {
 

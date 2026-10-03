@@ -2,11 +2,7 @@ package data.test.fixture;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.CoreUITabId;
-import com.fs.starfarer.api.campaign.FleetDataAPI;
-import com.fs.starfarer.api.campaign.SectorAPI;
+import com.fs.starfarer.api.campaign.*;
 import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.characters.PersonalityAPI;
@@ -20,7 +16,6 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.model.fleet.io.BattleNext_FleetSaver;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 

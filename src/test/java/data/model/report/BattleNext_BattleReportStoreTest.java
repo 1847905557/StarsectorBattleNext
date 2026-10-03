@@ -1,16 +1,13 @@
 package data.model.report;
 
-import java.io.IOException;
-import java.util.List;
-
-import data.model.report.BattleNext_BattleReportStore;
 import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.*;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
 
 class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 

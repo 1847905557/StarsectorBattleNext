@@ -5,11 +5,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public class BattleNext_TextFieldSession {
 

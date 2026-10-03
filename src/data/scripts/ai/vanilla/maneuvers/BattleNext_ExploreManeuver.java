@@ -10,10 +10,11 @@ import data.scripts.ai.vanilla.collisions.BattleNext_CollisionCheckSegment;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionDangerEntry;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionTimeRange;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.ExploreManeuver.

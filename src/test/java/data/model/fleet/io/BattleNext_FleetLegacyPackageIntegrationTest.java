@@ -1,9 +1,11 @@
 package data.model.fleet.io;
 
 import data.model.fleet.BattleNext_FleetStore;
-import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -12,8 +14,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetLegacyPackageIntegrationTest extends BattleNext_TestFleetIoFixture {
 

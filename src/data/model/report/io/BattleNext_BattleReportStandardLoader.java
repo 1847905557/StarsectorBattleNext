@@ -1,6 +1,5 @@
 package data.model.report.io;
 
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.report.BattleNext_BattleReportModel;

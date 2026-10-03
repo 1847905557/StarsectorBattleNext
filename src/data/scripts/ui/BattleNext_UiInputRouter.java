@@ -5,13 +5,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_TextFieldSession;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /** Coordinates modal UI layers and their text-input scope for one root panel. */
 public final class BattleNext_UiInputRouter {

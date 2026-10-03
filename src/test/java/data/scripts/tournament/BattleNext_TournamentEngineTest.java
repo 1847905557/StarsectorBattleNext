@@ -1,20 +1,19 @@
 package data.scripts.tournament;
 
-import data.model.report.BattleNext_BattleReportModel;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.model.report.BattleNext_BattleReportModel;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_TournamentEngineTest {
 

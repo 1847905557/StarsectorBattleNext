@@ -1,21 +1,18 @@
 package data.scripts.ai.vanilla.attack;
 
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
-import java.util.Map;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.Map;
 
 /** Port of com.fs.starfarer.combat.ai.attack.FighterAutofireManager. */
 public class BattleNext_FighterAutofireManager implements BattleNext_AutofireManager {

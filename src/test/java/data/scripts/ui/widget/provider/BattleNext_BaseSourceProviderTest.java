@@ -5,9 +5,11 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,9 +20,6 @@ import java.awt.Color;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_BaseSourceProviderTest {
 	private SettingsAPI previousSettings;

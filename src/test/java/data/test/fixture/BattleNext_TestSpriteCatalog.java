@@ -1,17 +1,15 @@
 package data.test.fixture;
 
-import java.util.Iterator;
-import java.util.List;
-
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class BattleNext_TestSpriteCatalog {
 

@@ -1,21 +1,20 @@
 package data.scripts.ui;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
-import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import data.missions.BattleNext_MissionRestrictedUnlock;
 import com.fs.state.AppDriver;
+import data.missions.BattleNext_MissionRestrictedUnlock;
+import data.scripts.tools.BattleNext_Logger;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.manager.ShaderCore;

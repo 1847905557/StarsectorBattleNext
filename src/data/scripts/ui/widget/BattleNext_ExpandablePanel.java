@@ -1,24 +1,19 @@
 package data.scripts.ui.widget;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.ScrollPanelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.*;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import org.lwjgl.input.Mouse;
 
 import java.awt.Color;
 import java.util.List;
 import java.util.function.Consumer;
-import org.lwjgl.input.Mouse;
 
 public class BattleNext_ExpandablePanel {
 

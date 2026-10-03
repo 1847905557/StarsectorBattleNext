@@ -1,12 +1,11 @@
 package data.scripts.plugin;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
+import data.scripts.tools.BattleNext_Logger;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;

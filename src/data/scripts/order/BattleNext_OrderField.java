@@ -1,13 +1,7 @@
 package data.scripts.order;
 
-import com.fs.starfarer.api.combat.AssignmentTargetAPI;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
 import data.order.BattleNext_OrderStarter.Action;
 import data.order.BattleNext_OrderUtils;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;

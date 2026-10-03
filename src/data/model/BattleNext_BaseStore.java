@@ -1,9 +1,7 @@
 package data.model;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import data.scripts.tools.BattleNext_EntryId;
-
+import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONException;
 
 import java.io.IOException;

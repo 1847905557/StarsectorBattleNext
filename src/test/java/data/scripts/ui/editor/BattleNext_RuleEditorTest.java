@@ -2,19 +2,19 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleStore;
-import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import java.util.List;
-import java.util.Map;
 import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.List;
+import java.util.Map;
 
 class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 

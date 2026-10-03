@@ -1,6 +1,5 @@
 package data.scripts.ui.widget.view;
 
-import data.test.fixture.BattleNext_TestTextCatalog;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -17,11 +16,10 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
-import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,8 +35,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;

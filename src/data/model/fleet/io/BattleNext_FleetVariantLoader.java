@@ -1,22 +1,16 @@
 package data.model.fleet.io;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import data.scripts.tools.BattleNext_ModFileManager;
-
 import com.fs.starfarer.api.Global;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.LinkedHashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BattleNext_FleetVariantLoader {
 

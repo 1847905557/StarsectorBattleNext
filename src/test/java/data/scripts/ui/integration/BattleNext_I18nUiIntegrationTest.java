@@ -12,11 +12,10 @@ import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.test.fixture.BattleNext_TestVariantFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 

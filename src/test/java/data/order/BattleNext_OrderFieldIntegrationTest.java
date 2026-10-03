@@ -2,16 +2,14 @@ package data.order;
 
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import data.order.BattleNext_OrderStarter.Action;
-import data.scripts.order.BattleNext_OrderField;
 import data.test.fixture.BattleNext_TestOrderFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OrderFieldIntegrationTest extends BattleNext_TestOrderFixture {
 

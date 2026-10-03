@@ -4,13 +4,12 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.page.BattleNext_ReportSourceDisplay;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Proxy;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_WeaponDisplayTest {
 

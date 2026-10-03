@@ -6,14 +6,10 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourceProvider {

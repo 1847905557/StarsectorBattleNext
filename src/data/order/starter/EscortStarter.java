@@ -4,8 +4,9 @@ import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.order.BattleNext_OrderUtils;
 import data.order.BattleNext_OrderStarter;
+import data.order.BattleNext_OrderUtils;
+
 import java.util.List;
 
 public class EscortStarter implements BattleNext_OrderStarter {

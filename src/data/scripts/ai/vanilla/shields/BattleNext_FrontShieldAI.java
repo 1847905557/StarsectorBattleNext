@@ -1,10 +1,10 @@
 package data.scripts.ai.vanilla.shields;
 
+import com.fs.starfarer.api.combat.ShieldAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.combat.ShipwideAIFlags;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.ShieldAPI;
 import data.scripts.ai.vanilla.BattleNext_FiringSolutionEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;

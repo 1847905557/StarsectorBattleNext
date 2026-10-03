@@ -1,27 +1,16 @@
 package data.scripts.ai.vanilla.shields;
 
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatAsteroidAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.ShipAIConfig;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.util.IntervalUtil;
-import data.scripts.ai.vanilla.BattleNext_DirectOrders;
-import data.scripts.ai.vanilla.BattleNext_FiringSolutionEval;
-import data.scripts.ai.vanilla.BattleNext_Orderable;
-import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
+import data.scripts.ai.vanilla.*;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackAIModule;
 import data.scripts.ai.vanilla.attack.BattleNext_AttackingGroup;
 import data.scripts.ai.vanilla.attack.BattleNext_WeaponGroupEvaluation;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
-import java.util.Iterator;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.Iterator;
 
 // vanilla implements the engine AI marker interface as well; its advance is covered by
 // BattleNext_Orderable and its render() was an engine-side debug hook and is dropped

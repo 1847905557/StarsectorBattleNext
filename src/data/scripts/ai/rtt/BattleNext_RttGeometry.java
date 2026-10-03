@@ -3,13 +3,7 @@ package data.scripts.ai.rtt;
 import com.fs.starfarer.api.combat.ShipAPI;
 import org.lwjgl.util.vector.Vector2f;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.LinkedHashSet;
+import java.util.*;
 
 public class BattleNext_RttGeometry {
 

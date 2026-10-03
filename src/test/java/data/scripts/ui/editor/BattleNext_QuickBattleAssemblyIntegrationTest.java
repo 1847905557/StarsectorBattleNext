@@ -6,11 +6,11 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleetIoFixture {
 

@@ -1,12 +1,11 @@
 package data.model.tournament;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_LoadSource;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.model.tournament.io.BattleNext_TournamentStandardLoader;
+import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONException;
 
 import java.io.IOException;

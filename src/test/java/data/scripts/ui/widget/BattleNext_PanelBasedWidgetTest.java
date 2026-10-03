@@ -3,15 +3,12 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.test.fixture.BattleNext_TestUiFixture;
-import data.test.fixture.BattleNext_TestPageFixture;
 import data.scripts.ui.BattleNext_UiInputRouter;
-import java.util.List;
+import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 
 class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 

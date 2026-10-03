@@ -1,12 +1,7 @@
 package data.scripts.ai.vanilla;
 
-import com.fs.starfarer.api.combat.AssignmentTargetAPI;
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
@@ -17,9 +12,10 @@ import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_RetreatManeuver;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_TaskMoveManeuver;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.OrderResponseModule.

@@ -1,15 +1,18 @@
 package data.scripts.ui.page;
 
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader.CatalogEntry;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_VariantDetails;
 
 import java.util.Comparator;
 import java.util.List;

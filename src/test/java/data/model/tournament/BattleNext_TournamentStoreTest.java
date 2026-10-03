@@ -1,18 +1,15 @@
 package data.model.tournament;
 
 import data.model.tournament.io.BattleNext_TournamentSaver;
-import java.io.IOException;
-import org.json.JSONException;
-
-import data.model.tournament.BattleNext_TournamentStore;
 import data.test.fixture.BattleNext_TestGameFixture;
+import org.json.JSONException;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.*;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import org.json.JSONObject;
+import java.nio.file.Files;
 
 class BattleNext_TournamentStoreTest extends BattleNext_TestGameFixture {
 

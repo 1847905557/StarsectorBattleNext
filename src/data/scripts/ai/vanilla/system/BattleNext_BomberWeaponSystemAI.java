@@ -1,19 +1,16 @@
 package data.scripts.ai.vanilla.system;
 
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.BattleNext_FiringSolutionEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
+import org.lwjgl.util.vector.Vector2f;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.lwjgl.util.vector.Vector2f;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.system.BomberWeaponSystemAI.

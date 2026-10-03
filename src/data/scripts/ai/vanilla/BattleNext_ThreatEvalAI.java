@@ -1,20 +1,10 @@
 package data.scripts.ai.vanilla;
 
-import com.fs.starfarer.api.combat.ArmorGridAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.FighterWingAPI;
-import com.fs.starfarer.api.combat.MutableShipStatsAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipSystemSpecAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShieldAPI.ShieldType;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
-import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.loading.DamagingExplosionSpec;
 import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.mission.FleetSide;
@@ -22,13 +12,9 @@ import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_AttackEntityManeuver;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.*;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.ThreatEvalAI.

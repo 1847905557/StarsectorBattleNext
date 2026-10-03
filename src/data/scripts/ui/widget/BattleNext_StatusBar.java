@@ -1,10 +1,9 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_UiTheme;
 
 public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 

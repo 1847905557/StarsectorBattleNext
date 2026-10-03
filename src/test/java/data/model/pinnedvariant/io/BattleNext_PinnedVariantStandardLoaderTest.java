@@ -3,19 +3,16 @@ package data.model.pinnedvariant.io;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
-import data.scripts.fleet.BattleNext_VariantBuilder;
-import java.io.IOException;
-import java.util.List;
-
-import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader;
-import data.test.fixture.BattleNext_TestGameFixture;
-import org.junit.jupiter.api.Test;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.test.fixture.BattleNext_TestGameFixture;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
 
 class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixture {
 

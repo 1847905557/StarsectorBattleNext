@@ -1,12 +1,10 @@
 package data.model.fleet.io;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;

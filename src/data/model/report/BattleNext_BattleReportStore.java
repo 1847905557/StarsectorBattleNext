@@ -2,8 +2,8 @@ package data.model.report;
 
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
-import data.model.report.io.BattleNext_BattleReportStandardLoader;
 import data.model.report.io.BattleNext_BattleReportSaver;
+import data.model.report.io.BattleNext_BattleReportStandardLoader;
 
 import java.util.List;
 

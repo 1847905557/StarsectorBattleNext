@@ -1,22 +1,18 @@
 package data.order;
 
+import data.order.starter.AssaultStarter;
+import data.scripts.tools.BattleNext_CsvLine;
+import data.test.fixture.BattleNext_TestOrderFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import data.scripts.tools.BattleNext_CsvLine;
-import data.order.filter.*;
-import data.order.picker.*;
-import data.order.starter.*;
-import data.order.suffix.*;
-import data.test.fixture.BattleNext_TestOrderFixture;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 

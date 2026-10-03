@@ -1,8 +1,9 @@
 package data.scripts.ai.vanilla.maneuvers;
 
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import java.util.Comparator;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.Comparator;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.EscortSpotTestPointComparator.

@@ -1,11 +1,6 @@
 package data.scripts.plugin;
 
-import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ViewportAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.ai.rtt.BattleNext_RttGeometry;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
@@ -14,12 +9,7 @@ import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 

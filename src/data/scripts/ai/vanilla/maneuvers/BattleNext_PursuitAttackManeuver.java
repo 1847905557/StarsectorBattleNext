@@ -2,10 +2,10 @@ package data.scripts.ai.vanilla.maneuvers;
 
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.util.IntervalUtil;
 import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
-import com.fs.starfarer.api.util.IntervalUtil;
 import org.lwjgl.util.vector.Vector2f;
 
 /**

@@ -2,8 +2,8 @@ package data.model.pinnedvariant;
 
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.BattleNext_JsonModel;
-import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_EntryId;
 import org.json.JSONException;
 import org.json.JSONObject;
 

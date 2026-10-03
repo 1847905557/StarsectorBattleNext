@@ -1,27 +1,16 @@
 package data.scripts.ai.vanilla.collisions;
 
-import com.fs.starfarer.api.combat.CollisionClass;
-import com.fs.starfarer.api.combat.CombatAsteroidAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DamageAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.MissileAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI.ShipTypeHints;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.ShieldAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.*;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.collisions.CollisionAnalysisModule.

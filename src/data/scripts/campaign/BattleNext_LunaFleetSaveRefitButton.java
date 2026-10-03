@@ -1,7 +1,5 @@
 package data.scripts.campaign;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CoreUITabId;
@@ -14,6 +12,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
+import data.scripts.tools.BattleNext_Logger;
 import lunalib.lunaRefit.BaseRefitButton;
 import lunalib.lunaRefit.LunaRefitManager;
 

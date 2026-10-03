@@ -1,17 +1,14 @@
 package data.model.quickbattle;
 
-import java.io.IOException;
-
-import data.model.quickbattle.BattleNext_QuickBattleStore;
+import data.model.BattleNext_LoadSource;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.*;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
-import data.model.BattleNext_LoadSource;
 
 class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 

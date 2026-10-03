@@ -5,8 +5,8 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.tools.BattleNext_GeometryRenderer;
-import org.boxutil.units.standard.misc.UIBorderObject;
 import org.boxutil.manager.ShaderCore;
+import org.boxutil.units.standard.misc.UIBorderObject;
 
 import java.util.List;
 

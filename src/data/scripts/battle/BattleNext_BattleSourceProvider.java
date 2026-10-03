@@ -1,7 +1,5 @@
 package data.scripts.battle;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
@@ -13,6 +11,7 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_RulesCheck;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 
 import java.util.ArrayList;

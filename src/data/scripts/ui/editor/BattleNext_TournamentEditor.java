@@ -1,7 +1,5 @@
 package data.scripts.ui.editor;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -22,6 +20,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_RulesCheck;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionField;

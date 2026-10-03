@@ -1,13 +1,11 @@
 package data.model.rule;
 
-import data.model.rule.BattleNext_RuleStore;
 import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.*;
-import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 class BattleNext_RuleStoreTest extends BattleNext_TestGameFixture {
 

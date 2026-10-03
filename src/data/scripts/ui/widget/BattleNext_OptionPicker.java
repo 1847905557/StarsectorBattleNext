@@ -1,27 +1,20 @@
 package data.scripts.ui.widget;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;

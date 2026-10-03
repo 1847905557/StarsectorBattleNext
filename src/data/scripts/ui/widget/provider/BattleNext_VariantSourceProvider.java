@@ -1,7 +1,5 @@
 package data.scripts.ui.widget.provider;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -9,8 +7,9 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.json.JSONException;
 
 import java.io.IOException;

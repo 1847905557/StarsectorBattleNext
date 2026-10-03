@@ -1,25 +1,21 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetStore;
-import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import data.scripts.ui.widget.BattleNext_OptionField;
 import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 

@@ -1,14 +1,12 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.ui.LabelAPI;
-
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.test.fixture.BattleNext_TestPageFixture;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class BattleNext_StatusBarTest extends BattleNext_TestPageFixture {
 

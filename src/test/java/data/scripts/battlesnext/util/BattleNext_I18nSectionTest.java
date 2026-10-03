@@ -2,25 +2,23 @@ package data.scripts.battlesnext.util;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import java.lang.reflect.Proxy;
-
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match.MatchStage;
 import data.scripts.battle.BattleNext_Match.MatchStatus;
 import data.test.fixture.BattleNext_TestI18nSource;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestTextCatalog.TextKey;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_I18nSectionTest {
 

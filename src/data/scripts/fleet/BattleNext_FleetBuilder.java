@@ -1,14 +1,13 @@
 package data.scripts.fleet;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberBuilder;
 import data.scripts.member.BattleNext_PersonSkills;
+import data.scripts.tools.BattleNext_Logger;
 
 import java.util.ArrayList;
 import java.util.List;

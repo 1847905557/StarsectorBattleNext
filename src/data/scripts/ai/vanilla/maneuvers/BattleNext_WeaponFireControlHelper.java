@@ -5,7 +5,6 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
-import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponType;
 import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import com.fs.starfarer.api.util.Misc;

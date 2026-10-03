@@ -1,25 +1,19 @@
 package data.scripts.ui.widget;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
-import com.fs.starfarer.api.loading.HullModSpecAPI;
-import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.Description;
-import com.fs.starfarer.api.ui.BaseTooltipCreator;
-import com.fs.starfarer.api.ui.Alignment;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.loading.FighterWingSpecAPI;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
+import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay;
@@ -27,14 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 
 public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {

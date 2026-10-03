@@ -1,21 +1,19 @@
 package data.scripts.ui.widget.provider;
 
-import org.junit.jupiter.api.Assertions;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Proxy;
 import java.awt.Color;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_VariantSourceProviderTest {
 

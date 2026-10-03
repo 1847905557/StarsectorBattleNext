@@ -1,10 +1,9 @@
 package data.scripts.fleet;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.restriction.*;
+import data.scripts.tools.BattleNext_Logger;
 
 import java.util.ArrayList;
 import java.util.List;

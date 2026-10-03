@@ -1,7 +1,5 @@
 package data.scripts.tools;
 
-import data.scripts.member.BattleNext_PersonSkills;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
@@ -16,6 +14,7 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.report.BattleNext_MemberReport;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;

@@ -1,11 +1,9 @@
 package data.order;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import data.scripts.tools.BattleNext_ModFileManager;
-
 import com.fs.starfarer.api.Global;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

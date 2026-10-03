@@ -1,7 +1,5 @@
 package data.scripts.ai.vanilla.shields;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.FogOfWarAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipCommand;
@@ -12,6 +10,7 @@ import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionAnalysisModule;
+import data.scripts.tools.BattleNext_Logger;
 import org.lwjgl.util.vector.Vector2f;
 
 // profiler hooks dropped

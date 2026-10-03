@@ -5,8 +5,9 @@ import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import org.json.JSONArray;
-import org.json.JSONObject;
 import org.json.JSONException;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -14,8 +15,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_TournamentModelTest {
 

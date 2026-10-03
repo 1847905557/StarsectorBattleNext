@@ -1,23 +1,15 @@
 package data.scripts.ai.vanilla.maneuvers;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.combat.CombatAssignmentType;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipCommand;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
-import data.scripts.ai.vanilla.BattleNext_BasicShipAI;
-import data.scripts.ai.vanilla.BattleNext_BestTargetEval;
-import data.scripts.ai.vanilla.BattleNext_DirectOrders;
-import data.scripts.ai.vanilla.BattleNext_OrderResponseModule;
-import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import java.util.Random;
+import data.scripts.ai.vanilla.*;
+import data.scripts.tools.BattleNext_Logger;
 import org.lwjgl.util.vector.Vector2f;
+
+import java.util.Random;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.movement.maneuvers.TaskMoveManeuver.

@@ -9,12 +9,11 @@ import data.order.picker.NearestPicker;
 import data.order.picker.RandomPicker;
 import data.order.picker.SpreadPicker;
 import data.test.fixture.BattleNext_TestOrderFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_OrderPickersIntegrationTest extends BattleNext_TestOrderFixture {
 

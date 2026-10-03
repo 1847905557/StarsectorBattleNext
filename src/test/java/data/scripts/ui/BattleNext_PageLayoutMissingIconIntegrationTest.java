@@ -1,13 +1,12 @@
 package data.scripts.ui;
 
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_PageLayoutMissingIconIntegrationTest {
 	private static final Color TINT = new Color(30, 60, 90);

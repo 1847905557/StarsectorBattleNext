@@ -1,12 +1,7 @@
 package data.scripts.ai.vanilla.system;
 
-import com.fs.starfarer.api.combat.FighterWingAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
-import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.util.IntervalUtil;
 import org.lwjgl.util.vector.Vector2f;

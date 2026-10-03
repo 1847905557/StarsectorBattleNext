@@ -4,11 +4,8 @@ import data.model.BattleNext_JsonModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 
 public class BattleNext_RuleModel extends BattleNext_JsonModel {
 

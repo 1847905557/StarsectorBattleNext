@@ -2,15 +2,13 @@ package data.model.rule.io;
 
 import data.model.BattleNext_LoadSource;
 import data.model.rule.BattleNext_RuleModel;
-
-import data.model.rule.io.BattleNext_RuleStandardLoader;
 import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.*;
-import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 
 class BattleNext_RuleStandardLoaderTest extends BattleNext_TestGameFixture {

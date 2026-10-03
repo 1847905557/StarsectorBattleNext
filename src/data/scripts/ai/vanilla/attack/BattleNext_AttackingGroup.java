@@ -4,7 +4,6 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.combat.WeaponGroupAPI;
 import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
-import java.util.List;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.attack.AttackingGroup.

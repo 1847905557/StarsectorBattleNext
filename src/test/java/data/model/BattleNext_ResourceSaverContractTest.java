@@ -10,14 +10,13 @@ import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 

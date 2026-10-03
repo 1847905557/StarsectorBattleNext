@@ -2,13 +2,12 @@ package data.model.quickbattle.io;
 
 import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_QuickBattleTextRoundTripTest extends BattleNext_TestFleetIoFixture {
 

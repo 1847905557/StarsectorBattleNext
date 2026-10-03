@@ -1,7 +1,5 @@
 package data.scripts.order;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
@@ -14,13 +12,9 @@ import data.order.BattleNext_OrderRegistry;
 import data.order.BattleNext_OrderUtils;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
 import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.tools.BattleNext_Logger;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 

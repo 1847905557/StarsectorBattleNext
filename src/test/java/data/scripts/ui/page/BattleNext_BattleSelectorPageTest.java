@@ -3,14 +3,9 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.widget.BattleNext_DropdownField;
-import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 

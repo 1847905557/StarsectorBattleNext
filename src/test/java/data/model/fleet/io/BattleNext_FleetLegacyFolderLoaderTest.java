@@ -6,12 +6,11 @@ import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixture {
 

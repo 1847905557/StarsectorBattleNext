@@ -1,7 +1,5 @@
 package data.missions.BattleNext_pvp;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
@@ -17,12 +15,13 @@ import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.plugin.*;
-import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
-import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.plugin.*;
 import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
 
 import java.util.List;

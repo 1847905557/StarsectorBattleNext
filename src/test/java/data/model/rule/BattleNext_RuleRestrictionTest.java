@@ -1,11 +1,11 @@
 package data.model.rule;
 
-import data.restriction.numeric.FleetMaxShips;
-
 import data.restriction.BattleNext_RestrictionRegistry;
+import data.restriction.numeric.FleetMaxShips;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,8 +13,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_RuleRestrictionTest {
 

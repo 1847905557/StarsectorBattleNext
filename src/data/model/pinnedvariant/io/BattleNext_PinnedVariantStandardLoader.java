@@ -1,19 +1,17 @@
 package data.model.pinnedvariant.io;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLoader<BattleNext_PinnedVariantModel> {

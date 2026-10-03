@@ -1,10 +1,6 @@
 package data.scripts.ai.vanilla.system;
 
-import com.fs.starfarer.api.combat.FogOfWarAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ShipSystemAPI;
-import com.fs.starfarer.api.combat.ShipwideAIFlags;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.impl.combat.EntropyAmplifierStats;
 import com.fs.starfarer.api.util.IntervalUtil;

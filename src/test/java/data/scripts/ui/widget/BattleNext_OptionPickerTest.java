@@ -3,13 +3,12 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.lang.reflect.Proxy;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_OptionPickerTest {
 	private SettingsAPI previousSettings;

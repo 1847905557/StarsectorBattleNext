@@ -7,8 +7,8 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.util.ArrayList;
 import java.util.Comparator;

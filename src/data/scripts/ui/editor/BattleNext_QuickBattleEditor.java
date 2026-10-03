@@ -1,19 +1,18 @@
 package data.scripts.ui.editor;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.missions.BattleNext_MissionBattleMap;
+import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -23,8 +22,8 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {

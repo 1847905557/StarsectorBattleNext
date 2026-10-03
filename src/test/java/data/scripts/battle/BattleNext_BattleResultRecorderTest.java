@@ -4,6 +4,8 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -11,9 +13,6 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 class BattleNext_BattleResultRecorderTest {
 

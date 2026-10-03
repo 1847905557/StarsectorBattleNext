@@ -4,9 +4,8 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
 
 class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 

@@ -1,8 +1,7 @@
 package data.test.fixture;
 
-import java.util.Arrays;
-
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,12 +9,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 public class BattleNext_TestTextCatalog {
 

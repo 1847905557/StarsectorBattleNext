@@ -1,10 +1,8 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -18,10 +16,11 @@ import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.test.fixture.BattleNext_TestVariantFixture;
+import org.codehaus.janino.SimpleCompiler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.codehaus.janino.SimpleCompiler;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -29,15 +28,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 	private int panelsBeforeFailure = -1;

@@ -3,8 +3,8 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 
 public abstract class BattleNext_BaseSourceProvider implements BattleNext_OptionPicker.OptionChoiceSource {
 

@@ -8,6 +8,7 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestSpriteCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -17,8 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVariantFixture {
 	private static final Color ORIGINAL_SPRITE_COLOR = new Color(150, 180, 210);

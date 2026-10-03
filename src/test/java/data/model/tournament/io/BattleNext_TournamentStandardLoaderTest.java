@@ -3,17 +3,14 @@ package data.model.tournament.io;
 import data.model.BattleNext_LoadSource;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
-import java.util.List;
-
-import data.model.tournament.io.BattleNext_TournamentStandardLoader;
 import data.test.fixture.BattleNext_TestGameFixture;
-import org.junit.jupiter.api.Test;
-import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
 import org.json.JSONException;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
 
 class BattleNext_TournamentStandardLoaderTest extends BattleNext_TestGameFixture {
 

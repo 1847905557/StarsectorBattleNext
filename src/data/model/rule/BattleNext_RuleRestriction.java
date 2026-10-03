@@ -1,10 +1,11 @@
 package data.model.rule;
 
+import data.restriction.BattleNext_RestrictionRegistry;
+import data.restriction.BattleNext_RestrictionSpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import data.restriction.BattleNext_RestrictionRegistry;
-import data.restriction.BattleNext_RestrictionSpec;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

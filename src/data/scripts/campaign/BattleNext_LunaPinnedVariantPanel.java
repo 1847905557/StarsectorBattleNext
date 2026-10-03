@@ -1,24 +1,17 @@
 package data.scripts.campaign;
 
-import data.scripts.tools.BattleNext_Logger;
-
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import data.scripts.tools.BattleNext_GeometryRenderer;
+import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.battlesnext.util.ui.UIPanelManager;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -26,8 +19,8 @@ import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import org.lwjgl.input.Keyboard;
 
-import java.util.List;
 import java.awt.Color;
+import java.util.List;
 
 public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 

@@ -1,5 +1,6 @@
 package data.scripts.ai.vanilla.maneuvers;
 
+import data.scripts.battlesnext.util.annotation.PublicData;
 import org.lwjgl.util.vector.Vector2f;
 
 /**
@@ -9,7 +10,6 @@ import org.lwjgl.util.vector.Vector2f;
  * because the escort maneuver builds spots directly. This is a residual
  * artifact of the decompilation, annotated where the maneuver constructs spots.
  */
-import data.scripts.battlesnext.util.annotation.PublicData;
 
 @PublicData
 public class BattleNext_EscortSpot {

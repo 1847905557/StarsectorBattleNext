@@ -6,6 +6,7 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.test.fixture.BattleNext_TestCampaignFleetFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -14,8 +15,6 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixture {
 

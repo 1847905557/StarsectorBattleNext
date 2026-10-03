@@ -1,13 +1,12 @@
 package data.scripts.ui.page;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay;
 
 import java.util.Locale;

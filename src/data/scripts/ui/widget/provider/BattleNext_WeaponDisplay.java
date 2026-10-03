@@ -1,9 +1,8 @@
 package data.scripts.ui.widget.provider;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
+import data.scripts.tools.BattleNext_Logger;
 
 public class BattleNext_WeaponDisplay {
 

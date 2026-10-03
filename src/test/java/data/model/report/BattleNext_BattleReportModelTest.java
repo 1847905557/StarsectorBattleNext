@@ -4,9 +4,8 @@ import data.scripts.report.BattleNext_MemberReport;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class BattleNext_BattleReportModelTest {
 

@@ -4,6 +4,7 @@ import com.fs.starfarer.api.combat.CombatAssignmentType;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.order.BattleNext_FleetOrderBehavior.FleetOrderMode;
 import data.test.fixture.BattleNext_TestOrderFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -11,8 +12,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetOrderBehaviorIntegrationTest extends BattleNext_TestOrderFixture {
 

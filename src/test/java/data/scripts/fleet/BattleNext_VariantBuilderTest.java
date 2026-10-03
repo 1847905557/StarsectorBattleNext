@@ -2,16 +2,15 @@ package data.scripts.fleet;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
 

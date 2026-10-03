@@ -1,7 +1,5 @@
 package data.scripts.ui;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -16,6 +14,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
@@ -23,8 +22,8 @@ import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
-import org.lwjgl.input.Keyboard;
 import org.json.JSONException;
+import org.lwjgl.input.Keyboard;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;

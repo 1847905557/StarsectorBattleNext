@@ -1,21 +1,13 @@
 package data.scripts.plugin;
 
-import com.fs.starfarer.api.combat.BeamAPI;
-import com.fs.starfarer.api.combat.CombatEntityAPI;
-import com.fs.starfarer.api.combat.DamageType;
-import com.fs.starfarer.api.combat.DamagingProjectileAPI;
-import com.fs.starfarer.api.combat.EmpArcEntityAPI;
-import com.fs.starfarer.api.combat.FighterWingAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.WeaponAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -23,8 +15,6 @@ import java.lang.reflect.Proxy;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BattleNext_ScorekeeperReportIntegrationTest {
 	private final Map<ShipAPI, Object[]> damageParams = new IdentityHashMap<>();

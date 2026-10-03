@@ -1,11 +1,11 @@
 package data.scripts.ai.vanilla;
 
 import com.fs.starfarer.api.combat.ShipSystemAPI;
-import java.lang.reflect.Proxy;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
 
 class BattleNext_VentModuleTest {
 

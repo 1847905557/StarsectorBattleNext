@@ -1,26 +1,16 @@
 package data.scripts.plugin;
 
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatUIAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipAIPlugin;
-import com.fs.starfarer.api.combat.ShipCommand;
-import com.fs.starfarer.api.combat.ViewportAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.input.InputEventAPI;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_RttPluginTest {

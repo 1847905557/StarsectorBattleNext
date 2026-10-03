@@ -1,13 +1,12 @@
 package data.model.pinnedvariant;
 
-import data.scripts.tools.BattleNext_Logger;
-
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader;
 import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
