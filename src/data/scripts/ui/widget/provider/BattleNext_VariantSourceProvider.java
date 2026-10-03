@@ -1,5 +1,7 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -48,7 +50,8 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		try {
 			pinnedVariants.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
-			Global.getLogger(BattleNext_VariantSourceProvider.class).warn("Unable to load pinned variants", exception);
+			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.options.pins.unavailable",
+				BattleNext_Logger.fields().put("load_error", pinnedVariants.getLoadError()).build(), exception);
 		}
 		if (pinnedVariants.isLoaded()) {
 			for (BattleNext_PinnedVariantModel pin : pinnedVariants.getAll()) {
@@ -84,6 +87,8 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(
 					option.getLabel(), option.getId(), hull, Global.getSettings(), List.of(facts)));
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.degraded",
+				BattleNext_Logger.fields().put("variant_id", option.getId()).put("name", option.getLabel()).build(), exception);
 			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
 					option.getLabel(), option.getId(), "", List.of(exception.toString())));
 		}
@@ -105,6 +110,8 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		try {
 			return resolve(id);
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.resolve.degraded",
+				BattleNext_Logger.fields().put("variant_id", id).put("fallback", "Omitted option or missing icon").build(), exception);
 			return null;
 		}
 	}

@@ -1,5 +1,7 @@
 package data.scripts.ai.vanilla.shields;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.combat.FogOfWarAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipCommand;
@@ -161,7 +163,8 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 						if (!this.eval.isShieldFacingOk()
 							&& (energyFraction > 0.2F || this.ship.getShield().isOn() || shouldRaiseShield || phasedThreatNear || avoidanceVector != null && this.eval.hasSolution() || collisionThreatDir != null)) {
 							if (debug) {
-								System.out.println("Ok to raise, shield on:" + this.ship.getShield().isOn());
+								BattleNext_Logger.info(BattleNext_OmniShieldAngleAI.class, "shield.raise.allowed",
+				BattleNext_Logger.fields().put("ship_id", this.ship.getId()).put("shield_on", this.ship.getShield().isOn()).put("flux", this.ship.getFluxLevel()).put("debug", debug).build());
 							}
 
 							okToRaise = true;
@@ -169,7 +172,8 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 
 						if (!shouldRaiseShield && avoidanceVector == null && collisionThreatDir == null) {
 							if (debug) {
-								System.out.println("Don't raise, no threat or missiles");
+								BattleNext_Logger.info(BattleNext_OmniShieldAngleAI.class, "shield.raise.no_threat",
+				BattleNext_Logger.fields().put("ship_id", this.ship.getId()).put("shield_on", this.ship.getShield().isOn()).put("flux", this.ship.getFluxLevel()).put("debug", debug).build());
 							}
 
 							okToRaise = false;
@@ -190,7 +194,8 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 									okToRaise = false;
 									fluxTooHigh = true;
 									if (debug) {
-										System.out.println("Don't raise, flux too high");
+										BattleNext_Logger.info(BattleNext_OmniShieldAngleAI.class, "shield.raise.flux_rejected",
+				BattleNext_Logger.fields().put("ship_id", this.ship.getId()).put("shield_on", this.ship.getShield().isOn()).put("flux", this.ship.getFluxLevel()).put("debug", debug).build());
 									}
 								}
 							}
@@ -297,7 +302,8 @@ public class BattleNext_OmniShieldAngleAI implements BattleNext_ShieldAI {
 						} else if (BattleNext_ShipAIHelper.isShieldIdle(this.ship)
 								&& (okToRaise || criticalHull && shouldRaiseShield)) {
 							if (debug) {
-								System.out.println("Toggling shield on");
+								BattleNext_Logger.info(BattleNext_OmniShieldAngleAI.class, "shield.toggle.on",
+				BattleNext_Logger.fields().put("ship_id", this.ship.getId()).put("shield_on", this.ship.getShield().isOn()).put("flux", this.ship.getFluxLevel()).put("debug", debug).build());
 							}
 
 							this.timeSinceShieldToggle = 0.0F;

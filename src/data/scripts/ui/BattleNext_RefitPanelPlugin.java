@@ -1,5 +1,7 @@
 package data.scripts.ui;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -208,6 +210,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			statusLabel.setText(saveError);
 			return false;
 		}
+		BattleNext_Logger.operationStarted(BattleNext_RefitPanelPlugin.class, "refit.commit",
+				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build());
 		ShipVariantAPI original = null;
 		ShipVariantAPI originalMember = null;
 		Object display = null;
@@ -226,6 +230,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			MethodHandles.publicLookup().findVirtual(refitScreen.getClass(), "saveCurrentVariant",
 					MethodType.methodType(void.class)).invoke(refitScreen);
 			committed = true;
+			BattleNext_Logger.operationSucceeded(BattleNext_RefitPanelPlugin.class, "refit.commit",
+				BattleNext_Logger.fields().put("member", member).put("variant", current).put("scope", "Mission refit").build());
 			ShipVariantAPI saved = currentVariant();
 			draft = saved.clone();
 			savedSMods = sModsOf(draft);
@@ -242,7 +248,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				savedSMods = sModsOf(draft);
 				savedDMods = dModsOf(draft);
 				saveError = "";
-				Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit panel refresh failed after save", exception);
+				BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "refit.display.after_commit.failed",
+				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build(), exception);
 				statusLabel.setText(strings.get("saved"));
 				return true;
 			}
@@ -253,19 +260,24 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 					MethodHandles.publicLookup().findVirtual(refitScreen.getClass(), "syncWithCurrentVariant",
 							MethodType.methodType(void.class)).invoke(refitScreen);
 				} catch (Throwable rollback) {
-					exception.addSuppressed(rollback);
+					BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "refit.rollback.failed",
+						BattleNext_Logger.fields().put("member", member).put("original", original).put("original_member", originalMember).build(), rollback);
+							exception.addSuppressed(rollback);
 				}
 			}
 			if (originalMember != null) {
 				try {
 					member.setVariant(originalMember, false, true);
 				} catch (Throwable rollback) {
+					BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "refit.rollback.failed",
+				BattleNext_Logger.fields().put("member", member).put("original", original).put("original_member", originalMember).build(), rollback);
 					exception.addSuppressed(rollback);
 				}
 			}
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
-			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Mission refit save failed", exception);
+			BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "refit.commit.failed",
+				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build(), exception);
 			return false;
 		}
 	}
@@ -287,7 +299,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			details.setVariantJson(null);
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
-			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Mission refit discard failed", exception);
+			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "refit.discard.failed",
+				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build(), exception);
 		}
 	}
 
@@ -463,7 +476,8 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			details.setVariantJson(null);
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
-			Global.getLogger(BattleNext_RefitPanelPlugin.class).warn("Refit details refresh failed", exception);
+			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "refit.details.refresh.failed",
+				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build(), exception);
 		}
 	}
 }

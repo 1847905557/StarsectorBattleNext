@@ -1,5 +1,7 @@
 package data.scripts.tournament;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -18,14 +20,28 @@ import java.util.Set;
 public class BattleNext_TournamentEngine {
 
 	public void start(BattleNext_TournamentModel tournament) {
-		if (tournament.isStarted()) throw new IllegalStateException("Tournament has already started");
-		validate(tournament);
-		tournament.clearGeneratedMatches();
-		tournament.setStarted(true);
-		tournament.setCompleted(false);
-		tournament.setChampionFleetId("");
-		createOpeningMatches(tournament, Map.of());
-		reconcile(tournament, Map.of());
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build();
+		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.start", input);
+		try {
+			if (tournament.isStarted()) throw new IllegalStateException("Tournament has already started");
+			validate(tournament);
+			tournament.clearGeneratedMatches();
+			tournament.setStarted(true);
+			tournament.setCompleted(false);
+			tournament.setChampionFleetId("");
+			createOpeningMatches(tournament, Map.of());
+			reconcile(tournament, Map.of());
+			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.start",
+					BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build());
+		} catch (RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(BattleNext_TournamentEngine.class, "tournament.start.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(BattleNext_TournamentEngine.class, "tournament.start", input, exception);
+			}
+			throw exception;
+		}
 	}
 
 	public BattleNext_Match getNextMatch(BattleNext_TournamentModel tournament) {
@@ -38,49 +54,79 @@ public class BattleNext_TournamentEngine {
 
 	public void recordRound(BattleNext_TournamentModel tournament, String matchId, String winner,
 			BattleNext_BattleReportModel report) {
-		BattleNext_Match match = tournament.findMatch(matchId);
-		if (!tournament.isStarted() || tournament.isCompleted() || match == null || match.getStatus() != MatchStatus.PENDING) {
-			throw new IllegalStateException("Tournament match is unavailable");
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build();
+		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.round.record", input);
+		try {
+			BattleNext_Match match = tournament.findMatch(matchId);
+			if (!tournament.isStarted() || tournament.isCompleted() || match == null || match.getStatus() != MatchStatus.PENDING) {
+				throw new IllegalStateException("Tournament match is unavailable");
+			}
+			BattleNext_Round.RoundStatus result = resultFor(winner, match);
+			BattleNext_Round round = new BattleNext_Round(match.getPlayer(), match.getEnemy());
+			round.setStatus(result);
+			round.setReport(report);
+			match.addRound(round);
+			if (result == BattleNext_Round.RoundStatus.DRAW) return;
+			int winsNeeded = tournament.getWinTarget();
+			if (match.getPlayerWins() >= winsNeeded || match.getEnemyWins() >= winsNeeded) {
+				match.setStatus(MatchStatus.COMPLETE);
+				reconcile(tournament, Map.of());
+				BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.round.record",
+					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build());
+				return;
+			}
+			match.setSides(match.getEnemy(), match.getPlayer());
+			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.round.record",
+					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build());
+		} catch (RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(BattleNext_TournamentEngine.class, "tournament.round.record.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(BattleNext_TournamentEngine.class, "tournament.round.record", input, exception);
+			}
+			throw exception;
 		}
-		BattleNext_Round.RoundStatus result = resultFor(winner, match);
-		BattleNext_Round round = new BattleNext_Round(match.getPlayer(), match.getEnemy());
-		round.setStatus(result);
-		round.setReport(report);
-		match.addRound(round);
-		if (result == BattleNext_Round.RoundStatus.DRAW) return;
-		int winsNeeded = tournament.getWinTarget();
-		if (match.getPlayerWins() >= winsNeeded || match.getEnemyWins() >= winsNeeded) {
-			match.setStatus(MatchStatus.COMPLETE);
-			reconcile(tournament, Map.of());
-			return;
-		}
-		match.setSides(match.getEnemy(), match.getPlayer());
 	}
 
 	public void rollback(BattleNext_TournamentModel tournament, String matchId) {
-		if (tournament.findMatch(matchId) == null) {
-			throw new IllegalArgumentException("Unknown tournament match: " + matchId);
-		}
-		Set<String> affected = new HashSet<>();
-		affected.add(matchId);
-		boolean changed;
-		do {
-			changed = false;
-			for (BattleNext_Match match : tournament.getMatches()) {
-				for (String dependency : match.getDependencies()) {
-					if (affected.contains(dependency) && affected.add(match.getId())) changed = true;
-				}
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build();
+		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.rollback", input);
+		try {
+			if (tournament.findMatch(matchId) == null) {
+				throw new IllegalArgumentException("Unknown tournament match: " + matchId);
 			}
-		} while (changed);
-		Map<String, BattleNext_Match> preserved = new HashMap<>();
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if (!affected.contains(match.getId())) preserved.put(match.getId(), match);
+			Set<String> affected = new HashSet<>();
+			affected.add(matchId);
+			boolean changed;
+			do {
+				changed = false;
+				for (BattleNext_Match match : tournament.getMatches()) {
+					for (String dependency : match.getDependencies()) {
+						if (affected.contains(dependency) && affected.add(match.getId())) changed = true;
+					}
+				}
+			} while (changed);
+			Map<String, BattleNext_Match> preserved = new HashMap<>();
+			for (BattleNext_Match match : tournament.getMatches()) {
+				if (!affected.contains(match.getId())) preserved.put(match.getId(), match);
+			}
+			tournament.clearGeneratedMatches();
+			tournament.setCompleted(false);
+			tournament.setChampionFleetId("");
+			createOpeningMatches(tournament, preserved);
+			reconcile(tournament, preserved);
+			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.rollback",
+					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build());
+		} catch (RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(BattleNext_TournamentEngine.class, "tournament.rollback.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(BattleNext_TournamentEngine.class, "tournament.rollback", input, exception);
+			}
+			throw exception;
 		}
-		tournament.clearGeneratedMatches();
-		tournament.setCompleted(false);
-		tournament.setChampionFleetId("");
-		createOpeningMatches(tournament, preserved);
-		reconcile(tournament, preserved);
 	}
 
 	private void validate(BattleNext_TournamentModel tournament) {
@@ -249,6 +295,8 @@ public class BattleNext_TournamentEngine {
 			match = old;
 		}
 		tournament.addGeneratedMatch(match);
+		BattleNext_Logger.info(BattleNext_TournamentEngine.class, "tournament.match.generated",
+				BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("match", match).put("scope", "memory").build());
 	}
 
 	private String initialPlayer(BattleNext_Match match) {
@@ -336,6 +384,8 @@ public class BattleNext_TournamentEngine {
 	private void finish(BattleNext_TournamentModel tournament, String champion) {
 		tournament.setChampionFleetId(champion);
 		tournament.setCompleted(true);
+		BattleNext_Logger.info(BattleNext_TournamentEngine.class, "tournament.completed",
+				BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build());
 	}
 
 	private void selectPendingMatch(BattleNext_TournamentModel tournament) {

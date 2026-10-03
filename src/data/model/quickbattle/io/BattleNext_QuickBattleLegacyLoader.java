@@ -1,5 +1,9 @@
 package data.model.quickbattle.io;
 
+import data.scripts.tools.BattleNext_Logger;
+
+import data.scripts.tools.BattleNext_ModFileManager;
+
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
@@ -18,9 +22,10 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
 		String text;
 		try {
-			text = Global.getSettings().loadText(LEGACY_PATH, MOD_ID);
+			text = BattleNext_ModFileManager.readText(BattleNext_QuickBattleLegacyLoader.class, LEGACY_PATH, MOD_ID);
 		} catch (IOException | JSONException exception) {
-			Global.getLogger(BattleNext_QuickBattleLegacyLoader.class).warn("Legacy pvp matches are unavailable: " + LEGACY_PATH);
+			BattleNext_Logger.warn(BattleNext_QuickBattleLegacyLoader.class, "quick_battle.legacy.load.degraded",
+				BattleNext_Logger.fields().put("path", LEGACY_PATH).put("fallback", result).build(), exception);
 			return result;
 		}
 		int index = 0;
@@ -30,6 +35,10 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 			String line = lines[lineIndex];
 			BattleNext_QuickBattleModel model = BattleNext_QuickBattleModel.parseLine(line, true);
 			if (model == null) continue;
+			if (model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW && !line.isBlank() && !line.trim().startsWith("#")) {
+				BattleNext_Logger.warn(BattleNext_QuickBattleLegacyLoader.class, "quick_battle.row.degraded",
+				BattleNext_Logger.fields().put("path", LEGACY_PATH).put("line", lineIndex + 1).put("input", line).put("model", model).put("criterion", "Four columns, fleet references, supported map and positive finite scale").build());
+			}
 			model.setId("pvp-legacy-" + index);
 			index++;
 			markSource(model, LEGACY_PATH);

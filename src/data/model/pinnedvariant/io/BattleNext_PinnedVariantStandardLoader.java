@@ -1,5 +1,7 @@
 package data.model.pinnedvariant.io;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
@@ -41,10 +43,12 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 			String pinId = "";
 			String hullId = "";
 			try {
-				JSONObject json = Global.getSettings().loadJSON(path, MOD_ID);
+				JSONObject json = BattleNext_ModFileManager.readJson(BattleNext_PinnedVariantStandardLoader.class, path, MOD_ID);
 				name = json.optString("displayName", name);
 				if (name.isBlank()) {
 					name = path.substring(path.lastIndexOf('/') + 1);
+					BattleNext_Logger.warn(BattleNext_PinnedVariantStandardLoader.class, "variant.pin.name.fallback",
+				BattleNext_Logger.fields().put("path", path).put("input", json).put("name", name).build());
 				}
 				pinId = json.optString("pinId", "");
 				JSONObject variant = json.optJSONObject("variantJson");
@@ -60,6 +64,8 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 				result.add(model);
 				entries.add(new CatalogEntry(path, name, pinId, hullId, model, ""));
 			} catch (IOException | JSONException | RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_PinnedVariantStandardLoader.class, "variant.pin.load.degraded",
+				BattleNext_Logger.fields().put("path", path).put("pin_id", pinId).put("name", name).put("hull_id", hullId).build(), exception);
 				String error = exception.toString();
 				errors.add(path + ": " + error);
 				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error));
@@ -83,7 +89,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 	@Override
 	protected BattleNext_PinnedVariantModel parse(String path) throws IOException, JSONException {
 		BattleNext_PinnedVariantModel model = new BattleNext_PinnedVariantModel();
-		model.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+		model.fromJson(BattleNext_ModFileManager.readJson(BattleNext_PinnedVariantStandardLoader.class, path, MOD_ID));
 		return model;
 	}
 

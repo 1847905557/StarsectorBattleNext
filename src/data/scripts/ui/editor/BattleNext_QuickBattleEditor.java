@@ -1,5 +1,7 @@
 package data.scripts.ui.editor;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
@@ -138,6 +140,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				store.save(entry);
 			}
 		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.error(BattleNext_QuickBattleEditor.class, "quick_battle.editor.commit.failed",
+				BattleNext_Logger.fields().put("entries", entries).put("input_state", serializeState()).build(), exception);
 			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
@@ -467,6 +471,8 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				float mapScale = Float.parseFloat(row.mapScale.getText().trim());
 				if (row.player.getText().trim().isEmpty() || row.enemy.getText().trim().isEmpty()
 						|| map < RANDOM_MAP_ID || map > LAST_MAP_ID || !Float.isFinite(mapScale) || mapScale <= 0f) {
+					BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
+				BattleNext_Logger.fields().put("index", index).put("player", row.player.getText()).put("enemy", row.enemy.getText()).put("map", row.map.getText()).put("scale", row.mapScale.getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
 					setStatus(battleStrings.get("invalid_map_settings"));
 					return false;
 				}
@@ -478,7 +484,9 @@ public class BattleNext_QuickBattleEditor implements BattleNext_EditorView {
 				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE
 						: model.getRowType());
 			} catch (NumberFormatException exception) {
-				setStatus(battleStrings.get("invalid_map_settings"));
+				BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
+				BattleNext_Logger.fields().put("index", index).put("player", row.player.getText()).put("enemy", row.enemy.getText()).put("map", row.map.getText()).put("scale", row.mapScale.getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
+					setStatus(battleStrings.get("invalid_map_settings"));
 				return false;
 			}
 		}

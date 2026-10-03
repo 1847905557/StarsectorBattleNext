@@ -1,5 +1,7 @@
 package data.model.fleet.io;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
@@ -28,7 +30,11 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = LEGACY_FOLDER + "/player" + number + "_fleet.csv";
-			if (!paths.contains(fleetPath)) continue;
+			if (!paths.contains(fleetPath)) {
+				BattleNext_Logger.warn(BattleNext_FleetLegacyLoader.class, "fleet.legacy.incomplete",
+				BattleNext_Logger.fields().put("metadata_path", dataPath).put("missing_members_path", fleetPath).put("number", number).build());
+				continue;
+			}
 			result.add(readFleet(number, dataPath, fleetPath));
 		}
 		return result;
@@ -42,27 +48,37 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 	protected BattleNext_FleetModel readFleet(String number, String dataPath, String fleetPath)
 			throws IOException, JSONException {
 
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("number", number).put("metadata_path", dataPath).put("members_path", fleetPath).build();
+		BattleNext_Logger.operationStarted(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load", input);
 		try {
-			JSONArray dataRows = Global.getSettings().loadCSV(dataPath, MOD_ID);
-			JSONObject data = metadata(dataRows, dataPath);
-			JSONArray fleetRows = Global.getSettings().loadCSV(fleetPath, MOD_ID);
-			List<BattleNext_MemberModel> members = new ArrayList<>();
-			for (int index = 0; index < fleetRows.length(); index++) {
-				JSONObject row = fleetRows.getJSONObject(index);
-				if (isEmpty(row, "rowNumber", "variant", "personality", "skills", "name", "portrait", "orders", "tags")) continue;
-				members.add(new BattleNext_MemberModel(row.optString("variant").trim(), row.optString("name").trim(),
-						row.optString("personality").trim(), splitValues(row.optString("skills")),
-						row.optString("portrait").trim(), row.optString("orders").trim(), splitValues(row.optString("tags"))));
+
+			try {
+				JSONArray dataRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, dataPath, MOD_ID);
+				JSONObject data = metadata(dataRows, dataPath);
+				JSONArray fleetRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, fleetPath, MOD_ID);
+				List<BattleNext_MemberModel> members = new ArrayList<>();
+				for (int index = 0; index < fleetRows.length(); index++) {
+					JSONObject row = fleetRows.getJSONObject(index);
+					if (isEmpty(row, "rowNumber", "variant", "personality", "skills", "name", "portrait", "orders", "tags")) continue;
+					members.add(new BattleNext_MemberModel(row.optString("variant").trim(), row.optString("name").trim(),
+							row.optString("personality").trim(), splitValues(row.optString("skills")),
+							row.optString("portrait").trim(), row.optString("orders").trim(), splitValues(row.optString("tags"))));
+				}
+				BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, data.optString("name").trim(),
+						splitValues(data.optString("skills")), splitValues(data.optString("tags")), members);
+				result.setFolderName("legacy_" + number);
+				result.setAuthor(data.optString("author").trim());
+				markSource(result, dataPath);
+				BattleNext_Logger.operationSucceeded(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load",
+					BattleNext_Logger.fields().put("fleet", result).put("metadata_path", dataPath).put("members_path", fleetPath).build());
+				return result;
+			} catch (IOException | JSONException exception) {
+				throw new IOException("Unable to load legacy fleet from " + dataPath + " and " + fleetPath
+						+ ": " + exception.getMessage(), exception);
 			}
-			BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, data.optString("name").trim(),
-					splitValues(data.optString("skills")), splitValues(data.optString("tags")), members);
-			result.setFolderName("legacy_" + number);
-			result.setAuthor(data.optString("author").trim());
-			markSource(result, dataPath);
-			return result;
-		} catch (IOException | JSONException exception) {
-			throw new IOException("Unable to load legacy fleet from " + dataPath + " and " + fleetPath
-					+ ": " + exception.getMessage(), exception);
+		} catch (IOException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load", input, exception);
+			throw exception;
 		}
 	}
 

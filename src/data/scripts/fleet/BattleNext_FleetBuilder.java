@@ -1,5 +1,7 @@
 package data.scripts.fleet;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -37,9 +39,13 @@ public class BattleNext_FleetBuilder {
 					members.add(memberBuilder.build(definition.getMembers().get(index)));
 				}
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_FleetBuilder.class, "fleet.member.assembly.failed",
+				BattleNext_Logger.fields().put("fleet_id", definition.getId()).put("member_index", index).put("member", definition.getMembers().get(index)).build(), exception);
 				errors.add("member[" + index + "]: " + exception.getMessage());
 			}
 		}
+		BattleNext_Logger.info(BattleNext_FleetBuilder.class, "fleet.assembly.completed",
+				BattleNext_Logger.fields().put("definition", definition).put("commander", commander).put("members", members).put("errors", errors).build());
 		return new BattleNext_AssembledFleet(definition, commander, members, errors);
 	}
 

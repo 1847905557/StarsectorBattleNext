@@ -1,5 +1,7 @@
 package data.scripts.ui.editor;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -336,6 +338,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 					restriction.setItems(items);
 				}
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_RuleEditor.class, "rule.restriction.input.rejected",
+				BattleNext_Logger.fields().put("rule_id", draft.getId()).put("restriction_id", current.getId()).put("input", input).put("type", spec.getType()).put("validate", validate).put("fallback", current).build(), exception);
 				if (validate) throw new IllegalArgumentException(current.getId() + ": " + exception.getMessage(), exception);
 				restriction = current;
 			}
@@ -354,6 +358,8 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 			setStatus(strings.get("saved"));
 			return true;
 		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.error(BattleNext_RuleEditor.class, "rule.editor.commit.failed",
+				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);
 			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}

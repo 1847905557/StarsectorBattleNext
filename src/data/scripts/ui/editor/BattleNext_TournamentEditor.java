@@ -1,5 +1,7 @@
 package data.scripts.ui.editor;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -370,6 +372,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			maxFleet = Integer.parseInt(maxFleetField.getText().trim());
 			map = Integer.parseInt(mapField.getText().trim());
 		} catch (NumberFormatException exception) {
+			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
+				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).put("criterion", "Integer best-of, fleet limit and map").build(), exception);
 			statusText = tournamentStrings.get("invalid_configuration");
 			return false;
 		}
@@ -380,11 +384,15 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT || fleets.size() > maxFleet
 				|| new HashSet<>(fleets).size() != fleets.size()
 				|| map < RANDOM_MAP_ID || map > LAST_MAP_ID) {
+			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
+				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).put("criterion", "Bracket, positive best-of, unique participants within fleet limits and supported map").build());
 			statusText = tournamentStrings.get("invalid_configuration");
 			return false;
 		}
 		for (String fleet : fleets) {
 			if (fleetStore.get(fleet) == null) {
+				BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.participant.rejected",
+				BattleNext_Logger.fields().put("tournament", draft).put("fleet_id", fleet).put("input_state", serializeState()).build());
 				statusText = tournamentStrings.get("invalid_participant_fleet") + ": " + fleet;
 				return false;
 			}
@@ -403,6 +411,8 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 			statusText = strings.get("saved");
 			return true;
 		} catch (Exception exception) {
+			BattleNext_Logger.error(BattleNext_TournamentEditor.class, "tournament.editor.commit.failed",
+				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);
 			statusText = strings.get("save_failed") + ": " + exception.getMessage();
 			return false;
 		}

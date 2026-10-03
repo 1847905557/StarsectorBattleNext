@@ -1,5 +1,7 @@
 package data.scripts.campaign;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -59,7 +61,8 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 					Global.getSector().getPlayerPerson(), selected, variant);
 		} catch (Exception exception) {
 			status = fleetStrings.get("player_save_snapshot_error") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to capture player fleet", exception);
+			BattleNext_Logger.error(BattleNext_LunaFleetSavePanel.class, "fleet.player.snapshot.failed",
+				BattleNext_Logger.fields().put("member", selected).put("variant", variant).build(), exception);
 		}
 	}
 
@@ -118,6 +121,8 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		if (!"fleet_capture_save".equals(buttonId) || saved || snapshot == null) return;
 		String displayName = name.getText();
 		if (displayName.trim().isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_LunaFleetSavePanel.class, "save.name.rejected",
+				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
 			status = fleetStrings.get("player_save_name_required");
 			rebuildContents(displayName);
 			return;
@@ -130,7 +135,8 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			status = fleetStrings.format("player_save_saved", snapshot.getName(), snapshot.getSourcePath());
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to save player fleet snapshot", exception);
+			BattleNext_Logger.error(BattleNext_LunaFleetSavePanel.class, "fleet.player.save.failed",
+				BattleNext_Logger.fields().put("fleet", snapshot).put("display_name", displayName).build(), exception);
 		}
 		rebuildContents(displayName);
 	}

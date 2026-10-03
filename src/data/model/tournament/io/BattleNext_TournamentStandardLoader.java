@@ -27,7 +27,7 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 	@Override
 	protected BattleNext_TournamentModel parse(String path) throws IOException, JSONException {
 		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
-		tournament.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+		tournament.fromJson(BattleNext_ModFileManager.readJson(BattleNext_TournamentStandardLoader.class, path, MOD_ID));
 		return tournament;
 	}
 
@@ -43,7 +43,7 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 
 	public String loadActiveId() throws IOException, JSONException {
 		if (!BattleNext_ModFileManager.exists(META_PATH)) return "";
-		JSONObject meta = Global.getSettings().loadJSON(META_PATH, MOD_ID);
+		JSONObject meta = BattleNext_ModFileManager.readJson(BattleNext_TournamentStandardLoader.class, META_PATH, MOD_ID);
 		int version = meta.optInt("formatVersion", BattleNext_TournamentModel.META_FORMAT_VERSION);
 		if (version != BattleNext_TournamentModel.META_FORMAT_VERSION) return "";
 		return meta.optString("activeTournamentId", "");

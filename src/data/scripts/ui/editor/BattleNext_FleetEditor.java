@@ -1,5 +1,7 @@
 package data.scripts.ui.editor;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -320,6 +322,8 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		try {
 			store.save(draft);
 		} catch (Exception exception) {
+			BattleNext_Logger.error(BattleNext_FleetEditor.class, "fleet.editor.commit.failed",
+				BattleNext_Logger.fields().put("draft", draft).build(), exception);
 			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			return false;
 		}
@@ -364,15 +368,21 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		if (id == null) return true;
 		String fleetId = id.getText().trim();
 		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetId)) {
+			BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.id.rejected",
+				BattleNext_Logger.fields().put("id", fleetId).put("draft", draft).put("criterion", "Valid path segment").build());
 			setStatus(fleetStrings.get("invalid_id"));
 			return false;
 		}
 		String fleetFolderName = folderName.getText().trim();
 		if (fleetFolderName.isEmpty()) {
 			fleetFolderName = fleetId;
+			BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.folder.identity.completed",
+				BattleNext_Logger.fields().put("id", fleetId).put("folder", fleetFolderName).build());
 			folderName.setText(fleetFolderName);
 		}
 		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetFolderName)) {
+			BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.folder.rejected",
+				BattleNext_Logger.fields().put("folder", fleetFolderName).put("draft", draft).put("criterion", "Valid path segment").build());
 			setStatus(fleetStrings.get("invalid_folder"));
 			return false;
 		}
@@ -389,6 +399,8 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 			BattleNext_MemberModel existing = draft.getMembers().get(index);
 			String variantId = value(fields == null ? null : fields.variant, existing.getVariantId()).trim();
 			if (validate && variantId.isEmpty()) {
+				BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.member.variant.rejected",
+				BattleNext_Logger.fields().put("fleet", draft).put("member_index", index).put("variant_id", variantId).build());
 				setStatus(variantStrings.get("invalid_reference"));
 				return false;
 			}
@@ -406,7 +418,8 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 						setStatus(variantStrings.get("invalid_reference") + ": " + exception.getMessage());
 						return false;
 					}
-					// Keep references to variants unavailable in the current game setup.
+					BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.member.variant.degraded",
+				BattleNext_Logger.fields().put("fleet_id", draft.getId()).put("member_index", index).put("variant_id", variantId).put("validate", validate).build(), exception);
 				}
 			}
 			members.add(new BattleNext_MemberModel(variantId, value(fields == null ? null : fields.name, existing.getName()),

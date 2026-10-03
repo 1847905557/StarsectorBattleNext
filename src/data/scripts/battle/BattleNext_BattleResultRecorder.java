@@ -1,5 +1,7 @@
 package data.scripts.battle;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
@@ -72,20 +74,29 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		recorded = true;
 		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		SaveOutcome outcome;
+		BattleNext_Logger.operationStarted(BattleNext_BattleResultRecorder.class, "battle.report.record",
+				BattleNext_Logger.fields().put("report", report).put("match", match).build());
 		try {
 			outcome = writer.save(report);
 		} catch (IOException | JSONException | RuntimeException exception) {
-			Global.getLogger(BattleNext_BattleResultRecorder.class).error("Unable to save battle report", exception);
+			BattleNext_Logger.operationFailed(BattleNext_BattleResultRecorder.class, "battle.report.record",
+				BattleNext_Logger.fields().put("report", report).put("match", match).build(), exception);
 			combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, messages.apply("save_failed"));
 			return;
 		}
+		BattleNext_Logger.operationSucceeded(BattleNext_BattleResultRecorder.class, "battle.report.record",
+				BattleNext_Logger.fields().put("report", report).put("match", match).put("outcome", outcome).build());
 		String message = outcome == SaveOutcome.RETAINED
 				? String.format(messages.apply("generated"), report.getName()) : messages.apply("not_retained");
 		combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, message);
 	}
 
 	private SaveOutcome record(BattleNext_BattleReportModel report) throws IOException, JSONException {
-		if (report.getId().isEmpty()) report.setId(UUID.randomUUID().toString());
+		if (report.getId().isEmpty()) {
+			report.setId(UUID.randomUUID().toString());
+			BattleNext_Logger.warn(BattleNext_BattleResultRecorder.class, "report.identity.completed",
+				BattleNext_Logger.fields().put("report", report).put("match", match).build());
+		}
 		if (report.getCreatedAt() <= 0L) report.setCreatedAt(System.currentTimeMillis());
 		String playerLabel = playerName == null || playerName.isBlank() ? match.getPlayer() : playerName;
 		String enemyLabel = enemyName == null || enemyName.isBlank() ? match.getEnemy() : enemyName;
@@ -99,6 +110,8 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			keepCount = BattleNext_Settings.getReportKeepCount();
 			List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
 			reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
+			BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
+				BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
 			for (int index = keepCount; index < reports.size(); index++) {
 				store.delete(reports.get(index).getId());
 			}

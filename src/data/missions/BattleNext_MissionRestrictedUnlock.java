@@ -8,6 +8,7 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
+import data.scripts.tools.BattleNext_Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +70,8 @@ public class BattleNext_MissionRestrictedUnlock {
 			restore();
 			throw exception;
 		}
+		BattleNext_Logger.info(BattleNext_MissionRestrictedUnlock.class, "restricted_assets.unlocked",
+				BattleNext_Logger.fields().put("preview", preview).put("changed_count", changedTags.size()).build());
 	}
 
 	private void removeRestricted(Set<String> tags) {
@@ -84,6 +87,8 @@ public class BattleNext_MissionRestrictedUnlock {
 		}
 		changedTags.clear();
 		enabled = false;
+		BattleNext_Logger.info(BattleNext_MissionRestrictedUnlock.class, "restricted_assets.restored",
+				BattleNext_Logger.fields().put("preview", preview).build());
 	}
 
 	public void forget() {

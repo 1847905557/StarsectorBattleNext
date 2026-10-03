@@ -1,5 +1,7 @@
 package data.scripts.fleet;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.restriction.*;
@@ -15,6 +17,10 @@ public class BattleNext_RulesCheck {
 			if (restriction.isEnabled() && BattleNext_RestrictionRegistry.getInstance().get(restriction.getId()) == null) {
 				reasons.add("Missing restriction script: " + restriction.getId());
 			}
+		}
+		if (!reasons.isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_RulesCheck.class, "rule.restrictions.rejected",
+				BattleNext_Logger.fields().put("rule", rule).put("reasons", reasons).build());
 		}
 		return reasons;
 	}
@@ -33,6 +39,10 @@ public class BattleNext_RulesCheck {
 					.getInstance().create(entry.getId());
 			reasons.addAll(implementation.validate(assembledFleet, restriction));
 		}
+		if (!reasons.isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_RulesCheck.class, "rule.fleet.rejected",
+				BattleNext_Logger.fields().put("fleet", assembledFleet.getDefinition()).put("rule", rule).put("reasons", reasons).build());
+		}
 		return reasons;
 	}
 
@@ -50,6 +60,10 @@ public class BattleNext_RulesCheck {
 							new BattleNext_RestrictionUtils.RestrictionEquipmentItem(context, category, itemId, source)));
 				}
 			}
+		}
+		if (!reasons.isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_RulesCheck.class, "rule.equipment.rejected",
+				BattleNext_Logger.fields().put("rule", rule).put("context", context).put("category", category).put("item_id", itemId).put("source", source).put("reasons", reasons).build());
 		}
 		return reasons;
 	}

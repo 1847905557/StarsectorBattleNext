@@ -1,5 +1,9 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.tools.BattleNext_ModFileManager;
+
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
@@ -60,7 +64,7 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 		// Starsector exposes no API for enumerating all personalities; read the merged vanilla CSV instead.
 		List<JSONObject> result = new ArrayList<>();
 		try {
-			JSONArray rows = Global.getSettings().getMergedSpreadsheetData("id", PERSONALITIES_PATH);
+			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_PersonalitySourceProvider.class, "id", PERSONALITIES_PATH);
 			for (int index = 0; index < rows.length(); index++) {
 				JSONObject row = rows.optJSONObject(index);
 				if (row != null) result.add(row);
@@ -81,8 +85,16 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 	static OptionChoice toOption(JSONObject row) {
 		if (row == null) return null;
 		String id = row.optString("id", "").trim();
-		if (id.isEmpty()) return null;
+		if (id.isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.identity.rejected",
+				BattleNext_Logger.fields().put("row", row).build());
+			return null;
+		}
 		String name = row.optString("name", "").trim();
+		if (name.isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.name.fallback",
+				BattleNext_Logger.fields().put("row", row).put("name", id).build());
+		}
 		return new OptionChoice(id, name.isEmpty() ? id : name);
 	}
 }

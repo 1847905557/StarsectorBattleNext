@@ -19,17 +19,25 @@ public class BattleNext_Settings {
 	private static JSONObject values;
 
 	public static void load() {
+		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.load",
+				BattleNext_Logger.fields().put("path", PATH).build());
 		values = defaults();
 		try {
-			JSONObject stored = Global.getSettings().readJSONFromCommon(PATH, false);
+			JSONObject stored = readStored(PATH);
 			if (stored != null) merge(stored);
 		} catch (Exception ignored) {
+			BattleNext_Logger.warn(BattleNext_Settings.class, "settings.load.fallback",
+					BattleNext_Logger.fields().put("path", PATH).put("fallback_path", PATH + ".data").build(), ignored);
 			try {
-				JSONObject stored = Global.getSettings().readJSONFromCommon(PATH + ".data", false);
+				JSONObject stored = readStored(PATH + ".data");
 				if (stored != null) merge(stored);
 			} catch (Exception absent) {
+				BattleNext_Logger.warn(BattleNext_Settings.class, "settings.defaults.applied",
+						BattleNext_Logger.fields().put("path", PATH + ".data").put("settings", values).build(), absent);
 			}
 		}
+		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.load",
+				BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
 	}
 
 	public static boolean isFullGraphicEffect() {
@@ -64,23 +72,62 @@ public class BattleNext_Settings {
 
 	public static void save(boolean fullGraphicEffect, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
 			float boostTimeMult, int reportKeepCount) {
-		if (battleTimeLimit < 0f || !Float.isFinite(battleTimeLimit)) throw new IllegalArgumentException("Battle time limit is invalid");
-		if (defaultTimeMult <= 0f || !Float.isFinite(defaultTimeMult)) throw new IllegalArgumentException("Default time multiplier is invalid");
-		if (boostTimeMult <= 0f || !Float.isFinite(boostTimeMult)) throw new IllegalArgumentException("Boost time multiplier is invalid");
-		if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
-		JSONObject next = defaults();
-		put(next, "fullGraphicEffect", fullGraphicEffect);
-		put(next, "rttInBattle", rttInBattle);
-		put(next, "battleTimeLimit", battleTimeLimit);
-		put(next, "defaultTimeMult", defaultTimeMult);
-		put(next, "boostTimeMult", boostTimeMult);
-		put(next, "reportKeepCount", reportKeepCount);
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("full_graphic_effect", fullGraphicEffect)
+				.put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
+				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).build();
+		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.save", input);
 		try {
-			Global.getSettings().writeJSONToCommon(PATH, next, false);
-		} catch (IOException | JSONException exception) {
-			throw new IllegalStateException("Unable to save settings", exception);
+			if (battleTimeLimit < 0f || !Float.isFinite(battleTimeLimit)) throw new IllegalArgumentException("Battle time limit is invalid");
+			if (defaultTimeMult <= 0f || !Float.isFinite(defaultTimeMult)) throw new IllegalArgumentException("Default time multiplier is invalid");
+			if (boostTimeMult <= 0f || !Float.isFinite(boostTimeMult)) throw new IllegalArgumentException("Boost time multiplier is invalid");
+			if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
+			JSONObject next = defaults();
+			put(next, "fullGraphicEffect", fullGraphicEffect);
+			put(next, "rttInBattle", rttInBattle);
+			put(next, "battleTimeLimit", battleTimeLimit);
+			put(next, "defaultTimeMult", defaultTimeMult);
+			put(next, "boostTimeMult", boostTimeMult);
+			put(next, "reportKeepCount", reportKeepCount);
+			try {
+				BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.write",
+				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
+				Global.getSettings().writeJSONToCommon(PATH, next, false);
+				BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.write",
+				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
+			} catch (IOException | JSONException exception) {
+				BattleNext_Logger.operationFailed(BattleNext_Settings.class, "settings.write",
+				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build(), exception);
+				throw new IllegalStateException("Unable to save settings", exception);
+			}
+			values = next;
+			BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.save",
+					BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
+		} catch (RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException) {
+				BattleNext_Logger.warn(BattleNext_Settings.class, "settings.validation.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(BattleNext_Settings.class, "settings.save", input, exception);
+			}
+			throw exception;
 		}
-		values = next;
+	}
+
+	private static JSONObject readStored(String path) throws IOException, JSONException {
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("compressed", false).build();
+		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.read", input);
+		try {
+			JSONObject stored = Global.getSettings().readJSONFromCommon(path, false);
+			BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.read",
+					BattleNext_Logger.fields().put("path", path).put("settings", stored).build());
+			if (stored == null) {
+				BattleNext_Logger.info(BattleNext_Settings.class, "settings.defaults.applied",
+						BattleNext_Logger.fields().put("path", path).put("settings", values).build());
+			}
+			return stored;
+		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(BattleNext_Settings.class, "settings.read", input, exception);
+			throw exception;
+		}
 	}
 
 	private static JSONObject defaults() {
@@ -95,12 +142,20 @@ public class BattleNext_Settings {
 	}
 
 	private static void merge(JSONObject stored) {
+		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.merge",
+				BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
 		putIf(values, "rttInBattle", stored.has("rttInBattle") ? stored.optBoolean("rttInBattle") : null);
 		putIf(values, "battleTimeLimit", validNumber(stored, "battleTimeLimit", false));
 		putIf(values, "defaultTimeMult", validNumber(stored, "defaultTimeMult", true));
 		putIf(values, "boostTimeMult", validNumber(stored, "boostTimeMult", true));
+		if (stored.has("reportKeepCount") && stored.optInt("reportKeepCount", -1) < 0) {
+			BattleNext_Logger.warn(BattleNext_Settings.class, "settings.validation.rejected",
+				BattleNext_Logger.fields().put("key", "reportKeepCount").put("input", stored.opt("reportKeepCount")).put("criterion", "Nonnegative integer").put("default_value", DEFAULT_REPORT_KEEP_COUNT).build());
+		}
 		putIf(values, "reportKeepCount", stored.has("reportKeepCount") && stored.optInt("reportKeepCount", -1) >= 0 ? stored.optInt("reportKeepCount") : null);
+		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.merge",
+				BattleNext_Logger.fields().put("stored", stored).put("settings", values).build());
 	}
 
 	private static void put(JSONObject object, String key, Object value) {
@@ -112,13 +167,22 @@ public class BattleNext_Settings {
 	}
 
 	private static void putIf(JSONObject object, String key, Object value) {
-		if (value != null) put(object, key, value);
+		if (value != null) {
+			put(object, key, value);
+		} else {
+			BattleNext_Logger.info(BattleNext_Settings.class, "settings.field.default",
+					BattleNext_Logger.fields().put("key", key).put("value", object.opt(key)).build());
+		}
 	}
 
 	private static Float validNumber(JSONObject object, String key, boolean positive) {
 		if (!object.has(key)) return null;
 		float value = (float) object.optDouble(key, Float.NaN);
-		if (!Float.isFinite(value) || value < 0f || (positive && value == 0f)) return null;
+		if (!Float.isFinite(value) || value < 0f || (positive && value == 0f)) {
+			BattleNext_Logger.warn(BattleNext_Settings.class, "settings.validation.rejected",
+					BattleNext_Logger.fields().put("key", key).put("input", object.opt(key)).put("positive", positive).build());
+			return null;
+		}
 		return value;
 	}
 

@@ -1,5 +1,7 @@
 package data.scripts.campaign;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CoreUITabId;
@@ -119,7 +121,8 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 			}
 		} catch (Throwable exception) {
 			error = fleetStrings.get("player_save_context_error") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to read player fleet refit context", exception);
+			BattleNext_Logger.warn(BattleNext_LunaFleetSaveRefitButton.class, "fleet.player.refit.context.unavailable",
+				BattleNext_Logger.fields().put("member", member).put("variant", variant).build(), exception);
 		}
 		display = new BattleNext_LunaFleetSavePanel(this::dismiss);
 		display.open(member, variant, error);
@@ -162,7 +165,8 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 				cleanup(true);
 			}
 		} catch (Throwable exception) {
-			Global.getLogger(getClass()).warn("Player fleet save panel detached", exception);
+			BattleNext_Logger.warn(BattleNext_LunaFleetSaveRefitButton.class, "fleet.player.refit.detached",
+				BattleNext_Logger.fields().put("owns_background", background != null).put("owns_host", host != null).build(), exception);
 			cleanup(true);
 		}
 	}

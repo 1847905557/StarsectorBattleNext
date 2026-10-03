@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -367,10 +369,13 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				tile.addUIElement(image).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
 				return;
 			} catch (RuntimeException exception) {
-				// A missing optional sprite leaves the option selectable.
+				BattleNext_Logger.warn(BattleNext_OptionPicker.class, "picker.icon.degraded",
+				BattleNext_Logger.fields().put("source", source.getClass()).put("option_id", option.id).put("label", option.label).put("path", icon).put("expects_icon", source.expectsIcon()).build(), exception);
 			}
 		}
 		if (source.expectsIcon()) {
+			BattleNext_Logger.warn(BattleNext_OptionPicker.class, "picker.icon.missing",
+				BattleNext_Logger.fields().put("source", source.getClass()).put("option_id", option.id).put("label", option.label).put("path", icon).put("fallback", "Missing icon").build());
 			tilePlugin.missingIcon = true;
 			return;
 		}

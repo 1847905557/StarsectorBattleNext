@@ -1,5 +1,7 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.characters.FullName.Gender;
@@ -9,6 +11,7 @@ import com.fs.starfarer.api.loading.Description.Type;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_ModFileManager;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
 import java.io.IOException;
@@ -69,12 +72,22 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 		try {
 			for (String path : BattleNext_ModFileManager.list(MOD_PORTRAIT_ROOT, true)) {
 				if (!isPortraitFile(path)) continue;
-				Global.getSettings().loadTexture(path);
+				BattleNext_Logger.operationStarted(BattleNext_PortraitSourceProvider.class, "texture.load",
+						BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build());
+				try {
+					Global.getSettings().loadTexture(path);
+				} catch (RuntimeException exception) {
+					BattleNext_Logger.operationFailed(BattleNext_PortraitSourceProvider.class, "texture.load",
+							BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build(), exception);
+					throw exception;
+				}
+				BattleNext_Logger.operationSucceeded(BattleNext_PortraitSourceProvider.class, "texture.load",
+						BattleNext_Logger.fields().put("path", path).build());
 				result.add(new OptionChoice(path, fileName(path)));
 			}
 		} catch (IOException exception) {
-			Global.getLogger(BattleNext_PortraitSourceProvider.class).warn(
-					"Mod portraits are unavailable: " + exception.getMessage());
+			BattleNext_Logger.warn(BattleNext_PortraitSourceProvider.class, "portraits.load.degraded",
+				BattleNext_Logger.fields().put("root", MOD_PORTRAIT_ROOT).put("loaded", result.stream().map(OptionChoice::getId).toList()).build(), exception);
 		}
 		return result;
 	}

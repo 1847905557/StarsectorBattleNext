@@ -1,5 +1,7 @@
 package data.scripts.ui.page;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -61,8 +63,11 @@ public class BattleNext_ReportSourceDisplay {
 					break;
 			}
 		} catch (RuntimeException ignored) {
-			// A missing current asset keeps the report's original source ID visible.
+			BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.degraded",
+				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).build(), ignored);
 		}
+		BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.unavailable",
+				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).put("placeholder", placeholder(source.getKind())).build());
 		return new SourceVisual(id, "", "", placeholder(source.getKind()), false, false);
 	}
 

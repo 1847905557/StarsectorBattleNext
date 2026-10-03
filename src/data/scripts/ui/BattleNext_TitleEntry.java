@@ -1,5 +1,7 @@
 package data.scripts.ui;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
@@ -18,7 +20,6 @@ import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.manager.ShaderCore;
 import org.boxutil.units.standard.misc.UIBorderObject;
-import org.boxutil.util.CommonUtil;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -112,8 +113,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	public void renderInUICoords(ViewportAPI viewport) {
 
 		if (!renderChecked) {
-			Global.getLogger(BattleNext_TitleEntry.class).info("Title UI render: state="
-					+ Global.getCurrentState() + ", icon=" + (entryIcon == null ? "missing" : "loaded"));
+			BattleNext_Logger.info(BattleNext_TitleEntry.class, "title.render.initialized",
+				BattleNext_Logger.fields().put("state", Global.getCurrentState()).put("icon_loaded", entryIcon != null).build());
 			renderChecked = true;
 		}
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {
@@ -218,7 +219,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private void logMissionSelectionFailure(Throwable exception) {
 		if (missionSelectionErrorLogged) return;
 		missionSelectionErrorLogged = true;
-		Global.getLogger(BattleNext_TitleEntry.class).warn("Mission selection detection failed", exception);
+		BattleNext_Logger.warn(BattleNext_TitleEntry.class, "mission.selection.unavailable",
+				BattleNext_Logger.fields().put("widget_class", MISSION_WIDGET_CLASS).put("enabled", BattleNext_MissionRestrictedUnlock.getInstance().isEnabled()).put("preview_retained", BattleNext_MissionRestrictedUnlock.getInstance().hasPreview()).build(), exception);
 	}
 
 	static void consumeOutsideMouseInput(PositionAPI bounds, List<InputEventAPI> events) {
@@ -419,7 +421,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private void logRefitDetectionFailure(Throwable exception) {
 		if (refitDetectionErrorLogged) return;
 		refitDetectionErrorLogged = true;
-		Global.getLogger(BattleNext_TitleEntry.class).warn("Mission refit UI detection failed", exception);
+		BattleNext_Logger.warn(BattleNext_TitleEntry.class, "mission.refit.unavailable",
+				BattleNext_Logger.fields().put("provider_class", MISSION_REFIT_PROVIDER_CLASS).put("refit_screen_class", REFIT_SCREEN_CLASS).build(), exception);
 	}
 
 	private void renderEntry() {
@@ -471,7 +474,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	private UIPanelAPI getScreenPanel() {
 		try {
 			if (!BUtil_RefMethod.VALID) {
-				Global.getLogger(BattleNext_TitleEntry.class).warn("Title screen panel reflection is unavailable");
+				BattleNext_Logger.warn(BattleNext_TitleEntry.class, "title.screen.reflection.unavailable",
+				BattleNext_Logger.fields().put("reflection_valid", BUtil_RefMethod.VALID).build());
 				return null;
 			}
 			Object state = AppDriver.getInstance().getCurrentState();
@@ -481,10 +485,12 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				Object result = BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, state);
 				return result instanceof UIPanelAPI ? (UIPanelAPI) result : null;
 			}
-			Global.getLogger(BattleNext_TitleEntry.class).warn("Title screen panel getter is unavailable");
+			BattleNext_Logger.warn(BattleNext_TitleEntry.class, "title.screen.getter.unavailable",
+				BattleNext_Logger.fields().put("state_class", state.getClass()).put("method", "getScreenPanel").build());
 			return null;
 		} catch (Throwable exception) {
-			CommonUtil.printThrowable(BattleNext_TitleEntry.class, "Title screen panel lookup failed: ", exception);
+			BattleNext_Logger.warn(BattleNext_TitleEntry.class, "title.screen.lookup.failed",
+				BattleNext_Logger.fields().put("method", "getScreenPanel").build(), exception);
 			return null;
 		}
 	}

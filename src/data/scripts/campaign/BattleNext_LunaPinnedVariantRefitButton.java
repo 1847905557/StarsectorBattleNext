@@ -1,5 +1,7 @@
 package data.scripts.campaign;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CoreUITabId;
@@ -112,7 +114,8 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 			}
 		} catch (Throwable exception) {
 			error = variantStrings.get("pin_context_error") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to capture campaign refit context", exception);
+			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantRefitButton.class, "variant.pin.refit.context.unavailable",
+				BattleNext_Logger.fields().put("member", member).put("variant", variant).build(), exception);
 		}
 		display = new BattleNext_LunaPinnedVariantPanel(this::dismiss);
 		display.open(selected, error);
@@ -166,7 +169,8 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 				cleanup();
 			}
 		} catch (Throwable exception) {
-			Global.getLogger(getClass()).warn("Campaign refit collection panel detached", exception);
+			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantRefitButton.class, "variant.pin.refit.detached",
+				BattleNext_Logger.fields().put("owns_background", background != null).put("owns_host", host != null).build(), exception);
 			cleanup();
 		}
 	}

@@ -1,5 +1,7 @@
 package data.scripts.campaign;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -72,7 +74,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		} catch (Exception exception) {
 			snapshot = null;
 			status = variantStrings.get("pin_snapshot_error") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to snapshot campaign refit variant", exception);
+			BattleNext_Logger.error(BattleNext_LunaPinnedVariantPanel.class, "variant.pin.snapshot.failed",
+				BattleNext_Logger.fields().put("variant", variant).build(), exception);
 		}
 	}
 
@@ -148,7 +151,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 				TooltipMakerAPI error = detailsPanel.createUIElement(width, detailsHeight, true);
 				error.addPara(variantStrings.get("pin_snapshot_error") + ": " + exception, INSET);
 				detailsPanel.addUIElement(error).inTL(0f, 0f);
-				Global.getLogger(getClass()).warn("Unable to display pinned variant snapshot", exception);
+				BattleNext_Logger.warn(BattleNext_LunaPinnedVariantPanel.class, "variant.pin.display.degraded",
+				BattleNext_Logger.fields().put("snapshot", snapshot).put("saved", saved).build(), exception);
 			}
 		}
 		if (contents.getExternalScroller() != null) {
@@ -168,6 +172,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		if (!"pin_save".equals(buttonId) || saved || snapshot == null) return;
 		String displayName = name.getText();
 		if (displayName.trim().isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantPanel.class, "save.name.rejected",
+				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
 			status = variantStrings.get("pin_name_required");
 			refreshContents(displayName);
 			return;
@@ -182,7 +188,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			}
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
-			Global.getLogger(getClass()).warn("Unable to save campaign refit collection", exception);
+			BattleNext_Logger.error(BattleNext_LunaPinnedVariantPanel.class, "variant.pin.save.failed",
+				BattleNext_Logger.fields().put("snapshot", snapshot).put("display_name", displayName).build(), exception);
 		}
 		refreshContents(displayName);
 	}

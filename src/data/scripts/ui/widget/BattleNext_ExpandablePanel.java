@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.graphics.SpriteAPI;
@@ -107,6 +109,8 @@ public class BattleNext_ExpandablePanel {
 		try {
 			return Global.getSettings().getSprite(path);
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_ExpandablePanel.class, "header.sprite.degraded",
+				BattleNext_Logger.fields().put("path", path).put("fallback", "Missing icon").build(), exception);
 			return null;
 		}
 	}

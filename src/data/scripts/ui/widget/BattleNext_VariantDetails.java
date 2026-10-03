@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -170,6 +172,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		try {
 			sprite = Global.getSettings().getSprite(hull.getSpriteName());
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.preview.degraded",
+				BattleNext_Logger.fields().put("variant", json).put("hull_id", hull.getHullId()).put("sprite", hull.getSpriteName()).build(), exception);
 			identity.addPara(variantStrings.get("preview_error") + ": " + exception, ROW_GAP);
 		}
 		float identityHeight = Math.min(identityLimit, identity.getHeightSoFar());
@@ -205,6 +209,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		for (String id : sorted) {
 			HullModSpecAPI spec = Global.getSettings().getHullModSpec(id);
 			if (spec == null) {
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.hullmod.missing",
+				BattleNext_Logger.fields().put("variant", json).put("hullmod_id", id).build());
 				list.addPara(strings.get("unavailable") + ": " + id, ROW_GAP);
 				continue;
 			}
@@ -265,6 +271,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				if (hull == null) throw new IllegalArgumentException("Unknown module hull: " + hullId);
 				tiles.add(new DisplayTile(hull.getHullName(), hull.getSpriteName(), hullId, hull, ""));
 			} catch (Exception exception) {
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.module.degraded",
+				BattleNext_Logger.fields().put("variant", variantJson).put("slot", slot).put("hull_id", hullId).put("module", modules.opt(slot)).build(), exception);
 				tiles.add(new DisplayTile(slot, "", hullId, null,
 						variantStrings.get("module_error") + ": " + exception));
 			}
@@ -281,6 +289,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		for (int index = 0; index < groups.length(); index++) {
 			JSONObject group = groups.optJSONObject(index);
 			if (group == null) {
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.weapon_group.rejected",
+				BattleNext_Logger.fields().put("variant", json).put("group_index", index).put("input", groups.opt(index)).build());
 				list.addPara(variantStrings.get("weapon_group_error") + ": " + index, ROW_GAP);
 				continue;
 			}
@@ -381,7 +391,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				icon.addImage(path, ICON_SIZE, ICON_SIZE, 0f);
 				return true;
 			} catch (RuntimeException ignored) {
-
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.weapon.sprite.degraded",
+				BattleNext_Logger.fields().put("variant", variantJson).put("weapon_name", visual.name()).put("path", path).put("primary", visual.primarySprite()).put("secondary", visual.secondarySprite()).build(), ignored);
 			}
 		}
 		return false;
@@ -406,6 +417,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				if (hull == null) throw new IllegalArgumentException("Missing fighter hull: " + id);
 				tiles.add(new DisplayTile(name, hull.getSpriteName(), id, hull, ""));
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.wing.degraded",
+				BattleNext_Logger.fields().put("variant", json).put("wing_id", id).put("name", name).build(), exception);
 				tiles.add(new DisplayTile(name, "", id, null, strings.get("unavailable") + ": " + exception));
 			}
 		}
@@ -440,6 +453,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			try {
 				sprite = Global.getSettings().getSprite(tile.spriteName());
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.tile.sprite.degraded",
+				BattleNext_Logger.fields().put("id", tile.id()).put("name", tile.name()).put("path", tile.spriteName()).build(), exception);
 				error = variantStrings.get("preview_error") + ": " + exception;
 			}
 		}
@@ -489,7 +504,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			try {
 				sprite = Global.getSettings().getSprite(spriteName);
 			} catch (RuntimeException ignored) {
-
+				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.card.sprite.degraded",
+				BattleNext_Logger.fields().put("variant", variantJson).put("id", id).put("title", title).put("path", spriteName).build(), ignored);
 			}
 		}
 		CardPlugin plugin = new CardPlugin(sprite);

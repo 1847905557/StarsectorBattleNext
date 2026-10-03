@@ -1,5 +1,7 @@
 package data.model.fleet.io;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
@@ -35,17 +37,27 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	}
 
 	private BattleNext_FleetModel read(String path, List<String> paths) throws IOException, JSONException {
-		String normalizedPath = path.replace("\\", "/");
-		String folderName = fleetFolder(normalizedPath);
-		if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
-			throw new IOException("Invalid fleet folder name: " + folderName);
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).build();
+		BattleNext_Logger.operationStarted(BattleNext_FleetStandardLoader.class, "fleet.resource.load", input);
+		try {
+			String normalizedPath = path.replace("\\", "/");
+			String folderName = fleetFolder(normalizedPath);
+			if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
+				throw new IOException("Invalid fleet folder name: " + folderName);
+			}
+			BattleNext_FleetModel fleet = new BattleNext_FleetModel();
+			fleet.fromJson(BattleNext_ModFileManager.readJson(BattleNext_FleetStandardLoader.class, path, MOD_ID));
+			fleet.setFolderName(folderName);
+			markSource(fleet, path);
+			BattleNext_FleetVariantLoader.load(fleet, paths);
+			BattleNext_Logger.operationSucceeded(BattleNext_FleetStandardLoader.class, "fleet.resource.load",
+					BattleNext_Logger.fields().put("path", path).put("fleet", fleet).build());
+			return fleet;
+		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(BattleNext_FleetStandardLoader.class, "fleet.resource.load", input, exception);
+			throw exception;
 		}
-		BattleNext_FleetModel fleet = new BattleNext_FleetModel();
-		fleet.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
-		fleet.setFolderName(folderName);
-		markSource(fleet, path);
-		BattleNext_FleetVariantLoader.load(fleet, paths);
-		return fleet;
 	}
 
 	private static boolean isFleetDataPath(String path) {

@@ -1,5 +1,7 @@
 package data.scripts.ui.widget;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -62,6 +64,8 @@ public class BattleNext_EquipmentTooltip {
 				Description description = settings.getDescription(descriptionId, type);
 				if (description != null && description.hasText1()) text = description.getText1();
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_EquipmentTooltip.class, "equipment.description.degraded",
+				BattleNext_Logger.fields().put("title", title).put("id", id).put("description_id", descriptionId).put("description_type", type).build(), exception);
 				resultNotes.add(STRINGS.get("load_failed") + ": " + exception);
 			}
 		}
@@ -80,6 +84,8 @@ public class BattleNext_EquipmentTooltip {
 			try {
 				text = spec.getDescription(size);
 			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_EquipmentTooltip.class, "hullmod.description.degraded",
+				BattleNext_Logger.fields().put("title", title).put("hullmod_id", id).put("hull_size", size).build(), exception);
 				resultNotes.add(STRINGS.get("load_failed") + ": " + exception);
 			}
 		}
@@ -96,6 +102,8 @@ public class BattleNext_EquipmentTooltip {
 			if (hull == null) throw new IllegalArgumentException("Missing fighter hull: " + id);
 			return hull(title, id, hull, settings, notes);
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_EquipmentTooltip.class, "wing.description.degraded",
+				BattleNext_Logger.fields().put("title", title).put("wing_id", id).build(), exception);
 			List<String> resultNotes = new ArrayList<>(notes);
 			resultNotes.add(STRINGS.get("load_failed") + ": " + exception);
 			return new Content(title, id, "", List.copyOf(resultNotes));

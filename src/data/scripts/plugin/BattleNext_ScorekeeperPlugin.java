@@ -1,5 +1,7 @@
 package data.scripts.plugin;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
@@ -50,7 +52,11 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || frozenReport != null) return;
 		refreshShips();
-		if (!battleStarted && hasActiveShip()) battleStarted = true;
+		if (!battleStarted && hasActiveShip()) {
+			battleStarted = true;
+			BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.started",
+				BattleNext_Logger.fields().put("ships", engine.getShips()).build());
+		}
 		if (battleStarted) {
 			String winner = determineWinner();
 			if (winner != null) freeze(winner);
@@ -161,6 +167,8 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			else report.addEnemyMember(tracked.report);
 		}
 		frozenReport = report;
+		BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.result.frozen",
+				BattleNext_Logger.fields().put("report", frozenReport).build());
 	}
 
 	private ScoreTrackedFleetMember findTracked(ShipAPI ship) {

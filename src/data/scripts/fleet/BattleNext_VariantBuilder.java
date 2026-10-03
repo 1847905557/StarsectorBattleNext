@@ -1,5 +1,7 @@
 package data.scripts.fleet;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -29,12 +31,18 @@ public class BattleNext_VariantBuilder {
 
 	public static BattleNext_VariantBuilder fromJson(JSONObject json, String fallbackId) {
 		String id = json.optString("variantId", fallbackId);
+		if (!json.has("variantId")) {
+			BattleNext_Logger.warn(BattleNext_VariantBuilder.class, "variant.identity.completed",
+				BattleNext_Logger.fields().put("fallback_id", fallbackId).put("variant", json).build());
+		}
 		return new BattleNext_VariantBuilder(id, json);
 	}
 
 	public static BattleNext_VariantBuilder fromRegistered(String id) throws JSONException {
 		ShipVariantAPI variant = Global.getSettings().getVariant(id);
 		if (variant == null) {
+			BattleNext_Logger.warn(BattleNext_VariantBuilder.class, "variant.reference.rejected",
+				BattleNext_Logger.fields().put("variant_id", id).build());
 			throw new IllegalArgumentException("Unknown variant: " + id);
 		}
 		return fromVariant(variant);
@@ -71,7 +79,13 @@ public class BattleNext_VariantBuilder {
 	}
 
 	public ShipVariantAPI build() {
-		return build(new HashSet<>());
+		try {
+			return build(new HashSet<>());
+		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_VariantBuilder.class, "variant.build.rejected",
+				BattleNext_Logger.fields().put("variant_id", id).put("variant", json).build(), exception);
+			throw exception;
+		}
 	}
 
 	private ShipVariantAPI build(Set<String> moduleIds) {

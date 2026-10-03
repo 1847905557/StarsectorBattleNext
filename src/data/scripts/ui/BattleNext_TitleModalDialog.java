@@ -1,6 +1,7 @@
 package data.scripts.ui;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
@@ -110,7 +111,8 @@ class BattleNext_TitleModalDialog {
 	private void logFailure(Throwable exception) {
 		if (errorLogged) return;
 		errorLogged = true;
-		Global.getLogger(BattleNext_TitleModalDialog.class).warn("Title modal isolation failed", exception);
+		BattleNext_Logger.warn(BattleNext_TitleModalDialog.class, "title.modal.isolation.failed",
+				BattleNext_Logger.fields().put("dialog_class", TITLE_DIALOG_CLASS).put("owns_dialog", owned != null).put("owns_screen", ownerScreen != null).build(), exception);
 	}
 
 	private static class VanillaAccess implements Access {

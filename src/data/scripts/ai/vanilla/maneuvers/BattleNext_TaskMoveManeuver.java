@@ -1,5 +1,7 @@
 package data.scripts.ai.vanilla.maneuvers;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.DeployedFleetMemberAPI;
@@ -328,7 +330,8 @@ public class BattleNext_TaskMoveManeuver implements BattleNext_Maneuver {
 	public static void main(String[] args) {
 		Vector2f vector = new Vector2f(100.0F, 0.0F);
 		BattleNext_ShipAIHelper.normalise(vector);
-		System.out.println(vector);
+		BattleNext_Logger.info(BattleNext_TaskMoveManeuver.class, "maneuver.vector.normalized",
+				BattleNext_Logger.fields().put("vector", vector).put("arguments", args).build());
 	}
 
 	@Override

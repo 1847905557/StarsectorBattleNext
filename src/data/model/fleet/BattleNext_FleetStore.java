@@ -1,5 +1,7 @@
 package data.model.fleet;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_LoadSource;
@@ -48,16 +50,26 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	@Override
 	public void save(BattleNext_FleetModel model) throws IOException, JSONException {
 
-		requireLoaded();
-		String target = "tournament/" + model.getFolderName();
-		for (BattleNext_FleetModel fleet : getAll()) {
-			if (fleet.getSourceType() != BattleNext_LoadSource.LEGACY) continue;
-			String source = fleet.getSourcePath().replace('\\', '/');
-			if (model.getId().equals(fleet.getId()) || target.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
-				throw new IOException("Legacy fleet requires a new ID and target directory: " + source);
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("model", model).build();
+		BattleNext_Logger.operationStarted(BattleNext_FleetStore.class, "fleet.store.commit", input);
+		try {
+
+			requireLoaded();
+			String target = "tournament/" + model.getFolderName();
+			for (BattleNext_FleetModel fleet : getAll()) {
+				if (fleet.getSourceType() != BattleNext_LoadSource.LEGACY) continue;
+				String source = fleet.getSourcePath().replace('\\', '/');
+				if (model.getId().equals(fleet.getId()) || target.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
+					throw new IOException("Legacy fleet requires a new ID and target directory: " + source);
+				}
 			}
+			super.save(model);
+			BattleNext_Logger.operationSucceeded(BattleNext_FleetStore.class, "fleet.store.commit",
+					BattleNext_Logger.fields().put("model", model).build());
+		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(BattleNext_FleetStore.class, "fleet.store.commit", input, exception);
+			throw exception;
 		}
-		super.save(model);
 	}
 
 	@Override

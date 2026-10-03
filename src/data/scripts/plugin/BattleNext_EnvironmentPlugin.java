@@ -1,6 +1,5 @@
 package data.scripts.plugin;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
@@ -74,6 +73,5 @@ public class BattleNext_EnvironmentPlugin extends BaseEveryFrameCombatPlugin {
 		engine.getFleetManager(FleetSide.ENEMY).getTaskManager(false).setFullAssault(true);
 		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
 		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, FOG_REVEAL_RADIUS);
-		Global.getLogger(BattleNext_EnvironmentPlugin.class).info("BattleNext timeout applied at " + timeLimit + " seconds");
 	}
 }

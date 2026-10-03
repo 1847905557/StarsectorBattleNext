@@ -1,5 +1,7 @@
 package data.model;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import data.scripts.tools.BattleNext_EntryId;
 
 import org.json.JSONException;
@@ -19,39 +21,85 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	}
 
 	public void reload() throws IOException, JSONException {
+		BattleNext_Logger.operationStarted(getClass(), "catalog.reload",
+				BattleNext_Logger.fields().put("previous_entries", getAll()).build());
 		try {
 			Map<String, T> loaded = new LinkedHashMap<>();
 			for (BattleNext_BaseLoader<T> loader : sources()) {
-				for (T model : loader.load()) {
+				BattleNext_Logger.operationStarted(loader.getClass(), "catalog.source.load",
+						BattleNext_Logger.fields().put("store", getClass()).build());
+				List<T> models;
+				try {
+					models = loader.load();
+				} catch (IOException | JSONException | RuntimeException exception) {
+					BattleNext_Logger.operationFailed(loader.getClass(), "catalog.source.load",
+							BattleNext_Logger.fields().put("store", getClass()).build(), exception);
+					throw exception;
+				}
+				BattleNext_Logger.operationSucceeded(loader.getClass(), "catalog.source.load",
+						BattleNext_Logger.fields().put("store", getClass()).put("models", models).build());
+				for (T model : models) {
 					mergeLoaded(loaded, model);
 				}
 			}
 			loadState();
 			replaceEntries(loaded);
 			succeedLoad();
+			BattleNext_Logger.operationSucceeded(getClass(), "catalog.reload",
+					BattleNext_Logger.fields().put("entries", getAll()).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(getClass(), "catalog.reload",
+					BattleNext_Logger.fields().put("published_entries", getAll()).build(), exception);
 			recordFailure(exception);
 			throw exception;
 		}
 	}
 
 	public void save(T model) throws IOException, JSONException {
-		requireLoaded();
-		if (model == null || !BattleNext_EntryId.isValidPathSegment(model.getId())) {
-			throw new IllegalArgumentException("Entry id is required");
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("model", model).build();
+		BattleNext_Logger.operationStarted(getClass(), "store.save", input);
+		try {
+			requireLoaded();
+			if (model == null || !BattleNext_EntryId.isValidPathSegment(model.getId())) {
+				throw new IllegalArgumentException("Entry id is required");
+			}
+			boolean created = !entries.containsKey(model.getId());
+			register(model, saver().save(model));
+			BattleNext_Logger.operationSucceeded(getClass(), "store.save",
+					BattleNext_Logger.fields().put("action", created ? "created" : "updated").put("model", model).build());
+		} catch (IOException | JSONException | RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(getClass(), "store.save.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(getClass(), "store.save", input, exception);
+			}
+			throw exception;
 		}
-		register(model, saver().save(model));
 	}
 
 	public void delete(String id) throws IOException, JSONException {
-		requireLoaded();
-		T model = get(id);
-		if (!isManaged(model)) {
-			throw new IllegalStateException("Entry is not managed: " + id);
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("id", id).put("model", get(id)).build();
+		BattleNext_Logger.operationStarted(getClass(), "store.delete", input);
+		try {
+			requireLoaded();
+			T model = get(id);
+			if (!isManaged(model)) {
+				throw new IllegalStateException("Entry is not managed: " + id);
+			}
+			saver().delete(model);
+			removeEntry(id);
+			onEntryRemoved(id);
+			BattleNext_Logger.operationSucceeded(getClass(), "store.delete", input);
+		} catch (IOException | JSONException | RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(getClass(), "store.delete.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(getClass(), "store.delete", input, exception);
+			}
+			throw exception;
 		}
-		saver().delete(model);
-		removeEntry(id);
-		onEntryRemoved(id);
 	}
 
 	public boolean isLoaded() {

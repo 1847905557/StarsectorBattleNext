@@ -1,5 +1,7 @@
 package data.missions.BattleNext_pvp;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
@@ -117,6 +119,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_PageantPlugin pageant = new BattleNext_PageantPlugin(scorekeeper,
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
 		api.addPlugin(pageant);
+		BattleNext_Logger.info(MissionDefinition.class, "battle.created",
+				BattleNext_Logger.fields().put("match", match).put("tournament", tournament).put("player", assembledPlayerFleet.getDefinition()).put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags())).put("enemy_mode", BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags())).put("time_limit", timeLimit).put("rtt", BattleNext_Settings.isRttInBattle()).put("marker", reportMarker).build());
 	}
 
 	private String progress(BattleNext_TournamentModel tournament, BattleNext_Match match) {
@@ -124,6 +128,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	}
 
 	private void showBlocked(MissionDefinitionAPI api, String message, List<String> reasons) {
+		BattleNext_Logger.warn(MissionDefinition.class, "battle.creation.rejected",
+				BattleNext_Logger.fields().put("message", message).put("reasons", reasons).build());
 		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
 		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
 		api.setFleetTagline(FleetSide.PLAYER, message);

@@ -22,7 +22,7 @@ public class BattleNext_RuleStandardLoader extends BattleNext_CatalogLoader<Batt
 	@Override
 	protected BattleNext_RuleModel parse(String path) throws IOException, JSONException {
 		BattleNext_RuleModel model = new BattleNext_RuleModel();
-		model.fromJson(Global.getSettings().loadJSON(path, MOD_ID));
+		model.fromJson(BattleNext_ModFileManager.readJson(BattleNext_RuleStandardLoader.class, path, MOD_ID));
 		return model;
 	}
 

@@ -1,5 +1,7 @@
 package data.model.tournament;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_LoadSource;
@@ -41,10 +43,24 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 	}
 
 	public void setActiveId(String id) throws IOException, JSONException {
-		requireLoaded();
-		if (!id.isEmpty() && get(id) == null) throw new IllegalArgumentException("Unknown tournament: " + id);
-		saver.saveActiveId(id);
-		activeId = id;
+
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("previous_id", activeId).put("requested_id", id).build();
+		BattleNext_Logger.operationStarted(BattleNext_TournamentStore.class, "tournament.activation.commit", input);
+		try {
+			requireLoaded();
+			if (!id.isEmpty() && get(id) == null) throw new IllegalArgumentException("Unknown tournament: " + id);
+			saver.saveActiveId(id);
+			activeId = id;
+			BattleNext_Logger.operationSucceeded(BattleNext_TournamentStore.class, "tournament.activation.commit",
+					BattleNext_Logger.fields().put("active_id", activeId).put("tournament", get(id)).build());
+		} catch (IOException | JSONException | RuntimeException exception) {
+			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+				BattleNext_Logger.warn(BattleNext_TournamentStore.class, "tournament.activation.commit.rejected", input, exception);
+			} else {
+				BattleNext_Logger.operationFailed(BattleNext_TournamentStore.class, "tournament.activation.commit", input, exception);
+			}
+			throw exception;
+		}
 	}
 
 	public String getActiveId() {

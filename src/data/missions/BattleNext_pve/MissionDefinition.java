@@ -56,7 +56,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		if (BattleNext_Settings.isRttInBattle()) {
 			api.addPlugin(new BattleNext_RttPlugin());
 		}
-		
+
 		api.addBriefingItem("Expected enemy DP: " + expectedDp);
 		api.addBriefingItem("Use left/right to rotate faction selection.");
 		api.initMap(-MAP_HALF_SIZE, MAP_HALF_SIZE, -MAP_HALF_SIZE, MAP_HALF_SIZE);

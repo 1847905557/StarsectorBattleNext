@@ -16,6 +16,7 @@ import com.fs.starfarer.api.loading.WingRole;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
+import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -163,7 +164,8 @@ public class BattleNext_ShipAIHelper {
 	public static float getBravery(ShipAPI ship) {
 		String personality = getPersonality(ship);
 		try {
-			JSONArray rows = Global.getSettings().getMergedSpreadsheetData("id", "data/characters/personalities.csv");
+			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_ShipAIHelper.class, "id",
+					"data/characters/personalities.csv");
 			for (int index = 0; index < rows.length(); index++) {
 				JSONObject row = rows.optJSONObject(index);
 				if (row != null && personality.equals(row.optString("id", "").trim())) {

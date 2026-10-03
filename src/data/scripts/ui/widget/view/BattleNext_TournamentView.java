@@ -1,5 +1,7 @@
 package data.scripts.ui.widget.view;
 
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -109,6 +111,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			}
 			buildLayout();
 		} catch (RuntimeException exception) {
+			BattleNext_Logger.warn(BattleNext_TournamentView.class, "tournament.chart.layout.degraded",
+				BattleNext_Logger.fields().put("tournament", tournament).build(), exception);
 			layoutError = tournament.getBracketType() + ": " + exception.getMessage();
 		}
 		appendUnmappedMatches();
@@ -333,12 +337,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		if (panel != null) {
 			PositionAPI canvas = panel.getPosition();
 			float[] visible = visibleBounds();
-			Global.getLogger(BattleNext_TournamentView.class).info("Tournament chart fit: tournament="
-					+ tournament.getId() + ", nodes=" + nodes.size() + ", zoom=" + zoom
-					+ ", canvas=" + canvas.getX() + "," + canvas.getY() + ","
-					+ canvas.getWidth() + "," + canvas.getHeight() + ", visible="
-					+ Arrays.toString(visible) + ", firstNode="
-					+ Arrays.toString(project(nodes.get(0).x, nodes.get(0).y)));
+			BattleNext_Logger.info(BattleNext_TournamentView.class, "tournament.chart.fitted",
+				BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("node_count", nodes.size()).put("zoom", zoom).put("canvas_x", canvas.getX()).put("canvas_y", canvas.getY()).put("canvas_width", canvas.getWidth()).put("canvas_height", canvas.getHeight()).put("visible_bounds", visible).put("first_node", project(nodes.get(0).x, nodes.get(0).y)).build());
 		}
 	}
 

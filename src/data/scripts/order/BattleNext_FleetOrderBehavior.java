@@ -1,6 +1,7 @@
 package data.scripts.order;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.tools.BattleNext_Logger;
+
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
@@ -57,7 +58,9 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 			String label = assembledFleet.getDefinition().getName() + " member[" + index + "] "
 					+ assembledFleet.getDefinition().getMembers().get(index).getVariantId();
 			BattleNext_OrderProcessor processor = new BattleNext_OrderProcessor(script, label,
-					BattleNext_OrderRegistry.getInstance(), message -> Global.getLogger(BattleNext_FleetOrderBehavior.class).error(message));
+					BattleNext_OrderRegistry.getInstance(), message -> BattleNext_Logger.warn(BattleNext_FleetOrderBehavior.class, "orders.statement.rejected",
+						BattleNext_Logger.fields().put("fleet_id", assembledFleet.getDefinition().getId()).put("side", side)
+								.put("member_id", member.getId()).put("label", label).put("script", script).put("reason", message).build()));
 			if (!processor.isEmpty()) orders.add(new MemberOrders(member, side.ordinal(), processor));
 		}
 	}

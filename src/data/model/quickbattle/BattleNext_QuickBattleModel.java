@@ -1,5 +1,6 @@
 package data.model.quickbattle;
 
+
 import data.model.BattleNext_CsvModel;
 import data.scripts.tools.BattleNext_CsvLine;
 
