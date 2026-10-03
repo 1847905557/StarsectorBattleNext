@@ -8,7 +8,8 @@
 			"BattleNext_source_type": "graphics/ui/icons/64x_xcircle.png"
 		},
 		"icon": {
-			"BattleNext_Icon": "graphics/ui/BattleNext_Icon.png"
+			"BattleNext_Icon": "graphics/ui/BattleNext_Icon.png",
+			"BattleNext_weapon_group_linked": "graphics/icons/jump-point.png"
 		},
 		"misc": {
 			"BattleNext_versus": "graphics/ui/BattleNext/BattleNext_versus.png",

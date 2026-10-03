@@ -5,6 +5,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -22,6 +23,7 @@ public class BattleNext_ExpandablePanel {
 	public static final float HEADER_HEIGHT = 40f;
 	public static final float ICON_SIZE = 32f;
 	public static final float ROW_GAP = 4f;
+	public static final float HEADER_SIDE_INSET = 8f;
 	private static final float MISSING_ICON_SIZE = 24f;
 
 	private static final Color BODY_BACKGROUND = new Color(0, 0, 0, 150);
@@ -29,7 +31,7 @@ public class BattleNext_ExpandablePanel {
 	private static final float METRICS_MAX_WIDTH = 260f;
 
 	public record Header(String primarySprite, boolean secondarySlot, String secondarySprite,
-			String firstLine, String secondLine, String rightFirstLine, String rightSecondLine) { }
+			String firstLine, String secondLine, String rightFirstLine, String rightSecondLine, Color primaryTint) { }
 
 	public record HeaderLayout(float textX, float textWidth, float metricsX, float metricsWidth) { }
 
@@ -59,11 +61,12 @@ public class BattleNext_ExpandablePanel {
 	}
 
 	public static HeaderLayout headerLayout(float width, boolean secondarySlot, boolean rightSummary) {
-		float textX = secondarySlot ? ICON_SIZE * 2f + 12f : ICON_SIZE + 8f;
+		float textX = HEADER_SIDE_INSET + (secondarySlot ? ICON_SIZE * 2f + 12f : ICON_SIZE + 8f);
 		float metricsWidth = rightSummary
 				? Math.min(METRICS_MAX_WIDTH, Math.max(METRICS_MIN_WIDTH, width * 0.28f)) : 0f;
-		float metricsX = rightSummary ? width - metricsWidth - 4f : width;
-		return new HeaderLayout(textX, Math.max(1f, metricsX - textX - 8f), metricsX, metricsWidth);
+		float metricsX = width - HEADER_SIDE_INSET - metricsWidth;
+		float textRight = rightSummary ? metricsX - 8f : metricsX;
+		return new HeaderLayout(textX, Math.max(1f, textRight - textX), metricsX, metricsWidth);
 	}
 
 	public static float panelHeight(boolean expanded, float bodyHeight) {
@@ -77,19 +80,24 @@ public class BattleNext_ExpandablePanel {
 	private static void addHeaderContent(CustomPanelAPI top, float width,
 			Header header, HeaderPlugin plugin) {
 		plugin.primarySprite = loadSprite(header.primarySprite());
+		plugin.primaryTint = header.primaryTint();
 		if (header.secondarySlot()) plugin.secondarySprite = loadSprite(header.secondarySprite());
 		boolean rightSummary = !header.rightFirstLine().isEmpty() || !header.rightSecondLine().isEmpty();
 		HeaderLayout layout = headerLayout(width, plugin.secondarySprite != null, rightSummary);
 		TooltipMakerAPI names = top.createUIElement(layout.textWidth(), HEADER_HEIGHT, false);
-		names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)), 3f);
+		LabelAPI firstLine = names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)), 3f);
+		firstLine.getPosition().inTL(0f, 3f);
 		if (!header.secondLine().isEmpty()) {
-			names.addPara(names.shortenString(header.secondLine(), Math.max(1f, layout.textWidth() - 6f)), 1f);
+			LabelAPI secondLine = names.addPara(names.shortenString(header.secondLine(), Math.max(1f, layout.textWidth() - 6f)), 1f);
+			secondLine.getPosition().inTL(0f, firstLine.getPosition().getHeight() + 4f);
 		}
 		top.addUIElement(names).inTL(layout.textX(), 0f);
 		if (rightSummary) {
 			TooltipMakerAPI metrics = top.createUIElement(layout.metricsWidth(), HEADER_HEIGHT, false);
-			metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth() - 6f), 3f);
-			metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth() - 6f), 1f);
+			LabelAPI firstMetric = metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth() - 6f), 3f);
+			firstMetric.getPosition().inTL(0f, 3f);
+			LabelAPI secondMetric = metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth() - 6f), 1f);
+			secondMetric.getPosition().inTL(0f, firstMetric.getPosition().getHeight() + 4f);
 			top.addUIElement(metrics).inTL(layout.metricsX(), 0f);
 		}
 	}
@@ -133,6 +141,7 @@ public class BattleNext_ExpandablePanel {
 		private boolean hovered;
 		private SpriteAPI primarySprite;
 		private SpriteAPI secondarySprite;
+		private Color primaryTint;
 
 		private HeaderPlugin(boolean expanded, TooltipMakerAPI viewport, Runnable onToggle) {
 			this.expanded = expanded;
@@ -161,17 +170,20 @@ public class BattleNext_ExpandablePanel {
 		public void render(float alphaMult) {
 			if (position == null) return;
 			float centerY = position.getY() + HEADER_HEIGHT * 0.5f;
-			float primaryCenterX = position.getX() + ICON_SIZE * 0.5f;
+			float primaryCenterX = position.getX() + HEADER_SIDE_INSET + ICON_SIZE * 0.5f;
 			if (primarySprite == null) {
 				BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(),
 						primaryCenterX - MISSING_ICON_SIZE * 0.5f,
 						centerY - MISSING_ICON_SIZE * 0.5f, MISSING_ICON_SIZE, alphaMult);
+			} else if (primaryTint != null) {
+				BattleNext_PageLayout.renderTintedFittedSprite(primarySprite,
+						primaryCenterX, centerY, ICON_SIZE, ICON_SIZE, primaryTint, alphaMult);
 			} else {
 				BattleNext_PageLayout.renderFittedSprite(primarySprite,
 						primaryCenterX, centerY, ICON_SIZE, ICON_SIZE, alphaMult);
 			}
 			if (secondarySprite != null) {
-				float secondaryCenterX = position.getX() + ICON_SIZE * 1.5f + 4f;
+				float secondaryCenterX = position.getX() + HEADER_SIDE_INSET + ICON_SIZE * 1.5f + 4f;
 				BattleNext_PageLayout.renderFittedSprite(secondarySprite,
 						secondaryCenterX, centerY, ICON_SIZE, ICON_SIZE, alphaMult);
 			}

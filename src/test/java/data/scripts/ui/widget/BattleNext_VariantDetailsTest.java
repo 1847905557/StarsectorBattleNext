@@ -208,7 +208,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 	}
 
 	@Test
-	void expansionMeasuresWrappedWeaponsAndRetainsIndependentScrollOffsets() throws Exception {
+	void expansionUsesFixedWeaponRowsAndRetainsIndependentScrollOffsets() throws Exception {
 
 		JSONObject json = equipmentJson();
 		BattleNext_VariantDetails[] details = new BattleNext_VariantDetails[1];
@@ -235,11 +235,13 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		CustomPanelAPI container = (CustomPanelAPI) children.get(root).get(1);
 		CustomPanelAPI body = (CustomPanelAPI) children.get(container).get(0);
 		TooltipState text = tooltips.get(children.get(body).get(0));
+		assertEquals(188f, body.getPosition().getHeight());
 		PositionAPI bodyBounds = body.getPosition();
 		PositionAPI first = text.getComponents().get(0).getPosition();
 		assertEquals(8f, bodyBounds.getY() + bodyBounds.getHeight() - first.getY() - first.getHeight());
 		for (int index = 0; index < text.getComponents().size(); index++) {
 			PositionAPI row = text.getComponents().get(index).getPosition();
+			assertEquals(40f, row.getHeight());
 			assertEquals(8f, row.getX() - bodyBounds.getX());
 			assertEquals(8f, bodyBounds.getX() + bodyBounds.getWidth() - row.getX() - row.getWidth());
 			if (index > 0) {

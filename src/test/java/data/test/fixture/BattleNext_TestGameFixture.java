@@ -53,7 +53,10 @@ public class BattleNext_TestGameFixture {
 	protected final Map<ShipHullSpecAPI, List<String>> moduleSlots = new IdentityHashMap<>();
 	protected final List<float[]> spriteCenters = new ArrayList<>();
 	protected final List<float[]> spriteSizes = new ArrayList<>();
+	protected final List<Color> spriteRenderColors = new ArrayList<>();
+	protected final List<float[]> spriteRenderStates = new ArrayList<>();
 	protected final Map<SpriteAPI, float[]> sprites = new IdentityHashMap<>();
+	protected final Map<SpriteAPI, String> spritePaths = new IdentityHashMap<>();
 	protected float spriteWidth = 120f;
 	protected float spriteHeight = 120f;
 	protected boolean failBuild;
@@ -74,6 +77,7 @@ public class BattleNext_TestGameFixture {
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> switch (method) {
 			case "getModManager" -> mods;
 			case "getString" -> BattleNext_TestTextCatalog.key(args[0], args[1]);
+			case "getSpriteName" -> BattleNext_TestSpriteCatalog.path(args[0], args[1]);
 			case "getColor" -> Color.GRAY;
 			case "getFloat" -> 1f;
 			case "getScreenWidth" -> 1600f;
@@ -97,7 +101,13 @@ public class BattleNext_TestGameFixture {
 			case "getSprite" -> {
 				if (failSprites) throw new IllegalArgumentException("Missing sprite");
 				float[] state = {spriteWidth, spriteHeight, 11f, 17f, 0.8f};
+				Color[] color = {Color.WHITE};
 				SpriteAPI sprite = proxy(SpriteAPI.class, (name, values) -> switch (name) {
+					case "getColor" -> color[0];
+					case "setColor" -> {
+						color[0] = (Color) values[0];
+						yield null;
+					}
 					case "getWidth" -> state[0];
 					case "getHeight" -> state[1];
 					case "getCenterX" -> state[2];
@@ -114,6 +124,8 @@ public class BattleNext_TestGameFixture {
 					}
 					case "renderAtCenter" -> {
 						spriteCenters.add(new float[]{(Float) values[0], (Float) values[1]});
+						spriteRenderColors.add(color[0]);
+						spriteRenderStates.add(state.clone());
 						yield null;
 					}
 					case "setSize" -> {
@@ -125,6 +137,8 @@ public class BattleNext_TestGameFixture {
 					default -> null;
 				});
 				sprites.put(sprite, state);
+				spritePaths.put(sprite, args.length == 1 ? (String) args[0]
+						: args[0] + "/" + args[1]);
 				yield sprite;
 			}
 			default -> null;

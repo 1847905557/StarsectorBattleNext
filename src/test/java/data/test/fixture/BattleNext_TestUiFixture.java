@@ -52,7 +52,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
 	protected final Map<String, Object> buttonIds = new LinkedHashMap<>();
 	protected final List<UIComponentAPI> removedComponents = new ArrayList<>();
+	protected final Map<UIComponentAPI, String> imagePaths = new IdentityHashMap<>();
+	protected final Map<UIComponentAPI, TooltipMakerAPI.TooltipCreator> attachedTooltips = new IdentityHashMap<>();
 	protected boolean deferTooltipWidth;
+	protected boolean shortenLabels;
 	protected float paragraphLineHeight = 20f;
 
 	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {
@@ -235,6 +238,18 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					yield label;
 				}
 				case "getPrev" -> previous;
+				case "addImage" -> {
+					PositionAPI image = position((Float) args[1], (Float) args[2]);
+					UIComponentAPI component = proxy(UIComponentAPI.class,
+							(name, values) -> "getPosition".equals(name) ? image : null);
+					append(component, (Float) args[3]);
+					imagePaths.put(component, (String) args[0]);
+					yield null;
+				}
+				case "addTooltipToPrevious" -> {
+					attachedTooltips.put(previous, (TooltipMakerAPI.TooltipCreator) args[0]);
+					yield null;
+				}
 				case "getHeightSoFar" -> usedHeight;
 				case "getWidthSoFar" -> width;
 				case "setHeightSoFar" -> {
@@ -264,7 +279,13 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					removedComponents.add((UIComponentAPI) args[0]);
 					yield null;
 				}
-				case "shortenString" -> args[0];
+				case "shortenString" -> {
+					String text = (String) args[0];
+					int count = Math.max(0, (int) ((Float) args[1] / 7f));
+					if (!shortenLabels || text.length() <= count) yield text;
+					if (count < 3) yield ".".repeat(count);
+					yield text.substring(0, count - 3) + "...";
+				}
 				case "addCustom" -> append((UIComponentAPI) args[0], (Float) args[1]);
 				case "addSpacer" -> {
 					PositionAPI spacer = position(1f, (Float) args[0]);
@@ -336,6 +357,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private float width;
 		private float height;
 		private boolean middleY;
+		private boolean middleX;
 
 		protected Bounds(float width, float height) {
 			this.width = width;
@@ -347,7 +369,8 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		}
 
 		protected Object call(String method, Object[] args) {
-			float x = left + (parent == null ? 0f : parent.getX());
+			float x = left + (parent == null ? 0f : parent.getX()
+					+ (middleX ? (parent.getWidth() - width) * 0.5f : 0f));
 			float y = parent == null ? 0f - top : parent.getY()
 					+ (middleY ? (parent.getHeight() - height) * 0.5f : parent.getHeight() - height - top);
 			return switch (method) {
@@ -366,10 +389,18 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					left = (Float) args[0];
 					top = (Float) args[1];
 					middleY = false;
+					middleX = false;
 					yield null;
 				}
 				case "inLMid" -> {
 					left = (Float) args[0];
+					middleY = true;
+					middleX = false;
+					yield null;
+				}
+				case "inMid" -> {
+					left = 0f;
+					middleX = true;
 					middleY = true;
 					yield null;
 				}

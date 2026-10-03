@@ -55,6 +55,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	private static final float MEMBER_BODY_LINE_HEIGHT = 24f;
 	private static final float SOURCE_ROW_HEIGHT = 40f;
 	private static final float SOURCE_ROW_GAP = 4f;
+	private static final float SOURCE_TEXT_GAP = 2f;
 
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
@@ -319,7 +320,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 					hull.spritePath(), false, "", shipName, hull.name(),
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
 					reportStrings.get("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
-							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()));
+							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()), null);
 			BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
@@ -363,7 +364,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		plugin.setPosition(sourcePanel.getPosition());
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source, Global.getSettings());
-		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, SOURCE_ROW_HEIGHT, false);
+		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE, false);
 		float iconY = (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f;
 		if (visual.accentIcon()) {
 			try {
@@ -372,6 +373,8 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 				plugin.missingIcon = true;
 			}
 		} else if (addSprite(icon, visual.primarySprite()) || addSprite(icon, visual.secondarySprite())) {
+			icon.getPrev().getPosition().inTL(0f, 0f);
+			icon.setHeightSoFar(MEMBER_THUMB_SIZE);
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		} else if ("weapon".equals(source.getKind()) || "fighter_wing".equals(source.getKind())
 				|| "ship".equals(source.getKind()) || "source_type".equals(source.getKind())
@@ -379,16 +382,28 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 			plugin.missingIcon = true;
 		} else {
 			icon.addPara(visual.placeholder(), 0f).getPosition().inMid();
+			icon.setHeightSoFar(MEMBER_THUMB_SIZE);
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		}
 		float textX = MEMBER_THUMB_SIZE + 8f;
 		float textWidth = sourceTextWidth(width);
 		TooltipMakerAPI labels = sourcePanel.createUIElement(textWidth, SOURCE_ROW_HEIGHT, false);
 		String name = visual.resolved() ? visual.name() : sourceKindLabel(source.getKind()) + ": " + visual.name();
-		labels.addPara(labels.shortenString(name, Math.max(1f, textWidth - 4f)), 0f)
-				.getPosition().inTL(0f, 0f);
-		addDamageColumns(labels, 18f, textWidth,
+		LabelAPI nameLabel = labels.addPara(labels.shortenString(name, Math.max(1f, textWidth - 4f)), 0f);
+		LabelAPI[] damageLabels = addDamageColumns(labels, 0f, textWidth,
 				new double[]{source.getHull(), source.getArmor(), source.getShields(), source.getEmp()});
+		float nameHeight = nameLabel.getPosition().getHeight();
+		float damageHeight = 0f;
+		for (LabelAPI label : damageLabels) {
+			damageHeight = Math.max(damageHeight, label.getPosition().getHeight());
+		}
+		float textGap = Math.min(SOURCE_TEXT_GAP, Math.max(0f, SOURCE_ROW_HEIGHT - nameHeight - damageHeight));
+		float textTop = (SOURCE_ROW_HEIGHT - nameHeight - textGap - damageHeight) * 0.5f;
+		nameLabel.getPosition().inTL(0f, textTop);
+		for (int index = 0; index < damageLabels.length; index++) {
+			damageLabels[index].getPosition().inTL(index * textWidth / damageLabels.length,
+					textTop + nameHeight + textGap);
+		}
 		labels.setHeightSoFar(SOURCE_ROW_HEIGHT);
 		sourcePanel.addUIElement(labels).inTL(textX, 0f);
 		content.addCustom(sourcePanel, SOURCE_ROW_GAP);
@@ -407,14 +422,17 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		}, TooltipLocation.RIGHT);
 	}
 
-	private void addDamageColumns(TooltipMakerAPI host, float y, float width, double[] values) {
+	private LabelAPI[] addDamageColumns(TooltipMakerAPI host, float y, float width, double[] values) {
 		String[] labels = {reportStrings.get("hull"), reportStrings.get("armor"), reportStrings.get("shield"), reportStrings.get("emp")};
+		LabelAPI[] result = new LabelAPI[values.length];
 		float columnWidth = width / values.length;
 		for (int index = 0; index < values.length; index++) {
 			String value = labels[index] + ": " + formatDamage(values[index]);
 			LabelAPI label = host.addPara(host.shortenString(value, Math.max(1f, columnWidth - 4f)), 0f);
 			label.getPosition().inTL(index * columnWidth, y);
+			result[index] = label;
 		}
+		return result;
 	}
 
 	static float detailControlWidth(float contentWidth) {

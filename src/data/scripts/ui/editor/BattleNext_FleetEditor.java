@@ -231,7 +231,7 @@ public class BattleNext_FleetEditor implements BattleNext_EditorView {
 		if (hullName == null || hullName.isEmpty()) hullName = variantStrings.get("missing");
 		BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 				hull == null ? "" : hull.getSpriteName(), true, member.getPortrait(),
-				hullName, member.getName(), "", "");
+				hullName, member.getName(), "", "", null);
 		FleetMemberEditorFields fields = new FleetMemberEditorFields();
 		memberFields.add(fields);
 		BattleNext_ExpandablePanel.add(memberContent, panel, width, expanded, 0f, header,

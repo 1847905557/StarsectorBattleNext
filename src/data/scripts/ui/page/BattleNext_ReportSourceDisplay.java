@@ -5,8 +5,8 @@ import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
-import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay;
 
 import java.util.Locale;
 
@@ -23,12 +23,9 @@ public class BattleNext_ReportSourceDisplay {
 		try {
 			switch (source.getKind()) {
 				case "weapon": {
-					WeaponSpecAPI spec = settings.getWeaponSpec(id);
-					if (spec != null) {
-						return new SourceVisual(nameOrId(spec.getWeaponName(), id),
-								path(spec.getTurretSpriteName()), path(spec.getHardpointSpriteName()), "W", true, false);
-					}
-					break;
+					BattleNext_WeaponDisplay.Visual visual = BattleNext_WeaponDisplay.resolve(id, settings);
+					return new SourceVisual(visual.name(), visual.primarySprite(), visual.secondarySprite(),
+							"W", visual.resolved(), false);
 				}
 				case "fighter_wing": {
 					FighterWingSpecAPI wing = settings.getFighterWingSpec(id);

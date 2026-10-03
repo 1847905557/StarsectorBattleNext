@@ -8,6 +8,7 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -16,6 +17,7 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -36,6 +38,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private static final float SECTION_HEADER_HEIGHT = BattleNext_PageLayout.TABLE_HEADER_HEIGHT;
 	private static final float ROW_GAP = BattleNext_ExpandablePanel.ROW_GAP;
 	private static final float ICON_SIZE = BattleNext_ExpandablePanel.ICON_SIZE;
+	private static final float WEAPON_ROW_HEIGHT = 40f;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private final Set<Integer> expanded = new HashSet<>();
@@ -291,28 +294,33 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			float bodyHeight = 0f;
 			if (open) {
 				float contentWidth = Math.max(1f, width - GAP * 2f);
-				float contentTop = GAP - ROW_GAP;
 				TooltipMakerAPI text = body.createUIElement(contentWidth
 						+ BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, 0f, false);
 				BattleNext_UiTheme.configure(text);
 				text.setTextWidthOverride(contentWidth);
 				if (count == 0) {
-					text.addPara(variantStrings.get("none"), ROW_GAP);
+					text.addPara(variantStrings.get("none"), 0f);
 				}
-				for (String slot : keys(weapons)) {
+				List<String> slots = keys(weapons);
+				for (int slotIndex = 0; slotIndex < slots.size(); slotIndex++) {
+					String slot = slots.get(slotIndex);
 					String id = weapons.optString(slot, "");
-					String name = slot + ": " + equipmentName(id, false);
-					text.addPara(name, ROW_GAP);
-					if (!id.isEmpty()) BattleNext_PageLayout.addIdTooltip(text, name, id);
+					addWeaponRow(body, text, slot, id, contentWidth, slotIndex == 0 ? 0f : ROW_GAP);
 				}
-				bodyHeight = text.getHeightSoFar() + contentTop + GAP;
+				bodyHeight = text.getHeightSoFar() + GAP * 2f;
 				body.getPosition().setSize(width, bodyHeight);
-				body.addUIElement(text).inTL(GAP - BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, contentTop);
+				body.addUIElement(text).inTL(GAP - BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, GAP);
 			}
 			String status = variantStrings.get(group.optBoolean("autofire", false) ? "autofire_enabled" : "autofire_disabled");
-			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header("", false, "",
+			String mode = group.optString("mode", "");
+			String icon = switch (mode) {
+				case "LINKED" -> Global.getSettings().getSpriteName("icon", "BattleNext_weapon_group_linked");
+				case "ALTERNATING" -> Global.getSettings().getSpriteName("systemMap", "icon_jump_point");
+				default -> "";
+			};
+			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(icon, false, "",
 					variantStrings.format("weapon_group_summary", index + 1, count),
-					group.optString("mode", "") + " / " + status, "", "");
+					mode + " / " + status, "", "", BattleNext_UiTheme.ACCENT);
 			BattleNext_ExpandablePanel.add(list, owner, width, open, bodyHeight, header,
 					() -> {
 						if (!interactive.getAsBoolean()) return;
@@ -324,6 +332,61 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 					}, container -> container.addComponent(body).inTL(0f, 0f));
 		}
+	}
+
+	private void addWeaponRow(CustomPanelAPI body, TooltipMakerAPI list,
+			String slot, String id, float width, float pad) {
+
+		BattleNext_WeaponDisplay.Visual visual = BattleNext_WeaponDisplay.resolve(id, Global.getSettings());
+		String weaponName = id.isEmpty() ? variantStrings.get("empty_slot")
+				: visual.resolved() ? visual.name() : strings.get("unavailable") + ": " + id;
+		String title = slot + ": " + weaponName;
+		WeaponRowPlugin plugin = new WeaponRowPlugin();
+		CustomPanelAPI row = body.createCustomPanel(width, WEAPON_ROW_HEIGHT, plugin);
+		plugin.position = row.getPosition();
+		TooltipMakerAPI icon = row.createUIElement(ICON_SIZE, ICON_SIZE, false);
+		plugin.missingIcon = !addWeaponImage(icon, visual);
+		if (!plugin.missingIcon) {
+			icon.getPrev().getPosition().inTL(0f, 0f);
+			icon.setHeightSoFar(ICON_SIZE);
+			row.addUIElement(icon).inTL(0f, (WEAPON_ROW_HEIGHT - ICON_SIZE) * 0.5f);
+		}
+		float textX = ICON_SIZE + GAP;
+		float textWidth = Math.max(1f, width - textX);
+		TooltipMakerAPI text = row.createUIElement(textWidth, WEAPON_ROW_HEIGHT, false);
+		BattleNext_UiTheme.configure(text);
+		text.setTextWidthOverride(textWidth);
+		LabelAPI label = text.addPara(text.shortenString(title, Math.max(1f, textWidth - 4f)), 0f);
+		label.getPosition().inTL(0f, (WEAPON_ROW_HEIGHT - label.getPosition().getHeight()) * 0.5f);
+		text.setHeightSoFar(WEAPON_ROW_HEIGHT);
+		row.addUIElement(text).inTL(textX, 0f);
+		list.addCustom(row, pad);
+		list.addTooltipToPrevious(new BaseTooltipCreator() {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return 360f;
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				tooltip.addTitle(title);
+				if (!id.isEmpty()) BattleNext_PageLayout.addMutedIdLine(tooltip, id, ROW_GAP);
+			}
+		}, TooltipMakerAPI.TooltipLocation.RIGHT);
+	}
+
+	private boolean addWeaponImage(TooltipMakerAPI icon, BattleNext_WeaponDisplay.Visual visual) {
+		for (String path : List.of(visual.primarySprite(), visual.secondarySprite())) {
+			if (path.isEmpty()) continue;
+			try {
+				Global.getSettings().getSprite(path);
+				icon.addImage(path, ICON_SIZE, ICON_SIZE, 0f);
+				return true;
+			} catch (RuntimeException ignored) {
+
+			}
+		}
+		return false;
 	}
 
 	private void buildWings(TooltipMakerAPI list, CustomPanelAPI owner, float width, JSONObject json) {
@@ -481,6 +544,28 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			BattleNext_PageLayout.renderFittedSprite(sprite, position.getX() + GAP + ICON_SIZE * 0.5f,
 					position.getY() + position.getHeight() - GAP - ICON_SIZE * 0.5f,
 					ICON_SIZE, ICON_SIZE, alphaMult);
+		}
+	}
+
+	private static class WeaponRowPlugin extends BaseCustomUIPanelPlugin {
+		private PositionAPI position;
+		private boolean missingIcon;
+
+		@Override
+		public void renderBelow(float alphaMult) {
+			BattleNext_GeometryRenderer.lineStrip(new float[]{
+					position.getX(), position.getY() + position.getHeight(),
+					position.getX() + position.getWidth(), position.getY() + position.getHeight()
+			}, BattleNext_UiTheme.PANEL, alphaMult * 0.6f, 1f);
+		}
+
+		@Override
+		public void render(float alphaMult) {
+			if (!missingIcon) return;
+			float size = ICON_SIZE * 0.75f;
+			BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(),
+					position.getX() + (ICON_SIZE - size) * 0.5f,
+					position.getY() + (WEAPON_ROW_HEIGHT - size) * 0.5f, size, alphaMult);
 		}
 	}
 

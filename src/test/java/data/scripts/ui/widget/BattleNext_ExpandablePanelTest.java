@@ -27,19 +27,23 @@ class BattleNext_ExpandablePanelTest {
 		assertEquals(240f, BattleNext_ExpandablePanel.panelHeight(true, 200f));
 		BattleNext_ExpandablePanel.HeaderLayout fleet =
 				BattleNext_ExpandablePanel.headerLayout(400f, true, false);
-		assertEquals(76f, fleet.textX());
+		assertEquals(84f, fleet.textX());
 		assertEquals(0f, fleet.metricsWidth());
 		assertTrue(fleet.textX() + fleet.textWidth() <= 400f);
 		BattleNext_ExpandablePanel.HeaderLayout withoutPortrait =
 				BattleNext_ExpandablePanel.headerLayout(400f, false, false);
-		assertEquals(40f, withoutPortrait.textX());
-		assertEquals(8f, withoutPortrait.textX() - BattleNext_ExpandablePanel.ICON_SIZE);
-		assertEquals(8f, fleet.textX() - (BattleNext_ExpandablePanel.ICON_SIZE * 2f + 4f));
+		assertEquals(48f, withoutPortrait.textX());
+		assertEquals(8f, withoutPortrait.textX() - BattleNext_ExpandablePanel.HEADER_SIDE_INSET
+				- BattleNext_ExpandablePanel.ICON_SIZE);
+		assertEquals(8f, fleet.textX() - BattleNext_ExpandablePanel.HEADER_SIDE_INSET
+				- (BattleNext_ExpandablePanel.ICON_SIZE * 2f + 4f));
+		assertEquals(392f, fleet.textX() + fleet.textWidth());
+		assertEquals(392f, withoutPortrait.textX() + withoutPortrait.textWidth());
 		BattleNext_ExpandablePanel.HeaderLayout report =
 				BattleNext_ExpandablePanel.headerLayout(1200f, false, true);
-		assertEquals(40f, report.textX());
+		assertEquals(48f, report.textX());
 		assertEquals(260f, report.metricsWidth());
-		assertEquals(936f, report.metricsX());
+		assertEquals(932f, report.metricsX());
 		assertTrue(report.textX() + report.textWidth() < report.metricsX());
 	}
 
