@@ -7,5 +7,5 @@ package data.scripts.ai.vanilla.attack;
 enum BattleNext_AttackState {
 	PICKING_TARGET,
 	FIRING,
-	WAITING;
+	WAITING
 }

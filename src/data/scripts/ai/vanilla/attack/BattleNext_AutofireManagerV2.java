@@ -74,11 +74,7 @@ public class BattleNext_AutofireManagerV2 implements BattleNext_AutofireManager 
 			// intentionally kept dead: vanilla sorts an always-empty list and the deobf comparator
 			// method was named compareByFluxPerSecond instead of compare
 			ArrayList<BattleNext_WeaponGroupEvaluation> sortedDeadList = new ArrayList<>();
-			Collections.sort(sortedDeadList, new Comparator<BattleNext_WeaponGroupEvaluation>() {
-				public int compare(BattleNext_WeaponGroupEvaluation one, BattleNext_WeaponGroupEvaluation two) {
-					return (int) Math.signum(one.getFluxPerSecond() - two.getFluxPerSecond());
-				}
-			});
+			sortedDeadList.sort((one, two) -> (int)Math.signum(one.getFluxPerSecond() - two.getFluxPerSecond()));
 			float spentFluxBudget = 0.0F;
 
 			for (BattleNext_WeaponGroupEvaluation evaluation : this.weaponGroupEvaluations.values()) {

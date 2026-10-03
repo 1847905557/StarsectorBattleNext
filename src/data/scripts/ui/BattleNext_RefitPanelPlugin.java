@@ -81,7 +81,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	public void init(CustomPanelAPI panel, float width, float height) {
 		this.panel = panel;
 		BattleNext_UiInputRouter.activate(inputRouter);
-		details = new BattleNext_VariantDetails(this::refreshDetails, () -> inputRouter.isEmpty());
+		details = new BattleNext_VariantDetails(this::refreshDetails, inputRouter::isEmpty);
 		border = new UIBorderObject(false, true);
 		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - BORDER_INSET;
 		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - BORDER_INSET;

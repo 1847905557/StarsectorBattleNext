@@ -61,9 +61,9 @@ public class BattleNext_ReportSourceDisplay {
 				default:
 					break;
 			}
-		} catch (RuntimeException ignored) {
+		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.degraded",
-				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).build(), ignored);
+				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).build(), exception);
 		}
 		BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.unavailable",
 				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).put("placeholder", placeholder(source.getKind())).build());

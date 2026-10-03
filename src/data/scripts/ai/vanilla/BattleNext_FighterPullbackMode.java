@@ -7,5 +7,5 @@ package data.scripts.ai.vanilla;
 public enum BattleNext_FighterPullbackMode {
 	NEVER,
 	EMERGENCY,
-	PRIMARY;
+	PRIMARY
 }

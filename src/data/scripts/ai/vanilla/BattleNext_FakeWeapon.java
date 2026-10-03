@@ -286,193 +286,246 @@ public class BattleNext_FakeWeapon implements WeaponAPI {
 		return null;
 	}
 
+	@Override
 	public void disable() {
 	}
 
+	@Override
 	public void disable(boolean var1) {
 	}
 
+	@Override
 	public float getArc() {
 		return this.slot.getArc();
 	}
 
+	@Override
 	public float getArcFacing() {
 		return this.slot.getAngle();
 	}
 
+	@Override
 	public SpriteAPI getBarrelSpriteAPI() {
 		return null;
 	}
 
+	@Override
 	public float getCurrHealth() {
 		return 0.0F;
 	}
 
+	@Override
 	public DerivedWeaponStatsAPI getDerivedStats() {
 		return this.derivedStats;
 	}
 
+	@Override
 	public float getDisabledDuration() {
 		return 0.0F;
 	}
 
+	@Override
 	public EveryFrameWeaponEffectPlugin getEffectPlugin() {
 		return null;
 	}
 
+	@Override
 	public Vector2f getLocation() {
 		return this.slot.computePosition(this.ship);
 	}
 
+	@Override
 	public float getMaxHealth() {
 		return 0.0F;
 	}
 
+	@Override
 	public List<MissileRenderDataAPI> getMissileRenderData() {
 		return null;
 	}
 
+	@Override
 	public float getProjectileFadeRange() {
 		return 0.0F;
 	}
 
+	@Override
 	public SpriteAPI getSprite() {
 		return null;
 	}
 
+	@Override
 	public SpriteAPI getUnderSpriteAPI() {
 		return null;
 	}
 
+	@Override
 	public boolean isPermanentlyDisabled() {
 		return false;
 	}
 
+	@Override
 	public boolean isRenderBarrelBelow() {
 		return false;
 	}
 
+	@Override
 	public void renderBarrel(SpriteAPI var1, Vector2f var2, float var3) {
 	}
 
+	@Override
 	public void repair() {
 	}
 
+	@Override
 	public void setAmmo(int var1) {
 		this.system.setAmmo(var1);
 	}
 
+	@Override
 	public void setCurrAngle(float var1) {
 	}
 
+	@Override
 	public void setMaxAmmo(int var1) {
 		this.ammoTracker.setMaxAmmo(var1);
 	}
 
+	@Override
 	public boolean isDecorative() {
 		return this.getType() == WeaponType.DECORATIVE;
 	}
 
+	@Override
 	public void ensureClonedSpec() {
 	}
 
+	@Override
 	public float getAmmoPerSecond() {
 		return this.system.getAmmoPerSecond();
 	}
 
+	@Override
 	public void setPDAlso(boolean var1) {
 	}
 
+	@Override
 	public void setCurrHealth(float var1) {
 	}
 
+	@Override
 	public MuzzleFlashSpec getMuzzleFlashSpec() {
 		return null;
 	}
 
+	@Override
 	public List<BeamAPI> getBeams() {
 		return new ArrayList<>();
 	}
 
+	@Override
 	public Vector2f getFirePoint(int var1) {
 		return new Vector2f(this.getLocation());
 	}
 
+	@Override
 	public SpriteAPI getGlowSpriteAPI() {
 		return null;
 	}
 
+	@Override
 	public void setRefireDelay(float var1) {
 	}
 
+	@Override
 	public float getRefireDelay() {
 		return 0.0F;
 	}
 
+	@Override
 	public float getBurstFireTimeRemaining() {
 		return 0.0F;
 	}
 
+	@Override
 	public Vector2f getRenderOffsetForDecorativeBeamWeaponsOnly() {
 		return null;
 	}
 
+	@Override
 	public void setRenderOffsetForDecorativeBeamWeaponsOnly(Vector2f var1) {
 	}
 
+	@Override
 	public void updateBeamFromPoints() {
 	}
 
+	@Override
 	public boolean isKeepBeamTargetWhileChargingDown() {
 		return false;
 	}
 
+	@Override
 	public void setKeepBeamTargetWhileChargingDown(boolean var1) {
 	}
 
+	@Override
 	public void setScaleBeamGlowBasedOnDamageEffectiveness(boolean var1) {
 	}
 
+	@Override
 	public void setForceFireOneFrame(boolean var1) {
 	}
 
+	@Override
 	public void setForceNoFireOneFrame(boolean var1) {
 	}
 
+	@Override
 	public void setSuspendAutomaticTurning(boolean var1) {
 	}
 
+	@Override
 	public Object getCustom() {
 		return this.custom;
 	}
 
+	@Override
 	public void setCustom(Object var1) {
 		this.custom = var1;
 	}
 
+	@Override
 	public void forceShowBeamGlow() {
 	}
 
+	@Override
 	public WeaponSpecAPI getOriginalSpec() {
 		return this.getSpec();
 	}
 
+	@Override
 	public void setWeaponGlowWidthMult(float var1) {
 	}
 
+	@Override
 	public void setWeaponGlowHeightMult(float var1) {
 	}
 
+	@Override
 	public void stopFiring() {
 	}
 
+	@Override
 	public boolean isForceDisabled() {
 		return false;
 	}
 
+	@Override
 	public void setForceDisabled(boolean var1) {
 	}
 
+	@Override
 	public boolean isForceNoFireOneFrame() {
 		return false;
 	}

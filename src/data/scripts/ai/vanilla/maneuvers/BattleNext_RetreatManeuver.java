@@ -19,7 +19,6 @@ import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -337,7 +336,7 @@ public class BattleNext_RetreatManeuver implements BattleNext_Maneuver {
 			entries.add(end);
 		}
 
-		Collections.sort(entries, new BattleNext_RetreatCollisionComparator(this));
+		entries.sort(new BattleNext_RetreatCollisionComparator(this));
 		ArrayList<BattleNext_CollisionTimeRange> ranges = new ArrayList<>();
 		if (entries.isEmpty()) {
 			return ranges;

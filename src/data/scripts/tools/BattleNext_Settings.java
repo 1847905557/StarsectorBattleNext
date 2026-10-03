@@ -25,9 +25,9 @@ public class BattleNext_Settings {
 		try {
 			JSONObject stored = readStored(PATH);
 			if (stored != null) merge(stored);
-		} catch (Exception ignored) {
+		} catch (Exception exception) {
 			BattleNext_Logger.warn(BattleNext_Settings.class, "settings.load.fallback",
-					BattleNext_Logger.fields().put("path", PATH).put("fallback_path", PATH + ".data").build(), ignored);
+					BattleNext_Logger.fields().put("path", PATH).put("fallback_path", PATH + ".data").build(), exception);
 			try {
 				JSONObject stored = readStored(PATH + ".data");
 				if (stored != null) merge(stored);

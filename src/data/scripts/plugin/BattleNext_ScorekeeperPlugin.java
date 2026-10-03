@@ -110,8 +110,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	}
 
 	private void registerMembers(List<FleetMemberAPI> members, boolean playerSide) {
-		for (int index = 0; index < members.size(); index++) {
-			FleetMemberAPI member = members.get(index);
+		for (FleetMemberAPI member : members) {
 			String variantId = member.getVariant().getHullVariantId();
 			ScoreTrackedFleetMember tracked = new ScoreTrackedFleetMember(variantId, member.getShipName(), member, playerSide);
 			trackedMembers.add(tracked);
@@ -174,7 +173,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		return ship == null ? null : membersByFleetMember.get(ship.getFleetMember());
 	}
 
-	private class ScoreTrackedFleetMember {
+	private static class ScoreTrackedFleetMember {
 		private final BattleNext_MemberReport report;
 		private final FleetMemberAPI member;
 		private final boolean playerSide;

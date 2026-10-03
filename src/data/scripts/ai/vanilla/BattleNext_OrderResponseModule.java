@@ -126,8 +126,7 @@ public class BattleNext_OrderResponseModule {
 
 		if (this.ship.getAIFlags().hasFlag(AIFlags.ESCORT_OTHER_SHIP)
 			&& !this.ship.isRetreating()
-			&& this.ship.getAIFlags().getCustom(AIFlags.ESCORT_OTHER_SHIP) instanceof ShipAPI) {
-			ShipAPI escortTarget = (ShipAPI) this.ship.getAIFlags().getCustom(AIFlags.ESCORT_OTHER_SHIP);
+			&& this.ship.getAIFlags().getCustom(AIFlags.ESCORT_OTHER_SHIP) instanceof ShipAPI escortTarget) {
 			float distance = BattleNext_ShipAIHelper.getDistance(this.ship.getLocation(), escortTarget.getLocation());
 			BattleNext_OrderResponseData response = new BattleNext_OrderResponseData(this);
 			if (distance < 2000.0F) {
@@ -144,8 +143,7 @@ public class BattleNext_OrderResponseModule {
 		} else {
 			if (this.ship.getAIFlags().hasFlag(AIFlags.CAMP_LOCATION)
 				&& !this.ship.isRetreating()
-				&& this.ship.getAIFlags().getCustom(AIFlags.CAMP_LOCATION) instanceof Vector2f) {
-				Vector2f campLocation = (Vector2f) this.ship.getAIFlags().getCustom(AIFlags.CAMP_LOCATION);
+				&& this.ship.getAIFlags().getCustom(AIFlags.CAMP_LOCATION) instanceof Vector2f campLocation) {
 				BattleNext_OrderResponseData campResponse = new BattleNext_OrderResponseData(this);
 				BattleNext_TaskMoveManeuver campManeuver = new BattleNext_TaskMoveManeuver(this.ship, campLocation, this.maneuverAPI);
 				campResponse.maneuver = campManeuver;
@@ -369,8 +367,7 @@ public class BattleNext_OrderResponseModule {
 
 			this.ship.getAIFlags().unsetFlag(AIFlags.MOVEMENT_DEST_WHILE_SIDETRACKED);
 			Vector2f defendPosition = null;
-			if (taskType == CombatAssignmentType.DEFEND && taskTarget instanceof DeployedFleetMemberAPI && distance < 3000.0F) {
-				DeployedFleetMemberAPI defendTarget = (DeployedFleetMemberAPI) taskTarget;
+			if (taskType == CombatAssignmentType.DEFEND && taskTarget instanceof DeployedFleetMemberAPI defendTarget && distance < 3000.0F) {
 				if (defendTarget.getShip() != null) {
 					ArrayList<DeployedFleetMemberAPI> assignedMembers = new ArrayList<>();
 
@@ -456,8 +453,7 @@ public class BattleNext_OrderResponseModule {
 				case ENGAGE:
 				case AVOID:
 				case INTERCEPT:
-					if ((isBomberWing || isSupportWing) && taskTarget instanceof DeployedFleetMemberAPI) {
-						DeployedFleetMemberAPI targetMember = (DeployedFleetMemberAPI) taskTarget;
+					if ((isBomberWing || isSupportWing) && taskTarget instanceof DeployedFleetMemberAPI targetMember) {
 						if (!targetMember.isFighterWing()) {
 							response.forcedTarget = targetMember.getShip();
 						}

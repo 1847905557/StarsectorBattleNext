@@ -40,6 +40,7 @@ public class BattleNext_RetreatPositionEvaluator implements BattleNext_ShipAIHel
 	// approximation: reconstructed base-class behavior; ships at or above the
 	// configured hull size count when they pass the ownership and targetability
 	// checks
+	@Override
 	public boolean isShipValid(ShipAPI ship, Vector2f location, ShipAPI candidate) {
 		if (this.checkOwnership && candidate.getOwner() == ship.getOwner()) {
 			return false;

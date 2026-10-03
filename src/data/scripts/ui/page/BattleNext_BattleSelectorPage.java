@@ -108,9 +108,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
 		CustomPanelAPI sourceButtonPanel = sourceButtonRect.createSubPanel(panel, inputOwner).getPanel();
 		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel, buttonWidth,
-				id -> {
-					inputOwner.buttonPressed(new BattleSourceSelectionRequest(id));
-				});
+				id -> inputOwner.buttonPressed(new BattleSourceSelectionRequest(id)));
 		sourceDropdown.attach(sourceButtonPanel);
 		sourceDropdown.setOptions(sourceOptions());
 		sourceDropdown.setValue(selectedId);

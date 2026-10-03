@@ -160,8 +160,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 	public static BattleNext_BasicShipAI getActiveInstance(ShipAPI ship) {
 		Object reference = ship.getCustomData().get(INSTANCE_KEY);
 		Object instance = reference instanceof WeakReference<?> ? ((WeakReference<?>) reference).get() : null;
-		if (!(instance instanceof BattleNext_BasicShipAI)) return null;
-		BattleNext_BasicShipAI ai = (BattleNext_BasicShipAI) instance;
+		if (!(instance instanceof BattleNext_BasicShipAI ai)) return null;
 		// approximation: ShipAPI exposes the wrapper AI and its delegated flags;
 		// matching flag identity identifies the installed ported AI.
 		return ship.getShipAI() != null && ship.getShipAI().getAIFlags() == ai.getAIFlags() ? ai : null;
@@ -349,8 +348,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 			if (!this.avoidingCollision && this.sequence.isCurrentManeuverDone()) {
 				this.sequence.initCurrentManeuver();
-				if (this.sequence.getCurrentManeuver() instanceof BattleNext_StrafeTargetManeuverV2) {
-					BattleNext_StrafeTargetManeuverV2 strafeManeuver = (BattleNext_StrafeTargetManeuverV2) this.sequence.getCurrentManeuver();
+				if (this.sequence.getCurrentManeuver() instanceof BattleNext_StrafeTargetManeuverV2 strafeManeuver) {
 					this.flockingAI.setAvoidanceRadius(strafeManeuver.computeFacing(true));
 					this.flockingAI.setDesiredFacing(strafeManeuver.getTargetFacing());
 				} else {
@@ -436,8 +434,7 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		while (shipGrid.hasNext()) {
 			Object next = shipGrid.next();
-			if (next instanceof ShipAPI) {
-				ShipAPI other = (ShipAPI) next;
+			if (next instanceof ShipAPI other) {
 				if (other != this.ship && (!other.isFighter() || other.getOwner() != this.ship.getOwner())) {
 					float distance = Misc.getDistance(this.ship.getLocation(), other.getLocation());
 					if (distance < checkRange) {
@@ -483,10 +480,9 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		while (grid.hasNext()) {
 			Object next = grid.next();
-			if (!(next instanceof ShipAPI)) {
+			if (!(next instanceof ShipAPI other)) {
 				continue;
 			}
-			ShipAPI other = (ShipAPI) next;
 			if (this.ship == other || other.isFighter() || other.isShuttlePod()) {
 				continue;
 			}
@@ -531,10 +527,9 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		while (grid.hasNext()) {
 			Object next = grid.next();
-			if (!(next instanceof CombatAsteroidAPI)) {
+			if (!(next instanceof CombatAsteroidAPI asteroid)) {
 				continue;
 			}
-			CombatAsteroidAPI asteroid = (CombatAsteroidAPI) next;
 			if (asteroid.getMass() * 1.5F >= this.ship.getMass() || this.ship.getHitpoints() < 100.0F) {
 				this.flockingAI.addCollisionEntityByType(asteroid);
 			}
@@ -549,10 +544,9 @@ public class BattleNext_BasicShipAI implements ShipAIPlugin, BattleNext_Maneuver
 
 		while (grid.hasNext()) {
 			Object next = grid.next();
-			if (!(next instanceof MissileAPI)) {
+			if (!(next instanceof MissileAPI missile)) {
 				continue;
 			}
-			MissileAPI missile = (MissileAPI) next;
 			if (missile.getOwner() == owner && !missile.isFizzling() && missile.getCollisionClass() == CollisionClass.MISSILE_NO_FF) {
 				boolean ownMine = missile.isMine() && !missile.isNoMineFFConcerns();
 				if (!ownMine) {

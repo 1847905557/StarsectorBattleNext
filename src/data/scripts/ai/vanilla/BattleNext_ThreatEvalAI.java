@@ -628,8 +628,7 @@ public class BattleNext_ThreatEvalAI {
 							}
 
 							float projectileSpeed = weapon.getProjectileSpeed();
-							if (weapon.getSpec() != null && weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI) {
-								MissileSpecAPI missileSpec = (MissileSpecAPI) weapon.getSpec().getProjectileSpec();
+							if (weapon.getSpec() != null && weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI missileSpec) {
 								projectileSpeed = missileSpec.getHullSpec().getEngineSpec().getMaxSpeed();
 								MutableShipStatsAPI stats = target.getMutableStats();
 								if (stats != null) {
@@ -692,8 +691,7 @@ public class BattleNext_ThreatEvalAI {
 									if (!weapon.isDisabled()) {
 										if (poorAim
 											&& weapon.getSpec() != null
-											&& weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI) {
-											MissileSpecAPI missileSpec = (MissileSpecAPI) weapon.getSpec().getProjectileSpec();
+											&& weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI missileSpec) {
 											float missileSpeed = missileSpec.getHullSpec().getEngineSpec().getMaxSpeed();
 											MutableShipStatsAPI stats = target.getMutableStats();
 											if (stats != null) {

@@ -241,8 +241,7 @@ public class BattleNext_FighterPullbackModule {
 										AssignmentInfo assignment = taskManager.getAssignmentFor(this.ship);
 										if (assignment != null
 											&& (assignment.getType() == CombatAssignmentType.INTERCEPT || assignment.getType() == CombatAssignmentType.STRIKE)
-											&& assignment.getTarget() instanceof DeployedFleetMemberAPI) {
-											DeployedFleetMemberAPI assignmentTarget = (DeployedFleetMemberAPI) assignment.getTarget();
+											&& assignment.getTarget() instanceof DeployedFleetMemberAPI assignmentTarget) {
 											// vanilla passed search-mode constant OO0O$oo.f_6a00a25e_2, ported as
 											// ManeuverSidePreference.ANY (no side preference among clustered enemies)
 											BattleNext_BestTargetEval bestTarget = BattleNext_ShipAIHelper.getBestManeuverTarget(this.ship, BattleNext_ShipAIHelper.ManeuverSidePreference.ANY, false, assignmentTarget.getShip());
@@ -671,8 +670,7 @@ public class BattleNext_FighterPullbackModule {
 	}
 
 	public static ShipAPI getFighterTarget(ShipAPI carrier) {
-		if (carrier.getAI() instanceof ShipAIPlugin) {
-			ShipAIPlugin carrierAI = (ShipAIPlugin) carrier.getAI();
+		if (carrier.getAI() instanceof ShipAIPlugin carrierAI) {
 			if (carrierAI.getAIFlags() != null && carrierAI.getAIFlags().hasFlag(AIFlags.MANEUVER_TARGET)) {
 				return (ShipAPI) carrierAI.getAIFlags().getCustom(AIFlags.MANEUVER_TARGET);
 			}

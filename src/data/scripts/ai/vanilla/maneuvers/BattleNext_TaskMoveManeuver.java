@@ -86,8 +86,7 @@ public class BattleNext_TaskMoveManeuver implements BattleNext_Maneuver {
 			BattleNext_DirectOrders orders = orderResponse.getOrders();
 			boolean interceptOrdered = orders != null && orders.getTaskType() == CombatAssignmentType.INTERCEPT;
 			if (interceptOrdered && orders.getTaskTarget() != null) {
-				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI) {
-					DeployedFleetMemberAPI taskMember = (DeployedFleetMemberAPI) orders.getTaskTarget();
+				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI taskMember) {
 					if (!taskMember.isFighterWing()) {
 						interceptTarget = taskMember.getShip();
 					}

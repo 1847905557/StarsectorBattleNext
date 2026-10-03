@@ -149,9 +149,9 @@ public class BattleNext_CollisionAnalysisModule {
 	private boolean isDangerousEntity(CombatEntityAPI entity) {
 		boolean isLooseDrone = false;
 		boolean controlsLocked = false;
-		if (entity instanceof ShipAPI) {
-			isLooseDrone = ((ShipAPI)entity).isDrone() && ((ShipAPI)entity).getCollisionClass() == CollisionClass.SHIP;
-			controlsLocked = ((ShipAPI)entity).controlsLocked();
+		if (entity instanceof ShipAPI shipEntity) {
+			isLooseDrone = shipEntity.isDrone() && shipEntity.getCollisionClass() == CollisionClass.SHIP;
+			controlsLocked = shipEntity.controlsLocked();
 		}
 
 		return this.ship.getMass() <= entity.getMass() * 0.75F
@@ -562,7 +562,7 @@ public class BattleNext_CollisionAnalysisModule {
 			// intentionally kept dead: vanilla declares a null Object here and never uses it
 			Object unused = null;
 			boolean singleThreat = !this.missileThreat && this.collisionCount <= 1;
-			boolean singleWideGap = safeGaps.size() == 1 && ((BattleNext_CollisionTimeRange)safeGaps.get(0)).getWidth() > 120.0F;
+			boolean singleWideGap = safeGaps.size() == 1 && safeGaps.get(0).getWidth() > 120.0F;
 			BattleNext_CollisionCheckSegment firstSegment = null;
 			if (this.segments.size() >= 1 && singleThreat || singleWideGap) {
 				firstSegment = this.segments.get(0);
@@ -593,8 +593,7 @@ public class BattleNext_CollisionAnalysisModule {
 					this.hitStationOrCapital = true;
 				}
 
-				if (segment.getEntity() instanceof ShipAPI) {
-					ShipAPI other = (ShipAPI)segment.getEntity();
+				if (segment.getEntity() instanceof ShipAPI other) {
 					if (other.getOwner() == this.ship.getOwner() && other.getHullSize().ordinal() >= HullSize.CRUISER.ordinal()) {
 						this.hitStationOrCapital = true;
 					}
@@ -707,7 +706,7 @@ public class BattleNext_CollisionAnalysisModule {
 			entries.add(endEntry);
 		}
 
-		Collections.sort(entries, new BattleNext_CollisionDangerComparator(this));
+		entries.sort(new BattleNext_CollisionDangerComparator(this));
 		List<BattleNext_CollisionTimeRange> safeGaps = new ArrayList<>();
 		int depth = 0;
 		float gapWidth = 0.0F;

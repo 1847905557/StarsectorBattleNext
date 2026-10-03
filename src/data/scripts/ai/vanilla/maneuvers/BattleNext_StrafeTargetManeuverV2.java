@@ -17,7 +17,6 @@ import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -205,8 +204,7 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 						Vector2f.add(rightRay, origin, rightRay);
 						float broadsideFacing = candidate.getFacing();
 						ShipAPI broadsideTarget = null;
-						if (candidate.getAI() instanceof ShipAIPlugin) {
-							ShipAIPlugin candidateAI = (ShipAIPlugin) candidate.getAI();
+						if (candidate.getAI() instanceof ShipAIPlugin candidateAI) {
 							if (candidateAI.getAIFlags() != null
 								&& candidateAI.getAIFlags().hasFlag(AIFlags.MANEUVER_TARGET)
 								&& candidateAI.getAIFlags().getCustom(AIFlags.MANEUVER_TARGET) instanceof ShipAPI) {
@@ -937,8 +935,7 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 				boolean interceptOrdered = orderResponse.getOrders() != null
 					&& orderResponse.getOrders().getTaskType() == CombatAssignmentType.INTERCEPT;
 				if (interceptOrdered && orderResponse.getOrders().getTaskTarget() != null) {
-					if (orderResponse.getOrders().getTaskTarget() instanceof DeployedFleetMemberAPI) {
-						DeployedFleetMemberAPI taskMember = (DeployedFleetMemberAPI) orderResponse.getOrders().getTaskTarget();
+					if (orderResponse.getOrders().getTaskTarget() instanceof DeployedFleetMemberAPI taskMember) {
 						if (!taskMember.isFighterWing()) {
 							interceptTarget = taskMember.getShip();
 						}
@@ -1639,7 +1636,7 @@ public class BattleNext_StrafeTargetManeuverV2 implements BattleNext_Maneuver {
 			entries.add(end);
 		}
 
-		Collections.sort(entries, new BattleNext_StrafeCollisionComparator(this));
+		entries.sort(new BattleNext_StrafeCollisionComparator(this));
 		ArrayList<BattleNext_CollisionTimeRange> ranges = new ArrayList<>();
 		if (entries.isEmpty()) {
 			return ranges;

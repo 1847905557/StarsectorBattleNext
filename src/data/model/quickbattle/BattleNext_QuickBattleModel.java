@@ -136,6 +136,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		return enabled ? line : "# " + line;
 	}
 
+	@Override
 	public String getId() {
 		return id;
 	}

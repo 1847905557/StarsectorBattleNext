@@ -11,5 +11,5 @@ public enum BattleNext_DirectOrdersType {
 	RETREAT,
 	REPAIR_AND_REFIT,
 	SEARCH_AND_DESTROY,
-	NO_ORDERS;
+	NO_ORDERS
 }

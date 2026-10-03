@@ -377,9 +377,9 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				Global.getSettings().getSprite(path);
 				icon.addImage(path, ICON_SIZE, ICON_SIZE, 0f);
 				return true;
-			} catch (RuntimeException ignored) {
+			} catch (RuntimeException exception) {
 				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.weapon.sprite.degraded",
-				BattleNext_Logger.fields().put("variant", variantJson).put("weapon_name", visual.name()).put("path", path).put("primary", visual.primarySprite()).put("secondary", visual.secondarySprite()).build(), ignored);
+				BattleNext_Logger.fields().put("variant", variantJson).put("weapon_name", visual.name()).put("path", path).put("primary", visual.primarySprite()).put("secondary", visual.secondarySprite()).build(), exception);
 			}
 		}
 		return false;
@@ -490,9 +490,9 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		if (icon) {
 			try {
 				sprite = Global.getSettings().getSprite(spriteName);
-			} catch (RuntimeException ignored) {
+			} catch (RuntimeException exception) {
 				BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.card.sprite.degraded",
-				BattleNext_Logger.fields().put("variant", variantJson).put("id", id).put("title", title).put("path", spriteName).build(), ignored);
+				BattleNext_Logger.fields().put("variant", variantJson).put("id", id).put("title", title).put("path", spriteName).build(), exception);
 			}
 		}
 		CardPlugin plugin = new CardPlugin(sprite);

@@ -175,7 +175,7 @@ public class BattleNext_AssignmentBasedManeuver implements BattleNext_Maneuver {
 			}
 
 			float threatScore = BattleNext_StrafeTargetManeuverV2.computeThreatScore(
-				this.ship, this.target, this.ship.isNonCombat(true), this.target != null && this.targetIsNonCombatVariant(this.target)
+				this.ship, this.target, this.ship.isNonCombat(true), this.target != null && targetIsNonCombatVariant(this.target)
 			);
 			float crMult = BattleNext_ShipAIHelper.getCRMult(this.ship);
 			threatScore += crMult;

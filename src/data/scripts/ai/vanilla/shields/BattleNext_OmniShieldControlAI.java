@@ -27,6 +27,7 @@ public class BattleNext_OmniShieldControlAI implements BattleNext_ManeuverAPI, B
 	private int nearbyFriendlyShipCount = 0;
 	private ShipAPI target = null;
 
+	@Override
 	public void forceCircumstanceEvaluation() {
 		this.collisionCheckTracker.forceIntervalElapsed();
 		this.threatEvalAI.getEvalIntervalTracker().forceIntervalElapsed();
@@ -274,10 +275,12 @@ public class BattleNext_OmniShieldControlAI implements BattleNext_ManeuverAPI, B
 		return this.ship;
 	}
 
+	@Override
 	public boolean needsRefit() {
 		return false;
 	}
 
+	@Override
 	public void setDoNotFireDelay(float delay) {
 
 	}

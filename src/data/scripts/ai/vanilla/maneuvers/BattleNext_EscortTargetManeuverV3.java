@@ -20,7 +20,6 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -812,7 +811,7 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 				this.targetEntity = BattleNext_ShipAIHelper.getNearestEnemyInRange(this.ship, this.attackAI.getAttackRange() + this.collisionRadiiSum + range + 10000.0F);
 				this.threatEntity = this.targetEntity;
 				if (this.threatEntity != null) {
-					Collections.sort(candidates, new BattleNext_EscortSpotRangeComparatorV2(this));
+					candidates.sort(new BattleNext_EscortSpotRangeComparatorV2(this));
 				}
 
 				sortedByThreat = true;
@@ -865,8 +864,8 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 					test2.set(clampedPoint);
 				}
 
-				Collections.sort(candidates, new BattleNext_EscortSpotTestPointComparator(this, test1, test2));
-				Collections.sort(backoffCandidates, new BattleNext_EscortSpotBackoffComparator(this, backOffAwayFrom));
+				candidates.sort(new BattleNext_EscortSpotTestPointComparator(this, test1, test2));
+				backoffCandidates.sort(new BattleNext_EscortSpotBackoffComparator(this, backOffAwayFrom));
 			}
 
 			this.escortSpots.clear();
@@ -973,10 +972,9 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 
 		// approximation: the engine entity object list is replaced by the ship list;
 		// non-ship targets cannot be confirmed and count as expired
-		if (this.targetEntity instanceof ShipAPI) {
+		if (this.targetEntity instanceof ShipAPI targetShipEntity) {
 			List<ShipAPI> ships = BattleNext_ShipAIHelper.getEngine().getShips();
-			ShipAPI targetShip = (ShipAPI) this.targetEntity;
-			return ships.contains(targetShip) && !targetShip.isExpired();
+			return ships.contains(targetShipEntity) && !targetShipEntity.isExpired();
 		}
 
 		return false;
@@ -1048,7 +1046,7 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 			entries.add(end);
 		}
 
-		Collections.sort(entries, new BattleNext_CollisionObjectComparator(this));
+		entries.sort(new BattleNext_CollisionObjectComparator(this));
 		ArrayList<BattleNext_CollisionTimeRange> ranges = new ArrayList<>();
 		if (entries.isEmpty()) {
 			return ranges;

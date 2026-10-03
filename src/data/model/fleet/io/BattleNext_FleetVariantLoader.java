@@ -3,6 +3,7 @@ package data.model.fleet.io;
 import com.fs.starfarer.api.Global;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
@@ -55,7 +56,7 @@ public class BattleNext_FleetVariantLoader {
 				}
 			}
 			if (fleet.hasLocalVariants()) {
-				for (String variantId : fleet.getMembers().stream().map(member -> member.getVariantId()).toList()) {
+				for (String variantId : fleet.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList()) {
 					if (fleet.getVariant(variantId) == null && !Global.getSettings().doesVariantExist(variantId)) {
 						BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.missing",
 					BattleNext_Logger.fields().put("fleet_id", fleet.getId()).put("variant_id", variantId).put("path", source).build());

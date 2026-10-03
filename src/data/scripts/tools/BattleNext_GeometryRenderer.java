@@ -158,7 +158,7 @@ public class BattleNext_GeometryRenderer {
 		geometryData = BufferUtils.createFloatBuffer(geometryCapacity);
 		int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, positionVbo);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, geometryCapacity * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long)geometryCapacity * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
 	}
 

@@ -6,7 +6,6 @@ import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipwideAIFlags.AIFlags;
 import com.fs.starfarer.api.combat.WeaponAPI.AIHints;
-import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageListener;
 import com.fs.starfarer.api.impl.combat.PhaseCloakStats;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
@@ -107,27 +106,24 @@ public class BattleNext_ShipAIHelper {
 		}
 
 		engine.getCustomData().put(DAMAGE_LISTENER_INSTALLED_KEY, Boolean.TRUE);
-		engine.getListenerManager().addListener(new DamageListener() {
-			@Override
-			public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
-				if (target instanceof ShipAPI) {
-					Object targetTracker = ((ShipAPI) target).getCustomData().get(BattleNext_ShipStatisticsTracker.CUSTOM_DATA_KEY);
-					if (targetTracker instanceof BattleNext_ShipStatisticsTracker) {
-						float amount = result.getDamageToHull() + result.getTotalDamageToArmor() + result.getDamageToShields();
-						((BattleNext_ShipStatisticsTracker) targetTracker).addDamageTaken(amount);
-					}
-				}
-
-				if (!(source instanceof ShipAPI)) {
-					return;
-				}
-
-				Object existing = ((ShipAPI) source).getCustomData().get(BattleNext_ShipStatisticsTracker.CUSTOM_DATA_KEY);
-				if (existing instanceof BattleNext_ShipStatisticsTracker) {
-					// approximation: the result object has no single total; sum hull, armor and shield components
+		engine.getListenerManager().addListener((DamageListener)(source, target, result) -> {
+			if (target instanceof ShipAPI) {
+				Object targetTracker = ((ShipAPI) target).getCustomData().get(BattleNext_ShipStatisticsTracker.CUSTOM_DATA_KEY);
+				if (targetTracker instanceof BattleNext_ShipStatisticsTracker) {
 					float amount = result.getDamageToHull() + result.getTotalDamageToArmor() + result.getDamageToShields();
-					((BattleNext_ShipStatisticsTracker) existing).addDamageDealt(amount);
+					((BattleNext_ShipStatisticsTracker) targetTracker).addDamageTaken(amount);
 				}
+			}
+
+			if (!(source instanceof ShipAPI)) {
+				return;
+			}
+
+			Object existing = ((ShipAPI) source).getCustomData().get(BattleNext_ShipStatisticsTracker.CUSTOM_DATA_KEY);
+			if (existing instanceof BattleNext_ShipStatisticsTracker) {
+				// approximation: the result object has no single total; sum hull, armor and shield components
+				float amount = result.getDamageToHull() + result.getTotalDamageToArmor() + result.getDamageToShields();
+				((BattleNext_ShipStatisticsTracker) existing).addDamageDealt(amount);
 			}
 		});
 	}
@@ -530,7 +526,7 @@ public class BattleNext_ShipAIHelper {
 		float diff = Math.abs(angle - direction) - arc / 2.0F;
 		float diffWrapped = Math.abs(360.0F - Math.abs(angle - direction)) - arc / 2.0F;
 		if (!(diff <= 0.0F) && !(diffWrapped <= 0.0F)) {
-			return diff > diffWrapped ? diffWrapped : diff;
+			return Math.min(diff, diffWrapped);
 		} else {
 			return 0.0F;
 		}
@@ -617,24 +613,24 @@ public class BattleNext_ShipAIHelper {
 		}
 
 		Collections.sort(angles);
-		angles.add((Float) angles.get(0));
+		angles.add(angles.get(0));
 		float largest = 0.0F;
-		float previous = (Float) angles.get(0);
+		float previous = angles.get(0);
 		int lastIndex = angles.size() - 1;
 
 		for (int i = 1; i < angles.size(); i++) {
 			float gap;
 			if (i == lastIndex) {
-				gap = (Float) angles.get(i) + 360.0F - previous;
+				gap = angles.get(i) + 360.0F - previous;
 			} else {
-				gap = (Float) angles.get(i) - previous;
+				gap = angles.get(i) - previous;
 			}
 
 			if (gap > largest) {
 				largest = gap;
 			}
 
-			previous = (Float) angles.get(i);
+			previous = angles.get(i);
 		}
 
 		return largest;
@@ -646,18 +642,18 @@ public class BattleNext_ShipAIHelper {
 		}
 
 		Collections.sort(angles);
-		angles.add((Float) angles.get(0));
+		angles.add(angles.get(0));
 		float largest = 0.0F;
-		float previous = (Float) angles.get(0);
+		float previous = angles.get(0);
 		float midpoint = -1.0F;
 		int lastIndex = angles.size() - 1;
 
 		for (int i = 1; i < angles.size(); i++) {
 			float gap;
 			if (i == lastIndex) {
-				gap = (Float) angles.get(i) + 360.0F - previous;
+				gap = angles.get(i) + 360.0F - previous;
 			} else {
-				gap = (Float) angles.get(i) - previous;
+				gap = angles.get(i) - previous;
 			}
 
 			if (gap > largest) {
@@ -665,21 +661,21 @@ public class BattleNext_ShipAIHelper {
 				midpoint = previous + largest / 2.0F;
 			}
 
-			previous = (Float) angles.get(i);
+			previous = angles.get(i);
 		}
 
 		return midpoint;
 	}
 
-	public static final float atan2DegreesFast(float y, float x) {
+	public static float atan2DegreesFast(float y, float x) {
 		return atan2Fast(y, x) * (180.0F / (float) Math.PI);
 	}
 
-	public static final float atan2Degrees(float y, float x) {
+	public static float atan2Degrees(float y, float x) {
 		return (float) Math.atan2(y, x) * (180.0F / (float) Math.PI);
 	}
 
-	public static final float atan2Fast(float y, float x) {
+	public static float atan2Fast(float y, float x) {
 		float offset;
 		float sign;
 		if (x < 0.0F) {
@@ -704,7 +700,7 @@ public class BattleNext_ShipAIHelper {
 			offset = 0.0F;
 		}
 
-		float scale = 1.0F / ((x < y ? y : x) * atanTableScale);
+		float scale = 1.0F / ((Math.max(x, y)) * atanTableScale);
 		int xi = (int) (x * scale);
 		int yi = (int) (y * scale);
 		int index = yi * atanTableWidth + xi;
@@ -2636,12 +2632,7 @@ public class BattleNext_ShipAIHelper {
 	public static boolean isEnemyInRange(final ShipAPI ship, Vector2f point) {
 		float heading = getAngleFast(ship.getLocation(), point);
 		float distance = getDistance(ship.getLocation(), point);
-		int count = countEnemiesInRange(ship, ship.getLocation(), heading, 30.0F, distance, new TargetValidityFilter() {
-			@Override
-			public boolean isShipValid(ShipAPI queryShip, Vector2f at, ShipAPI candidate) {
-				return queryShip != ship && queryShip.getOwner() == ship.getOwner();
-			}
-		});
+		int count = countEnemiesInRange(ship, ship.getLocation(), heading, 30.0F, distance, (queryShip, at, candidate) -> queryShip != ship && queryShip.getOwner() == ship.getOwner());
 		return count > 0;
 	}
 
@@ -3003,7 +2994,7 @@ public class BattleNext_ShipAIHelper {
 	public enum ManeuverSidePreference {
 		PREFER_RIGHT,
 		PREFER_LEFT,
-		ANY;
+		ANY
 	}
 
 	private static class ManeuverTargetScanState {
@@ -3042,8 +3033,7 @@ public class BattleNext_ShipAIHelper {
 			BattleNext_DirectOrders orders = orderable.getOrders();
 			boolean interceptTask = orders != null && orders.getTaskType() == CombatAssignmentType.INTERCEPT;
 			if (interceptTask && orders.getTaskTarget() != null) {
-				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI) {
-					DeployedFleetMemberAPI taskMember = (DeployedFleetMemberAPI) orders.getTaskTarget();
+				if (orders.getTaskTarget() instanceof DeployedFleetMemberAPI taskMember) {
 					// the engine getAsDFM().getShipIfShip() returns null for wings
 					state.interceptTarget = taskMember.isFighterWing() ? null : taskMember.getShip();
 				}
@@ -3393,8 +3383,7 @@ public class BattleNext_ShipAIHelper {
 			effectiveShooterVelocity = new Vector2f();
 		}
 
-		if (shooter instanceof MissileAPI) {
-			MissileAPI shooterMissile = (MissileAPI) shooter;
+		if (shooter instanceof MissileAPI shooterMissile) {
 			float alignment = Vector2f.dot(targetVelocity, targetDirection);
 			float maxEffectiveSpeed = Math.max(closingSpeedBonus, shooterMissile.getMaxSpeed());
 			maxEffectiveSpeed = Math.max(100.0F, maxEffectiveSpeed);
@@ -3457,8 +3446,7 @@ public class BattleNext_ShipAIHelper {
 	public static boolean isShipAboutToBeHit(ShipAPI ship, CombatEntityAPI incoming) {
 		float distance = getDistance(ship.getLocation(), incoming.getLocation());
 		float clearance = ship.getCollisionRadius() + incoming.getCollisionRadius();
-		if (incoming instanceof ShipAPI && ((ShipAPI) incoming).getParentStation() != null) {
-			ShipAPI station = (ShipAPI) incoming;
+		if (incoming instanceof ShipAPI station && station.getParentStation() != null) {
 			float stationDistance = getDistance(ship.getLocation(), station.getParentStation().getLocation());
 			if (stationDistance < distance) {
 				float moduleToStationDistance = Misc.getDistance(incoming.getLocation(), station.getParentStation().getLocation());
@@ -3550,8 +3538,7 @@ public class BattleNext_ShipAIHelper {
 			return null;
 		}
 
-		if (ship.getAI() instanceof ShipAIPlugin) {
-			ShipAIPlugin ai = (ShipAIPlugin) ship.getAI();
+		if (ship.getAI() instanceof ShipAIPlugin ai) {
 			if (ai.getAIFlags() != null
 				&& ai.getAIFlags().hasFlag(AIFlags.MANEUVER_TARGET)
 				&& ai.getAIFlags().getCustom(AIFlags.MANEUVER_TARGET) instanceof ShipAPI) {
@@ -3568,15 +3555,13 @@ public class BattleNext_ShipAIHelper {
 		ShipwideAIFlags flags = carrier.getAIFlags();
 		if (flags != null && flags.hasFlag(AIFlags.CARRIER_FIGHTER_TARGET)) {
 			Object flagged = flags.getCustom(AIFlags.CARRIER_FIGHTER_TARGET);
-			if (flagged instanceof ShipAPI) {
-				ShipAPI target = (ShipAPI) flagged;
+			if (flagged instanceof ShipAPI target) {
 				boolean friend = target.getOwner() != 100 && carrier.getOwner() != 100 && target.getOwner() == carrier.getOwner();
 				if (!target.isHulk() && (!friend || !target.isFighter())) return target;
 			}
 		}
 
-		if (flags != null && flags.getCustom(AIFlags.MANEUVER_TARGET) instanceof ShipAPI) {
-			ShipAPI target = (ShipAPI) flags.getCustom(AIFlags.MANEUVER_TARGET);
+		if (flags != null && flags.getCustom(AIFlags.MANEUVER_TARGET) instanceof ShipAPI target) {
 			if (!target.isHulk() && target.getOwner() != 100 && carrier.getOwner() != 100 && target.getOwner() != carrier.getOwner()) return target;
 		}
 
@@ -3587,10 +3572,9 @@ public class BattleNext_ShipAIHelper {
 	}
 
 	public static float getDistanceToEntitySurface(Vector2f point, CombatEntityAPI entity, boolean includeShield) {
-		if (!(entity instanceof ShipAPI)) {
+		if (!(entity instanceof ShipAPI ship)) {
 			return entity.getCollisionRadius();
 		} else {
-			ShipAPI ship = (ShipAPI) entity;
 			if (includeShield) {
 				ShieldAPI shield = ship.getShield();
 				if (shield != null && shield.isOn() && isInArc(shield.getFacing(), shield.getActiveArc(), shield.getLocation(), point)) {

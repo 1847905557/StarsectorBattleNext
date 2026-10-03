@@ -487,8 +487,7 @@ public class BattleNext_FiringSolutionEval {
 
 		boolean targetsThisShip = false;
 		boolean aggressiveSeeker = false;
-		if (missile.getMissileAI() instanceof GuidedMissileAI) {
-			GuidedMissileAI guidedAI = (GuidedMissileAI) missile.getMissileAI();
+		if (missile.getMissileAI() instanceof GuidedMissileAI guidedAI) {
 			targetsThisShip = guidedAI.getTarget() == this.ship;
 			// approximation: engine compared the engine MissileType enum; the API spec only exposes the type string
 			aggressiveSeeker = "HEATSEEKER".equals(missile.getSpec().getTypeString());
@@ -878,8 +877,7 @@ public class BattleNext_FiringSolutionEval {
 						if (this.assumingFiring || weapon.isFiring()) {
 							float windowLeft = window;
 							float projectileSpeed = weapon.getProjectileSpeed();
-							if (weapon.getSpec() != null && weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI) {
-								MissileSpecAPI missileSpec = (MissileSpecAPI) weapon.getSpec().getProjectileSpec();
+							if (weapon.getSpec() != null && weapon.getSpec().getProjectileSpec() instanceof MissileSpecAPI missileSpec) {
 								projectileSpeed = missileSpec.getHullSpec().getEngineSpec().getMaxSpeed();
 								MutableShipStatsAPI stats = other.getMutableStats();
 								if (stats != null) {

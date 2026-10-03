@@ -7,5 +7,5 @@ package data.scripts.ai.vanilla;
 enum BattleNext_AutofireState {
 	WAITING,
 	TRACKING,
-	FIRING;
+	FIRING
 }

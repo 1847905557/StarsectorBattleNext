@@ -27,9 +27,9 @@ public class BattleNext_WeaponDisplay {
 				return new Visual(name == null || name.isBlank() ? id : name,
 						primary == null ? "" : primary, secondary == null ? "" : secondary, true);
 			}
-		} catch (RuntimeException ignored) {
+		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_WeaponDisplay.class, "weapon.resolve.degraded",
-				BattleNext_Logger.fields().put("weapon_id", id).put("fallback", id).build(), ignored);
+				BattleNext_Logger.fields().put("weapon_id", id).put("fallback", id).build(), exception);
 			return new Visual(id, "", "", false);
 		}
 		BattleNext_Logger.warn(BattleNext_WeaponDisplay.class, "weapon.spec.missing",

@@ -100,7 +100,10 @@ class BattleNext_TitleModalDialog {
 			if (!access.isDialog(candidate)) continue;
 			boolean alreadyPresent = false;
 			for (Object existing : before) {
-				if (existing == candidate) alreadyPresent = true;
+				if (existing == candidate) {
+					alreadyPresent = true;
+					break;
+				}
 			}
 			if (!alreadyPresent) return candidate;
 		}

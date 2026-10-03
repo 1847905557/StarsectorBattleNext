@@ -404,26 +404,24 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				if (source.getKind().equals("weapon")) {
-					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(visual.name(),
-							source.getId(), source.getId(), Description.Type.WEAPON, Global.getSettings(), List.of()));
-				} else if (source.getKind().equals("fighter_wing")) {
-					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.wing(
-							visual.name(), source.getId(), Global.getSettings(), List.of()));
-				} else if (source.getKind().equals("ship")) {
-					try {
-						ShipHullSpecAPI hull = Global.getSettings().getHullSpec(source.getId());
-						if (hull == null) throw new IllegalArgumentException("Unknown hull: " + source.getId());
-						BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(
-								visual.name(), source.getId(), hull, Global.getSettings(), List.of()));
-					} catch (RuntimeException exception) {
-						BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
-								visual.name(), source.getId(), "", List.of(exception.toString())));
+				switch (source.getKind()) {
+					case "weapon" ->
+							BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(visual.name(), source.getId(), source.getId(), Description.Type.WEAPON, Global.getSettings(), List.of()));
+					case "fighter_wing" ->
+							BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.wing(visual.name(), source.getId(), Global.getSettings(), List.of()));
+					case "ship" -> {
+						try {
+							ShipHullSpecAPI hull = Global.getSettings().getHullSpec(source.getId());
+							if (hull == null) throw new IllegalArgumentException("Unknown hull: " + source.getId());
+							BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(visual.name(), source.getId(), hull, Global.getSettings(), List.of()));
+						} catch (RuntimeException exception) {
+							BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(visual.name(), source.getId(), "", List.of(exception.toString())));
+						}
 					}
-				} else {
-					tooltip.addTitle(visual.name());
-					BattleNext_PageLayout.addMutedIdLine(tooltip,
-							sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+					default -> {
+						tooltip.addTitle(visual.name());
+						BattleNext_PageLayout.addMutedIdLine(tooltip, sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+					}
 				}
 			}
 		}, TooltipLocation.RIGHT);
@@ -551,8 +549,8 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		if (!expanded.add(row)) expanded.remove(row);
 	}
 
-	static record MemberRow(BattleNext_MemberReport member, boolean dealt) { }
-	static record HullSummary(String name, String spritePath) { }
+	record MemberRow(BattleNext_MemberReport member, boolean dealt) { }
+	record HullSummary(String name, String spritePath) { }
 
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
 		private PositionAPI position;

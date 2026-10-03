@@ -230,8 +230,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	private final class DropdownPopupPlugin extends BaseCustomUIPanelPlugin {
 		@Override
 		public void buttonPressed(Object buttonId) {
-			if (!(buttonId instanceof DropdownChoice)) return;
-			DropdownChoice option = (DropdownChoice) buttonId;
+			if (!(buttonId instanceof DropdownChoice option)) return;
 			if (!option.enabled) return;
 			value = option.id;
 			inputRouter.releaseFocus();

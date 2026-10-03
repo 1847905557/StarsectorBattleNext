@@ -601,21 +601,19 @@ public class BattleNext_AttackAIModule {
 			this.attackingGroup = null;
 			this.selectWeaponGroup();
 		} else {
-			Collections.sort(candidates, new Comparator<BattleNext_AttackingGroup>() {
-				public int compare(BattleNext_AttackingGroup one, BattleNext_AttackingGroup two) {
-					boolean oneIsFighter = one.getShip() != null && one.getShip().isFighter();
-					boolean twoIsFighter = two.getShip() != null && two.getShip().isFighter();
-					if (oneIsFighter && !twoIsFighter) {
+			candidates.sort((one, two) -> {
+				boolean oneIsFighter = one.getShip() != null && one.getShip().isFighter();
+				boolean twoIsFighter = two.getShip() != null && two.getShip().isFighter();
+				if (oneIsFighter && !twoIsFighter) {
+					return 1;
+				} else if (twoIsFighter && !oneIsFighter) {
+					return -1;
+				} else {
+					float scoreDiff = one.getScore() - two.getScore();
+					if (scoreDiff < 0.0F) {
 						return 1;
-					} else if (twoIsFighter && !oneIsFighter) {
-						return -1;
 					} else {
-						float scoreDiff = one.getScore() - two.getScore();
-						if (scoreDiff < 0.0F) {
-							return 1;
-						} else {
-							return scoreDiff > 0.0F ? -1 : (int) (one.getDistance() - two.getDistance());
-						}
+						return scoreDiff > 0.0F ? -1 : (int)(one.getDistance() - two.getDistance());
 					}
 				}
 			});

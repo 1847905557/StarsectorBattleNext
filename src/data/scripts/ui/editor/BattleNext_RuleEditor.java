@@ -435,7 +435,7 @@ public class BattleNext_RuleEditor implements BattleNext_EditorView {
 		return result;
 	}
 
-	private class RestrictionTooltip extends BaseTooltipCreator {
+	private static class RestrictionTooltip extends BaseTooltipCreator {
 
 		private final String id;
 		private final String type;
