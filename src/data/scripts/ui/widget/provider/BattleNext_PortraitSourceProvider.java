@@ -18,6 +18,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 	private static final int PORTRAIT_SELECTION_MAX_COUNT = 1;
+	private static final float TOOLTIP_WIDTH = 480f;
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 
 	@Override
@@ -95,6 +96,11 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 	}
 
 	@Override
+	public float getTooltipWidth() {
+		return TOOLTIP_WIDTH;
+	}
+
+	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		addHeader(tooltip, option.getLabel(), option.getId());
 		for (FactionSpecAPI spec : Global.getSettings().getAllFactionSpecs()) {
@@ -103,9 +109,9 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 					&& !spec.getAllPortraits(Gender.FEMALE).contains(option.getId())
 					&& !spec.getAllPortraits(Gender.ANY).contains(option.getId())) continue;
 			Description description = Global.getSettings().getDescription(spec.getId(), Type.FACTION);
-			if (description != null) addExcerpt(tooltip, description.getText1FirstPara());
+			if (description != null) addDescription(tooltip, description.getText1());
 			return;
 		}
-		addExcerpt(tooltip, memberStrings.get("custom_portrait"));
+		addDescription(tooltip, memberStrings.get("custom_portrait"));
 	}
 }

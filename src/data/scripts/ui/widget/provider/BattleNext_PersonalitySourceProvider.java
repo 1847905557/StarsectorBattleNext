@@ -52,7 +52,7 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 		addHeader(tooltip, option.getLabel(), option.getId());
 		if (row != null) {
 			String description = row.optString("desc", "").trim();
-			addExcerpt(tooltip, description);
+			addDescription(tooltip, description);
 		}
 	}
 

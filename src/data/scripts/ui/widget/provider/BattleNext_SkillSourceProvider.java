@@ -17,7 +17,7 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 	private static final int ADVANCED_SKILL_MAX_COUNT = 2;
 	private static final int BASIC_SKILL_MAX_COUNT = 1;
 	private static final float SCOPE_GAP = 5f;
-	private static final float SCOPE_RESERVE = 26f;
+	private static final float TOOLTIP_WIDTH = 480f;
 
 	@Override
 	public int getMaxCount(String id) {
@@ -72,14 +72,19 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 	}
 
 	@Override
+	public float getTooltipWidth() {
+		return TOOLTIP_WIDTH;
+	}
+
+	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
 		addHeader(tooltip, option.getLabel(), option.getId());
 		if (spec == null) return;
 		String scope = String.join(" - ", Stream.of(spec.getScopeStr(), spec.getScopeStr2())
 				.filter(value -> value != null && !value.isBlank()).toList());
-		addExcerpt(tooltip, spec.getDescription(), scope.isEmpty() ? 0f : SCOPE_RESERVE);
-		if (!scope.isEmpty() && tooltip.getHeightSoFar() + SCOPE_RESERVE <= tooltip.getPosition().getHeight()) {
+		addDescription(tooltip, spec.getDescription());
+		if (!scope.isEmpty()) {
 			tooltip.addPara(scope, SCOPE_GAP);
 		}
 	}

@@ -206,7 +206,6 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		String id = kind.equals("variant") ? "variant_50%" : "ordinary";
 		source.createTooltip(hover, new BattleNext_OptionPicker.OptionChoice(id, "Choice"));
 		assertEquals(360f, source.getTooltipWidth());
-		assertTrue(source.isTooltipScrollable());
 		var content = textValues(hover);
 		assertEquals(id, content.get(1));
 		assertEquals(kind.equals("variant") ? MODULE_PARAGRAPH : MOD_PARAGRAPH, content.get(2));

@@ -11,7 +11,6 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -63,11 +62,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		}
 
 		default float getTooltipWidth() {
-			return HOVER_MAX_WIDTH;
-		}
-
-		default boolean isTooltipScrollable() {
-			return false;
+			return BattleNext_EquipmentTooltip.WIDTH;
 		}
 
 		void createTooltip(TooltipMakerAPI tooltip, OptionChoice option);
@@ -108,15 +103,10 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float TILE_COUNT_PIP_TOP_INSET = 4f;
 	private static final float TILE_COUNT_PIP_SPACING = 7f;
 	private static final float TILE_COUNT_PIP_SIZE = 5f;
-	private static final float HOVER_MAX_WIDTH = 480f;
-	private static final float HOVER_MAX_HEIGHT = 240f;
-	private static final float HOVER_CONTENT_INSET = 6f;
-	private static final float HOVER_SCROLL_STEP = 40f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.PANEL;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
-	private static final Color HOVER_BACKGROUND = new Color(8, 14, 17, 250);
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final OptionChoiceSource source;
@@ -150,13 +140,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private CustomPanelAPI popup;
 	private PopupOverlay popupOverlay;
 	private CustomPanelAPI gridPanel;
-	private ScrollPanelAPI gridScroller;
-	private CustomPanelAPI hoverPanel;
-	private TooltipMakerAPI hoverContent;
 	private BattleNext_TextField search;
 	private String lastSearch = "";
-	private OptionChoice hoveredOption;
-	private final List<OptionTileHoverTarget> hoverTargets = new ArrayList<>();
 
 	public BattleNext_OptionPicker(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			float buttonWidth, float buttonHeight, String title, float topGap, OptionChoiceSource source,
@@ -184,7 +169,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	@Override
 	protected void clearOverlays() {
 		if (search != null) search.close();
-		removeHover();
 		if (gridPanel != null) releasePanel(gridPanel);
 		if (popup != null) {
 			if (popupOverlay != null) inputRouter.pop(popupOverlay);
@@ -193,13 +177,9 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		popup = null;
 		popupOverlay = null;
 		gridPanel = null;
-		gridScroller = null;
-		hoverPanel = null;
 		search = null;
-		hoveredOption = null;
 		options = List.of();
 		selection.clear();
-		hoverTargets.clear();
 	}
 
 	@Override
@@ -220,15 +200,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				clearOverlays();
 				event.consume();
 				return true;
-			}
-			if (event.isMouseScrollEvent() && hoverContent != null && source.isTooltipScrollable()
-					&& contains(hoverPanel, event)) {
-				ScrollPanelAPI scroller = hoverContent.getExternalScroller();
-				float limit = Math.max(0f, hoverContent.getHeightSoFar() - scroller.getPosition().getHeight());
-				float offset = scroller.getYOffset() - Math.signum(event.getEventValue()) * HOVER_SCROLL_STEP;
-				scroller.setYOffset(Math.max(0f, Math.min(limit, offset)));
-				event.consume();
-				continue;
 			}
 			if (!event.isMouseDownEvent() && !event.isMouseScrollEvent()) continue;
 			if (event.isMouseScrollEvent() && contains(row, event) && !contains(popup, event)) {
@@ -340,10 +311,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 	private void rebuildGrid() {
 
-		removeHover();
-		hoverTargets.clear();
 		if (gridPanel != null) releasePanel(gridPanel);
-		gridScroller = null;
 		float width = popup.getPosition().getWidth() - 2f * POPUP_INSET;
 		float height = popup.getPosition().getHeight() - POPUP_GRID_HEIGHT_RESERVE;
 		gridPanel = ownPanel(popup, popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin()));
@@ -367,13 +335,23 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				addIcon(tile, option, tilePlugin);
 				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP),
 						POPUP_INSET + index / columns * (TILE_SIZE + TILE_GAP));
-				hoverTargets.add(new OptionTileHoverTarget(option, tile));
+				grid.addTooltipTo(new BaseTooltipCreator() {
+					@Override
+					public float getTooltipWidth(Object ignored) {
+						return source.getTooltipWidth();
+					}
+
+					@Override
+					public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+						BattleNext_UiTheme.configure(tooltip);
+						source.createTooltip(tooltip, option);
+					}
+				}, tile, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 			}
 			int rows = (visible.size() + columns - 1) / columns;
 			grid.setHeightSoFar(2f * POPUP_INSET + rows * (TILE_SIZE + TILE_GAP));
 		}
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
-		gridScroller = grid.getExternalScroller();
 		popup.addComponent(gridPanel).inTL(POPUP_INSET, POPUP_GRID_TOP);
 	}
 
@@ -487,11 +465,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		return component != null && component.getPosition().containsEvent(event);
 	}
 
-	private boolean contains(PositionAPI position, float x, float y) {
-		return position != null && x >= position.getX() && x < position.getX() + position.getWidth()
-				&& y >= position.getY() && y < position.getY() + position.getHeight();
-	}
-
 	private boolean isInsideViewports(InputEventAPI event) {
 		for (TooltipMakerAPI viewport : viewports) {
 			ScrollPanelAPI scroller = viewport.getExternalScroller();
@@ -513,91 +486,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 					|| viewport.getY() + viewport.getHeight() <= rowPosition.getY()) return false;
 		}
 		return true;
-	}
-
-	private void updateHover(float x, float y) {
-
-		if (popup == null || !contains(popup.getPosition(), x, y)) {
-			removeHover();
-			return;
-		}
-		if (hoverPanel != null) {
-			PositionAPI hover = hoverPanel.getPosition();
-			if (contains(hover, x, y)) return;
-			for (OptionTileHoverTarget candidate : hoverTargets) {
-				if (candidate.option != hoveredOption) continue;
-				PositionAPI tile = candidate.tile.getPosition();
-				float left = hover.getX() >= tile.getX() + tile.getWidth()
-						? tile.getX() + tile.getWidth() : hover.getX() + hover.getWidth();
-				float right = hover.getX() >= tile.getX() + tile.getWidth()
-						? hover.getX() : tile.getX();
-				float bottom = Math.max(tile.getY(), hover.getY());
-				float top = Math.min(tile.getY() + tile.getHeight(), hover.getY() + hover.getHeight());
-				if (x >= left && x <= right && y >= bottom && y <= top) return;
-			}
-		}
-		PositionAPI gridViewport = gridScroller == null
-				? gridPanel == null ? null : gridPanel.getPosition() : gridScroller.getPosition();
-		if (!contains(gridViewport, x, y)) {
-			removeHover();
-			return;
-		}
-		OptionTileHoverTarget target = null;
-		for (OptionTileHoverTarget candidate : hoverTargets) {
-			PositionAPI position = candidate.tile.getPosition();
-			if (contains(position, x, y)) {
-				target = candidate;
-				break;
-			}
-		}
-		if (target == null) {
-			removeHover();
-			return;
-		}
-		if (hoverPanel != null && target.option == hoveredOption) return;
-		showHover(target);
-	}
-
-	private void showHover(OptionTileHoverTarget target) {
-
-		removeHover();
-		float width = Math.min(source.getTooltipWidth(), popup.getPosition().getWidth() - POPUP_INSET * 2f);
-		float height = Math.min(HOVER_MAX_HEIGHT, popup.getPosition().getHeight() - POPUP_INSET * 2f);
-		hoverPanel = ownPanel(popup, popup.createCustomPanel(width, height, new OptionPickerHoverPlugin(target.option)));
-		new UIRect(0f, 0f, width, height).addBorder(hoverPanel, BORDER_COLOR, POPUP_BORDER_THICKNESS);
-		hoveredOption = target.option;
-		TooltipMakerAPI tooltip = hoverPanel.createUIElement(width - HOVER_CONTENT_INSET * 2f,
-				height - HOVER_CONTENT_INSET * 2f, source.isTooltipScrollable());
-		hoverContent = tooltip;
-		tooltip.getPosition().setSize(width - HOVER_CONTENT_INSET * 2f,
-				height - HOVER_CONTENT_INSET * 2f);
-		BattleNext_UiTheme.configure(tooltip);
-		source.createTooltip(tooltip, target.option);
-		if (source.isTooltipScrollable()) {
-			float visibleHeight = Math.min(height - HOVER_CONTENT_INSET * 2f, tooltip.getHeightSoFar());
-			tooltip.getPosition().setSize(width - HOVER_CONTENT_INSET * 2f, visibleHeight);
-			height = visibleHeight + HOVER_CONTENT_INSET * 2f;
-			hoverPanel.getPosition().setSize(width, height);
-		}
-		hoverPanel.addUIElement(tooltip).inTL(HOVER_CONTENT_INSET, HOVER_CONTENT_INSET);
-		PositionAPI tile = target.tile.getPosition();
-		float localX = tile.getX() - popup.getPosition().getX();
-		float localY = popup.getPosition().getY() + popup.getPosition().getHeight()
-				- tile.getY() - tile.getHeight();
-		float x = localX + TILE_SIZE + HOVER_CONTENT_INSET;
-		if (x + width > popup.getPosition().getWidth() - POPUP_INSET) x = localX - width - HOVER_CONTENT_INSET;
-		float y = Math.max(POPUP_INSET, Math.min(localY, popup.getPosition().getHeight() - height - POPUP_INSET));
-		if (x < POPUP_INSET) x = POPUP_INSET;
-		popup.addComponent(hoverPanel).inTL(x, y);
-		popup.bringComponentToTop(hoverPanel);
-	}
-
-	private void removeHover() {
-
-		if (hoverPanel != null) releasePanel(hoverPanel);
-		hoverPanel = null;
-		hoverContent = null;
-		hoveredOption = null;
 	}
 
 	private class OptionPickerPanelPlugin extends BaseCustomUIPanelPlugin {
@@ -665,8 +553,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				rebuildGrid();
 				return;
 			}
-			float scale = Global.getSettings().getScreenScaleMult();
-			updateHover(Mouse.getX() / scale, Mouse.getY() / scale);
 		}
 
 		@Override
@@ -736,7 +622,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		public void processInput(List<InputEventAPI> events) {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
-				if (hoverPanel != null && contains(hoverPanel, event)) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
 				if (mode == OptionSelectionMode.SINGLE) selection.clear();
 				int max = maxCount(option.id);
@@ -751,29 +636,4 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		}
 	}
 
-	private class OptionPickerHoverPlugin extends BaseCustomUIPanelPlugin {
-
-		private final OptionChoice option;
-
-		private OptionPickerHoverPlugin(OptionChoice option) {
-			this.option = option;
-		}
-
-		@Override
-		public void renderBelow(float alphaMult) {
-			if (hoverPanel == null) return;
-			BattleNext_GeometryRenderer.fillRect(hoverPanel.getPosition(), HOVER_BACKGROUND, alphaMult);
-		}
-	}
-
-	private static class OptionTileHoverTarget {
-
-		private final OptionChoice option;
-		private final CustomPanelAPI tile;
-
-		private OptionTileHoverTarget(OptionChoice option, CustomPanelAPI tile) {
-			this.option = option;
-			this.tile = tile;
-		}
-	}
 }

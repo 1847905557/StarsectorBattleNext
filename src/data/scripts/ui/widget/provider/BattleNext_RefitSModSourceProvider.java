@@ -53,16 +53,6 @@ public class BattleNext_RefitSModSourceProvider extends BattleNext_BaseSourcePro
 	}
 
 	@Override
-	public float getTooltipWidth() {
-		return BattleNext_EquipmentTooltip.WIDTH;
-	}
-
-	@Override
-	public boolean isTooltipScrollable() {
-		return true;
-	}
-
-	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice choice) {
 
 		ShipVariantAPI variant = variantSupplier.get();

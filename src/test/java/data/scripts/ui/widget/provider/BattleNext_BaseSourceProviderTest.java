@@ -5,18 +5,19 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.awt.Color;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,48 +71,45 @@ class BattleNext_BaseSourceProviderTest {
 		assertEquals(List.of("title:Portrait", "small", "key:" + path, "default"), calls);
 	}
 
-	@Test
-	void excerptPrefersCompleteSentencesAndPreservesPercentText() {
-		String prose = "Shields absorb 50% of damage. Engines respond slowly. Crew remain ready.";
-
-		assertEquals("Shields absorb 50% of damage...",
-				BattleNext_BaseSourceProvider.fitExcerpt(prose, 40f,
-						candidate -> candidate.length() <= 37 ? 40d : 80d));
-		assertEquals(prose, BattleNext_BaseSourceProvider.fitExcerpt(prose, 120f, ignored -> 40d));
-		assertTrue(BattleNext_BaseSourceProvider.fitExcerpt(prose, 0f, ignored -> 40d).isEmpty());
-	}
-
-	@Test
-	void excerptRendersOnceHoverBoundsAreAssignedBeforeMounting() {
-		AtomicReference<Float> height = new AtomicReference<>(0f);
-		List<String> rendered = new ArrayList<>();
-		PositionAPI position = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[]{PositionAPI.class}, (instance, method, args) -> switch (method.getName()) {
-					case "getHeight" -> height.get();
-					case "getWidth" -> 450f;
-					case "setSize" -> { height.set((Float) args[1]); yield instance; }
-					default -> null;
-				});
-		PositionAPI measured = (PositionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[]{PositionAPI.class}, (instance, method, args) ->
-						"getHeight".equals(method.getName()) ? 20f : null);
+	@ParameterizedTest
+	@ValueSource(strings = {"\n", "\r\n", "\r", "\u2028"})
+	void descriptionRendersCompleteFirstParagraphBeforeNativeBoundsAreAssigned(String separator) {
+		List<String> calls = new ArrayList<>();
+		String paragraph = "Shields absorb 50% of damage. " + "Complete %s description. ".repeat(100).strip();
 		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> switch (method.getName()) {
-					case "getPosition" -> position;
-					case "getHeightSoFar" -> 55f;
-					case "createLabel" -> (LabelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
-							new Class<?>[]{LabelAPI.class}, (label, labelMethod, labelArgs) ->
-									"autoSizeToWidth".equals(labelMethod.getName()) ? measured : null);
-					case "addPara" -> { rendered.add((String) args[0]); yield null; }
+					case "setParaFontDefault" -> { calls.add("default"); yield null; }
+					case "setParaFontColor" -> {
+						assertEquals(BattleNext_UiTheme.TEXT, args[0]);
+						calls.add("color");
+						yield null;
+					}
+					case "addPara" -> {
+						assertEquals(BattleNext_UiTheme.TEXT, args[1]);
+						assertEquals(8f, args[2]);
+						calls.add((String) args[0]);
+						yield null;
+					}
+					case "getPosition", "getHeightSoFar", "createLabel" ->
+							throw new AssertionError("Native tooltip content is built before its bounds are assigned");
 					default -> null;
 				});
-		TestProvider provider = new TestProvider();
-		provider.renderExcerpt(tooltip, "In combat, this officer remains steady.");
-		assertTrue(rendered.isEmpty());
+		new TestProvider().renderDescription(tooltip, " \t" + paragraph + separator + "Second paragraph");
+		assertEquals(List.of("default", "color", paragraph), calls);
+	}
 
-		position.setSize(450f, 220f);
-		provider.renderExcerpt(tooltip, "In combat, this officer remains steady.");
-		assertEquals(List.of("In combat, this officer remains steady."), rendered);
+	@ParameterizedTest
+	@NullAndEmptySource
+	@ValueSource(strings = {" ", "\t\r\n"})
+	void emptyDescriptionsKeepTheirHeader(String text) {
+		List<String> rendered = new ArrayList<>();
+		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> {
+					if ("addPara".equals(method.getName())) rendered.add((String) args[0]);
+					return null;
+				});
+		new TestProvider().renderDescription(tooltip, text);
+		assertTrue(rendered.isEmpty());
 	}
 
 	private static class TestProvider extends BattleNext_BaseSourceProvider {
@@ -119,8 +117,8 @@ class BattleNext_BaseSourceProviderTest {
 			addHeader(tooltip, "Portrait", key);
 		}
 
-		private void renderExcerpt(TooltipMakerAPI tooltip, String text) {
-			addExcerpt(tooltip, text);
+		private void renderDescription(TooltipMakerAPI tooltip, String text) {
+			addDescription(tooltip, text);
 		}
 
 		@Override

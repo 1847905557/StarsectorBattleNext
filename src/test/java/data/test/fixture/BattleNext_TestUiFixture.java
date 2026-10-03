@@ -57,9 +57,13 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final List<UIComponentAPI> removedComponents = new ArrayList<>();
 	protected final Map<UIComponentAPI, String> imagePaths = new IdentityHashMap<>();
 	protected final Map<UIComponentAPI, TooltipMakerAPI.TooltipCreator> attachedTooltips = new IdentityHashMap<>();
+	protected final Map<UIComponentAPI, TooltipBinding> tooltipBindings = new IdentityHashMap<>();
 	protected boolean deferTooltipWidth;
 	protected boolean shortenLabels;
 	protected float paragraphLineHeight = 20f;
+
+	protected record TooltipBinding(TooltipState owner, TooltipMakerAPI.TooltipLocation location,
+			boolean recreateEveryFrame) { }
 
 	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {
 		return new BattleNext_OptionPicker.OptionChoiceSource() {
@@ -239,6 +243,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				case "setParaFontDefault" -> { paraFont = "default"; yield null; }
 				case "setParaSmallInsignia" -> { paraFont = "small-insignia"; yield null; }
 				case "setTitleSmallOrbitron" -> { titleFont = "small-orbitron"; yield null; }
+				case "setTitleOrbitronLarge" -> { titleFont = "large-orbitron"; yield null; }
 				case "setParaFontColor" -> { paraColor = (Color) args[0]; yield null; }
 				case "setTitleFontColor" -> { titleColor = (Color) args[0]; yield null; }
 				case "addTitle", "addPara", "addSectionHeading" -> {
@@ -264,6 +269,14 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				case "addTooltipToPrevious" -> {
 					attachedTooltips.put(previous, (TooltipMakerAPI.TooltipCreator) args[0]);
+					yield null;
+				}
+				case "addTooltipTo" -> {
+					UIComponentAPI target = (UIComponentAPI) args[1];
+					assertTrue(components.contains(target), "Tooltip target must belong to its binding host");
+					attachedTooltips.put(target, (TooltipMakerAPI.TooltipCreator) args[0]);
+					tooltipBindings.put(target, new TooltipBinding(this, (TooltipMakerAPI.TooltipLocation) args[2],
+							args.length == 4 ? (Boolean) args[3] : true));
 					yield null;
 				}
 				case "getHeightSoFar" -> usedHeight;
