@@ -80,7 +80,10 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
-	inputs.file file("data/config/BattleNext_orders.csv")
+	inputs.files file("data/config/BattleNext_orders.csv"),
+			file("data/config/BattleNext_restrictions.csv"),
+			file("data/strings/strings.json"),
+			file("data/config/settings.json")
 }
 
 // Compilation

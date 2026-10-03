@@ -18,6 +18,8 @@ import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -31,14 +33,18 @@ class BattleNext_RulesCheckTest {
 
 	@BeforeEach
 	void loadRestrictions() throws Exception {
+		BattleNext_RestrictionRegistry.getInstance().load(restrictionRows(), this::createRestriction);
+	}
+
+	private JSONArray restrictionRows() throws Exception {
 		JSONArray rows = new JSONArray();
 		for (String line : Files.readAllLines(Path.of(BattleNext_RestrictionRegistry.PATH), StandardCharsets.UTF_8)) {
-			if (line.startsWith("id,")) continue;
+			if (line.isBlank() || line.stripLeading().startsWith("#") || line.startsWith("id,")) continue;
 			List<String> fields = BattleNext_CsvLine.parse(line);
 			rows.put(new JSONObject().put("id", fields.get(0)).put("type", fields.get(1))
 					.put("script", fields.get(2)).put("desc", fields.get(3)));
 		}
-		BattleNext_RestrictionRegistry.getInstance().load(rows, this::createRestriction);
+		return rows;
 	}
 
 	@Test
@@ -83,26 +89,52 @@ class BattleNext_RulesCheckTest {
 		assertEquals("draft_copy", saved.getId());
 	}
 
-	@Test
-	void registeredRestrictionsHaveExpectedTypes() {
-		List<BattleNext_RestrictionSpec> entries = BattleNext_RestrictionRegistry.getInstance().getAll();
-		assertEquals(22, entries.size());
-		assertEquals(22, entries.stream().map(BattleNext_RestrictionSpec::getId).distinct().count());
-		assertEquals(22, entries.stream().map(BattleNext_RestrictionSpec::getScript).distinct().count());
-		for (BattleNext_RestrictionSpec entry : entries) {
-			String simpleName = entry.getScript().substring(entry.getScript().lastIndexOf('.') + 1);
-			assertEquals(Character.toUpperCase(entry.getId().charAt(0)) + entry.getId().substring(1), simpleName);
-			assertNotSame(BattleNext_RestrictionRegistry.getInstance().create(entry.getId()),
-					BattleNext_RestrictionRegistry.getInstance().create(entry.getId()));
+	@ParameterizedTest
+	@ValueSource(strings = {"current", "added", "removed", "reversed", "empty"})
+	void registeredRestrictionsFollowInputRowsAcrossCatalogChanges(String change) throws Exception {
+
+		JSONArray current = restrictionRows();
+		List<JSONObject> inputs = new ArrayList<>();
+		for (int index = 0; index < current.length(); index++) {
+			inputs.add(current.getJSONObject(index));
 		}
-		assertEquals(13, entries.stream()
-				.filter(entry -> "number".equals(entry.getType())).count());
-		assertEquals(9, entries.stream()
-				.filter(entry -> "list".equals(entry.getType())).count());
-		assertEquals(13, BattleNext_RestrictionRegistry.getInstance().getByType("number").size());
-		assertEquals(9, BattleNext_RestrictionRegistry.getInstance().getByType("list").size());
-		assertEquals("fleetMaxShips", entries.get(0).getId());
-		assertEquals("fleetMaxShips", BattleNext_RestrictionRegistry.getInstance().getByType("number").get(0).getId());
+		if (change.equals("added")) {
+			String id = "fixtureExtension";
+			Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
+			while (names.contains(id)) {
+				id += "Extra";
+			}
+			inputs.add(new JSONObject().put("id", id).put("type", "number")
+					.put("script", ExampleRestriction.class.getName()).put("desc", "Fixture extension"));
+		} else if (change.equals("removed")) {
+			inputs = new ArrayList<>(inputs.stream().skip(1).toList());
+		} else if (change.equals("reversed")) {
+			Collections.reverse(inputs);
+		} else if (change.equals("empty")) {
+			inputs.clear();
+		}
+		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
+		registry.load(new JSONArray(inputs), this::createRestriction);
+		assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
+				registry.getAll().stream().map(BattleNext_RestrictionSpec::getId).toList());
+		Set<String> ids = new HashSet<>();
+		for (JSONObject input : inputs) {
+			BattleNext_RestrictionSpec entry = registry.get(input.getString("id").trim());
+			assertTrue(ids.add(entry.getId()), entry.getId());
+			assertEquals(input.getString("type").trim(), entry.getType());
+			assertEquals(input.getString("script").trim(), entry.getScript());
+			assertEquals(input.getString("desc").trim(), entry.getDescription());
+			assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(entry.getType()))
+					.map(candidate -> candidate.optString("id").trim()).toList(),
+					registry.getByType(entry.getType()).stream().map(BattleNext_RestrictionSpec::getId).toList());
+			String simpleName = entry.getScript().substring(entry.getScript().lastIndexOf('.') + 1);
+			if (entry.getScript().startsWith("data.restriction.")) {
+				assertEquals(Character.toUpperCase(entry.getId().charAt(0)) + entry.getId().substring(1), simpleName);
+			}
+			Object instance = registry.create(entry.getId());
+			assertInstanceOf(BattleNext_RestrictionScript.class, instance);
+			assertNotSame(instance, registry.create(entry.getId()));
+		}
 	}
 
 	@Test

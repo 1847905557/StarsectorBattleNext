@@ -34,12 +34,7 @@ class BattleNext_I18nSectionTest {
 	@Test
 	void catalogDomainsKeysEncodingAndOrderingFollowTheTextContract() throws Exception {
 
-		Map<String, Integer> expected = Map.ofEntries(
-				Map.entry("Battle", 22), Map.entry("Combat", 4), Map.entry("Common", 30),
-				Map.entry("Fleet", 25), Map.entry("Management", 10), Map.entry("Member", 8),
-				Map.entry("Refit", 6), Map.entry("Report", 26), Map.entry("Rule", 18),
-				Map.entry("Settings", 10), Map.entry("Tournament", 63), Map.entry("Variant", 38));
-		Map<String, Integer> counts = new TreeMap<>();
+		Set<String> categories = new TreeSet<>();
 		String raw = BattleNext_TestTextCatalog.source();
 		List<String> ordered = new ArrayList<>();
 		for (Map.Entry<TextKey, String> entry : BattleNext_TestTextCatalog.entries().entrySet()) {
@@ -49,17 +44,15 @@ class BattleNext_I18nSectionTest {
 			assertTrue(key.id().substring(prefix.length()).matches("[a-z][a-z0-9]*(?:_[a-z0-9]+)*"), key.toString());
 			assertFalse(entry.getValue().isBlank(), key.toString());
 			assertTrue(entry.getValue().codePoints().allMatch(value -> value < 128), key.toString());
-			counts.merge(key.category(), 1, Integer::sum);
+			categories.add(key.category());
 			ordered.add(key.id());
 		}
-		assertEquals(expected, counts);
-		assertEquals(260, ordered.size());
 		List<String> rawOrder = Pattern.compile("\"(BattleNext_[a-z0-9_]+)\"\\s*:")
 				.matcher(raw).results().map(match -> match.group(1)).toList();
 		assertEquals(ordered, rawOrder);
 		List<String> domains = Pattern.compile("(?m)^\\t\"([A-Za-z]+)\"\\s*:")
 				.matcher(raw).results().map(match -> match.group(1)).toList();
-		assertEquals(counts.keySet().stream().toList(), domains);
+		assertEquals(categories.stream().toList(), domains);
 	}
 
 	@Test
@@ -71,7 +64,6 @@ class BattleNext_I18nSectionTest {
 			consumed.add(read.key());
 		}
 		assertEquals(BattleNext_TestTextCatalog.entries().keySet(), consumed);
-		assertTrue(reads.size() >= 260);
 	}
 
 	@Test

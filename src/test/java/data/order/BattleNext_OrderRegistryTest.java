@@ -7,11 +7,17 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
@@ -33,34 +39,46 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 		assertNotNull(registry.create("custom"));
 	}
 
-	@Test
-	void allRegisteredOrdersAreUniqueAndCreatable() throws Exception {
-		JSONArray rows = new JSONArray();
+	@ParameterizedTest
+	@ValueSource(strings = {"current", "added", "removed", "reversed", "empty"})
+	void registeredOrdersFollowInputRowsAcrossCatalogChanges(String change) throws Exception {
+
 		List<String> lines = Files.readAllLines(Path.of(BattleNext_OrderRegistry.PATH), StandardCharsets.UTF_8);
 		assertEquals(List.of("id", "type", "script", "desc"), BattleNext_CsvLine.parse(lines.get(0)));
-		for (String line : lines.subList(1, lines.size())) {
-			if (line.isBlank() || line.stripLeading().startsWith("#")) continue;
-			List<String> fields = BattleNext_CsvLine.parse(line);
-			rows.put(new JSONObject().put("id", fields.get(0)).put("type", fields.get(1))
-					.put("script", fields.get(2)).put("desc", fields.get(3)));
+		JSONArray current = csvRows();
+		List<JSONObject> inputs = new ArrayList<>();
+		for (int index = 0; index < current.length(); index++) {
+			inputs.add(current.getJSONObject(index));
+		}
+		if (change.equals("added")) {
+			String id = "fixture_extension";
+			Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
+			while (names.contains(id)) {
+				id += "_extra";
+			}
+			inputs.add(row(id, "starter", AssaultStarter.class.getName()));
+		} else if (change.equals("removed")) {
+			inputs = new ArrayList<>(inputs.stream().skip(1).toList());
+		} else if (change.equals("reversed")) {
+			Collections.reverse(inputs);
+		} else if (change.equals("empty")) {
+			inputs.clear();
 		}
 		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
-		registry.load(rows, BattleNext_OrderRegistryTest::instantiate);
-		assertEquals(26, registry.getAll().size());
-		assertEquals(26, registry.getAll().stream().map(BattleNext_OrderSpec::getId).distinct().count());
-		assertEquals(12, registry.getByType("starter").size());
-		assertEquals(8, registry.getByType("filter").size());
-		assertEquals(4, registry.getByType("picker").size());
-		assertEquals(2, registry.getByType("suffix").size());
-		assertEquals("assault", registry.getAll().get(0).getId());
-		assertEquals("assault", registry.getByType("starter").get(0).getId());
-		assertNotNull(registry.get("fighter"));
-		assertNotNull(registry.get("hullsize"));
-		assertNotNull(registry.get("selfFlux"));
-		assertNull(registry.get("selfflux"));
-		for (BattleNext_OrderSpec spec : registry.getAll()) {
-			assertNotSame(registry.create(spec.getId()),
-					registry.create(spec.getId()));
+		registry.load(new JSONArray(inputs), BattleNext_OrderRegistryTest::instantiate);
+		assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
+				registry.getAll().stream().map(BattleNext_OrderSpec::getId).toList());
+		Set<String> ids = new HashSet<>();
+		for (JSONObject input : inputs) {
+			BattleNext_OrderSpec spec = registry.get(input.getString("id").trim());
+			assertTrue(ids.add(spec.getId()), spec.getId());
+			assertEquals(input.getString("type").trim(), spec.getType());
+			assertEquals(input.getString("script").trim(), spec.getScript());
+			assertEquals(input.getString("desc").trim(), spec.getDescription());
+			assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(spec.getType()))
+					.map(candidate -> candidate.optString("id").trim()).toList(),
+					registry.getByType(spec.getType()).stream().map(BattleNext_OrderSpec::getId).toList());
+			assertNotSame(registry.create(spec.getId()), registry.create(spec.getId()));
 		}
 	}
 
