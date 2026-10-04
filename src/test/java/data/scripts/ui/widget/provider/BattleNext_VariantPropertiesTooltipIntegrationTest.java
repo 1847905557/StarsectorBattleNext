@@ -180,7 +180,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		assertEquals(List.of("Properties", "empty",
 				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
 				"BattleNext_variant_flux_capacitors: 0", "BattleNext_variant_flux_vents: 0",
-				"BattleNext_variant_weapons: 0 · BattleNext_variant_fighter_wings: 0 · BattleNext_variant_modules: 0 · BattleNext_variant_hullmods: 0"),
+				"BattleNext_variant_weapons: 0 - BattleNext_variant_fighter_wings: 0 - BattleNext_variant_modules: 0 - BattleNext_variant_hullmods: 0"),
 				show(new BattleNext_VariantSourceProvider(), "empty"));
 	}
 
@@ -224,7 +224,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 				empty.add(titles.get(index) + ": 0");
 			}
 		}
-		String summary = String.join(" · ", empty);
+		String summary = String.join(" - ", empty);
 		if (!empty.isEmpty()) {
 			expected.add(summary);
 		}

@@ -143,7 +143,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 		assertEquals("wolf_50%_custom", view.paragraphs.get(0));
 		assertTrue(view.paragraphs.contains("BattleNext_variant_flux_capacitors: 0"));
 		assertTrue(view.paragraphs.contains("BattleNext_variant_flux_vents: 0"));
-		assertEquals("BattleNext_variant_weapons: 0 · BattleNext_variant_fighter_wings: 0 · BattleNext_variant_modules: 0",
+		assertEquals("BattleNext_variant_weapons: 0 - BattleNext_variant_fighter_wings: 0 - BattleNext_variant_modules: 0",
 				view.paragraphs.get(view.paragraphs.size() - 1));
 		assertTrue(view.paragraphs.contains("BattleNext_variant_hullmods: 1"));
 		assertTrue(view.paragraphs.contains("Hardened Shields [BattleNext_variant_built_in, BattleNext_variant_d_mod]"));

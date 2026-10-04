@@ -14,6 +14,7 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.ArrayList;
+import java.awt.Color;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -33,6 +34,8 @@ public class BattleNext_EquipmentTooltip {
 			rows = List.copyOf(rows);
 		}
 	}
+
+	public record FleetMemberLine(String hull, String officer, int elite, String personality) { }
 
 	private BattleNext_EquipmentTooltip() {
 
@@ -70,7 +73,32 @@ public class BattleNext_EquipmentTooltip {
 			}
 		}
 		if (!emptySections.isEmpty()) {
-			tooltip.addPara(String.join(" · ", emptySections), BattleNext_UiTheme.MUTED, BODY_GAP);
+			tooltip.addPara(String.join(" - ", emptySections), BattleNext_UiTheme.MUTED, BODY_GAP);
+		}
+		tooltip.addSpacer(BOTTOM_INSET);
+	}
+
+	public static void renderFleet(TooltipMakerAPI tooltip, Content content, List<String> summary,
+			String membersTitle, List<FleetMemberLine> members) {
+
+		renderHeader(tooltip, content.title(), content.id());
+		for (int index = 0; index < summary.size(); index++) {
+			tooltip.addPara(summary.get(index), BattleNext_UiTheme.TEXT, index == 0 ? BODY_GAP : ROW_GAP);
+		}
+		tooltip.addPara(membersTitle, BattleNext_UiTheme.ACCENT, BODY_GAP);
+		for (FleetMemberLine member : members) {
+			if (member.elite() > 0) {
+				tooltip.addPara("%s - %s (%s) - %s", ROW_GAP,
+						new Color[]{BattleNext_UiTheme.TEXT, BattleNext_UiTheme.TEXT,
+								Misc.getPositiveHighlightColor(), BattleNext_UiTheme.TEXT},
+						member.hull(), member.officer(), Integer.toString(member.elite()), member.personality());
+			} else {
+				tooltip.addPara(member.hull() + " - " + member.officer() + " - " + member.personality(),
+						BattleNext_UiTheme.TEXT, ROW_GAP);
+			}
+		}
+		for (String note : content.notes()) {
+			tooltip.addPara(note, BattleNext_UiTheme.TEXT, BODY_GAP);
 		}
 		tooltip.addSpacer(BOTTOM_INSET);
 	}

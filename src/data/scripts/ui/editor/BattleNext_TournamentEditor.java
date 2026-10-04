@@ -24,8 +24,8 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -231,7 +231,7 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		} else {
 			fleetPicker = new BattleNext_OptionField(inputRouter, panel,
 					Math.min(EDITOR_FIELD_MAX_WIDTH, contentRect.getWidth() - EDITOR_FIELD_SIDE_RESERVE),
-					new TournamentFleetOptionSource(), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, content);
+					new BattleNext_FleetSourceProvider(fleetStore), BattleNext_OptionField.OptionSelectionMode.MULTIPLE, content);
 			fleetPicker.attach(content, panel);
 			fleetField = fleetPicker.getField();
 			fleetField.setText(String.join(",", draft.getFleetIds()));
@@ -430,30 +430,4 @@ public class BattleNext_TournamentEditor implements BattleNext_EditorView {
 		return statusText;
 	}
 
-	private class TournamentFleetOptionSource implements BattleNext_OptionPicker.OptionChoiceSource {
-		@Override
-		public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
-			List<BattleNext_OptionPicker.OptionChoice> options = new ArrayList<>();
-			for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
-				options.add(new BattleNext_OptionPicker.OptionChoice(fleet.getId(), fleet.getName()));
-			}
-			return options;
-		}
-
-		@Override
-		public int getMaxStack(String id) {
-			return 1;
-		}
-
-		@Override
-		public String getIconPath(String id) {
-			return null;
-		}
-
-		@Override
-		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-			tooltip.addTitle(option.getLabel());
-			BattleNext_PageLayout.addMutedIdLine(tooltip, option.getId(), 0f);
-		}
-	}
 }

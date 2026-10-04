@@ -193,7 +193,17 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			assertEquals(PARAGRAPH + "\nSecond paragraph", ((LabelAPI) components.get(2)).getText());
 			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
-		} else if (List.of("tournament", "restriction").contains(kind)) {
+		} else if (kind.equals("tournament")) {
+			assertEquals(6, components.size());
+			assertEquals("small-orbitron", labelFonts.get(components.get(0).getPosition()));
+			assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(components.get(0).getPosition()));
+			var titlePosition = components.get(0).getPosition();
+			var idPosition = components.get(1).getPosition();
+			assertEquals(5f, titlePosition.getY() - idPosition.getY() - idPosition.getHeight());
+			assertEquals("BattleNext_fleet_ships: 0 - BattleNext_fleet_fighter_wings: 0", ((LabelAPI) components.get(2)).getText());
+			assertEquals("BattleNext_fleet_base_dp: 0 - BattleNext_fleet_base_fp: 0", ((LabelAPI) components.get(3)).getText());
+			assertEquals(8f, components.get(5).getPosition().getHeight());
+		} else if (kind.equals("restriction")) {
 			assertEquals(2, components.size());
 		} else {
 			assertEquals(PARAGRAPH, ((LabelAPI) components.get(2)).getText());
@@ -221,6 +231,11 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		BattleNext_OptionField field;
 		if (kind.equals("tournament")) {
 			BattleNext_FleetStore fleets = new BattleNext_FleetStore() {
+				@Override
+				public BattleNext_FleetModel get(String id) {
+					return getAll().stream().filter(fleet -> fleet.getId().equals(id)).findFirst().orElse(null);
+				}
+
 				@Override
 				public List<BattleNext_FleetModel> getAll() {
 					return List.of(new BattleNext_FleetModel("fleet_id", "Fleet name", List.of(), List.of(), List.of()));
