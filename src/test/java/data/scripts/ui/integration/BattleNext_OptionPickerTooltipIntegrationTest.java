@@ -239,7 +239,7 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			}
 
 			@Override
-			public int getMaxCount(String id) {
+			public int getMaxStack(String id) {
 				return 1;
 			}
 

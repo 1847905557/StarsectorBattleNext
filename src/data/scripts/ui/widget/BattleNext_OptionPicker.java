@@ -48,7 +48,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		List<OptionChoice> getOptions();
 
-		int getMaxCount(String id);
+		int getMaxStack(String id);
 
 		String getIconPath(String id);
 
@@ -450,7 +450,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			if (value == null) continue;
 			String id = value.trim();
 			if (id.isEmpty()) continue;
-			counts.put(id, Math.min(counts.getOrDefault(id, 0) + 1, maxCount(id)));
+			counts.put(id, Math.min(counts.getOrDefault(id, 0) + 1, maxStack(id)));
 		}
 		return counts;
 	}
@@ -463,8 +463,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		return result;
 	}
 
-	private int maxCount(String id) {
-		return Math.max(1, source.getMaxCount(id));
+	private int maxStack(String id) {
+		return Math.max(1, source.getMaxStack(id));
 	}
 
 	private boolean contains(UIComponentAPI component, InputEventAPI event) {
@@ -630,7 +630,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				if (event.isConsumed()) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
 				if (mode == OptionSelectionMode.SINGLE) selection.clear();
-				int max = maxCount(option.id);
+				int max = maxStack(option.id);
 				int next = selection.getOrDefault(option.id, 0) + 1;
 				if (next > max) {
 					next = 0;

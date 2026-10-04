@@ -62,7 +62,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 				ShipHullSpecAPI hull = hulls.get(arguments[0]);
 				return hull == null ? null : decorateHull(hull);
 			}
-			if (method.getName().equals("getHullModSpec")) return hullmod();
+			if (method.getName().equals("getHullModSpec")) return hullmod((String) arguments[0]);
 			if (method.getName().equals("getWeaponSpec")) {
 				return proxy(WeaponSpecAPI.class, (name, values) -> switch (name) {
 					case "getWeaponName" -> "Ion Pulser";
@@ -161,7 +161,9 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 			case "wing" -> WING_PARAGRAPH;
 			default -> WEAPON_PARAGRAPH;
 		};
-		assertLayout(hover, List.of(title, id, paragraph));
+		assertLayout(hover, kind.equals("hullmod")
+				? List.of(title, id, paragraph + "\nSECOND PARAGRAPH", "S-mod effect 60%.", "Second effect paragraph")
+				: List.of(title, id, paragraph));
 		if (kind.equals("module")) {
 			assertTrue(tooltips.get(hover).getUsedHeight() > 80f);
 			assertEquals(List.of("SHIP/child_text"), descriptionReads);
@@ -193,30 +195,65 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"smod", "dmod", "variant"})
+	@ValueSource(strings = {"smod", "dmod"})
 	void selectorsRetainNotesAndTheirFormalIdentifierWithCompleteText(String kind) {
 
 		BattleNext_OptionPicker.OptionChoiceSource source = kind.equals("smod")
 				? new BattleNext_RefitSModSourceProvider(() -> current)
-				: kind.equals("dmod") ? new BattleNext_RefitDModSourceProvider(() -> current)
-				: new BattleNext_VariantSourceProvider();
+				: new BattleNext_RefitDModSourceProvider(() -> current);
 		var hover = tooltip(360f, 60f, false);
-		String id = kind.equals("variant") ? "variant_50%" : "ordinary";
+		String id = kind.equals("smod") ? "ordinary" : "damaged";
 		source.createTooltip(hover, new BattleNext_OptionPicker.OptionChoice(id, "Choice"));
 		assertEquals(360f, source.getTooltipWidth());
 		var content = textValues(hover);
 		assertEquals(id, content.get(1));
-		assertEquals(kind.equals("variant") ? MODULE_PARAGRAPH : MOD_PARAGRAPH, content.get(2));
-		assertEquals(4, content.size());
+		assertEquals(MOD_PARAGRAPH + "\nSECOND PARAGRAPH", content.get(2));
+		assertEquals(kind.equals("smod") ? 5 : 4, content.size());
 		assertTrue(tooltips.get(hover).getUsedHeight() > 60f);
 		for (int index = 2; index < content.size(); index++) {
 			var position = tooltips.get(hover).getComponents().get(index).getPosition();
 			assertEquals("default", labelFonts.get(position));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(position));
 		}
-		if (kind.equals("smod")) assertEquals("S-mod effect 60%.", content.get(3));
+		if (kind.equals("smod")) {
+			assertEquals(List.of("S-mod effect 60%.", "Second effect paragraph"), content.subList(3, 5));
+		}
 		if (kind.equals("dmod")) assertTrue(content.get(3).contains("d_mod_"));
-		if (!kind.equals("variant")) assertTrue(hullSizes.stream().allMatch(size -> size == ShipAPI.HullSize.FRIGATE));
+		assertTrue(hullSizes.stream().allMatch(size -> size == ShipAPI.HullSize.FRIGATE));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"variant_50%", "registered_variant"})
+	void variantSelectorRendersCurrentPropertiesWithSharedHeaderAndSectionLayout(String id) {
+
+		var source = new BattleNext_VariantSourceProvider();
+		var hover = tooltip(360f, 0f, false);
+		source.createTooltip(hover, new BattleNext_OptionPicker.OptionChoice(id, "Choice"));
+		assertEquals(360f, source.getTooltipWidth());
+		List<String> values = textValues(hover);
+		assertEquals(List.of("Choice", id), values.subList(0, 2));
+		assertTrue(values.contains("BattleNext_variant_weapons: 1"));
+		assertTrue(values.contains("Ion Pulser ×1"));
+		assertTrue(values.contains("BattleNext_variant_fighter_wings: 1"));
+		assertTrue(values.contains("Broadsword Wing ×1"));
+		assertTrue(values.contains("BattleNext_variant_modules: 1"));
+		assertTrue(values.contains("Child ×1"));
+		assertEquals(List.of(), descriptionReads);
+		var components = tooltips.get(hover).getComponents();
+		for (int index = 0; index < values.size(); index++) {
+			var position = components.get(index).getPosition();
+			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default",
+					labelFonts.get(position));
+			assertEquals(index == 0 ? BattleNext_UiTheme.ACCENT : index == 1
+					? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
+			if (index == 0) continue;
+			var previous = components.get(index - 1).getPosition();
+			boolean sectionRow = index > 4 && !values.get(index).startsWith("BattleNext_variant_");
+			assertEquals(index == 1 ? 5f : sectionRow ? 2f : 8f,
+					previous.getY() - position.getY() - position.getHeight());
+		}
+		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
+		assertTrue(tooltips.get(hover).getUsedHeight() > 100f);
 	}
 
 	@ParameterizedTest
@@ -254,8 +291,8 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		TooltipState state = tooltips.get(hover);
 		assertEquals(expected, textValues(hover));
 		var components = state.getComponents();
-		assertEquals(4, components.size());
-		for (int index = 0; index < 3; index++) {
+		assertEquals(expected.size() + 1, components.size());
+		for (int index = 0; index < expected.size(); index++) {
 			var position = components.get(index).getPosition();
 			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default",
 					labelFonts.get(position));
@@ -266,7 +303,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 				assertEquals(index == 1 ? 5f : 8f, previous.getY() - position.getY() - position.getHeight());
 			}
 		}
-		assertEquals(8f, components.get(3).getPosition().getHeight());
+		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
 	}
 
 	private List<String> textValues(TooltipMakerAPI hover) {
@@ -277,16 +314,28 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		return result;
 	}
 
-	private HullModSpecAPI hullmod() {
+	private HullModSpecAPI hullmod(String id) {
 		return proxy(HullModSpecAPI.class, (method, arguments) -> switch (method) {
-			case "getId" -> "ordinary";
+			case "getId" -> id;
+			case "hasTag" -> id.equals("damaged") && arguments[0].equals("dmod");
 			case "getDisplayName" -> "Expanded Magazines";
 			case "getSpriteName" -> "graphics/mod.png";
-			case "getDescription" -> {
-				hullSizes.add((ShipAPI.HullSize) arguments[0]);
-				yield MOD_PARAGRAPH + "\nSECOND PARAGRAPH";
-			}
-			case "getEffect" -> proxy(HullModEffect.class, (name, values) -> name.equals("hasSModEffect"));
+			case "getDescriptionFormat" -> MOD_PARAGRAPH.replace("%", "%%") + "\nSECOND PARAGRAPH";
+			case "getEffect" -> proxy(HullModEffect.class, (name, values) -> switch (name) {
+				case "shouldAddDescriptionToTooltip" -> true;
+				case "getDescriptionParam" -> {
+					hullSizes.add((ShipAPI.HullSize) values[1]);
+					yield null;
+				}
+				case "hasSModEffect" -> !id.equals("damaged");
+				case "addSModSection" -> {
+					TooltipMakerAPI tooltip = (TooltipMakerAPI) values[0];
+					tooltip.addPara("S-mod effect 60%.", BattleNext_UiTheme.TEXT, 8f);
+					tooltip.addPara("Second effect paragraph", BattleNext_UiTheme.TEXT, 8f);
+					yield null;
+				}
+				default -> null;
+			});
 			case "getSModEffectFormat" -> "Effect";
 			case "getSModDescription" -> "S-mod effect 60%.\nSecond effect paragraph";
 			default -> null;

@@ -16,6 +16,9 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<PositionAPI, Alignment> labelAlignments = new IdentityHashMap<>();
 	protected final Map<PositionAPI, String> labelFonts = new IdentityHashMap<>();
 	protected final Map<PositionAPI, Color> labelColors = new IdentityHashMap<>();
+	protected final Map<PositionAPI, List<String>> labelHighlights = new IdentityHashMap<>();
+	protected final Map<PositionAPI, String> labelPatterns = new IdentityHashMap<>();
+	protected final Map<PositionAPI, List<Color>> labelHighlightColors = new IdentityHashMap<>();
 	protected final Map<String, AtomicBoolean> buttons = new LinkedHashMap<>();
 	protected final Map<String, PositionAPI> buttonPositions = new LinkedHashMap<>();
 	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
@@ -24,6 +27,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<UIComponentAPI, String> imagePaths = new IdentityHashMap<>();
 	protected final Map<UIComponentAPI, TooltipMakerAPI.TooltipCreator> attachedTooltips = new IdentityHashMap<>();
 	protected final Map<UIComponentAPI, TooltipBinding> tooltipBindings = new IdentityHashMap<>();
+	protected final Map<UIPanelAPI, TableState> tables = new IdentityHashMap<>();
 	protected boolean deferTooltipWidth;
 	protected boolean shortenLabels;
 	protected float paragraphLineHeight = 20f;
@@ -40,7 +44,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			}
 
 			@Override
-			public int getMaxCount(String id) {
+			public int getMaxStack(String id) {
 				return 1;
 			}
 
@@ -125,6 +129,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private float offset;
 		private boolean mounted;
 		private UIComponentAPI previous;
+		private TableState table;
 		private String paraFont = "default";
 		private String titleFont = "default-title";
 		private Color paraColor = Color.WHITE;
@@ -204,6 +209,28 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 
 		protected Object call(String method, Object[] args) {
 			return switch (method) {
+				case "beginTable", "beginTable2" -> {
+					float itemHeight = 0f;
+					for (Object value : args) {
+						if (value instanceof Float number) {
+							itemHeight = number;
+							break;
+						}
+					}
+					table = new TableState(itemHeight, (Object[]) args[args.length - 1]);
+					tables.put(table.panel, table);
+					yield table.panel;
+				}
+				case "addRow", "addRowWithGlow" -> {
+					table.rows.add(Arrays.asList(((Object[]) args[0]).clone()));
+					yield table.rows.get(table.rows.size() - 1);
+				}
+				case "addTable" -> {
+					table.panel.getPosition().setSize(width, table.itemHeight * (table.rows.size() + 1));
+					append(table.panel, (Float) args[2]);
+					table = null;
+					yield null;
+				}
 				case "getExternalScroller" -> mounted && scrollable ? scroller : null;
 				case "getPosition" -> position;
 				case "setParaFontDefault" -> { paraFont = "default"; yield null; }
@@ -214,13 +241,25 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				case "setTitleFontColor" -> { titleColor = (Color) args[0]; yield null; }
 				case "addTitle", "addPara", "addSectionHeading" -> {
 					String value = (String) args[0];
+					String[] highlights = args[args.length - 1] instanceof String[] values ? values : new String[0];
+					if (method.equals("addPara") && args[args.length - 1] instanceof String[]) {
+						value = String.format(Locale.ROOT, value, (Object[]) highlights);
+					}
 					labels.add(value);
-					float pad = args[args.length - 1] instanceof Float number ? number : 0f;
+					float pad = args[args.length - 1] instanceof Float number ? number
+							: args.length > 1 && args[1] instanceof Float number ? number : 0f;
 					LabelAPI label = label(value, textWidth);
 					boolean title = method.equals("addTitle");
 					labelFonts.put(label.getPosition(), title ? titleFont : paraFont);
-					labelColors.put(label.getPosition(), title ? titleColor
-							: args.length > 1 && args[1] instanceof Color color ? color : paraColor);
+					Color textColor = args.length > 1 && args[1] instanceof Color color ? color
+							: args.length == 5 && args[2] instanceof Color color ? color : paraColor;
+					labelColors.put(label.getPosition(), title ? titleColor : textColor);
+					labelPatterns.put(label.getPosition(), (String) args[0]);
+					labelHighlights.put(label.getPosition(), Collections.unmodifiableList(Arrays.asList(highlights.clone())));
+					Object highlight = highlights.length > 0 ? args[args.length - 2] : null;
+					Color[] highlightColors = highlight instanceof Color[] colors ? colors
+							: highlight instanceof Color color ? new Color[]{color} : new Color[0];
+					labelHighlightColors.put(label.getPosition(), List.of(highlightColors));
 					append((UIComponentAPI) label, pad);
 					yield label;
 				}
@@ -315,6 +354,32 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				default -> null;
 			};
+		}
+	}
+
+	protected class TableState {
+		private final UIPanelAPI panel;
+		private final float itemHeight;
+		private final List<Object> columns;
+		private final List<List<Object>> rows = new ArrayList<>();
+
+		private TableState(float itemHeight, Object[] columns) {
+			this.itemHeight = itemHeight;
+			this.columns = Arrays.asList(columns.clone());
+			float width = 0f;
+			for (int index = 1; index < columns.length; index += 2) {
+				width += ((Number) columns[index]).floatValue();
+			}
+			PositionAPI position = position(width, 0f);
+			panel = proxy(UIPanelAPI.class, (method, args) -> method.equals("getPosition") ? position : null);
+		}
+
+		public List<Object> getColumns() {
+			return columns;
+		}
+
+		public List<List<Object>> getRows() {
+			return rows;
 		}
 	}
 

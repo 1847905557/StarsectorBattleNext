@@ -35,6 +35,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BattleNext_TestGameFixture {
 
+	private static final Color TEXT_COLOR = new Color(220, 220, 220);
+	private static final Color BUTTON_TEXT_COLOR = new Color(170, 222, 255);
+	private static final Color HIGHLIGHT_COLOR = new Color(255, 210, 0);
+	private static final Color STORY_COLOR = new Color(163, 239, 128);
+	private static final Color GRAY_COLOR = new Color(175, 175, 175, 180);
+	private static final Color PANEL_COLOR = new Color(31, 94, 112, 175);
+
 	@TempDir
 	protected Path directory;
 	protected SettingsAPI previousSettings;
@@ -70,7 +77,15 @@ public class BattleNext_TestGameFixture {
 			case "getModManager" -> mods;
 			case "getString" -> BattleNext_TestTextCatalog.key(args[0], args[1]);
 			case "getSpriteName" -> BattleNext_TestSpriteCatalog.path(args[0], args[1]);
-			case "getColor" -> Color.GRAY;
+			case "getColor" -> switch ((String) args[0]) {
+				case "standardTextColor" -> TEXT_COLOR;
+				case "buttonText" -> BUTTON_TEXT_COLOR;
+				case "buttonShortcut" -> HIGHLIGHT_COLOR;
+				case "storyOptionColor" -> STORY_COLOR;
+				case "textGrayColor" -> GRAY_COLOR;
+				case "buttonBgDark" -> PANEL_COLOR;
+				default -> Color.GRAY;
+			};
 			case "getFloat" -> 1f;
 			case "getScreenWidth" -> 1600f;
 			case "getScreenHeight" -> 900f;
@@ -191,6 +206,8 @@ public class BattleNext_TestGameFixture {
 			case "getHullId" -> id;
 			case "getHullName" -> name;
 			case "getSpriteName" -> "graphics/" + id + ".png";
+			case "getBuiltInMods" -> List.of();
+			case "getBuiltInWeapons" -> new HashMap<String, String>();
 			case "getBuiltInWings" -> List.of();
 			case "getWeaponSlot", "getWeaponSlotAPI" -> proxy(WeaponSlotAPI.class, (key, values) -> switch (key) {
 				case "getId" -> args[0];
@@ -223,6 +240,10 @@ public class BattleNext_TestGameFixture {
 		return parent;
 	}
 
+	protected Variant variant(String id, ShipHullSpecAPI hull) throws JSONException {
+		return new Variant(id, hull);
+	}
+
 	protected class Variant {
 		private final JSONObject json = new JSONObject();
 		private final Map<String, ShipVariantAPI> modules = new LinkedHashMap<>();
@@ -231,6 +252,7 @@ public class BattleNext_TestGameFixture {
 		private final LinkedHashSet<String> sMods = new LinkedHashSet<>();
 		private final LinkedHashSet<String> permaMods = new LinkedHashSet<>();
 		private final LinkedHashSet<String> mods = new LinkedHashSet<>();
+		private final Map<String, String> weapons = new LinkedHashMap<>();
 		private final ShipVariantAPI api;
 
 		protected Variant(String id, ShipHullSpecAPI hull) throws JSONException {
@@ -240,9 +262,27 @@ public class BattleNext_TestGameFixture {
 				case "getHullSpec" -> hull;
 				case "getHullVariantId" -> json.getString("variantId");
 				case "getDisplayName" -> json.getString("displayName");
+				case "getNumFluxCapacitors" -> json.optInt("fluxCapacitors", 0);
+				case "getNumFluxVents" -> json.optInt("fluxVents", 0);
+				case "getHullMods" -> mods;
+				case "getPermaMods" -> permaMods;
+				case "getFittedWeaponSlots" -> fittedWeapons().keySet();
+				case "getWeaponId" -> fittedWeapons().get(args[0]);
+				case "addWeapon" -> weapons.put((String) args[0], (String) args[1]);
+				case "getFittedWings" -> {
+					List<String> fitted = new ArrayList<>(hull.getBuiltInWings());
+					JSONArray wings = json.optJSONArray("wings");
+					if (wings != null) {
+						for (int index = hull.getBuiltInWings().size(); index < wings.length(); index++) {
+							if (wings.isNull(index)) continue;
+							String wing = wings.optString(index, "");
+							if (!wing.isEmpty()) fitted.add(wing);
+						}
+					}
+					yield fitted;
+				}
 				case "clone" -> args[0];
-				case "toJSONObject" -> new JSONObject(json.toString())
-						.put("hullMods", new JSONArray(mods)).put("permaMods", new JSONArray(permaMods)).put("sMods", new JSONArray(sMods));
+				case "toJSONObject" -> snapshotJson();
 				case "getSModdedBuiltIns" -> builtIns;
 				case "getSuppressedMods" -> suppressed;
 				case "getSMods" -> sMods;
@@ -279,19 +319,55 @@ public class BattleNext_TestGameFixture {
 				}
 				case "addWeaponGroup" -> {
 					WeaponGroupSpec group = (WeaponGroupSpec) args[0];
+					JSONObject installed = new JSONObject();
+					for (String slot : group.getSlots()) {
+						installed.put(slot, weapons.get(slot));
+					}
 					JSONArray groups = json.optJSONArray("weaponGroups");
 					if (groups == null) {
 						groups = new JSONArray();
 					}
 					groups.put(new JSONObject().put("mode", group.getType().name())
 							.put("autofire", group.isAutofireOnByDefault())
-							.put("weapons", new JSONObject().put("weapon", "laser")));
+							.put("weapons", installed));
 					json.put("weaponGroups", groups);
 					yield null;
 				}
 				default -> null;
 			});
 		}
+
+		private Map<String, String> fittedWeapons() throws JSONException {
+			Map<String, String> fitted = new LinkedHashMap<>(api.getHullSpec().getBuiltInWeapons());
+			JSONArray groups = json.optJSONArray("weaponGroups");
+			if (groups != null) {
+				for (int index = 0; index < groups.length(); index++) {
+					JSONObject group = groups.getJSONObject(index).getJSONObject("weapons");
+					if (group.length() > 0) {
+						for (String slot : JSONObject.getNames(group)) {
+							fitted.put(slot, group.getString(slot));
+						}
+					}
+				}
+			}
+			fitted.putAll(weapons);
+			return fitted;
+		}
+
+		private JSONObject snapshotJson() throws JSONException {
+			JSONObject snapshot = new JSONObject(json.toString()).put("hullMods", new JSONArray(mods))
+					.put("permaMods", new JSONArray(permaMods)).put("sMods", new JSONArray(sMods));
+			JSONArray wings = json.optJSONArray("wings");
+			if (wings != null) {
+				JSONArray configured = new JSONArray();
+				for (int index = api.getHullSpec().getBuiltInWings().size(); index < wings.length(); index++) {
+					configured.put(wings.isNull(index) ? "" : wings.getString(index));
+				}
+				snapshot.put("wings", configured);
+			}
+			return snapshot;
+		}
+
 		public JSONObject getJson() {
 			return json;
 		}

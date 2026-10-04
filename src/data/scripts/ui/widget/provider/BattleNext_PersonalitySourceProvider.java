@@ -18,7 +18,7 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 	private static final String PERSONALITIES_PATH = "data/characters/personalities.csv";
 
 	@Override
-	public int getMaxCount(String id) {
+	public int getMaxStack(String id) {
 		return 1;
 	}
 

@@ -27,6 +27,9 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 class BattleNext_SourceProviderTooltipIntegrationTest {
 
@@ -59,17 +62,30 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 			case "getHullSpec" -> hull;
 			case "getHullSize" -> ShipAPI.HullSize.FRIGATE;
 			case "getHullMods" -> List.of("built");
+			case "getFittedWeaponSlots", "getFittedWings" -> List.of();
+			case "getStationModules" -> Map.of();
+			case "getSMods", "getSModdedBuiltIns" -> new LinkedHashSet<String>();
+			case "getPermaMods", "getSuppressedMods" -> Set.of();
+			case "getNumFluxVents", "getNumFluxCapacitors" -> 0;
 			case "hasHullMod", "hasTag" -> false;
 			default -> null;
 		});
-		HullModEffect effect = proxy(HullModEffect.class, (method, args) ->
-				"hasSModEffect".equals(method));
+		HullModEffect effect = proxy(HullModEffect.class, (method, args) -> switch (method) {
+			case "hasSModEffect", "shouldAddDescriptionToTooltip" -> true;
+			case "hasSModEffectSection" -> false;
+			case "addSModSection" -> {
+				((TooltipMakerAPI) args[0]).addPara("Elite shield effect, 50% stronger.", Color.WHITE, 8f);
+				yield null;
+			}
+			default -> null;
+		});
 		hullmod = proxy(HullModSpecAPI.class, (method, args) -> switch (method) {
 			case "getDisplayName" -> "Hardened Shields";
+			case "isHiddenEverywhere" -> false;
 			case "getEffect" -> effect;
 			case "getSModEffectFormat" -> "Elite shield effect";
 			case "getSModDescription" -> "Elite shield effect, 50% stronger.";
-			case "getDescription" -> "Reduces shield damage by 20%.";
+			case "getDescriptionFormat" -> "Reduces shield damage by 20%%.";
 			case "hasTag" -> "dmod".equals(args[0]);
 			default -> null;
 		});
@@ -77,6 +93,7 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 			case "getDescription" -> "Improves combat coordination by 10%.";
 			case "getScopeStr" -> "Ship";
 			case "getScopeStr2" -> "Fleet";
+			case "getEffectsAPI" -> List.of();
 			default -> null;
 		});
 		factionSpec = proxy(FactionSpecAPI.class, (method, args) -> switch (method) {
@@ -117,14 +134,20 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 	}
 
 	@Test
-	void variantTooltipQuotesShipBackgroundAndLabelsBaseDp() {
+	void variantTooltipListsItsOwnPropertiesAndLabelsBaseDp() {
 		RecordingTooltip view = new RecordingTooltip();
 		new BattleNext_VariantSourceProvider().createTooltip(view.api,
 				new OptionChoice("wolf_50%_custom", "Wolf - Custom"));
 
 		assertEquals("Wolf - Custom", view.title);
 		assertEquals("wolf_50%_custom", view.paragraphs.get(0));
-		assertTrue(view.paragraphs.stream().anyMatch(text -> text.contains("The Wolf is a fast combat frigate")));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_flux_capacitors: 0"));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_flux_vents: 0"));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_weapons: 0"));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_fighter_wings: 0"));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_modules: 0"));
+		assertTrue(view.paragraphs.contains("BattleNext_variant_hullmods: 1"));
+		assertTrue(view.paragraphs.contains("Hardened Shields [BattleNext_variant_built_in, BattleNext_variant_d_mod]"));
 		assertTrue(view.paragraphs.stream().anyMatch(text -> text.contains("BattleNext_variant_base_deployment_points: 5.0")));
 	}
 
@@ -194,12 +217,17 @@ class BattleNext_SourceProviderTooltipIntegrationTest {
 				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "addTitle" -> { title = (String) args[0]; height += 30f; yield null; }
 					case "addPara" -> {
-						paragraphs.add((String) args[0]);
+						String text = (String) args[0];
+						if (args[args.length - 1] instanceof String[] parameters) {
+							text = String.format(text, (Object[]) parameters);
+						}
+						paragraphs.add(text);
 						height += 22f;
 						yield null;
 					}
 					case "getPosition" -> position;
 					case "getHeightSoFar" -> height;
+					case "getWidthSoFar" -> 360f;
 					case "createLabel" -> (LabelAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 							new Class<?>[]{LabelAPI.class}, (label, labelMethod, labelArgs) ->
 									"autoSizeToWidth".equals(labelMethod.getName()) ? measured((String) args[0]) : null);

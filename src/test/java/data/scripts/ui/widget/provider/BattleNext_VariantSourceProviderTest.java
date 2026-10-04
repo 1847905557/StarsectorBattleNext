@@ -21,7 +21,7 @@ class BattleNext_VariantSourceProviderTest {
 	void variantsAreSingleSelection() {
 		BattleNext_VariantSourceProvider provider = new BattleNext_VariantSourceProvider();
 
-		assertEquals(1, provider.getMaxCount("any_variant"));
+		assertEquals(1, provider.getMaxStack("any_variant"));
 	}
 
 	@Test

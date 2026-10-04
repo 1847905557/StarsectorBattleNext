@@ -214,8 +214,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 				@Override
 				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-					BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hullmod(
-							spec.getDisplayName(), id, spec, hull.getHullSize(), List.of()));
+					BattleNext_EquipmentTooltip.renderHullmod(tooltip, spec.getDisplayName(), id, spec,
+							hull.getHullSize(), json.optString("variantId", ""), List::of);
 				}
 			}, TooltipMakerAPI.TooltipLocation.RIGHT);
 		}

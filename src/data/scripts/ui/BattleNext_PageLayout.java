@@ -74,10 +74,6 @@ public class BattleNext_PageLayout {
 	private static final float TOOLTIP_MAX_WIDTH = 500f;
 	private static final float TOOLTIP_WIDTH_PER_CHAR = 10f;
 
-	private static final float LIST_MIN_WIDTH = 320f;
-	private static final float LIST_MAX_WIDTH = 480f;
-	private static final float LIST_WIDTH_SHARE = 0.38f;
-
 	private static final float MANAGEMENT_OUTER_MARGIN = 8f;
 	private static final float MANAGEMENT_COLUMN_GAP = 20f;
 	private static final float MANAGEMENT_LIST_MIN_WIDTH = 260f;
@@ -238,11 +234,6 @@ public class BattleNext_PageLayout {
 	static void applyButtonSounds(ButtonAPI button) {
 		button.setMouseOverSound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID);
 		button.setButtonPressedSound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID);
-	}
-
-	public static float listWidth(CustomPanelAPI panel) {
-		return Math.min(LIST_MAX_WIDTH, Math.max(LIST_MIN_WIDTH,
-				panel.getPosition().getWidth() * LIST_WIDTH_SHARE));
 	}
 
 	public static UIRect[] managementRegions(CustomPanelAPI panel) {

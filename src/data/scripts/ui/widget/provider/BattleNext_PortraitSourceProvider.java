@@ -21,13 +21,12 @@ import java.util.Set;
 public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
-	private static final int PORTRAIT_SELECTION_MAX_COUNT = 1;
-	private static final float TOOLTIP_WIDTH = 480f;
+	private static final float TOOLTIP_WIDTH = 520f;
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 
 	@Override
-	public int getMaxCount(String id) {
-		return PORTRAIT_SELECTION_MAX_COUNT;
+	public int getMaxStack(String id) {
+		return 1;
 	}
 
 	@Override

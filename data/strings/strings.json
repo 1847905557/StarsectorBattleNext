@@ -59,6 +59,7 @@
 		"BattleNext_common_save": "Save",
 		"BattleNext_common_save_failed": "Save failed",
 		"BattleNext_common_saved": "Saved",
+		"BattleNext_common_skill_effect_level": "Level %s",
 		"BattleNext_common_source_unavailable": "Source location unavailable; change the ID to save a copy",
 		"BattleNext_common_source_unavailable_short": "Change ID to save a copy",
 		"BattleNext_common_status": "Status",
@@ -254,6 +255,7 @@
 		"BattleNext_variant_autofire_enabled": "Autofire enabled",
 		"BattleNext_variant_base_deployment_points": "Base DP",
 		"BattleNext_variant_built_in": "Built-in",
+		"BattleNext_variant_built_in_s_mod": "Built-in S-mod",
 		"BattleNext_variant_d_mod": "D-mod",
 		"BattleNext_variant_empty_slot": "Empty slot",
 		"BattleNext_variant_error_marker": "[Error]",
@@ -269,6 +271,7 @@
 		"BattleNext_variant_modules": "Modules",
 		"BattleNext_variant_no_pinned": "No pinned variants",
 		"BattleNext_variant_none": "None",
+		"BattleNext_variant_permanent": "Permanent",
 		"BattleNext_variant_pin_add_action": "Add to pinned variants",
 		"BattleNext_variant_pin_context_error": "Could not read the campaign refit context",
 		"BattleNext_variant_pin_current_action": "[Battle NEXT] Pin current variant",
@@ -285,8 +288,10 @@
 		"BattleNext_variant_s_mod": "S-mod",
 		"BattleNext_variant_select_pinned": "Select a pinned variant from the list",
 		"BattleNext_variant_source_file": "Source file",
+		"BattleNext_variant_suppressed": "Suppressed",
 		"BattleNext_variant_weapon_group_error": "Invalid weapon group",
 		"BattleNext_variant_weapon_group_summary": "Group %d (%d weapons)",
-		"BattleNext_variant_weapon_groups": "Weapon groups"
+		"BattleNext_variant_weapon_groups": "Weapon groups",
+		"BattleNext_variant_weapons": "Weapons"
 	}
 }

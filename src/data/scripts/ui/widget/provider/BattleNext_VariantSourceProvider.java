@@ -3,6 +3,8 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
@@ -17,6 +19,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvider {
 
@@ -31,22 +37,25 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		this.pinnedVariants = pinnedVariants;
 	}
 
-	private static final int VARIANT_SELECTION_MAX_COUNT = 1;
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+	private final BattleNext_I18nSection commonStrings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 
 	@Override
-	public int getMaxCount(String id) {
-		return VARIANT_SELECTION_MAX_COUNT;
+	public int getMaxStack(String id) {
+		return 1;
 	}
 
 	@Override
 	public List<OptionChoice> getOptions() {
 		List<OptionChoice> options = new ArrayList<>();
+		List<OptionChoice> standardOptions = new ArrayList<>();
+		List<OptionChoice> pinnedOptions = new ArrayList<>();
 		for (String id : Global.getSettings().getAllVariantIds()) {
 			ShipVariantAPI variant = loadVariant(id);
 			if (variant == null || variant.isFighter()) continue;
-			options.add(new OptionChoice(id, label(variant)));
+			standardOptions.add(new OptionChoice(id, label(variant)));
 		}
+		standardOptions.sort(Comparator.comparing(OptionChoice::getId));
 		try {
 			pinnedVariants.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
@@ -57,10 +66,12 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			for (BattleNext_PinnedVariantModel pin : pinnedVariants.getAll()) {
 				ShipVariantAPI variant = pinnedVariants.resolve(pin.getPinId());
 				if (variant.isFighter()) continue;
-				options.add(new OptionChoice(PINNED_PREFIX + pin.getPinId(), pin.getDisplayName()));
+				pinnedOptions.add(new OptionChoice(PINNED_PREFIX + pin.getPinId(), pin.getDisplayName()));
 			}
 		}
-		options.sort(Comparator.comparing(OptionChoice::getId));
+		pinnedOptions.sort(Comparator.comparing(OptionChoice::getId));
+		options.addAll(pinnedOptions);
+		options.addAll(standardOptions);
 		return options;
 	}
 
@@ -84,8 +95,14 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
 			String facts = variantStrings.get("hull_size") + ": " + size + " - "
 					+ variantStrings.get("base_deployment_points") + ": " + hull.getSuppliesToRecover();
-			BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.hull(
-					option.getLabel(), option.getId(), hull, Global.getSettings(), List.of(facts)));
+			List<String> properties = List.of(facts,
+					variantStrings.get("flux_capacitors") + ": " + variant.getNumFluxCapacitors(),
+					variantStrings.get("flux_vents") + ": " + variant.getNumFluxVents());
+			List<List<String>> sections = List.of(weaponSection(variant, option.getId()),
+					wingSection(variant, option.getId()), moduleSection(variant, option.getId()),
+					hullmodSection(variant, option.getId()));
+			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
+					option.getLabel(), option.getId(), "", properties), sections);
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.degraded",
 				BattleNext_Logger.fields().put("variant_id", option.getId()).put("name", option.getLabel()).build(), exception);
@@ -93,6 +110,130 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 					option.getLabel(), option.getId(), "", List.of(exception.toString())));
 		}
 	}
+
+	private List<String> weaponSection(ShipVariantAPI variant, String selectionId) {
+
+		Map<String, Integer> counts = new TreeMap<>();
+		Map<String, String> names = new TreeMap<>();
+		for (String slot : variant.getFittedWeaponSlots()) {
+			counts.merge(variant.getWeaponId(slot), 1, Integer::sum);
+		}
+		for (String id : counts.keySet()) {
+			BattleNext_WeaponDisplay.Visual display = BattleNext_WeaponDisplay.resolve(id, Global.getSettings());
+			String name = display.name();
+			if (!display.resolved()) {
+				BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.weapon.unavailable",
+						BattleNext_Logger.fields().put("variant_id", selectionId).put("weapon_id", id)
+								.put("count", counts.get(id)).put("fallback", id).build());
+				name = commonStrings.get("unavailable") + ": " + id;
+			}
+			names.put(id, name);
+		}
+		return countedSection(variantStrings.get("weapons"), counts, names);
+	}
+
+	private List<String> wingSection(ShipVariantAPI variant, String selectionId) {
+
+		Map<String, Integer> counts = new TreeMap<>();
+		Map<String, String> names = new TreeMap<>();
+		for (String id : variant.getFittedWings()) {
+			counts.merge(id, 1, Integer::sum);
+		}
+		for (String id : counts.keySet()) {
+			try {
+				var spec = Global.getSettings().getFighterWingSpec(id);
+				if (spec == null) throw new IllegalArgumentException("Unknown fighter wing: " + id);
+				String name = spec.getWingName();
+				if (name == null || name.isBlank()) throw new IllegalArgumentException("Missing fighter wing name: " + id);
+				names.put(id, name);
+			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.wing.unavailable",
+						BattleNext_Logger.fields().put("variant_id", selectionId).put("wing_id", id)
+								.put("count", counts.get(id)).put("fallback", id).build(), exception);
+				names.put(id, commonStrings.get("unavailable") + ": " + id);
+			}
+		}
+		return countedSection(variantStrings.get("fighter_wings"), counts, names);
+	}
+
+	private List<String> moduleSection(ShipVariantAPI variant, String selectionId) {
+
+		Map<String, Integer> counts = new TreeMap<>();
+		Map<String, String> names = new TreeMap<>();
+		for (var entry : new TreeMap<>(variant.getStationModules()).entrySet()) {
+			String id = entry.getValue();
+			String name;
+			try {
+				ShipVariantAPI module = variant.getModuleVariant(entry.getKey());
+				if (module == null) throw new IllegalArgumentException("Missing module variant: " + id);
+				ShipHullSpecAPI hull = module.getHullSpec();
+				if (hull == null) throw new IllegalArgumentException("Missing module hull: " + id);
+				id = hull.getHullId();
+				name = hull.getHullName();
+				if (name == null || name.isBlank()) throw new IllegalArgumentException("Missing module hull name: " + id);
+			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.module.unavailable",
+						BattleNext_Logger.fields().put("variant_id", selectionId).put("module_slot", entry.getKey())
+								.put("module_variant_id", entry.getValue()).put("object_id", id)
+								.put("fallback", id).build(), exception);
+				name = commonStrings.get("unavailable") + ": " + id;
+			}
+			counts.merge(id, 1, Integer::sum);
+			names.put(id, name);
+		}
+		return countedSection(variantStrings.get("modules"), counts, names);
+	}
+
+	private List<String> hullmodSection(ShipVariantAPI variant, String selectionId) {
+
+		Set<String> ids = new TreeSet<>(variant.getHullMods());
+		Set<String> builtIns = new TreeSet<>(variant.getHullSpec().getBuiltInMods());
+		Set<String> permanent = variant.getPermaMods();
+		Set<String> sMods = variant.getSMods();
+		Set<String> builtInSMods = variant.getSModdedBuiltIns();
+		Set<String> suppressed = variant.getSuppressedMods();
+		ids.addAll(builtIns);
+		ids.addAll(permanent);
+		ids.addAll(sMods);
+		ids.addAll(builtInSMods);
+		ids.addAll(suppressed);
+		List<String> rows = new ArrayList<>();
+		for (String id : ids) {
+			List<String> states = new ArrayList<>();
+			if (builtIns.contains(id)) states.add(variantStrings.get("built_in"));
+			if (permanent.contains(id)) states.add(variantStrings.get("permanent"));
+			if (sMods.contains(id)) states.add(variantStrings.get("s_mod"));
+			if (builtInSMods.contains(id)) states.add(variantStrings.get("built_in_s_mod"));
+			if (suppressed.contains(id)) states.add(variantStrings.get("suppressed"));
+			String name;
+			try {
+				HullModSpecAPI spec = Global.getSettings().getHullModSpec(id);
+				if (spec == null) throw new IllegalArgumentException("Unknown hullmod: " + id);
+				if (spec.isHiddenEverywhere()) continue;
+				if (spec.hasTag(Tags.HULLMOD_DMOD)) states.add(variantStrings.get("d_mod"));
+				name = spec.getDisplayName();
+				if (name == null || name.isBlank()) throw new IllegalArgumentException("Missing hullmod name: " + id);
+			} catch (RuntimeException exception) {
+				BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.hullmod.unavailable",
+						BattleNext_Logger.fields().put("variant_id", selectionId).put("hullmod_id", id)
+								.put("states", states).put("fallback", id).build(), exception);
+				name = commonStrings.get("unavailable") + ": " + id;
+			}
+			rows.add(name + (states.isEmpty() ? "" : " [" + String.join(", ", states) + "]"));
+		}
+		rows.add(0, variantStrings.get("hullmods") + ": " + rows.size());
+		return rows;
+	}
+
+	private List<String> countedSection(String title, Map<String, Integer> counts, Map<String, String> names) {
+		List<String> rows = new ArrayList<>();
+		rows.add(title + ": " + counts.values().stream().mapToInt(Integer::intValue).sum());
+		for (var entry : counts.entrySet()) {
+			rows.add(names.get(entry.getKey()) + " ×" + entry.getValue());
+		}
+		return rows;
+	}
+
 	public ShipVariantAPI resolve(String id) {
 		if (!id.startsWith(PINNED_PREFIX)) return Global.getSettings().getVariant(id);
 		if (!pinnedVariants.isLoaded()) {

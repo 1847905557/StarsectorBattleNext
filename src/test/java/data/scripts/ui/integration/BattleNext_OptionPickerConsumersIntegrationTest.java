@@ -145,9 +145,9 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 	}
 
 	@ParameterizedTest
-	@CsvSource({"commander,480,Sensors,sensors", "officer,480,Sensors,sensors",
+	@CsvSource({"commander,520,Sensors,sensors", "officer,520,Sensors,sensors",
 			"variant,360,Parent - Unsubmitted,parent_variant", "personality,360,Steady,steady",
-			"portrait,480,Hegemony,graphics/portraits/hegemony.png", "tournament,360,Fleet name,fleet_id",
+			"portrait,520,Hegemony,graphics/portraits/hegemony.png", "tournament,360,Fleet name,fleet_id",
 			"smod,360,Hullmod ordinary,ordinary", "dmod,360,Hullmod damaged,damaged",
 			"restriction,360,Fleet limit 20%,limit"})
 	void allNineConsumersUseTheirNativeWidthIdentityAndCompleteText(String kind, int width,
@@ -177,7 +177,23 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		assertEquals(id, ((LabelAPI) components.get(1)).getText());
 		assertEquals("small-insignia", labelFonts.get(components.get(1).getPosition()));
 		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(components.get(1).getPosition()));
-		if (List.of("tournament", "restriction").contains(kind)) {
+		if (kind.equals("variant")) {
+			assertTrue(((LabelAPI) components.get(2)).getText().contains("BattleNext_variant_base_deployment_points"));
+			assertEquals("BattleNext_variant_flux_capacitors: 0", ((LabelAPI) components.get(3)).getText());
+			assertEquals("BattleNext_variant_flux_vents: 0", ((LabelAPI) components.get(4)).getText());
+			List<String> values = components.stream().filter(LabelAPI.class::isInstance)
+					.map(LabelAPI.class::cast).map(LabelAPI::getText).toList();
+			assertTrue(values.contains("BattleNext_variant_weapons: 1"));
+			assertTrue(values.contains("Weapon laser ×1"));
+			assertTrue(values.contains("BattleNext_variant_fighter_wings: 1"));
+			assertTrue(values.contains("BattleNext_variant_modules: 1"));
+			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
+			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
+		} else if (List.of("smod", "dmod").contains(kind)) {
+			assertEquals(PARAGRAPH + "\nSecond paragraph", ((LabelAPI) components.get(2)).getText());
+			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
+			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
+		} else if (List.of("tournament", "restriction").contains(kind)) {
 			assertEquals(2, components.size());
 		} else {
 			assertEquals(PARAGRAPH, ((LabelAPI) components.get(2)).getText());
@@ -190,9 +206,6 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		if (kind.equals("smod")) assertEquals("S-mod effect 50%.", ((LabelAPI) components.get(3)).getText());
 		if (kind.equals("dmod")) {
 			assertTrue(((LabelAPI) components.get(3)).getText().contains("BattleNext_refit_d_mod_"));
-		}
-		if (kind.equals("variant")) {
-			assertTrue(((LabelAPI) components.get(3)).getText().contains("BattleNext_variant_base_deployment_points"));
 		}
 		picker.closeOverlays();
 		assertNull(getField(picker, "popup"));
@@ -256,9 +269,17 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			case "getId" -> id;
 			case "getDisplayName" -> "Hullmod " + id;
 			case "getSpriteName" -> "graphics/mod.png";
-			case "getDescription" -> PARAGRAPH + "\nSecond paragraph";
+			case "getDescriptionFormat" -> PARAGRAPH.replace("%", "%%") + "\nSecond paragraph";
 			case "hasTag" -> id.equals("damaged") && arguments[0].equals("dmod");
-			case "getEffect" -> proxy(HullModEffect.class, (name, values) -> name.equals("hasSModEffect"));
+			case "getEffect" -> proxy(HullModEffect.class, (name, values) -> switch (name) {
+				case "shouldAddDescriptionToTooltip" -> true;
+				case "hasSModEffect" -> !id.equals("damaged");
+				case "addSModSection" -> {
+					((TooltipMakerAPI) values[0]).addPara("S-mod effect 50%.", BattleNext_UiTheme.TEXT, 8f);
+					yield null;
+				}
+				default -> null;
+			});
 			case "getSModEffectFormat" -> "Effect";
 			case "getSModDescription" -> "S-mod effect 50%.";
 			default -> null;

@@ -12,6 +12,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_HullModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
@@ -168,9 +169,9 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 				new Class<?>[]{HullModSpecAPI.class}, (instance, method, args) ->
 						"hasTag".equals(method.getName()) && "notPhase".equals(args[0]));
 		withSettings(null, () -> {
-			assertFalse(BattleNext_RefitDModSourceProvider.isSuitableFor(
+			assertFalse(BattleNext_HullModSourceProvider.isSuitableFor(
 					new VariantState(phase, Set.of()).api, noPhaseDMod));
-			assertTrue(BattleNext_RefitDModSourceProvider.isSuitableFor(
+			assertTrue(BattleNext_HullModSourceProvider.isSuitableFor(
 					new VariantState(ordinary, Set.of()).api, noPhaseDMod));
 		});
 	}

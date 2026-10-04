@@ -126,7 +126,7 @@ class BattleNext_BaseSourceProviderTest {
 		}
 
 		@Override
-		public int getMaxCount(String id) {
+		public int getMaxStack(String id) {
 			return 1;
 		}
 

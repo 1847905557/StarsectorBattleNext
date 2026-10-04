@@ -44,7 +44,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 				return choices;
 			}
 			@Override
-			public int getMaxCount(String id) {
+			public int getMaxStack(String id) {
 				return 1;
 			}
 			@Override
