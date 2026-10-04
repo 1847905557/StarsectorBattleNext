@@ -150,7 +150,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			startTournament();
 		} else if ("tournament:authorize".equals(buttonId)) {
 			BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
-			BattleNext_Match next = tournament == null ? null : nextMatch(tournament);
+			BattleNext_Match next = tournament == null ? null : tournament.getNextPendingMatch();
 			if (next != null) {
 				provider.load();
 				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
@@ -256,7 +256,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
 			}
 		}
-		BattleNext_Match next = nextMatch(tournament);
+		BattleNext_Match next = tournament.getNextPendingMatch();
 		List<String> warnings = new ArrayList<>();
 		boolean authorizeAvailable = false;
 
@@ -336,13 +336,4 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		refreshContent();
 	}
 
-	private BattleNext_Match nextMatch(BattleNext_TournamentModel tournament) {
-		if (!tournament.isStarted() || tournament.isCompleted()) return null;
-		BattleNext_Match pending = tournament.findMatch(tournament.getPendingMatchId());
-		if (pending != null && pending.getStatus() == BattleNext_Match.MatchStatus.PENDING) return pending;
-		for (BattleNext_Match match : tournament.getMatches()) {
-			if (match.getStatus() == BattleNext_Match.MatchStatus.PENDING && !match.getEnemy().isEmpty()) return match;
-		}
-		return null;
-	}
 }

@@ -239,6 +239,13 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				case "setTitleOrbitronLarge" -> { titleFont = "large-orbitron"; yield null; }
 				case "setParaFontColor" -> { paraColor = (Color) args[0]; yield null; }
 				case "setTitleFontColor" -> { titleColor = (Color) args[0]; yield null; }
+				case "createLabel" -> {
+					LabelAPI label = label((String) args[0], (Float) args[2]);
+					labels.add((String) args[0]);
+					labelFonts.put(label.getPosition(), paraFont);
+					labelColors.put(label.getPosition(), (Color) args[1]);
+					yield label;
+				}
 				case "addTitle", "addPara", "addSectionHeading" -> {
 					String value = (String) args[0];
 					String[] highlights = args[args.length - 1] instanceof String[] values ? values : new String[0];
@@ -295,8 +302,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					textWidth = (Float) args[0];
 					yield null;
 				}
-				case "createRect" -> proxy(UIComponentAPI.class, (name, values) ->
-						"getPosition".equals(name) ? position(1f, 1f) : null);
+				case "createRect" -> {
+					PositionAPI rectangle = position(1f, 1f);
+					yield proxy(UIComponentAPI.class, (name, values) -> "getPosition".equals(name) ? rectangle : null);
+				}
 				case "addCustomDoNotSetPosition" -> {
 					geometry.get(((UIComponentAPI) args[0]).getPosition()).parent = position;
 					components.add((UIComponentAPI) args[0]);

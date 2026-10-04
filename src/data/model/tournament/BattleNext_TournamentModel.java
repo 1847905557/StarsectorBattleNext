@@ -315,6 +315,16 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		return null;
 	}
 
+	public BattleNext_Match getNextPendingMatch() {
+		if (!started || completed) return null;
+		BattleNext_Match pending = findMatch(pendingMatchId);
+		if (pending != null && pending.getStatus() == BattleNext_Match.MatchStatus.PENDING) return pending;
+		for (BattleNext_Match match : matches) {
+			if (match.getStatus() == BattleNext_Match.MatchStatus.PENDING && !match.getEnemy().isEmpty()) return match;
+		}
+		return null;
+	}
+
 	public void clearMatches() {
 		if (!started) {
 			matches.clear();

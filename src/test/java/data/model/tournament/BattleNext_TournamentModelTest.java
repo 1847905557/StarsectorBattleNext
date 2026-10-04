@@ -139,4 +139,70 @@ class BattleNext_TournamentModelTest {
 		assertEquals(7, tournament.getPlayableMatchTotal());
 		assertEquals(1073741824, tournament.getWinTarget());
 	}
+
+	@Test
+	void nextPendingMatchPrefersTheValidReferenceAndLeavesProgressUntouched() throws Exception {
+		var tournament = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.ROUND_ROBIN, 3, 3);
+		tournament.setFleetIds(List.of("a", "b", "c"));
+		var first = new BattleNext_Match("first", "a", "b", 1, 1);
+		var selected = new BattleNext_Match("selected", "b", "c", 1, 1);
+		tournament.addMatch(first);
+		tournament.addMatch(selected);
+		tournament.setStarted(true);
+		tournament.setPendingMatchId("selected");
+		String before = tournament.toJson().toString();
+		for (int iteration = 0; iteration < 3; iteration++) {
+			assertSame(selected, tournament.getNextPendingMatch());
+			assertEquals(before, tournament.toJson().toString());
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "missing", "finished"})
+	void nextPendingMatchUsesStablePlayableOrderWhenReferenceIsUnavailable(String pendingId) throws Exception {
+		var tournament = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 3);
+		tournament.setFleetIds(List.of("a", "b", "c"));
+		var bye = new BattleNext_Match("bye", "a", "", 1, 1);
+		var finished = new BattleNext_Match("finished", "a", "b", 1, 1);
+		finished.setStatus(BattleNext_Match.MatchStatus.COMPLETE);
+		var first = new BattleNext_Match("first", "a", "c", 1, 1);
+		var second = new BattleNext_Match("second", "b", "c", 1, 1);
+		for (BattleNext_Match match : List.of(bye, finished, first, second)) {
+			tournament.addMatch(match);
+		}
+		tournament.setStarted(true);
+		tournament.setPendingMatchId(pendingId);
+		String before = tournament.toJson().toString();
+		assertSame(first, tournament.getNextPendingMatch());
+		assertEquals(before, tournament.toJson().toString());
+		first.setStatus(BattleNext_Match.MatchStatus.COMPLETE);
+		assertSame(second, tournament.getNextPendingMatch());
+		second.setStatus(BattleNext_Match.MatchStatus.COMPLETE);
+		before = tournament.toJson().toString();
+		assertNull(tournament.getNextPendingMatch());
+		assertEquals(before, tournament.toJson().toString());
+	}
+
+	@Test
+	void nextPendingMatchObservesUnstartedCompletedAndEmptyLifecycles() throws Exception {
+		var tournament = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		tournament.setFleetIds(List.of("a", "b"));
+		var match = new BattleNext_Match("match", "a", "b", 1, 1);
+		tournament.addMatch(match);
+		tournament.setPendingMatchId("match");
+		String before = tournament.toJson().toString();
+		assertNull(tournament.getNextPendingMatch());
+		assertEquals(before, tournament.toJson().toString());
+		tournament.setStarted(true);
+		assertSame(match, tournament.getNextPendingMatch());
+		tournament.setCompleted(true);
+		before = tournament.toJson().toString();
+		assertNull(tournament.getNextPendingMatch());
+		assertEquals(before, tournament.toJson().toString());
+		tournament.setCompleted(false);
+		tournament.clearGeneratedMatches();
+		before = tournament.toJson().toString();
+		assertNull(tournament.getNextPendingMatch());
+		assertEquals(before, tournament.toJson().toString());
+	}
 }

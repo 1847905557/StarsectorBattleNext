@@ -7,14 +7,20 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -30,6 +36,8 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
 	private final BattleNext_RuleStore ruleStore = new BattleNext_RuleStore();
 	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
+	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
+	private BattleNext_TournamentDisplay tournamentDisplay;
 
 	private String selectedId = "";
 	private boolean draftOpen;
@@ -114,7 +122,29 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildDetail(CustomPanelAPI contentPanel) {
-		editor.attach(contentPanel);
+
+		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
+		if (tournament == null || !tournament.isStarted()) {
+			editor.attach(contentPanel);
+			return;
+		}
+		Map<String, String> fleetNames = new LinkedHashMap<>();
+		for (String fleetId : tournament.getFleetIds()) {
+			if (fleetStore.get(fleetId) != null) {
+				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
+			}
+		}
+		BattleNext_Match next = tournament.getNextPendingMatch();
+		List<String> warnings = new ArrayList<>();
+		if (selectedId.equals(tournamentStore.getActiveId()) && next != null) {
+			provider.load();
+			warnings.addAll(provider.getWarnings());
+			warnings.addAll(provider.getRuleWarnings());
+		}
+		BattleNext_TournamentDisplay.Details details = new BattleNext_TournamentDisplay.Details(fleetNames,
+				ruleStore.get(tournament.getRuleId()) != null, next, status, warnings, false, false);
+		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, this::buttonPressed);
+		tournamentDisplay.attach(contentPanel);
 	}
 
 	@Override
@@ -150,6 +180,14 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected void clearPageOverlays() {
 		editor.closePicker();
+	}
+
+	@Override
+	protected void clearPageResources() {
+		if (tournamentDisplay != null) {
+			tournamentDisplay.close();
+			tournamentDisplay = null;
+		}
 	}
 
 	@Override
@@ -258,6 +296,10 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		if (tournamentDisplay != null) {
+			tournamentDisplay.handleGlobalInput(events);
+			return false;
+		}
 		return draftOpen && editor.handleGlobalInput(events);
 	}
 
