@@ -5,6 +5,8 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
@@ -16,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.List;
 
 class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 
@@ -60,13 +64,14 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		fleets.reload();
 		rules.reload();
 		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournaments, fleets, rules);
-		editor.open(null);
+		BattleNext_TournamentModel missing = new BattleNext_TournamentModel("tournament", "Tournament", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		missing.setFleetIds(List.of("first", "second"));
+		editor.open(missing);
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.setInputRouter(router);
 		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("tournament");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Tournament");
-		((TextFieldAPI) getField(editor, "fleetField")).setText("first,second");
 		assertFalse(editor.serialize());
 		assertEquals("BattleNext_tournament_invalid_participant_fleet: first", editor.getStatusText());
 		editor.closePicker();

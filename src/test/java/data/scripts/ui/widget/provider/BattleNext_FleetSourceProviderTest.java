@@ -12,10 +12,11 @@ import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
-import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -95,13 +96,13 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI root = panel(1000f, 900f, new BaseCustomUIPanelPlugin());
 		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(
 				new BattleNext_TournamentStore(), store, new BattleNext_RuleStore());
-		editor.open(null);
+		BattleNext_TournamentModel draft = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		draft.setFleetIds(List.of("first_50%"));
+		editor.open(draft);
 		editor.setInputRouter(router);
 		editor.attach(root);
-		BattleNext_OptionField field = (BattleNext_OptionField) getField(editor, "fleetPicker");
-		field.getField().setText("first_50%");
 		for (int cycle = 0; cycle < 3; cycle++) {
-			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(field, "picker");
+			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "fleetPicker");
 			var source = getField(picker, "source");
 			assertInstanceOf(BattleNext_FleetSourceProvider.class, source);
 			assertSame(store, getField(source, "fleetStore"));
@@ -128,17 +129,18 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 			selection.clear();
 			selection.put("second", 1);
 			plugins.get(popup).buttonPressed(buttonIds.get(cycle == 1 ? "CONFIRM" : "CANCEL"));
-			assertEquals(cycle == 0 ? "first_50%" : "second", field.getField().getText());
+			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
+					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
 			assertTrue(router.isEmpty());
 			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
 			editor.refreshContent();
 			assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
-			field = (BattleNext_OptionField) getField(editor, "fleetPicker");
-			assertEquals(cycle == 0 ? "first_50%" : "second", field.getField().getText());
+			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
+					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
 		}
-		field.close();
+		editor.releaseResources();
 		router.clear();
-		assertTrue(((List<?>) getField(field, "ownedPanels")).isEmpty());
+		assertNull(getField(editor, "fleetPicker"));
 		assertFalse(router.getSession().hasInputState());
 	}
 

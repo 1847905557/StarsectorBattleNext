@@ -51,8 +51,6 @@
 		"BattleNext_common_duplicate_id": "An entry already uses this ID",
 		"BattleNext_common_enabled": "Enabled",
 		"BattleNext_common_load_failed": "Load failed",
-		"BattleNext_common_move_down": "Move down",
-		"BattleNext_common_move_up": "Move up",
 		"BattleNext_common_picker_no_options": "No matching options",
 		"BattleNext_common_picker_search": "Search",
 		"BattleNext_common_ready": "Ready",
@@ -164,7 +162,6 @@
 		"BattleNext_rule_add_restriction": "Add restriction",
 		"BattleNext_rule_editor_title": "Rule set",
 		"BattleNext_rule_empty": "No rules are available",
-		"BattleNext_rule_fleet_validation": "Fleet validation",
 		"BattleNext_rule_force_start_match": "Start this match anyway",
 		"BattleNext_rule_id": "Rule set ID",
 		"BattleNext_rule_invalid_id": "Rule set ID is invalid",
@@ -193,7 +190,7 @@
 		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in Mission Battle"
 	},
 	"Tournament": {
-		"BattleNext_tournament_apply_participant_selection": "Apply selection",
+		"BattleNext_tournament_add_fleet": "Add fleet",
 		"BattleNext_tournament_best_of_count": "BO count",
 		"BattleNext_tournament_bracket": "Bracket",
 		"BattleNext_tournament_bracket_double_elimination": "Double elimination",
@@ -221,6 +218,7 @@
 		"BattleNext_tournament_context_label": "Tournament",
 		"BattleNext_tournament_editor_title": "Tournament is editable",
 		"BattleNext_tournament_empty": "No tournaments are available",
+		"BattleNext_tournament_fleet": "Fleet",
 		"BattleNext_tournament_format": "Format",
 		"BattleNext_tournament_id": "Tournament ID",
 		"BattleNext_tournament_invalid_configuration": "Bracket, BO count, fleet limit or map is invalid",
@@ -229,7 +227,6 @@
 		"BattleNext_tournament_locked_message": "Teams and format are locked",
 		"BattleNext_tournament_match_status_complete": "Complete",
 		"BattleNext_tournament_match_status_pending": "Pending",
-		"BattleNext_tournament_matches": "Matches",
 		"BattleNext_tournament_max_fleets": "Maximum fleets",
 		"BattleNext_tournament_missing": "Selected tournament is missing",
 		"BattleNext_tournament_missing_detail": "Choose Quick Battle or another tournament to continue.",
@@ -255,7 +252,9 @@
 		"BattleNext_tournament_status_completed": "Completed; no match is available",
 		"BattleNext_tournament_status_in_progress": "In progress",
 		"BattleNext_tournament_status_not_started": "Not started; no match is available",
-		"BattleNext_tournament_summary": "Tournament summary"
+		"BattleNext_tournament_summary": "Tournament summary",
+		"BattleNext_tournament_valid": "Valid",
+		"BattleNext_tournament_validation_failed": "Fleet validation failed"
 	},
 	"Variant": {
 		"BattleNext_variant_autofire_disabled": "Autofire disabled",

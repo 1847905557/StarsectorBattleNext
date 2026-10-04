@@ -1,6 +1,7 @@
 package data.test.fixture;
 
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
@@ -9,6 +10,8 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
+import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,10 +23,24 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
+
+	protected void confirmTournamentFleets(BattleNext_TournamentEditor editor, List<String> ids) throws Exception {
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "fleetPicker");
+		CustomPanelAPI row = (CustomPanelAPI) getField(picker, "row");
+		plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
+		Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
+		selection.clear();
+		for (String id : ids) {
+			selection.put(id, 1);
+		}
+		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+		plugins.get(popup).buttonPressed(buttonIds.get("CONFIRM"));
+	}
 
 	protected BattleNext_PinnedVariantPage page(BattleNext_PinnedVariantStore store,
 			Consumer<Runnable> navigation,

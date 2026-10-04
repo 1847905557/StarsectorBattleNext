@@ -184,6 +184,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void clearPageResources() {
+		editor.releaseResources();
 		if (tournamentDisplay != null) {
 			tournamentDisplay.close();
 			tournamentDisplay = null;

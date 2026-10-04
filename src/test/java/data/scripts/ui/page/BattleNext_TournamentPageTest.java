@@ -330,8 +330,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		((TextFieldAPI) getField(editor, "idField")).setText("created");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Created cup");
 		((TextFieldAPI) getField(editor, "maxFleetField")).setText("3");
-		((TextFieldAPI) getField(editor, "fleetField")).setText("first,second,third");
-		page.buttonPressed("fleet:apply");
+		confirmTournamentFleets(editor, List.of("first", "second", "third"));
 		assertTrue(page.hasUnsavedChanges());
 		page.buttonPressed("save");
 		assertFalse(page.hasUnsavedChanges());

@@ -245,7 +245,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			editor.open(null);
 			editor.setInputRouter(router);
 			editor.attach(root);
-			field = (BattleNext_OptionField) getField(editor, "fleetPicker");
+			return (BattleNext_OptionPicker) getField(editor, "fleetPicker");
 		} else if (kind.equals("restriction")) {
 			var editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 			editor.open(null);
