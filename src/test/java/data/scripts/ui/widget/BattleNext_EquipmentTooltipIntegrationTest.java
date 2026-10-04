@@ -242,14 +242,17 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		var components = tooltips.get(hover).getComponents();
 		for (int index = 0; index < values.size(); index++) {
 			var position = components.get(index).getPosition();
+			String text = values.get(index);
+			boolean heading = Set.of("BattleNext_variant_weapons:", "BattleNext_variant_fighter_wings:",
+					"BattleNext_variant_modules:", "BattleNext_variant_hullmods:").stream().anyMatch(text::startsWith);
 			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default",
 					labelFonts.get(position));
-			assertEquals(index == 0 ? BattleNext_UiTheme.ACCENT : index == 1
+			assertEquals(index == 0 || heading ? BattleNext_UiTheme.ACCENT : index == 1
 					? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index == 0) continue;
 			var previous = components.get(index - 1).getPosition();
-			boolean sectionRow = index > 4 && !values.get(index).startsWith("BattleNext_variant_");
-			assertEquals(index == 1 ? 5f : sectionRow ? 2f : 8f,
+			boolean sectionRow = index > 4 && !heading;
+			assertEquals(index == 1 ? 5f : index == 4 || sectionRow ? 2f : 8f,
 					previous.getY() - position.getY() - position.getHeight());
 		}
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());

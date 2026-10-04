@@ -12,10 +12,13 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip.VariantSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionSelectionMode;
@@ -38,6 +41,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -169,16 +173,100 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 	}
 
 	@Test
-	void emptyVariantRetainsEverySectionWithZeroTotals() throws Exception {
+	void emptyVariantRetainsEveryZeroTotalInTheFinalSummary() throws Exception {
 
 		Variant empty = variant("empty", configuredHull("empty_hull", "Empty", List.of(), false));
 		registeredVariants.put("empty", empty.getApi());
 		assertEquals(List.of("Properties", "empty",
 				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
 				"BattleNext_variant_flux_capacitors: 0", "BattleNext_variant_flux_vents: 0",
-				"BattleNext_variant_weapons: 0", "BattleNext_variant_fighter_wings: 0",
-				"BattleNext_variant_modules: 0", "BattleNext_variant_hullmods: 0"),
+				"BattleNext_variant_weapons: 0 · BattleNext_variant_fighter_wings: 0 · BattleNext_variant_modules: 0 · BattleNext_variant_hullmods: 0"),
 				show(new BattleNext_VariantSourceProvider(), "empty"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})
+	void everyEmptySectionCombinationUsesColoredHeadingsAndAFinalMutedSummary(int mask) throws Exception {
+
+		String id = "combination_" + mask;
+		Variant selected = variant(id, configuredHull(id + "_hull", "Combination", List.of("module"), false));
+		if ((mask & 1) != 0) {
+			selected.getApi().addWeapon("slot", "weapon");
+		}
+		if ((mask & 2) != 0) {
+			selected.getApi().setWingId(0, "wing");
+		}
+		if ((mask & 4) != 0) {
+			selected.getApi().setModuleVariant("module",
+					variant("module_variant", configuredHull("module_hull", "Module", List.of(), false)).getApi());
+		}
+		if ((mask & 8) != 0) {
+			selected.getApi().addMod("ordinary");
+		}
+		registeredVariants.put(id, selected.getApi());
+		TooltipMakerAPI hover = tooltip(360f, 0f, false);
+		new BattleNext_VariantSourceProvider().createTooltip(hover, new OptionChoice(id, "Properties"));
+		List<String> expected = new ArrayList<>(List.of("Properties", id,
+				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
+				"BattleNext_variant_flux_capacitors: 0", "BattleNext_variant_flux_vents: 0"));
+		List<String> titles = List.of("BattleNext_variant_weapons", "BattleNext_variant_fighter_wings",
+				"BattleNext_variant_modules", "BattleNext_variant_hullmods");
+		List<String> rows = List.of("Same weapon ×1", "Same wing ×1", "Module ×1", "Mod ordinary");
+		Set<String> headings = new HashSet<>();
+		List<String> empty = new ArrayList<>();
+		for (int index = 0; index < titles.size(); index++) {
+			if ((mask & (1 << index)) != 0) {
+				String heading = titles.get(index) + ": 1";
+				headings.add(heading);
+				expected.add(heading);
+				expected.add(rows.get(index));
+			} else {
+				empty.add(titles.get(index) + ": 0");
+			}
+		}
+		String summary = String.join(" · ", empty);
+		if (!empty.isEmpty()) {
+			expected.add(summary);
+		}
+		List<LabelAPI> rendered = tooltips.get(hover).getComponents().stream()
+				.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).toList();
+		assertEquals(expected, rendered.stream().map(LabelAPI::getText).toList());
+		assertEquals("small-orbitron", labelFonts.get(rendered.get(0).getPosition()));
+		assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(rendered.get(0).getPosition()));
+		assertEquals("small-insignia", labelFonts.get(rendered.get(1).getPosition()));
+		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(rendered.get(1).getPosition()));
+		for (int index = 2; index < rendered.size(); index++) {
+			LabelAPI label = rendered.get(index);
+			boolean heading = headings.contains(label.getText());
+			boolean footer = !empty.isEmpty() && index == rendered.size() - 1;
+			assertEquals("default", labelFonts.get(label.getPosition()));
+			assertEquals(footer ? BattleNext_UiTheme.MUTED : heading ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT,
+					labelColors.get(label.getPosition()));
+			var previous = rendered.get(index - 1).getPosition();
+			float gap = previous.getY() - label.getPosition().getY() - label.getPosition().getHeight();
+			boolean row = index > 4 && !heading && !footer;
+			assertEquals(index == 4 || row ? 2f : 8f, gap);
+		}
+		if (!empty.isEmpty()) {
+			assertEquals(summary, rendered.get(rendered.size() - 1).getText());
+			if (mask == 0) {
+				assertTrue(rendered.get(rendered.size() - 1).getPosition().getHeight() > paragraphLineHeight);
+			}
+		}
+		var components = tooltips.get(hover).getComponents();
+		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
+		assertTrue(appender.events.isEmpty());
+	}
+
+	@Test
+	void structuredSectionKeepsAnImmutableSnapshotOfItsRowsAndExplicitCount() {
+		List<String> rows = new ArrayList<>(List.of("Name with : 0 ×2", "Other name ×1"));
+		VariantSection section = new VariantSection("Weapons", 3, rows);
+		rows.clear();
+		assertEquals("Weapons", section.title());
+		assertEquals(3, section.count());
+		assertEquals(List.of("Name with : 0 ×2", "Other name ×1"), section.rows());
+		assertThrows(UnsupportedOperationException.class, () -> section.rows().clear());
 	}
 
 	@ParameterizedTest

@@ -28,15 +28,17 @@ public class BattleNext_EquipmentTooltip {
 
 	public record Content(String title, String id, String description, List<String> notes) { }
 
+	public record VariantSection(String title, int count, List<String> rows) {
+		public VariantSection {
+			rows = List.copyOf(rows);
+		}
+	}
+
 	private BattleNext_EquipmentTooltip() {
 
 	}
 
 	public static void render(TooltipMakerAPI tooltip, Content content) {
-		render(tooltip, content, List.of());
-	}
-
-	public static void render(TooltipMakerAPI tooltip, Content content, List<List<String>> sections) {
 
 		renderHeader(tooltip, content.title(), content.id());
 		String paragraph = firstParagraph(content.description());
@@ -45,10 +47,30 @@ public class BattleNext_EquipmentTooltip {
 			if (note == null || note.isBlank()) continue;
 			tooltip.addPara(note, BattleNext_UiTheme.TEXT, BODY_GAP);
 		}
-		for (List<String> section : sections) {
-			for (int index = 0; index < section.size(); index++) {
-				tooltip.addPara(section.get(index), BattleNext_UiTheme.TEXT, index == 0 ? BODY_GAP : ROW_GAP);
+		tooltip.addSpacer(BOTTOM_INSET);
+	}
+
+	public static void renderVariant(TooltipMakerAPI tooltip, Content content, List<VariantSection> sections) {
+
+		renderHeader(tooltip, content.title(), content.id());
+		tooltip.addPara(content.description(), BattleNext_UiTheme.TEXT, BODY_GAP);
+		for (int index = 0; index < content.notes().size(); index++) {
+			tooltip.addPara(content.notes().get(index), BattleNext_UiTheme.TEXT, index == 0 ? BODY_GAP : ROW_GAP);
+		}
+		List<String> emptySections = new ArrayList<>();
+		for (VariantSection section : sections) {
+			String heading = section.title() + ": " + section.count();
+			if (section.count() == 0) {
+				emptySections.add(heading);
+				continue;
 			}
+			tooltip.addPara(heading, BattleNext_UiTheme.ACCENT, BODY_GAP);
+			for (String row : section.rows()) {
+				tooltip.addPara(row, BattleNext_UiTheme.TEXT, ROW_GAP);
+			}
+		}
+		if (!emptySections.isEmpty()) {
+			tooltip.addPara(String.join(" · ", emptySections), BattleNext_UiTheme.MUTED, BODY_GAP);
 		}
 		tooltip.addSpacer(BOTTOM_INSET);
 	}
