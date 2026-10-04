@@ -82,7 +82,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float POPUP_GRID_HEIGHT_RESERVE = 90f;
 	private static final float SEARCH_LABEL_TOP_INSET = 6f;
 	private static final float SEARCH_LABEL_WIDTH = 80f;
-	private static final float SEARCH_FIELD_WIDTH_RESERVE = 96f;
 	private static final float TILE_CONTENT_INSET = 2f;
 	private static final float TILE_ICON_SIZE = 60f;
 	private static final float TILE_LABEL_TRUNCATION_WIDTH = 54f;
@@ -243,7 +242,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		popup = ownPanel(overlayHost, panelOwner.createCustomPanel(width, height, new OptionPickerPopupPlugin()));
 		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, POPUP_BORDER_THICKNESS);
-		popup.addUIElement(searchElement(width)).inTL(POPUP_INSET, POPUP_INSET);
+		popup.addUIElement(searchElement(width)).inTL(2f * POPUP_INSET, POPUP_INSET);
 		float buttonWidth = Math.min(POPUP_ACTION_MAX_WIDTH, (width - 3f * POPUP_INSET) * 0.5f);
 		float buttonY = height - POPUP_ACTION_BOTTOM_RESERVE;
 		BattleNext_PageLayout.fixedButton(popup,
@@ -288,20 +287,29 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 	private TooltipMakerAPI searchElement(float width) {
 
-		TooltipMakerAPI searchBar = popup.createUIElement(width - 2f * POPUP_INSET, SEARCH_HEIGHT, false);
+		int columns = gridColumns(width);
+		float contentWidth = columns * TILE_SIZE + (columns - 1) * TILE_GAP;
+		float labelWidth = Math.min(SEARCH_LABEL_WIDTH, contentWidth * 0.5f);
+		float fieldWidth = contentWidth - labelWidth;
+		TooltipMakerAPI searchBar = popup.createUIElement(contentWidth, SEARCH_HEIGHT, false);
 		searchBar.addPara(strings.get("picker_search"), 0f)
 				.getPosition().inTL(0f, SEARCH_LABEL_TOP_INSET);
-		TooltipMakerAPI fieldHost = popup.createUIElement(width - SEARCH_FIELD_WIDTH_RESERVE, SEARCH_HEIGHT, false);
+		TooltipMakerAPI fieldHost = popup.createUIElement(fieldWidth, SEARCH_HEIGHT, false);
 		BattleNext_TextField field = new BattleNext_TextField(inputRouter, popup,
-				width - SEARCH_FIELD_WIDTH_RESERVE, BattleNext_PageLayout.FORM_FIELD_HEIGHT, fieldHost);
+				fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, fieldHost);
 		field.attach(fieldHost, popup);
+		field.getPosition().inTL(0f, 0f);
 		search = field;
 		search.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		fieldHost.setHeightSoFar(BattleNext_PageLayout.FORM_FIELD_HEIGHT);
-		popup.addUIElement(fieldHost).inTL(POPUP_INSET + SEARCH_LABEL_WIDTH,
+		popup.addUIElement(fieldHost).inTL(2f * POPUP_INSET + labelWidth,
 				POPUP_INSET + (SEARCH_HEIGHT - BattleNext_PageLayout.FORM_FIELD_HEIGHT) * 0.5f);
 		searchBar.setHeightSoFar(SEARCH_HEIGHT);
 		return searchBar;
+	}
+
+	private int gridColumns(float popupWidth) {
+		return Math.max(1, (int) ((popupWidth - 4f * POPUP_INSET + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
 	}
 
 	private void rebuildGrid() {
@@ -322,7 +330,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		if (visible.isEmpty()) {
 			grid.addPara(strings.get("picker_no_options"), POPUP_INSET);
 		} else {
-			int columns = Math.max(1, (int) ((width - 2f * POPUP_INSET + TILE_GAP) / (TILE_SIZE + TILE_GAP)));
+			int columns = gridColumns(popup.getPosition().getWidth());
 			for (int index = 0; index < visible.size(); index++) {
 				OptionChoice option = visible.get(index);
 				OptionPickerTilePlugin tilePlugin = new OptionPickerTilePlugin(option);

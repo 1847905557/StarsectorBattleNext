@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvider {
+
 	private static final float ADVANCED_SKILL_LEVEL_THRESHOLD = 1f;
 	private static final int ADVANCED_SKILL_MAX_COUNT = 2;
 	private static final int BASIC_SKILL_MAX_COUNT = 1;

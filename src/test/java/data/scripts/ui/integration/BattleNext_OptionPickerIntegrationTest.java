@@ -4,8 +4,10 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -13,6 +15,7 @@ import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Method;
@@ -21,6 +24,96 @@ import java.util.List;
 import java.util.Map;
 
 class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture {
+
+	@ParameterizedTest
+	@CsvSource({"160,false", "160,true", "240,false", "240,true", "320,false", "320,true",
+			"540,false", "540,true", "800,false", "800,true"})
+	void searchRowUsesGridColumnBoundariesThroughFilteringScrollingAndReopening(int width, boolean deferred) throws Exception {
+
+		deferTooltipWidth = deferred;
+		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		CustomPanelAPI overlay = panel(width, 700f, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI host = overlay.createUIElement(32f, 28f, false);
+		BattleNext_OptionPicker.OptionChoiceSource source = new BattleNext_OptionPicker.OptionChoiceSource() {
+			@Override
+			public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
+				List<BattleNext_OptionPicker.OptionChoice> choices = new ArrayList<>();
+				for (int index = 0; index < 30; index++) {
+					choices.add(new BattleNext_OptionPicker.OptionChoice("id_" + index, "Option " + index));
+				}
+				return choices;
+			}
+			@Override
+			public int getMaxCount(String id) {
+				return 1;
+			}
+			@Override
+			public String getIconPath(String id) {
+				return null;
+			}
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
+				tooltip.addTitle(option.getLabel());
+			}
+		};
+		BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, overlay, 32f, 28f, "...", 0f,
+				source, BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, ids -> {});
+		picker.attach(host, overlay);
+		overlay.addUIElement(host).inTL(20f, 40f);
+		for (int cycle = 0; cycle < 2; cycle++) {
+			press(picker, "row", "TOGGLE");
+			assertSearchGridAlignment(picker);
+			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
+			float fieldX = search.getPosition().getX();
+			float fieldWidth = search.getPosition().getWidth();
+			search.setText("Option 1");
+			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			plugins.get(popup).advance(0f);
+			assertSearchGridAlignment(picker);
+			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
+			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+			grid.getExternalScroller().setYOffset(40f);
+			assertSearchGridAlignment(picker);
+			search.setText("unmatched");
+			plugins.get(popup).advance(0f);
+			assertEquals(fieldX, search.getPosition().getX(), 0.001f);
+			assertEquals(fieldWidth, search.getPosition().getWidth(), 0.001f);
+			search.setText("");
+			plugins.get(popup).advance(0f);
+			assertSearchGridAlignment(picker);
+			search.grabFocus(false);
+			assertTrue(search.hasFocus());
+			press(picker, "popup", "CANCEL");
+			assertFalse(router.getSession().hasInputState());
+		}
+		picker.close();
+		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
+	}
+
+	private void assertSearchGridAlignment(BattleNext_OptionPicker picker) throws Exception {
+
+		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+		CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
+		TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+		List<UIComponentAPI> tiles = tooltips.get(grid).getComponents();
+		PositionAPI first = tiles.get(0).getPosition();
+		float right = (float) tiles.stream().mapToDouble(tile -> tile.getPosition().getX()
+				+ tile.getPosition().getWidth()).max().orElseThrow();
+		LabelAPI label = children.get(popup).stream().filter(child -> child instanceof TooltipMakerAPI)
+				.flatMap(child -> tooltips.get(child).getComponents().stream())
+				.filter(child -> child instanceof LabelAPI).map(child -> (LabelAPI) child)
+				.filter(child -> child.getText().equals("BattleNext_common_picker_search")).findFirst().orElseThrow();
+		PositionAPI field = ((BattleNext_TextField) getField(picker, "search")).getPosition();
+		assertEquals(16f, first.getX() - popup.getPosition().getX(), 0.001f);
+		assertEquals(first.getX(), label.getPosition().getX(), 0.001f);
+		assertEquals(right, field.getX() + field.getWidth(), 0.001f);
+		assertEquals(Math.min(80f, (right - first.getX()) * 0.5f), field.getX() - first.getX(), 0.001f);
+		assertEquals(28f, field.getHeight(), 0.001f);
+		assertEquals(10f, popup.getPosition().getY() + popup.getPosition().getHeight()
+				- field.getY() - field.getHeight(), 0.001f);
+		assertTrue(field.getWidth() > 0f);
+		assertTrue(right <= popup.getPosition().getX() + popup.getPosition().getWidth() - 8f);
+	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {12, 658})

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvider {
+
 	public static final String PINNED_PREFIX = "pinned:";
 	private final BattleNext_PinnedVariantStore pinnedVariants;
 
