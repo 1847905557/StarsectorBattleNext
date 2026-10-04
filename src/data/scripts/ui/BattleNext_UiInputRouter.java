@@ -8,7 +8,7 @@ import data.scripts.ui.widget.BattleNext_TextFieldSession;
 import java.util.*;
 
 /** Coordinates modal UI layers and their text-input scope for one root panel. */
-public final class BattleNext_UiInputRouter {
+public class BattleNext_UiInputRouter {
 
 	public interface Overlay {
 		PositionAPI getBounds();
@@ -18,12 +18,14 @@ public final class BattleNext_UiInputRouter {
 		void close();
 	}
 
-	private final BattleNext_TextFieldSession session = new BattleNext_TextFieldSession();
+	private final BattleNext_TextFieldSession session = new BattleNext_TextFieldSession(this::isTextInputAllowed);
 
-	public BattleNext_TextFieldSession getSession() { return session; }
+	public BattleNext_TextFieldSession getSession() {
+		return session;
+	}
 
 	private final Deque<Overlay> overlays = new ArrayDeque<>();
-	private final Map<Overlay, List<BattleNext_TextField>> modalFields = new IdentityHashMap<>();
+	private final Map<Overlay, Set<BattleNext_TextField>> modalFields = new IdentityHashMap<>();
 	private static final ThreadLocal<BattleNext_UiInputRouter> CURRENT = new ThreadLocal<>();
 
 	public static BattleNext_UiInputRouter current() {
@@ -44,16 +46,17 @@ public final class BattleNext_UiInputRouter {
 		if (overlay == null) return;
 		overlays.remove(overlay);
 		overlays.push(overlay);
-		modalFields.computeIfAbsent(overlay, ignored -> new ArrayList<>());
+		modalFields.computeIfAbsent(overlay, ignored -> Collections.newSetFromMap(new IdentityHashMap<>()));
 		session.finish(true);
-		session.setModalRegion(overlay.getBounds());
 	}
 
 	public void pop(Overlay overlay) {
 		if (overlay == null) return;
+		if (overlays.peek() == overlay) {
+			session.finish(true);
+		}
 		overlays.remove(overlay);
 		modalFields.remove(overlay);
-		updateModalRegion();
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -66,8 +69,14 @@ public final class BattleNext_UiInputRouter {
 	public void registerModalField(BattleNext_TextField field) {
 		Overlay overlay = overlays.peek();
 		if (overlay == null || field == null) return;
-		modalFields.computeIfAbsent(overlay, ignored -> new ArrayList<>()).add(field);
-		session.registerModalField(field);
+		modalFields.get(overlay).add(field);
+	}
+
+	public void unregisterTextField(BattleNext_TextField field) {
+		session.unregister(field);
+		for (Set<BattleNext_TextField> fields : modalFields.values()) {
+			fields.remove(field);
+		}
 	}
 
 	public void releaseFocus() {
@@ -77,8 +86,7 @@ public final class BattleNext_UiInputRouter {
 	public void clear() {
 		while (!overlays.isEmpty()) overlays.pop().close();
 		modalFields.clear();
-		session.clearModalRegion();
-		session.clearRegisteredFields();
+		session.clear();
 	}
 
 	public boolean isEmpty() {
@@ -89,14 +97,12 @@ public final class BattleNext_UiInputRouter {
 		return overlay != null && overlays.peek() == overlay;
 	}
 
-	private void updateModalRegion() {
+	private boolean isTextInputAllowed(BattleNext_TextField field, InputEventAPI event) {
 		Overlay overlay = overlays.peek();
-		if (overlay == null) session.clearModalRegion();
-		else {
-			session.setModalRegion(overlay.getBounds());
-			for (BattleNext_TextField field : modalFields.getOrDefault(overlay, List.of())) {
-				session.registerModalField(field);
-			}
-		}
+		if (overlay == null) return true;
+		PositionAPI bounds = overlay.getBounds();
+		if (bounds == null) return true;
+		return modalFields.get(overlay).contains(field)
+				&& (!event.isLMBDownEvent() || bounds.containsEvent(event));
 	}
 }

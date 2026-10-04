@@ -43,6 +43,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+
 	private CustomPanelAPI panel;
 	private PositionAPI viewport;
 	private BattleNext_UiInputRouter inputRouter;
@@ -86,20 +87,26 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		try {
 			if (tournament.getBracketType() == null) {
-				throw new IllegalArgumentException(tournamentStrings.get("chart_missing_bracket"));
+				throw new IllegalArgumentException("Tournament bracket type is missing: " + tournament.getId());
 			}
 			List<String> fleets = tournament.getFleetIds();
 
 			if (fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 					|| fleets.size() > BattleNext_TournamentModel.MAX_FLEET_COUNT
 					|| new HashSet<>(fleets).size() != fleets.size() || fleets.contains("")) {
-				throw new IllegalArgumentException(tournamentStrings.get("chart_invalid_participants"));
+				throw new IllegalArgumentException("Invalid tournament participants: " + fleets);
 			}
 			buildLayout();
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_TournamentView.class, "tournament.chart.layout.degraded",
 				BattleNext_Logger.fields().put("tournament", tournament).build(), exception);
-			layoutError = tournament.getBracketType() + ": " + exception.getMessage();
+			List<String> participants = tournament.getFleetIds();
+			String reason = tournament.getBracketType() == null ? tournamentStrings.get("chart_missing_bracket")
+					: participants.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+						|| participants.size() > BattleNext_TournamentModel.MAX_FLEET_COUNT
+						|| new HashSet<>(participants).size() != participants.size() || participants.contains("")
+							? tournamentStrings.get("chart_invalid_participants") : exception.getMessage();
+			layoutError = tournament.getBracketType() + ": " + reason;
 		}
 		appendUnmappedMatches();
 		fitAll();

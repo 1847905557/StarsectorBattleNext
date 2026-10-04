@@ -196,14 +196,15 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		second.close();
 	}
 
-	@Test
-	void blankNameIsRejectedAndCanBeCorrected() throws Exception {
+	@ParameterizedTest
+	@ValueSource(strings = {"", "   ", "\t\r\n", "\u3000", "\u2003"})
+	void blankNameIsRejectedAndCanBeCorrected(String blank) throws Exception {
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
-		name(display).setText("   ");
+		name(display).setText(blank);
 		display.buttonPressed("pin_save");
 		assertTrue(labels.contains("BattleNext_variant_pin_name_required"));
-		assertEquals("   ", name(display).getText());
+		assertEquals(blank, name(display).getText());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		name(display).setText("Named snapshot");
 		display.buttonPressed("pin_save");

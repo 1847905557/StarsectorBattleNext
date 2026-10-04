@@ -22,17 +22,19 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
 	private final OptionSelectionMode mode;
-	private final float width;
+	private final float fieldWidth;
 	private final CustomPanelAPI overlayHost;
 	private final TooltipMakerAPI[] viewports;
+
 	private BattleNext_OptionPicker picker;
 	private BattleNext_TextField field;
 	private CustomPanelAPI row;
 
 	@Override
 	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI owner) {
-		float inputWidth = width - PICKER_BUTTON_WIDTH;
-		row = ownPanel(host, owner.createCustomPanel(width, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+		float buttonWidth = Math.min(PICKER_BUTTON_WIDTH, Math.max(0f, fieldWidth - 1f));
+		float inputWidth = fieldWidth - buttonWidth;
+		row = ownPanel(host, owner.createCustomPanel(fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
 				new BaseCustomUIPanelPlugin()));
 		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
 		BattleNext_TextField textField = new BattleNext_TextField(inputRouter, row, inputWidth,
@@ -44,9 +46,9 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 		field.setVerticalCursor(true);
 		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
 		row.addUIElement(input).inTL(0f, 0f);
-		TooltipMakerAPI pickerHost = row.createUIElement(PICKER_BUTTON_WIDTH,
+		TooltipMakerAPI pickerHost = row.createUIElement(buttonWidth,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, PICKER_BUTTON_WIDTH,
+		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, buttonWidth,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, "...", 0f, source, toPickerMode(mode),
 				() -> parse(field.getText()), ids -> field.setText(expand(ids)), viewports);
 		picker.attach(pickerHost, row);
@@ -59,13 +61,13 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 	}
 
 	public BattleNext_OptionField(BattleNext_UiInputRouter inputRouter,
-			CustomPanelAPI overlayHost, float width,
+			CustomPanelAPI overlayHost, float fieldWidth,
 			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode,
 			TooltipMakerAPI... viewports) {
 		super(inputRouter);
 		this.source = source;
 		this.mode = mode;
-		this.width = width;
+		this.fieldWidth = fieldWidth;
 		this.overlayHost = overlayHost;
 		this.viewports = viewports;
 	}

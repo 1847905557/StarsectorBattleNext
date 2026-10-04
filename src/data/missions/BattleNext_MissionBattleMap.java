@@ -7,6 +7,9 @@ public class BattleNext_MissionBattleMap {
 	public static final int MAP_COUNT = 12;
 	private static final float MIN_MAP_SCALE = 0.1f;
 
+	public static final int RANDOM_MAP_ID = -1;
+	public static final int LAST_MAP_ID = MAP_COUNT - 1;
+
 	private BattleNext_MissionBattleMap() {
 
 	}

@@ -405,7 +405,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 			var page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 			page.buttonPressed("pin:" + pin.getSourcePath());
-			details = (BattleNext_VariantDetails) getField(page, "details");
+			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
 			refresh = page::refreshContent;
 			close = page::close;
 		} else if (entry.equals("campaign")) {

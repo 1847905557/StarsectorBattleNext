@@ -10,8 +10,8 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import org.json.JSONException;
@@ -125,7 +125,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null || !tournament.isStarted()) {
-			editor.attach(contentPanel);
+			attachEditor(contentPanel);
 			return;
 		}
 		Map<String, String> fleetNames = new LinkedHashMap<>();
@@ -179,12 +179,16 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void clearPageOverlays() {
-		editor.closePicker();
+		editor.closeOverlays();
+	}
+
+	@Override
+	protected BattleNext_EditorView editorView() {
+		return editor;
 	}
 
 	@Override
 	protected void clearPageResources() {
-		editor.releaseResources();
 		if (tournamentDisplay != null) {
 			tournamentDisplay.close();
 			tournamentDisplay = null;
@@ -246,43 +250,19 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected boolean savePage() {
 		if (!draftOpen || editor.isReadOnly()) return true;
-		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
-			setStatus(strings.get("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
-					: !fleetStore.isLoaded() ? fleetStore.getLoadError() : ruleStore.getLoadError()));
-			return false;
-		}
-		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(tournamentStrings.get("invalid_id"));
-			return false;
-		}
-		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
-			if (BattleNext_EntryId.sameFileName(id, tournament.getId()) && !tournament.getId().equals(selectedId)) {
-				setStatus(strings.get("duplicate_id")); return false;
-			}
-		}
-		if (!selectedId.isEmpty() && BattleNext_EntryId.sameFileName(id, selectedId)
-				&& !tournamentStore.isManaged(selectedId)) {
-			setStatus(strings.get("source_unavailable")); return false;
-		}
-		if (!editor.serialize()) {
+		if (!editor.save()) {
 			setStatus(editor.getStatusText());
 			return false;
 		}
+		selectedId = editor.getDraftId();
+		setStatus(strings.get("saved"));
 		try {
 			tournamentStore.reload();
-			selectedId = id;
-			if (!editor.open(tournamentStore.get(id))) {
-				setStatus(editor.getStatusText());
-				return false;
-			}
-			setStatus(strings.get("saved"));
 			refreshContent();
-			return true;
 		} catch (Exception exception) {
-			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
-			return false;
+			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
 		}
+		return true;
 	}
 
 	@Override

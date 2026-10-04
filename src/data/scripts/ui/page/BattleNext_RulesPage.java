@@ -6,8 +6,8 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_RuleEditor;
 
 import java.util.List;
@@ -114,7 +114,12 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildDetail(CustomPanelAPI contentPanel) {
-		editor.attach(contentPanel);
+		attachEditor(contentPanel);
+	}
+
+	@Override
+	protected BattleNext_EditorView editorView() {
+		return editor;
 	}
 
 	@Override
@@ -139,7 +144,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void clearPageOverlays() {
-		editor.closePicker();
+		editor.closeOverlays();
 	}
 
 	@Override
@@ -193,35 +198,19 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	@Override
 	protected boolean savePage() {
 		if (!draftOpen) return true;
-		if (!store.isLoaded()) {
-			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
-			return false;
-		}
-		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(ruleStrings.get("invalid_id"));
-			return false;
-		}
-		for (BattleNext_RuleModel rule : store.getAll()) {
-			if (BattleNext_EntryId.sameFileName(id, rule.getId()) && !rule.getId().equals(selectedId)) {
-				setStatus(strings.get("duplicate_id"));
-				return false;
-			}
-		}
-		if (!editor.serialize()) {
+		if (!editor.save()) {
 			setStatus(editor.getStatusText());
 			return false;
 		}
+		selectedId = editor.getDraftId();
+		setStatus(strings.get("saved"));
 		try {
 			store.reload();
-			selectedId = id;
-			setStatus(strings.get("saved"));
 			refreshContent();
-			return true;
 		} catch (Exception exception) {
-			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
-			return false;
+			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
 		}
+		return true;
 	}
 
 	@Override

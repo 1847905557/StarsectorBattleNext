@@ -12,6 +12,10 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_ReportTarget;
+import data.scripts.ui.widget.BattleNext_ReportDetails;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		assertEquals(0, children.get(root).size());
 	}
 
+
 	@ParameterizedTest
 	@ValueSource(ints = {12, 15, 17, 20})
 	void sourceTextAndImagesRemainCenteredAcrossFontHeightsAndScrolling(int lineHeight) throws Exception {
@@ -49,9 +54,9 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		configureRowAssets();
 		CustomPanelAPI body = panel(1400f, 80f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 80f, true);
-		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
 		for (String kind : List.of("weapon", "ship", "fighter_wing")) {
-			appendSource(page, body, content, kind);
+			appendSource(details, body, content, kind);
 		}
 		body.addUIElement(content).inTL(8f, 8f);
 		List<CustomPanelAPI> rows = tooltips.get(content).getComponents().stream()
@@ -85,8 +90,8 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		mixedLabelHeights = true;
 		CustomPanelAPI body = panel(1400f, 100f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 100f, false);
-		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
-		appendSource(page, body, content, kind);
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		appendSource(details, body, content, kind);
 		body.addUIElement(content).inTL(8f, 8f);
 		CustomPanelAPI row = (CustomPanelAPI) tooltips.get(content).getComponents().get(0);
 		assertTextCentered(row);
@@ -104,10 +109,10 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		paragraphLineHeight = 15f;
 		CustomPanelAPI body = panel(1400f, 100f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 100f, false);
-		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
 		failSprites = true;
-		appendSource(page, body, content, "damage_type");
-		appendSource(page, body, content, "weapon");
+		appendSource(details, body, content, "damage_type");
+		appendSource(details, body, content, "weapon");
 		body.addUIElement(content).inTL(8f, 8f);
 		CustomPanelAPI placeholder = (CustomPanelAPI) tooltips.get(content).getComponents().get(0);
 		TooltipState icon = tooltips.get(children.get(placeholder).get(0));
@@ -151,14 +156,14 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		assertTrue(top <= row.getPosition().getY() + row.getPosition().getHeight());
 	}
 
-	private void appendSource(BattleNext_BattleReportPage page, CustomPanelAPI body,
+	private void appendSource(BattleNext_ReportDetails details, CustomPanelAPI body,
 			TooltipMakerAPI content, String kind) throws Exception {
-		Method method = BattleNext_BattleReportPage.class.getDeclaredMethod("addSourceRow",
+		Method method = BattleNext_ReportDetails.class.getDeclaredMethod("addSourceRow",
 				CustomPanelAPI.class, TooltipMakerAPI.class, BattleNext_DamageSourceReport.class, float.class);
 		method.setAccessible(true);
 		BattleNext_DamageSourceReport source = new BattleNext_DamageSourceReport(kind, kind.equals("damage_type") ? "ENERGY" : "source");
 		source.add(490.4, 76.5, 12.3, 0d);
-		method.invoke(page, body, content, source, 1300f);
+		method.invoke(details, body, content, source, 1300f);
 	}
 
 	private void configureRowAssets() {

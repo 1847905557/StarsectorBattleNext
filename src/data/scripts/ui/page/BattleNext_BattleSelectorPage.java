@@ -4,7 +4,6 @@ import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -13,11 +12,10 @@ import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_RulesCheck;
-import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
 import data.scripts.ui.widget.BattleNext_DropdownField;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
@@ -44,9 +42,6 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	private static final float SOURCE_CONTROL_HEIGHT = 30f;
 	private static final float SOURCE_LABEL_TEXT_TOP_INSET = 5f;
 	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = 8f;
-
-	private static final int RANDOM_MAP_ID = -1;
-	private static final int LAST_MAP_ID = BattleNext_MissionBattleMap.MAP_COUNT - 1;
 
 	public static class BattleSourceSelectionRequest {
 		private final String id;
@@ -124,8 +119,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			if (quickBattleEditor == null) {
 				quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
 			}
-			quickBattleEditor.setInputRouter(inputRouter);
-			quickBattleEditor.attach(contentPanel);
+			attachEditor(contentPanel);
 		} else {
 			quickBattleEditor = null;
 			buildTournamentDetails(contentPanel);
@@ -134,9 +128,15 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	@Override
 	protected void clearPageOverlays() {
+		if (quickBattleEditor != null) quickBattleEditor.closeOverlays();
 		if (sourceDropdown != null) {
 			sourceDropdown.closeOverlays();
 		}
+	}
+
+	@Override
+	protected BattleNext_EditorView editorView() {
+		return quickBattleEditor;
 	}
 
 	@Override
@@ -152,9 +152,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 			BattleNext_Match next = tournament == null ? null : tournament.getNextPendingMatch();
 			if (next != null) {
-				provider.load();
-				if (provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty()) {
-					BattleNext_BattleSignals.authorizeMatch(tournament.getId(), next.getId());
+				if (provider.authorizeNextMatch(tournament.getId(), next.getId())) {
 					loadError = ruleStrings.get("next_briefing_authorized");
 				}
 				refreshContent();
@@ -187,6 +185,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	@Override
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		if (sourceDropdown != null && sourceDropdown.handleGlobalInput(events)) return true;
+		if (quickBattleEditor != null && quickBattleEditor.handleGlobalInput(events)) return true;
 
 		if (tournamentDisplay != null) {
 			tournamentDisplay.handleGlobalInput(events);
@@ -274,66 +273,15 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	}
 
 	private void startTournament() {
-		if (!tournamentStore.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
-			loadError = strings.get("load_failed") + ": " + (!tournamentStore.isLoaded() ? tournamentStore.getLoadError()
-					: !fleetStore.isLoaded() ? fleetStore.getLoadError() : ruleStore.getLoadError());
-			refreshContent();
-			return;
-		}
 		BattleNext_TournamentModel source = tournamentStore.get(selectedId);
 		if (source == null || source.isStarted()) return;
-		if (source.getBracketType() == null || source.getBoCount() < 1
-				|| source.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-				|| source.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
-				|| source.getMapId() < RANDOM_MAP_ID || source.getMapId() > LAST_MAP_ID) {
-			loadError = tournamentStrings.get("invalid_configuration");
-			refreshContent();
-			return;
-		}
-		if (source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-				|| source.getFleetIds().size() > source.getMaxFleet()) {
-			loadError = tournamentStrings.get("need_fleets");
-			refreshContent();
-			return;
-		}
-		BattleNext_TournamentModel tournament;
 		try {
-			tournament = new BattleNext_TournamentModel();
-			tournament.fromJson(source.toJson());
-		} catch (Exception exception) {
-			loadError = exception.getMessage();
-			refreshContent();
-			return;
-		}
-		if (!tournament.getRuleId().isEmpty() && ruleStore.get(tournament.getRuleId()) == null) {
-			loadError = tournamentStrings.get("rules_unavailable");
-			refreshContent();
-			return;
-		}
-		if (!tournament.getRuleId().isEmpty()) {
-			List<String> missing = new BattleNext_RulesCheck().missingRestrictions(ruleStore.get(tournament.getRuleId()));
-			if (!missing.isEmpty()) {
-				loadError = String.join("; ", missing);
-				refreshContent();
-				return;
-			}
-		}
-		for (String fleet : tournament.getFleetIds()) {
-			if (fleetStore.get(fleet) == null) {
-				loadError = tournamentStrings.get("invalid_participant_fleet") + ": " + fleet;
-				refreshContent();
-				return;
-			}
-		}
-		try {
-			tournamentEngine.start(tournament);
-			tournamentStore.save(tournament);
-			tournamentStore.setActiveId(tournament.getId());
+			tournamentEngine.startAndActivate(source, tournamentStore, fleetStore, ruleStore);
 			loadError = tournamentStrings.get("started");
 		} catch (Exception exception) {
-			loadError = exception.getMessage();
+			loadError = source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+					? tournamentStrings.get("need_fleets") + ": " + exception.getMessage() : exception.getMessage();
 		}
 		refreshContent();
 	}
-
 }

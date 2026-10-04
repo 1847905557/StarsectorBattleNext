@@ -171,6 +171,6 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 
 	private Map<?, ?> registrations(BattleNext_LunaFleetSavePanel display) throws Exception {
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(display, "inputRouter");
-		return (Map<?, ?>) getField(router.getSession(), "REGISTERED");
+		return (Map<?, ?>) getField(router.getSession(), "registrations");
 	}
 }

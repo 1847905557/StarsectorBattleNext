@@ -28,9 +28,9 @@ class BattleNext_LegacyFleetExportIntegrationTest extends BattleNext_TestFleetIo
 		BattleNext_FleetEditor editor = (BattleNext_FleetEditor) getField(page, "editor");
 		assertFalse(page.hasUnsavedChanges());
 		assertFalse(page.save());
-		((TextFieldAPI) getField(editor, "id")).setText("exported");
+		((TextFieldAPI) getField(editor, "idField")).setText("exported");
 		assertFalse(page.save());
-		((TextFieldAPI) getField(editor, "folderName")).setText("exported");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("exported");
 		assertTrue(page.save(), page.getStatusText());
 		BattleNext_FleetStore store = (BattleNext_FleetStore) getField(page, "store");
 		assertEquals(2, store.getAll().size());

@@ -1,5 +1,10 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.widget.BattleNext_ReportDetails;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.model.report.BattleNext_ReportTarget;
+import data.model.report.BattleNext_BattleReportModel;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -139,8 +144,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	void reportAndVariantSelectTheSameWorkingWeaponImage(String id) throws Exception {
 		var details = details(1000, List.of(id));
 		var variantRow = (CustomPanelAPI) tooltips.get(children.get(groupBody(details)).get(0)).getComponents().get(0);
-		var report = new BattleNext_BattleReportPage(() -> {}, Runnable::run,
-				(description, action) -> {});
+		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
 		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
 		var list = body.createUIElement(600f, 100f, false);
 		var method = report.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
@@ -206,7 +210,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 			var page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 			page.buttonPressed("pin:" + pin.getSourcePath());
-			details = (BattleNext_VariantDetails) getField(page, "details");
+			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
 			close = page::close;
 		} else if (entry.equals("campaign")) {
 			var store = new BattleNext_PinnedVariantStore();

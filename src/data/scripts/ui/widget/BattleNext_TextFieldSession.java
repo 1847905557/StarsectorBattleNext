@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 
 public class BattleNext_TextFieldSession {
 
@@ -15,10 +16,8 @@ public class BattleNext_TextFieldSession {
 		DRAGGING
 	}
 
-	private final Map<BattleNext_TextField, Boolean> REGISTERED = new WeakHashMap<>();
-	private final Map<BattleNext_TextField, List<TooltipMakerAPI>> VIEWPORTS = new WeakHashMap<>();
-	private final Map<BattleNext_TextField, Boolean> MODAL_FIELDS = new WeakHashMap<>();
-	private PositionAPI modalRegion;
+	private final Map<BattleNext_TextField, List<TooltipMakerAPI>> registrations = new WeakHashMap<>();
+	private final BiPredicate<BattleNext_TextField, InputEventAPI> inputScope;
 
 	private BattleNext_TextField focusedField;
 	private BattleNext_TextField pointerOwner;
@@ -27,32 +26,21 @@ public class BattleNext_TextFieldSession {
 	private float pointerY;
 	private long generation;
 
-	public BattleNext_TextFieldSession() {
+	public BattleNext_TextFieldSession(BiPredicate<BattleNext_TextField, InputEventAPI> inputScope) {
+		this.inputScope = inputScope;
 	}
 
-	public void register(BattleNext_TextField field, TooltipMakerAPI... viewports) {
-		REGISTERED.put(field, Boolean.TRUE);
-		List<TooltipMakerAPI> hosts = new ArrayList<>();
-		if (viewports != null) {
-			for (TooltipMakerAPI viewport : viewports) {
-				if (viewport != null) hosts.add(viewport);
-			}
-		}
-		VIEWPORTS.put(field, hosts);
+	void register(BattleNext_TextField field, TooltipMakerAPI... viewports) {
+		registrations.put(field, List.of(viewports));
 	}
 
-	public void clearRegisteredFields() {
+	public void clear() {
 		finish(true);
-		REGISTERED.clear();
-		VIEWPORTS.clear();
-		MODAL_FIELDS.clear();
-		clearModalRegion();
+		registrations.clear();
 	}
 
 	public void unregister(BattleNext_TextField field) {
-		REGISTERED.remove(field);
-		VIEWPORTS.remove(field);
-		MODAL_FIELDS.remove(field);
+		registrations.remove(field);
 		if (pointerOwner == field) {
 			pointerOwner = null;
 			phase = TextFieldPointerPhase.IDLE;
@@ -65,24 +53,6 @@ public class BattleNext_TextFieldSession {
 		}
 	}
 
-	public void setModalRegion(PositionAPI position) {
-		modalRegion = position;
-		MODAL_FIELDS.clear();
-	}
-
-	public void clearModalRegion(PositionAPI position) {
-		if (modalRegion == position) clearModalRegion();
-	}
-
-	public void clearModalRegion() {
-		modalRegion = null;
-		MODAL_FIELDS.clear();
-	}
-
-	public void registerModalField(BattleNext_TextField field) {
-		if (field != null) MODAL_FIELDS.put(field, Boolean.TRUE);
-	}
-
 	void focus(BattleNext_TextField field) {
 		if (focusedField == field) {
 			field.onFocusGained();
@@ -93,7 +63,7 @@ public class BattleNext_TextFieldSession {
 		field.onFocusGained();
 	}
 
-	void beginPointer(BattleNext_TextField field, InputEventAPI event) {
+	private void beginPointer(BattleNext_TextField field, InputEventAPI event) {
 		boolean preserveSelection = focusedField == field && event.isShiftDown();
 		finish(!preserveSelection);
 		focusedField = field;
@@ -138,7 +108,7 @@ public class BattleNext_TextFieldSession {
 		}
 	}
 
-	void finishPointer() {
+	private void finishPointer() {
 		BattleNext_TextField oldPointer = pointerOwner;
 		pointerOwner = null;
 		phase = TextFieldPointerPhase.IDLE;
@@ -168,6 +138,7 @@ public class BattleNext_TextFieldSession {
 			}
 
 			if (event.isMouseMoveEvent() && activeGeneration == generation && pointerOwner != null
+					&& inputScope.test(pointerOwner, event)
 					&& (phase == TextFieldPointerPhase.PRESSED || phase == TextFieldPointerPhase.DRAGGING)) {
 				pointerX = event.getX();
 				pointerY = event.getY();
@@ -179,6 +150,7 @@ public class BattleNext_TextFieldSession {
 			}
 
 			if (event.isLMBUpEvent() && activeGeneration == generation && pointerOwner != null
+					&& inputScope.test(pointerOwner, event)
 					&& (phase == TextFieldPointerPhase.PRESSED || phase == TextFieldPointerPhase.DRAGGING)) {
 				pointerX = event.getX();
 				pointerY = event.getY();
@@ -190,7 +162,7 @@ public class BattleNext_TextFieldSession {
 			}
 
 			if (event.isKeyboardEvent() && (event.isKeyDownEvent() || event.isRepeat())
-					&& focusedField != null) {
+					&& focusedField != null && inputScope.test(focusedField, event)) {
 				BattleNext_TextField field = focusedField;
 				field.processKeyboard(event);
 				event.consume();
@@ -201,30 +173,22 @@ public class BattleNext_TextFieldSession {
 	}
 
 	public boolean hasInputState() {
-		return focusedField != null || pointerOwner != null || !REGISTERED.isEmpty();
+		return focusedField != null || pointerOwner != null || !registrations.isEmpty();
 	}
 
 	private BattleNext_TextField findTarget(InputEventAPI event) {
-		for (BattleNext_TextField field : REGISTERED.keySet()) {
-			if (field.isUsableForInput() && isAllowedByModalScope(field, event)
-					&& field.getPosition().containsEvent(event) && isInsideViewports(field, event)) {
+		for (var registration : registrations.entrySet()) {
+			BattleNext_TextField field = registration.getKey();
+			if (field.isUsableForInput() && inputScope.test(field, event)
+					&& field.getPosition().containsEvent(event) && isInsideViewports(registration.getValue(), event)) {
 				return field;
 			}
 		}
 		return null;
 	}
 
-	private boolean isAllowedByModalScope(BattleNext_TextField field, InputEventAPI event) {
-		if (!isInsideModalRegion(event)) return false;
-		return modalRegion == null || MODAL_FIELDS.containsKey(field);
-	}
-
-	private boolean isInsideModalRegion(InputEventAPI event) {
-		return modalRegion == null || modalRegion.containsEvent(event);
-	}
-
-	private boolean isInsideViewports(BattleNext_TextField field, InputEventAPI event) {
-		for (TooltipMakerAPI host : VIEWPORTS.getOrDefault(field, Collections.emptyList())) {
+	private boolean isInsideViewports(List<TooltipMakerAPI> viewports, InputEventAPI event) {
+		for (TooltipMakerAPI host : viewports) {
 			ScrollPanelAPI scroller = host.getExternalScroller();
 			PositionAPI position = scroller == null ? host.getPosition() : scroller.getPosition();
 			if (!position.containsEvent(event)) return false;

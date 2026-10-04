@@ -23,6 +23,7 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 	private final float[] columnShares;
 	private final RowBuilder rowBuilder;
 	private final BiConsumer<Float, TooltipMakerAPI> contentBuilder;
+
 	private UIRect rowsBounds;
 	private CustomPanelAPI rowsPanel;
 	private float scrollOffset;

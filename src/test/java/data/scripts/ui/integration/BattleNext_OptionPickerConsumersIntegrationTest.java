@@ -157,7 +157,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		BattleNext_OptionPicker picker = picker(kind, root, router);
 		router = (BattleNext_UiInputRouter) getField(picker, "inputRouter");
-		int registrations = ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size();
+		int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
 		var open = picker.getClass().getDeclaredMethod("open");
 		open.setAccessible(true);
 		open.invoke(picker);
@@ -221,7 +221,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		assertNull(getField(picker, "popup"));
 		assertTrue(removedComponents.contains(gridPanel));
 		assertTrue(router.isEmpty());
-		assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		picker.close();
 		router.clear();
 	}
@@ -244,13 +244,13 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			var editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), fleets, new BattleNext_RuleStore());
 			editor.open(null);
 			editor.setInputRouter(router);
-			editor.attach(root);
+			attachEditor(editor, root);
 			return (BattleNext_OptionPicker) getField(editor, "fleetPicker");
 		} else if (kind.equals("restriction")) {
 			var editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 			editor.open(null);
 			editor.setInputRouter(router);
-			editor.attach(root);
+			attachEditor(editor, root);
 			return (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
 		} else if (kind.equals("smod") || kind.equals("dmod")) {
 			var plugin = new BattleNext_RefitPanelPlugin(() -> {});
@@ -266,12 +266,12 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			editor.open(null, false);
 			editor.setInputRouter(router);
 			editor.setOverlayHost(root);
-			editor.attach(root);
+			attachEditor(editor, root);
 			editor.buttonPressed("add_member");
 			if (kind.equals("commander")) {
-				field = (BattleNext_OptionField) getField(editor, "skillsPicker");
+				field = optionFields(editor).get(0);
 			} else {
-				List<BattleNext_OptionField> members = (List<BattleNext_OptionField>) getField(editor, "memberPickers");
+				List<BattleNext_OptionField> members = optionFields(editor).subList(1, optionFields(editor).size());
 				int index = List.of("variant", "personality", "officer", "portrait").indexOf(kind);
 				field = members.get(index);
 			}

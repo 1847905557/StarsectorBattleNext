@@ -55,7 +55,7 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		picker.close();
 		assertTrue(nativeTargets(owner).isEmpty());
 		assertTrue(router.isEmpty());
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 	}
 
 	@ParameterizedTest
@@ -108,7 +108,7 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			assertTrue(nativeTargets(owner).isEmpty());
 			assertEquals(1, ((List<?>) getField(picker, "ownedPanels")).size());
 			assertTrue(router.isEmpty());
-			assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+			assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		}
 		TooltipMakerAPI refreshedHost = owner.createUIElement(80f, 28f, false);
 		picker.attach(refreshedHost, owner);
@@ -156,7 +156,7 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		assertNull(getField(picker, "popup"));
 		assertTrue(router.isEmpty());
 		assertFalse(router.getSession().hasInputState());
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		picker.close();
 		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
 	}

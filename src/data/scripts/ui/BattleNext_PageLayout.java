@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import data.scripts.battlesnext.util.ui.UIPanelManager;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.ui.widget.BattleNext_TextField;
 
 import java.awt.Color;
 
@@ -41,9 +42,13 @@ public class BattleNext_PageLayout {
 	public static final float MANAGEMENT_FOOTER_STATUS_TOP_INSET = 5f;
 
 	public static final float FORM_FIELD_HEIGHT = 28f;
+	public static final float EDITOR_FIELD_INSET = 6f;
 	public static final float EDITOR_COLUMN_GAP = 10f;
 	public static final float EDITOR_LEFT_COLUMN_SHARE = 0.45f;
-	public static final float EDITOR_MIN_SPLIT_WIDTH = 2f;
+	public static final float EDITOR_LABEL_GAP = 5f;
+	public static final float EDITOR_READ_ONLY_VALUE_GAP = 2f;
+	public static final float EDITOR_TABLE_TITLE_HEIGHT = 24f;
+	public static final float TABLE_ACTION_SIDE_INSET = 4f;
 
 	public static final float TABLE_HEADER_HEIGHT = 18f;
 	public static final float TABLE_ROW_HEIGHT = 38f;
@@ -54,10 +59,11 @@ public class BattleNext_PageLayout {
 	public static final float SECTION_HEADING_EXTRA_WIDTH = 10f;
 	public static final float SCROLLBAR_RESERVED_WIDTH = 5f;
 	public static final float CUSTOM_COMPONENT_LEFT_INSET = 5f;
-	public static final float TABLE_FIELD_LEFT_INSET = 3f;
-	public static final float TABLE_FIELD_RIGHT_INSET = 7f;
 	public static final float TABLE_CHECKBOX_MAX_WIDTH = 22f;
-	public static final float TABLE_ACTION_BUTTON_HEIGHT = 28f;
+	public static final float TABLE_ACTION_BUTTON_HEIGHT = 30f;
+	public static final float EDITOR_BUTTON_WIDTH = 190f;
+	public static final float EDITOR_BUTTON_HEIGHT = 30f;
+	public static final float EDITOR_BUTTON_GAP = 4f;
 
 	public static final float CELL_LABEL_SIDE_INSET = 2f;
 	public static final float CELL_LABEL_TRUNCATION_PADDING = 10f;
@@ -170,6 +176,75 @@ public class BattleNext_PageLayout {
 				BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.ALL, width, FOOTER_HEIGHT, BUTTON_VERTICAL_GAP);
 		applyButtonSounds(button);
 		return button;
+	}
+
+	public static ButtonAPI editorButton(TooltipMakerAPI fieldContent, String title, Object id, float areaWidth) {
+		float buttonWidth = editorButtonWidth(areaWidth);
+		ButtonAPI button = fieldContent.addButton(fieldContent.shortenString(title,
+				Math.max(MIN_UI_WIDTH, buttonWidth - BUTTON_TEXT_TRUNCATION_PADDING)), id,
+				BattleNext_UiTheme.ACCENT, BattleNext_UiTheme.PANEL, Alignment.MID, CutStyle.ALL,
+				buttonWidth, EDITOR_BUTTON_HEIGHT, EDITOR_BUTTON_GAP);
+		applyButtonSounds(button);
+		return button;
+	}
+
+	public static float editorButtonWidth(float areaWidth) {
+		return Math.min(EDITOR_BUTTON_WIDTH, areaWidth);
+	}
+
+	public static BattleNext_TextField editorTextField(BattleNext_UiInputRouter router, CustomPanelAPI hostPanel,
+			TooltipMakerAPI fieldContent, float areaWidth, String value, TooltipMakerAPI... viewports) {
+		BattleNext_TextField field = new BattleNext_TextField(router, hostPanel,
+				editorFieldWidth(areaWidth), FORM_FIELD_HEIGHT, viewports);
+		field.attach(fieldContent, hostPanel);
+		field.setText(value);
+		field.setMaxChars(-1);
+		field.getPosition().inTL(editorFieldInset(areaWidth), fieldContent.getHeightSoFar() - FORM_FIELD_HEIGHT);
+		return field;
+	}
+
+	public static float editorFieldWidth(float areaWidth) {
+		return Math.max(MIN_UI_WIDTH, areaWidth - editorFieldInset(areaWidth) * 2f);
+	}
+
+	public static float editorFieldInset(float areaWidth) {
+		return Math.min(EDITOR_FIELD_INSET, Math.max(0f, (areaWidth - MIN_UI_WIDTH) * 0.5f));
+	}
+
+	public static UIRect[] editorColumns(float areaWidth, float areaHeight) {
+		float availableWidth = Math.max(MIN_UI_WIDTH * 2f, areaWidth - EDITOR_COLUMN_GAP);
+		float columnWidth = (float) Math.floor(availableWidth * EDITOR_LEFT_COLUMN_SHARE);
+		return new UIRect[]{new UIRect(0f, 0f, columnWidth, areaHeight),
+				new UIRect(columnWidth + EDITOR_COLUMN_GAP, 0f, availableWidth - columnWidth, areaHeight)};
+	}
+
+	public static UIRect editorFieldCell(UIRect cell) {
+		return new UIRect(cell.getX() + editorFieldInset(cell.getWidth()),
+				cell.getY() + (cell.getHeight() - FORM_FIELD_HEIGHT) * 0.5f,
+				editorFieldWidth(cell.getWidth()), FORM_FIELD_HEIGHT);
+	}
+
+	public static UIRect editorLabelCell(UIRect cell) {
+		return new UIRect(cell.getX() + CELL_LABEL_SIDE_INSET, cell.getY(),
+				Math.max(MIN_UI_WIDTH, cell.getWidth() - CELL_LABEL_SIDE_INSET * 2f), cell.getHeight());
+	}
+
+	public static UIRect editorCheckboxCell(UIRect cell) {
+		float fieldWidth = Math.min(TABLE_CHECKBOX_MAX_WIDTH, cell.getWidth());
+		return new UIRect(cell.getX() + (cell.getWidth() - fieldWidth) * 0.5f,
+				cell.getY(), fieldWidth, cell.getHeight());
+	}
+
+	public static UIRect[] editorActions(UIRect cell, int actionCount) {
+		float buttonWidth = Math.max(MIN_UI_WIDTH, cell.getWidth() - TABLE_ACTION_SIDE_INSET * 2f) / actionCount;
+		float left = cell.getX() + (cell.getWidth() - buttonWidth * actionCount) * 0.5f;
+		UIRect[] actions = new UIRect[actionCount];
+		for (int index = 0; index < actionCount; index++) {
+			actions[index] = new UIRect(left + buttonWidth * index,
+					cell.getY() + (cell.getHeight() - TABLE_ACTION_BUTTON_HEIGHT) * 0.5f,
+					buttonWidth, TABLE_ACTION_BUTTON_HEIGHT);
+		}
+		return actions;
 	}
 
 	public static ButtonAPI buttonWithTooltip(TooltipMakerAPI maker, String title, Object id, float width) {

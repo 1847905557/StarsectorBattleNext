@@ -1,6 +1,11 @@
 package data.scripts.tournament;
 
 import data.model.report.BattleNext_BattleReportModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rule.BattleNext_RuleStore;
+import data.model.tournament.BattleNext_TournamentStore;
+import data.missions.BattleNext_MissionBattleMap;
+import data.scripts.fleet.BattleNext_RulesCheck;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match;
@@ -12,6 +17,33 @@ import data.scripts.tools.BattleNext_Logger;
 import java.util.*;
 
 public class BattleNext_TournamentEngine {
+
+	public void startAndActivate(BattleNext_TournamentModel source, BattleNext_TournamentStore tournaments,
+			BattleNext_FleetStore fleets, BattleNext_RuleStore rules) throws Exception {
+		if (!tournaments.isLoaded() || !fleets.isLoaded() || !rules.isLoaded()) {
+			throw new IllegalStateException(!tournaments.isLoaded() ? tournaments.getLoadError()
+					: !fleets.isLoaded() ? fleets.getLoadError() : rules.getLoadError());
+		}
+		if (source.getMapId() < -1 || source.getMapId() >= BattleNext_MissionBattleMap.MAP_COUNT) {
+			throw new IllegalArgumentException("Tournament map is outside the supported range: " + source.getMapId());
+		}
+		if (source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT) {
+			throw new IllegalArgumentException("Tournament requires at least two fleets: " + source.getFleetIds());
+		}
+		if (!source.getRuleId().isEmpty()) {
+			if (rules.get(source.getRuleId()) == null) throw new IllegalArgumentException("Tournament rule is unavailable: " + source.getRuleId());
+			List<String> missing = new BattleNext_RulesCheck().missingRestrictions(rules.get(source.getRuleId()));
+			if (!missing.isEmpty()) throw new IllegalArgumentException(String.join("; ", missing));
+		}
+		for (String id : source.getFleetIds()) {
+			if (fleets.get(id) == null) throw new IllegalArgumentException("Tournament participant fleet is unavailable: " + id);
+		}
+		BattleNext_TournamentModel prepared = new BattleNext_TournamentModel();
+		prepared.fromJson(source.toJson());
+		start(prepared);
+		tournaments.save(prepared);
+		tournaments.activate(prepared.getId());
+	}
 
 	public void start(BattleNext_TournamentModel tournament) {
 

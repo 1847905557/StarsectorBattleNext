@@ -102,6 +102,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
 	private static final Color TILE_NORMAL = new Color(20, 48, 57, 210);
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final OptionChoiceSource source;
 	private final OptionSelectionMode mode;

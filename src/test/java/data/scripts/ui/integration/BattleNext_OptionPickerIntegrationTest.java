@@ -166,7 +166,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 			search.grabFocus(false);
 			assertTrue(search.hasFocus());
-			assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
 			selection.clear();
 			selection.put("second", 1);

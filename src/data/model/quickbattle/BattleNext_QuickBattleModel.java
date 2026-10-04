@@ -1,6 +1,5 @@
 package data.model.quickbattle;
 
-
 import data.model.BattleNext_CsvModel;
 import data.scripts.tools.BattleNext_CsvLine;
 
@@ -207,5 +206,15 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	public void setLegacyIds(boolean legacyIds) {
 		this.legacyIds = legacyIds;
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj);
 	}
 }

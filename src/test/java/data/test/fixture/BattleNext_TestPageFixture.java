@@ -11,7 +11,9 @@ import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_OptionField;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,6 +30,16 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
+
+	protected void attachEditor(BattleNext_EditorView editor, CustomPanelAPI host) {
+		editor.setOverlayHost(host);
+		editor.attach(host);
+	}
+
+	protected List<BattleNext_OptionField> optionFields(BattleNext_EditorView editor) throws Exception {
+		return ((List<?>) getField(editor, "tooltipWidgets")).stream()
+				.filter(BattleNext_OptionField.class::isInstance).map(BattleNext_OptionField.class::cast).toList();
+	}
 
 	protected void confirmTournamentFleets(BattleNext_TournamentEditor editor, List<String> ids) throws Exception {
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "fleetPicker");

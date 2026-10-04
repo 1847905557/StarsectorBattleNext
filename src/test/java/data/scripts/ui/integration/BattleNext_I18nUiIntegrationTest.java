@@ -31,13 +31,13 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.setInputRouter(router);
 		editor.setOverlayHost(root);
-		editor.attach(root);
+		attachEditor(editor, root);
 		editor.buttonPressed("add_member");
 		assertTrue(labels.contains("BattleNext_fleet_commander_skills"));
 		assertTrue(labels.contains("BattleNext_member_captain_skills"));
 		assertTrue(labels.contains("BattleNext_member_captain_personality"));
 		assertTrue(labels.contains("BattleNext_member_captain_portrait"));
-		editor.closePicker();
+		editor.closeOverlays();
 		router.clear();
 	}
 
@@ -69,12 +69,12 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		editor.open(missing);
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.setInputRouter(router);
-		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("tournament");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Tournament");
 		assertFalse(editor.serialize());
 		assertEquals("BattleNext_tournament_invalid_participant_fleet: first", editor.getStatusText());
-		editor.closePicker();
+		editor.closeOverlays();
 		router.clear();
 	}
 

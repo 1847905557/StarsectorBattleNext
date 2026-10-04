@@ -45,36 +45,36 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		try {
 			page.attach(root);
-			ButtonAPI logging = (ButtonAPI) getField(page, "infoLog");
+			ButtonAPI logging = (ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox");
 			assertFalse(logging.isChecked());
 			assertEquals("Enable full graphic effects", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("fullGraphicEffect")));
 			assertEquals("Enable info log", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("infoLog")));
-			assertEquals(36f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
-			assertEquals(36f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
+			assertEquals(33f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
+			assertEquals(33f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
 			logging.setChecked(true);
 			assertTrue(page.hasUnsavedChanges());
 			assertFalse(BattleNext_Settings.isInfoLogEnabled());
 			page.refreshContent();
-			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			assertTrue(((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).isChecked());
 			assertTrue(page.hasUnsavedChanges());
 			page.discard();
-			assertFalse(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			assertFalse(((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).isChecked());
 			assertFalse(page.hasUnsavedChanges());
-			((ButtonAPI) getField(page, "infoLog")).setChecked(true);
+			((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).setChecked(true);
 			assertTrue(page.save());
 			assertTrue(stored.get().getBoolean("infoLog"));
 			assertTrue(BattleNext_Settings.isInfoLogEnabled());
 			assertFalse(page.hasUnsavedChanges());
 			page.attach(root);
-			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
-			((ButtonAPI) getField(page, "infoLog")).setChecked(false);
+			assertTrue(((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).isChecked());
+			((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).setChecked(false);
 			page.discard();
-			assertTrue(((ButtonAPI) getField(page, "infoLog")).isChecked());
-			((ButtonAPI) getField(page, "infoLog")).setChecked(false);
+			assertTrue(((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).isChecked());
+			((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).setChecked(false);
 			assertTrue(page.save());
 			assertFalse(BattleNext_Settings.isInfoLogEnabled());
 			page.attach(root);
-			assertFalse(((ButtonAPI) getField(page, "infoLog")).isChecked());
+			assertFalse(((ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox")).isChecked());
 		} finally {
 			page.close();
 			Global.setSettings(delegate);
@@ -90,12 +90,12 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
 		CustomPanelAPI root = panel(width, 900f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
-		float expectedWidth = Math.min(260f, width - 20f);
-		List<String> names = List.of("battleTimeLimit", "defaultTimeMult", "boostTimeMult", "reportKeepCount");
+		float expectedWidth = width - 12f;
+		List<String> names = List.of("battleTimeLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField");
 		List<String> values = List.of("700.5", "pending", "4.5", "75");
 		assertFalse(page.hasUnsavedChanges());
 		for (int index = 0; index < names.size(); index++) {
-			TextFieldAPI field = (TextFieldAPI) getField(page, names.get(index));
+			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
 			assertEquals(expectedWidth, field.getPosition().getWidth(), names.get(index));
 			assertEquals(28f, field.getPosition().getHeight(), names.get(index));
 			field.setText(values.get(index));
@@ -103,7 +103,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
 		for (int index = 0; index < names.size(); index++) {
-			TextFieldAPI field = (TextFieldAPI) getField(page, names.get(index));
+			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
 			assertEquals(expectedWidth, field.getPosition().getWidth(), names.get(index));
 			assertEquals(28f, field.getPosition().getHeight(), names.get(index));
 			assertEquals(values.get(index), field.getText(), names.get(index));
@@ -111,7 +111,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertTrue(page.hasUnsavedChanges());
 		assertEquals(1, children.get(root).size());
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(page, "inputRouter");
-		assertEquals(4, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals(4, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		page.close();
 		assertTrue(children.get(root).isEmpty());
 		assertFalse(router.getSession().hasInputState());

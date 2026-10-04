@@ -45,6 +45,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+
 	private BattleNext_TournamentView chart;
 
 	public BattleNext_TournamentDisplay(BattleNext_UiInputRouter inputRouter,

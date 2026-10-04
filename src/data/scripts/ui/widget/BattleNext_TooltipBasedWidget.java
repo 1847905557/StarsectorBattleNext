@@ -14,6 +14,7 @@ public abstract class BattleNext_TooltipBasedWidget {
 	protected TooltipMakerAPI host;
 	protected CustomPanelAPI panelOwner;
 	protected BattleNext_UiInputRouter inputRouter;
+
 	private final List<OwnedPanel> ownedPanels = new ArrayList<>();
 
 	protected BattleNext_TooltipBasedWidget() {

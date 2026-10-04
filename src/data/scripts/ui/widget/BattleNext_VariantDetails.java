@@ -34,12 +34,14 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private static final float TILE_TARGET_SIZE = 120f;
 	private static final float TILE_NAME_HEIGHT = 24f;
 	private static final float TILE_BORDER_WIDTH = 2f;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
 	private final Set<Integer> expanded = new HashSet<>();
 	private final Map<String, TooltipMakerAPI> lists = new LinkedHashMap<>();
 	private final Runnable refresh;
 	private final BooleanSupplier interactive;
+
 	private JSONObject variantJson;
 	private PreviewPlugin preview;
 

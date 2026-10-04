@@ -6,6 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.model.tournament.io.BattleNext_TournamentStandardLoader;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_BattleSignals;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -64,6 +65,11 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 
 	public String getActiveId() {
 		return activeId;
+	}
+
+	public void activate(String id) throws IOException, JSONException {
+		setActiveId(id);
+		BattleNext_BattleSignals.clearAuthorization();
 	}
 
 	public boolean isManaged(String id) {

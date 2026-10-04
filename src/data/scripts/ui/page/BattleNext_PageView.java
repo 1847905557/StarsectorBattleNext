@@ -5,12 +5,14 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.editor.BattleNext_EditorView;
 
 import java.util.List;
 
 public abstract class BattleNext_PageView {
 
 	protected CustomPanelAPI panel;
+	protected CustomPanelAPI overlayHost;
 	protected BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	protected String status = "";
@@ -20,6 +22,10 @@ public abstract class BattleNext_PageView {
 	public final void setInputRouter(BattleNext_UiInputRouter router) {
 		inputRouter = router;
 		bindPageInput();
+	}
+
+	public final void setOverlayHost(CustomPanelAPI host) {
+		overlayHost = host;
 	}
 
 	public final void attach(CustomPanelAPI body) {
@@ -34,6 +40,7 @@ public abstract class BattleNext_PageView {
 
 	public final void createContents() {
 		clearPageOverlays();
+		if (editorView() != null) editorView().detach();
 		inputRouter.clear();
 		clearPageResources();
 		releasePanel();
@@ -46,6 +53,7 @@ public abstract class BattleNext_PageView {
 
 	public final void refreshContent() {
 		clearPageOverlays();
+		if (editorView() != null) editorView().detach();
 		inputRouter.clear();
 		clearPageResources();
 		refreshPage();
@@ -55,6 +63,7 @@ public abstract class BattleNext_PageView {
 
 	public final void close() {
 		clearPageOverlays();
+		if (editorView() != null) editorView().close();
 		inputRouter.clear();
 		clearPageResources();
 		releasePanel();
@@ -114,6 +123,17 @@ public abstract class BattleNext_PageView {
 
 	}
 
+	protected BattleNext_EditorView editorView() {
+		return null;
+	}
+
+	protected final void attachEditor(CustomPanelAPI host) {
+		BattleNext_EditorView editor = editorView();
+		editor.setInputRouter(inputRouter);
+		editor.setOverlayHost(overlayHost == null ? panel : overlayHost);
+		editor.attach(host);
+	}
+
 	protected void establishPageState() {
 
 	}
@@ -147,7 +167,7 @@ public abstract class BattleNext_PageView {
 	}
 
 	protected String pageStatus() {
-		return status;
+		return status.isEmpty() && editorView() != null ? editorView().getStatusText() : status;
 	}
 
 	protected final void setStatus(String value) {

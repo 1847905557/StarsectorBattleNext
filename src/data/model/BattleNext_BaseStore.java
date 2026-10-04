@@ -11,6 +11,21 @@ import java.util.Map;
 
 public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
+	public enum EditRejectionReason { DUPLICATE_ID, SOURCE_UNAVAILABLE, DUPLICATE_FOLDER }
+
+	public static class EditRejection extends IllegalStateException {
+		private final EditRejectionReason reason;
+
+		public EditRejection(EditRejectionReason reason, String identity) {
+			super(reason.name() + ": " + identity);
+			this.reason = reason;
+		}
+
+		public EditRejectionReason getReason() {
+			return reason;
+		}
+	}
+
 	private final Map<String, T> entries = new LinkedHashMap<>();
 	private String loadError;
 
@@ -74,6 +89,21 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			}
 			throw exception;
 		}
+	}
+
+	public void saveEdited(T model, String sourceId) throws IOException, JSONException {
+		requireLoaded();
+		for (T existing : getAll()) {
+			if (BattleNext_EntryId.sameFileName(model.getId(), existing.getId()) && !existing.getId().equals(sourceId)) {
+				throw new EditRejection(EditRejectionReason.DUPLICATE_ID, model.getId());
+			}
+		}
+		T source = get(sourceId);
+		if (source != null && BattleNext_EntryId.sameFileName(model.getId(), sourceId)
+				&& !isManaged(source) && source.getSourceType() != BattleNext_LoadSource.CREATED) {
+			throw new EditRejection(EditRejectionReason.SOURCE_UNAVAILABLE, sourceId);
+		}
+		save(model);
 	}
 
 	public void delete(String id) throws IOException, JSONException {

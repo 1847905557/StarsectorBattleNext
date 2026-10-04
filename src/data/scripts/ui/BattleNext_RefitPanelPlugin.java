@@ -440,9 +440,9 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 		closePickers();
 		String displayName = pinName.getText();
-		if (displayName.trim().isEmpty()) {
+		if (displayName.isBlank()) {
 			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "variant.pin.name.rejected",
-					BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
+					BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank name").build());
 			statusLabel.setText(variantStrings.get("pin_name_required"));
 			return;
 		}

@@ -168,16 +168,17 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.close();
 	}
 
-	@Test
-	void blankNameAndWriteFailurePreserveInputAndDraftForRetry() throws Exception {
+	@ParameterizedTest
+	@ValueSource(strings = {"", "   ", "\t\r\n", "\u3000", "\u2003"})
+	void blankNameAndWriteFailurePreserveInputAndDraftForRetry(String blank) throws Exception {
 
 		BattleNext_RefitPanelPlugin plugin = opened(current());
 		TextFieldAPI name = (TextFieldAPI) getField(plugin, "pinName");
 		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
-		name.setText("   ");
+		name.setText(blank);
 		plugin.buttonPressed("pin_add");
 		assertEquals("BattleNext_variant_pin_name_required", status(plugin));
-		assertEquals("   ", name.getText());
+		assertEquals(blank, name.getText());
 		assertTrue(buttons.get("pin_add").get());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		name.setText("Retry this draft");
@@ -230,7 +231,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertFalse(name.hasFocus());
 		assertFalse(children.get(right).contains(previousHost));
 		assertTrue(removedComponents.contains(previousHost));
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		assertFalse(buttons.get("pin_add").get());
 		plugin.close();
 		plugin.open(member(current), new Refit(member(current), current.api));
@@ -240,7 +241,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(children.get(right).contains(reopenedHost));
 		LabelAPI caption = (LabelAPI) tooltips.get(reopenedHost).getComponents().get(0);
 		assertEquals("BattleNext_variant_pin_name", caption.getText());
-		assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertTrue(buttons.get("pin_add").get());
 		plugin.close();
 	}
@@ -279,19 +280,19 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
 		CustomPanelAPI root = (CustomPanelAPI) getField(plugin, "panel");
 		int mounted = children.get(root).size();
-		int registered = ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size();
+		int registered = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
 		for (int iteration = 0; iteration < 3; iteration++) {
 			invoke(picker, "open");
 			assertFalse(router.isEmpty());
 			assertSame(root.getPosition(), geometry.get(((CustomPanelAPI) getField(picker, "popup")).getPosition()).getParent());
-			assertEquals(registered + 1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(registered + 1, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 			Map<String, Integer> selection = selection(picker);
 			selection.put("ordinary", 1);
 			picker.closeOverlays();
 			assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
 			assertEquals(mounted, children.get(root).size());
 			assertTrue(router.isEmpty());
-			assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		}
 		invoke(picker, "open");
 		selection(picker).put("ordinary", 1);
@@ -299,7 +300,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
 		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertTrue(router.isEmpty());
-		assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
 				getField(details(plugin), "variantJson"));
 		BattleNext_OptionPicker dPicker = (BattleNext_OptionPicker) getField(plugin, "dModPicker");
@@ -413,7 +414,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
 			BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(plugin, "inputRouter");
 			assertTrue(router.isEmpty());
-			assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+			assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 			assertEquals(mounted, children.get(root).size());
 			plugin.open(member(current), new Refit(member(current), current.api));
 			assertEquals(5, children.get(left).size());

@@ -162,8 +162,8 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.buttonPressed("add");
 		Object editor = getField(page, "quickBattleEditor");
 		Object row = ((List<?>) getField(editor, "rows")).get(0);
-		((TextFieldAPI) getField(row, "player")).setText("Draft fleet");
-		((TextFieldAPI) getField(row, "map")).setText("Unfinished number");
+		((TextFieldAPI) getField(row, "playerField")).setText("Draft fleet");
+		((TextFieldAPI) getField(row, "mapField")).setText("Unfinished number");
 		String snapshot = ((BattleNext_EditorView) editor).serializeState();
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
@@ -176,12 +176,12 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 	void settingsKeepsRawDraftAndDirtyStateAcrossRefresh() throws Exception {
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		((TextFieldAPI) getField(page, "battleTimeLimit")).setText("pending");
+		((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).setText("pending");
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
-		assertEquals("pending", ((TextFieldAPI) getField(page, "battleTimeLimit")).getText());
+		assertEquals("pending", ((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).getText());
 		assertTrue(page.hasUnsavedChanges());
-		CustomPanelAPI content = (CustomPanelAPI) getField(page, "contentPanel");
+		CustomPanelAPI content = (CustomPanelAPI) getField(getField(page, "editor"), "panel");
 		TooltipState state = tooltips.get(children.get(content).get(0));
 		PositionAPI save = buttonPositions.get("settings_save");
 		assertEquals(8f, state.getViewport().getY() - save.getY() - save.getHeight());
@@ -202,11 +202,11 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.buttonPressed("add");
 		assertTrue(buttons.get("save").get());
 		Object editor = getField(page, "editor");
-		TextFieldAPI field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "name" : "nameField");
+		TextFieldAPI field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "nameField" : "nameField");
 		field.setText("Draft name");
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
-		field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "name" : "nameField");
+		field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "nameField" : "nameField");
 		assertEquals("Draft name", field.getText());
 		assertTrue(page.hasUnsavedChanges());
 		page.buttonPressed("back");
@@ -239,7 +239,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 			report.setName("Report");
 			store.save(report);
 			page.attach(root);
-			page.buttonPressed("report:report-1");
+			page.buttonPressed("report:report:report-1");
 		} else {
 			page.buttonPressed("add");
 		}
@@ -295,13 +295,13 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		store.save(report);
 		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		page.buttonPressed("report:report-1");
+		page.buttonPressed("report:report:report-1");
 		assertTrue(buttons.get("save").get());
 		assertTrue(labels.contains("report-1"));
-		((TextFieldAPI) getField(page, "nameField")).setText("Draft report");
+		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Draft report");
 		page.buttonPressed("member:0");
-		assertEquals(1, ((Set<?>) getField(page, "expandedMembers")).size());
-		assertEquals("Draft report", ((TextFieldAPI) getField(page, "nameField")).getText());
+		assertEquals(1, ((Set<?>) getField(getField(getField(page, "editor"), "details"), "expandedMembers")).size());
+		assertEquals("Draft report", ((TextFieldAPI) getField(getField(page, "editor"), "nameField")).getText());
 		assertTrue(page.hasUnsavedChanges());
 		CustomPanelAPI detail = (CustomPanelAPI) getField(page, "detailPanel");
 		UIRect detailRect = (UIRect) getField(page, "detailRect");

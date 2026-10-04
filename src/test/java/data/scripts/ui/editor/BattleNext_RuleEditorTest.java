@@ -63,17 +63,17 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.setInputRouter(router);
 		editor.open(null);
-		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("draft_rule");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Draft rule");
 		confirmRestrictions(editor, List.of("limitNumber"));
 		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
-		Map<String, ButtonAPI> enabled = (Map<String, ButtonAPI>) getField(editor, "enabledFields");
+		Map<String, ButtonAPI> enabled = (Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes");
 		values.get("limitNumber").setText("12");
 		enabled.get("limitNumber").setChecked(false);
 		confirmRestrictions(editor, List.of("limitList"));
 		values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
-		enabled = (Map<String, ButtonAPI>) getField(editor, "enabledFields");
+		enabled = (Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes");
 		assertEquals(Set.of("limitNumber", "limitList"), values.keySet());
 		assertEquals(values.keySet(), enabled.keySet());
 		assertEquals("12", values.get("limitNumber").getText());
@@ -103,21 +103,21 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.open(null);
 		editor.setInputRouter(router);
-		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		confirmRestrictions(editor, List.of("limitNumber"));
 		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
 		values.get("limitNumber").setText("pending");
-		((Map<String, ButtonAPI>) getField(editor, "enabledFields")).get("limitNumber").setChecked(false);
+		((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").setChecked(false);
 		editor.refreshContent();
 		values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
 		assertEquals("pending", values.get("limitNumber").getText());
-		assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledFields")).get("limitNumber").isChecked());
+		assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").isChecked());
 		values.get("limitNumber").setText("12");
-		int registrations = ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size();
+		int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
 		for (int iteration = 0; iteration < 20; iteration++) {
 			confirmRestrictions(editor, List.of("limitList"));
 			editor.buttonPressed("rule:remove:1");
-			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 			assertEquals("12", ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("limitNumber").getText());
 			assertTrue(router.isEmpty());
 		}
@@ -133,14 +133,14 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		source.setRestrictions(List.of(restriction));
 		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 		editor.open(source);
-		editor.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(((Map<?, ?>) getField(editor, "valueFields")).isEmpty());
 		BattleNext_RestrictionRegistry.getInstance().load(new JSONArray().put(new JSONObject()
 				.put("id", "lateLimit").put("type", "number").put("script", "late").put("desc", "Late limit")),
 				name -> (BattleNext_RestrictionScript) (fleet, value) -> List.of());
 		editor.refreshContent();
 		assertEquals("9.0", ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("lateLimit").getText());
-		assertTrue(((Map<String, ButtonAPI>) getField(editor, "enabledFields")).get("lateLimit").isChecked());
+		assertTrue(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("lateLimit").isChecked());
 		assertFalse(editor.hasUnsavedChanges());
 	}
 
@@ -165,7 +165,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		editor.open(null);
 		editor.setInputRouter(new BattleNext_UiInputRouter());
 		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
-		editor.attach(panel);
+		attachEditor(editor, panel);
 		assertNotNull(editor.getStatusText());
 		editor.refreshContent();
 	}
@@ -178,12 +178,12 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
 		editor.open(null);
 		editor.setInputRouter(router);
-		editor.attach(root);
+		attachEditor(editor, root);
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
 		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
 		float rowWidth = table.getContent().getWidthSoFar() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
 		assertEquals(Math.min(190f, rowWidth), getField(picker, "buttonWidth"));
-		assertEquals(28f, getField(picker, "buttonHeight"));
+		assertEquals(30f, getField(picker, "buttonHeight"));
 		assertEquals("BattleNext_rule_add_restriction", buttonLabels.get("TOGGLE"));
 		assertSame(root, getField(picker, "overlayHost"));
 		TooltipMakerAPI[] viewports = (TooltipMakerAPI[]) getField(picker, "viewports");
@@ -193,6 +193,6 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		editor.refreshContent();
 		assertEquals("rule_draft", editor.getDraftId());
 		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
-		assertEquals(2, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals(2, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 	}
 }

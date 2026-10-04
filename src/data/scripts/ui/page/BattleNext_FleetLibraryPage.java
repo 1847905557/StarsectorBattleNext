@@ -3,12 +3,11 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 import org.json.JSONException;
 
@@ -28,7 +27,6 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	private final BattleNext_FleetStore store = new BattleNext_FleetStore();
 	private final BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 
-	private CustomPanelAPI overlayHost;
 	private String selectedId = "";
 	private boolean draftOpen;
 
@@ -100,8 +98,12 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildDetail(CustomPanelAPI contentPanel) {
-		editor.setOverlayHost(overlayHost);
-		editor.attach(contentPanel);
+		attachEditor(contentPanel);
+	}
+
+	@Override
+	protected BattleNext_EditorView editorView() {
+		return editor;
 	}
 
 	@Override
@@ -131,7 +133,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void clearPageOverlays() {
-		editor.closePicker();
+		editor.closeOverlays();
 	}
 
 	@Override
@@ -184,51 +186,18 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	@Override
 	protected boolean savePage() {
 		if (!draftOpen) return true;
-		if (!store.isLoaded()) {
-			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
-			return false;
-		}
-		String id = editor.getDraftId();
-		if (!BattleNext_EntryId.isValidPathSegment(id)) {
-			setStatus(fleetStrings.get("invalid_id"));
-			return false;
-		}
-		for (BattleNext_FleetModel fleet : store.getAll()) {
-			if (BattleNext_EntryId.sameFileName(id, fleet.getId()) && !fleet.getId().equals(selectedId)) {
-				setStatus(strings.get("duplicate_id")); return false;
-			}
-		}
-		String folderName = editor.getDraftFolderName();
-		if (folderName.isEmpty()) folderName = id;
-		if (!BattleNext_EntryId.isValidPathSegment(folderName)) {
-			setStatus(fleetStrings.get("invalid_folder"));
-			return false;
-		}
-		for (BattleNext_FleetModel fleet : store.getAll()) {
-			if (BattleNext_EntryId.sameFileName(folderName, fleet.getFolderName())
-					&& !fleet.getId().equals(selectedId)) {
-				setStatus(fleetStrings.get("duplicate_folder"));
-				return false;
-			}
-		}
-		BattleNext_FleetModel original = selectedId.isEmpty() ? null : store.get(selectedId);
-			if (original != null && BattleNext_EntryId.sameFileName(id, selectedId)
-					&& original.getSourceType() == BattleNext_LoadSource.LEGACY) {
-			setStatus(strings.get("source_unavailable")); return false;
-		}
-		if (!editor.serialize()) {
+		if (!editor.save()) {
 			setStatus(editor.getStatusText());
 			return false;
 		}
+		selectedId = editor.getDraftId();
+		setStatus(strings.get("saved"));
 		try {
 			store.reload();
-		} catch (IOException | JSONException | RuntimeException exception) {
-			setStatus(strings.get("load_failed") + ": " + exception.getMessage());
-			return false;
+			refreshContent();
+		} catch (Exception exception) {
+			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
 		}
-		selectedId = id;
-		status = strings.get("saved");
-		refreshContent();
 		return true;
 	}
 
@@ -245,9 +214,5 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	@Override
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		return draftOpen && editor.handleGlobalInput(events);
-	}
-
-	public void setOverlayHost(CustomPanelAPI overlayHost) {
-		this.overlayHost = overlayHost;
 	}
 }

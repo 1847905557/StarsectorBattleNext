@@ -56,12 +56,12 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		BattleNext_PinnedVariantPage page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 		page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("pin:" + pin.getSourcePath());
-		((TextFieldAPI) getField(page, "name")).setText("Unsaved module name");
+		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Unsaved module name");
 		CustomUIPanelPlugin header = plugins.values().stream()
 				.filter(plugin -> plugin.getClass().getSimpleName().equals("HeaderPlugin")).findFirst().orElseThrow();
 		Runnable toggle = (Runnable) getField(header, "onToggle");
 		toggle.run();
-		assertEquals("Unsaved module name", ((TextFieldAPI) getField(page, "name")).getText());
+		assertEquals("Unsaved module name", ((TextFieldAPI) getField(getField(page, "editor"), "nameField")).getText());
 		assertTrue(page.hasUnsavedChanges());
 		var router = (BattleNext_UiInputRouter) getField(page, "inputRouter");
 		var overlay = new BattleNext_UiInputRouter.Overlay() {

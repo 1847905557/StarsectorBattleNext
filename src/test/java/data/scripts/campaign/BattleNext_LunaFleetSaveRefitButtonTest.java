@@ -145,7 +145,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 			button.advance(0f);
 		}
 		assertEquals("right".equals(path), field.hasFocus());
-		assertEquals("right".equals(path) ? 1 : 0, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertEquals("right".equals(path) ? 1 : 0, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		if (!"right".equals(path)) {
 			assertTrue(children.get(root).isEmpty());
 			assertTrue(children.get(background).isEmpty());

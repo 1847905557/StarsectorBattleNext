@@ -100,13 +100,13 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		draft.setFleetIds(List.of("first_50%"));
 		editor.open(draft);
 		editor.setInputRouter(router);
-		editor.attach(root);
+		attachEditor(editor, root);
 		for (int cycle = 0; cycle < 3; cycle++) {
 			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "fleetPicker");
 			var source = getField(picker, "source");
 			assertInstanceOf(BattleNext_FleetSourceProvider.class, source);
 			assertSame(store, getField(source, "fleetStore"));
-			int registrations = ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size();
+			int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
 			CustomPanelAPI row = (CustomPanelAPI) getField(picker, "row");
 			plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
 			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
@@ -132,15 +132,15 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
 					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
 			assertTrue(router.isEmpty());
-			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 			editor.refreshContent();
 			assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
 			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
 					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
 		}
-		editor.releaseResources();
+		editor.close();
 		router.clear();
-		assertNull(getField(editor, "fleetPicker"));
+		assertTrue(((List<?>) getField(getField(editor, "fleetPicker"), "ownedPanels")).isEmpty());
 		assertFalse(router.getSession().hasInputState());
 	}
 

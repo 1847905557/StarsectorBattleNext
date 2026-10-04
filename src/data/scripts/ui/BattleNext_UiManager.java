@@ -212,7 +212,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
 		BattleNext_PageView view = activeView();
 		view.setInputRouter(inputRouter);
-		if (currentPage == BattleManagementPage.FLEETS) fleetPage.setOverlayHost(panel);
+		view.setOverlayHost(panel);
 		view.attach(body);
 		attachedView = view;
 	}
@@ -332,10 +332,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		try {
 			tournamentStore.reload();
 			if (!id.isEmpty() && tournamentStore.get(id) == null) {
-				throw new IllegalArgumentException(tournamentStrings.get("missing"));
+				throw new IllegalArgumentException("Selected tournament is missing: " + id);
 			}
-			tournamentStore.setActiveId(id);
-			BattleNext_BattleSignals.clearAuthorization();
+			tournamentStore.activate(id);
 			refreshState();
 			return true;
 		} catch (Exception exception) {

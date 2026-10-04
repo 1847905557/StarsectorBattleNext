@@ -95,6 +95,22 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		return this;
 	}
 
+	public record EditState(String text, int cursor, int anchor, float scroll, String undoText, boolean focused) { }
+
+	public EditState captureEditState() {
+		return new EditState(text, cursor, anchor, scroll, undoText, session.isFocused(this));
+	}
+
+	public void restoreEditState(EditState state) {
+		text = state.text();
+		cursor = state.cursor();
+		anchor = state.anchor();
+		scroll = state.scroll();
+		if (state.focused()) session.focus(this);
+		undoText = state.undoText();
+		refreshVisual();
+	}
+
 	public BattleNext_TextField(BattleNext_UiInputRouter router, CustomPanelAPI panelOwner, float width, float height,
 			TooltipMakerAPI... viewports) {
 		super(router);
@@ -109,22 +125,10 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	@Override
 	protected void clearContent() {
-		session.unregister(this);
+		inputRouter.unregisterTextField(this);
 		panel = null;
 		textHost = null;
 		textLabel = null;
-	}
-
-	public static void releaseFocusedField() {
-		BattleNext_UiInputRouter.current().getSession().finish(true);
-	}
-
-	public static void clearRegisteredFields() {
-		BattleNext_UiInputRouter.current().getSession().clearRegisteredFields();
-	}
-
-	public static boolean handleGlobalInputStatic(List<InputEventAPI> events) {
-		return BattleNext_UiInputRouter.current().getSession().handleGlobalInput(events);
 	}
 
 	private boolean hasSelection() {

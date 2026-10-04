@@ -5,6 +5,7 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.fleet.CrewCompositionAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
@@ -47,13 +48,15 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
 			return switch (method.getName()) {
 				case "doesVariantExist" -> true;
-				case "getVariant" -> proxy(ShipVariantAPI.class, (name, values) -> null);
+				case "getVariant" -> proxy(ShipVariantAPI.class, (name, values) -> name.equals("getHullSpec")
+						? proxy(ShipHullSpecAPI.class, (hullMethod, hullArguments) -> hullMethod.equals("getHullName") ? "Variant hull" : null) : null);
 				case "createPerson" -> proxy(PersonAPI.class, (name, values) -> null);
 				case "createFleetMember" -> {
 					ShipState ship = deployed.get(next.getAndIncrement());
 					RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (name, values) -> name.equals("getMaxCR") ? 1f : null);
 					CrewCompositionAPI crew = proxy(CrewCompositionAPI.class, (name, values) -> null);
 					FleetMemberAPI member = proxy(FleetMemberAPI.class, (name, values) -> switch (name) {
+						case "getVariant" -> args[1];
 						case "getRepairTracker" -> repair;
 						case "getCrewComposition" -> crew;
 						default -> null;

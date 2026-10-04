@@ -20,10 +20,11 @@ import java.util.function.Consumer;
 
 class BattleNext_TextFieldTest {
 	private final List<String> sounds = new ArrayList<>();
+	private final BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 
 	@AfterEach
 	void clearFocus() {
-		BattleNext_TextField.clearRegisteredFields();
+		router.clear();
 	}
 
 	@Test
@@ -41,12 +42,12 @@ class BattleNext_TextFieldTest {
 	void unsupportedControlShortcutsAreConsumedWithoutChangingText() throws Exception {
 		BattleNext_TextField field = field();
 		field.setText("abc");
-		BattleNext_UiInputRouter.current().getSession().register(field);
+		router.getSession().register(field);
 		field.grabFocus();
 		for (InputEventAPI event : List.of(key(Keyboard.KEY_B, 'b', true, false),
 				key(Keyboard.KEY_LEFT, (char) 2, true, false),
 				key(Keyboard.KEY_BACK, '\b', true, true))) {
-			assertTrue(BattleNext_TextField.handleGlobalInputStatic(List.of(event)));
+			assertTrue(router.handleGlobalInput(List.of(event)));
 			assertTrue(event.isConsumed());
 			assertEquals("abc", field.getText());
 		}
@@ -128,9 +129,9 @@ class BattleNext_TextFieldTest {
 		assertTrue(sounds.isEmpty());
 		field.grabFocus();
 		assertEquals(List.of(BattleNext_TextField.BUZZ_SOUND_ID), sounds);
-		BattleNext_UiInputRouter.current().getSession().register(field);
-		BattleNext_TextField.handleGlobalInputStatic(List.of(pointer()));
-		BattleNext_TextField.handleGlobalInputStatic(List.of(pointer()));
+		router.getSession().register(field);
+		router.handleGlobalInput(List.of(pointer()));
+		router.handleGlobalInput(List.of(pointer()));
 		assertEquals(List.of("ui_typer_buzz", "ui_typer_buzz", "ui_typer_buzz"), sounds);
 		field.setText("changed");
 		assertEquals(3, sounds.size());
@@ -244,7 +245,7 @@ class BattleNext_TextFieldTest {
 		unsafeField.setAccessible(true);
 		Unsafe unsafe = (Unsafe) unsafeField.get(null);
 		BattleNext_TextField field = (BattleNext_TextField) unsafe.allocateInstance(BattleNext_TextField.class);
-		setField(field, "session", BattleNext_UiInputRouter.current().getSession());
+		setField(field, "session", router.getSession());
 		setField(field, "panel", panel);
 		setField(field, "textLabel", label);
 		setField(field, "width", 300f);

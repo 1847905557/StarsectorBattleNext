@@ -7,6 +7,9 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_PersonSkills;
+import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import data.test.fixture.BattleNext_TestCampaignFleetFixture;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +22,33 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetFixture {
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "   ", "\u3000", "Named ship"})
+	void optionalMemberNamesPersistAndBlankNamesResolveToHullNames(String name) throws Exception {
+
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
+		store.reload();
+		for (boolean expanded : List.of(false, true)) {
+			String id = "fleet_" + expanded;
+			BattleNext_MemberModel member = new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of());
+			BattleNext_FleetModel source = new BattleNext_FleetModel(id, "Fleet", List.of(), List.of(), List.of(member));
+			source.putVariant(BattleNext_VariantBuilder.fromVariant(selectedVariant.getApi()));
+			BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
+			editor.open(source, false);
+			attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+			if (expanded) editor.buttonPressed("toggle_member:0");
+			assertTrue(editor.save(), editor.getStatusText());
+			store.reload();
+			BattleNext_FleetModel saved = store.get(id);
+			assertEquals(member.getName(), saved.getMembers().get(0).getName());
+			var assembled = new BattleNext_FleetBuilder().build(saved);
+			assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
+			String expected = name.isBlank() ? selectedVariant.getApi().getHullSpec().getHullName() : name;
+			assertEquals(expected, assembled.getMembers().get(0).getShipName());
+			editor.close();
+		}
+	}
 
 	@Test
 	void capturesAllMembersAndUsesActiveRefitAndActualCaptains() throws Exception {

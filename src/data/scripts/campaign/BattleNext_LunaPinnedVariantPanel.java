@@ -165,9 +165,9 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		}
 		if (!"pin_save".equals(buttonId) || saved || snapshot == null) return;
 		String displayName = name.getText();
-		if (displayName.trim().isEmpty()) {
+		if (displayName.isBlank()) {
 			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantPanel.class, "save.name.rejected",
-				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
+				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank name").build());
 			status = variantStrings.get("pin_name_required");
 			refreshContents(displayName);
 			return;

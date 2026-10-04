@@ -235,10 +235,10 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 			page.buttonPressed("tournament:select:draft");
 			assertReleased(previous, oldChart);
 			assertNull(display(page));
-			assertFalse(((Map<?, ?>) getField(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession(), "REGISTERED")).isEmpty());
+			assertFalse(((Map<?, ?>) getField(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession(), "registrations")).isEmpty());
 			page.buttonPressed("tournament:select:other");
 			assertNotNull(display(page));
-			assertTrue(((Map<?, ?>) getField(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession(), "REGISTERED")).isEmpty());
+			assertTrue(((Map<?, ?>) getField(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession(), "registrations")).isEmpty());
 			previous = display(page);
 			oldChart = chart(previous);
 			page.buttonPressed("back");
@@ -329,7 +329,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		BattleNext_TournamentEditor editor = (BattleNext_TournamentEditor) getField(page, "editor");
 		((TextFieldAPI) getField(editor, "idField")).setText("created");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Created cup");
-		((TextFieldAPI) getField(editor, "maxFleetField")).setText("3");
+		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("3");
 		confirmTournamentFleets(editor, List.of("first", "second", "third"));
 		assertTrue(page.hasUnsavedChanges());
 		page.buttonPressed("save");

@@ -49,6 +49,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	private final CustomPanelAPI overlayHost;
 	private final DropdownSelectionListener listener;
 	private final List<DropdownChoice> options = new ArrayList<>();
+
 	private CustomPanelAPI row;
 	private ButtonAPI button;
 	private CustomPanelAPI popup;

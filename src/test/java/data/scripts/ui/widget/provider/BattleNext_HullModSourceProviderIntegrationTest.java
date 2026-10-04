@@ -403,7 +403,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			var page = page(store, Runnable::run, (text, action) -> {}, () -> {});
 			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 			page.buttonPressed("pin:" + pin.getSourcePath());
-			details = (BattleNext_VariantDetails) getField(page, "details");
+			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
 			close = page::close;
 		} else if (entry.equals("campaign")) {
 			var store = new BattleNext_PinnedVariantStore();

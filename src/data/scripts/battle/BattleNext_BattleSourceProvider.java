@@ -13,6 +13,7 @@ import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_RulesCheck;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tournament.BattleNext_TournamentEngine;
+import data.scripts.tools.BattleNext_BattleSignals;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -119,6 +120,13 @@ public class BattleNext_BattleSourceProvider {
 
 	public List<String> getWarnings() {
 		return Collections.unmodifiableList(warnings);
+	}
+
+	public boolean authorizeNextMatch(String tournamentId, String matchId) {
+		load();
+		if (!warnings.isEmpty() || ruleWarnings.isEmpty()) return false;
+		BattleNext_BattleSignals.authorizeMatch(tournamentId, matchId);
+		return true;
 	}
 
 	public List<String> getRuleWarnings() {

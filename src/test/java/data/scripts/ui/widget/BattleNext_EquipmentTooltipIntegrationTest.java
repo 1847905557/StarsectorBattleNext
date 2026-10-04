@@ -1,5 +1,10 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.widget.BattleNext_ReportDetails;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.model.report.BattleNext_ReportTarget;
+import data.model.report.BattleNext_BattleReportModel;
+
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -178,8 +183,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	void reportEquipmentSourcesUseTheSameDescriptionsAndRawIdentifiers(String kind) throws Exception {
 
 		String id = kind.equals("ship") ? "child" : kind.equals("weapon") ? "laser" : "wing";
-		var page = new BattleNext_BattleReportPage(() -> {}, Runnable::run,
-				(description, action) -> {});
+		var page = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
 		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
 		var list = body.createUIElement(600f, 100f, false);
 		var method = page.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,

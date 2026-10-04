@@ -8,6 +8,7 @@ import data.model.fleet.io.BattleNext_FleetLegacyLoader;
 import data.model.fleet.io.BattleNext_FleetSaver;
 import data.model.fleet.io.BattleNext_FleetStandardLoader;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_EntryId;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -77,5 +78,15 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 
 	public boolean isManaged(String id) {
 		return isManaged(get(id));
+	}
+
+	@Override
+	public void saveEdited(BattleNext_FleetModel model, String sourceId) throws IOException, JSONException {
+		for (BattleNext_FleetModel existing : getAll()) {
+			if (!existing.getId().equals(sourceId) && BattleNext_EntryId.sameFileName(model.getFolderName(), existing.getFolderName())) {
+				throw new EditRejection(EditRejectionReason.DUPLICATE_FOLDER, model.getFolderName());
+			}
+		}
+		super.saveEdited(model, sourceId);
 	}
 }

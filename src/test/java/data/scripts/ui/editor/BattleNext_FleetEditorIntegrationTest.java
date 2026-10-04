@@ -1,6 +1,6 @@
 package data.scripts.ui.editor;
 
-import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
@@ -23,17 +23,18 @@ class BattleNext_FleetEditorIntegrationTest extends BattleNext_TestVariantFixtur
 		BattleNext_PinnedVariantModel pin = pins.saveVariant("Fleet input", source().getApi());
 		BattleNext_FleetModel fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(),
 				List.of(new BattleNext_MemberModel("pinned:" + pin.getPinId(), "Ship", "", List.of(), "", "", List.of())));
-		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
-		setField(editor, "draft", fleet);
-		for (String field : List.of("id", "folderName", "name", "author", "description", "skills", "tags")) {
-			setField(editor, field, proxy(TextFieldAPI.class, (method, args) -> "getText".equals(method) ? "fleet" : null));
-		}
-		var capture = BattleNext_FleetEditor.class.getDeclaredMethod("captureDraft", boolean.class);
-		capture.setAccessible(true);
-		assertEquals(true, capture.invoke(editor, true));
-		assertEquals(pin.getPinId(), fleet.getMembers().get(0).getVariantId());
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
+		store.reload();
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
+		editor.open(fleet, false);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		assertEquals(true, editor.save(), editor.getStatusText());
+		store.reload();
+		BattleNext_FleetModel saved = store.get("fleet");
+		assertEquals(pin.getPinId(), saved.getMembers().get(0).getVariantId());
 		pins.delete(pin.getPinId());
-		assertEquals("Unsubmitted", fleet.getVariant(pin.getPinId()).build().getDisplayName());
-		assertNotNull(fleet.getVariant(pin.getPinId()).build().getModuleVariant("module"));
+		assertEquals("Unsubmitted", saved.getVariant(pin.getPinId()).build().getDisplayName());
+		assertNotNull(saved.getVariant(pin.getPinId()).build().getModuleVariant("module"));
+		editor.close();
 	}
 }

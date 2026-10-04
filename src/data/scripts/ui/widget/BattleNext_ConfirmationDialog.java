@@ -44,6 +44,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 
 	private final ConfirmationDialogHost host;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+
 	private CustomPanelAPI parent;
 	private CustomPanelAPI confirmation;
 	private TooltipMakerAPI confirmationStatusContent;

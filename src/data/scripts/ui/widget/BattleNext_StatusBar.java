@@ -12,6 +12,7 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+
 	private TooltipMakerAPI content;
 	private LabelAPI statusLabel;
 	private float textWidth;

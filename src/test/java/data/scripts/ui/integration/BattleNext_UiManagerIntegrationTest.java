@@ -32,7 +32,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed(tabs[2]);
 		var page = (BattleNext_PinnedVariantPage) getField(manager, "variantPage");
 		manager.buttonPressed("pin:" + pin.getSourcePath());
-		((TextFieldAPI) getField(page, "name")).setText("Changed");
+		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Changed");
 		manager.buttonPressed(tabs[1]);
 		assertEquals(tabs[2], getField(manager, "currentPage"));
 		manager.buttonPressed("confirm_cancel");

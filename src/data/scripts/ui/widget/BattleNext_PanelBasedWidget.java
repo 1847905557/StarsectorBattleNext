@@ -12,6 +12,7 @@ public abstract class BattleNext_PanelBasedWidget {
 
 	protected CustomPanelAPI panel;
 	protected BattleNext_UiInputRouter inputRouter;
+
 	private final List<OwnedPanel> ownedPanels = new ArrayList<>();
 
 	protected BattleNext_PanelBasedWidget() {
