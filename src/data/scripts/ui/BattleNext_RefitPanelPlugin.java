@@ -10,6 +10,8 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
@@ -17,6 +19,7 @@ import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
@@ -45,11 +48,15 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private static final float PICKER_GAP = 36f;
 	private static final float FOOTER_BUTTON_WIDTH = 160f;
 	private static final float FOOTER_BUTTON_GAP = 10f;
+	private static final float PIN_BUTTON_HEIGHT = 30f;
+	private static final float PIN_NAME_GAP = 6f;
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
+	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+	private final BattleNext_PinnedVariantStore pinnedStore = new BattleNext_PinnedVariantStore();
 	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, inputRouter);
 
 	private UIBorderObject border;
@@ -60,6 +67,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private BattleNext_OptionPicker sModPicker;
 	private BattleNext_OptionPicker dModPicker;
 	private ButtonAPI saveButton;
+	private ButtonAPI pinButton;
+	private BattleNext_TextField pinName;
+	private TooltipMakerAPI pinNameHost;
+	private boolean draftPinned;
+	private String pinnedName = "";
 	private LabelAPI statusLabel;
 	private FleetMemberAPI member;
 	private Object refitScreen;
@@ -96,11 +108,16 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		float leftX = width * SIDE_SHARE;
 		float rightX = leftX + leftWidth + gap;
 		leftPanel = panel.createCustomPanel(leftWidth, contentHeight, new BaseCustomUIPanelPlugin());
-		rightPanel = panel.createCustomPanel(rightWidth, contentHeight, new BaseCustomUIPanelPlugin());
+		rightPanel = panel.createCustomPanel(rightWidth, contentHeight, new ActionsPanelPlugin());
 		panel.addComponent(leftPanel).inTL(leftX, top);
 		panel.addComponent(rightPanel).inTL(rightX, top);
 
 		buildPickers(rightWidth);
+		pinButton = BattleNext_PageLayout.fixedButton(rightPanel,
+				new UIRect(0f, contentHeight - PIN_BUTTON_HEIGHT, rightWidth, PIN_BUTTON_HEIGHT),
+				variantStrings.get("pin_add_action"), "pin_add", CutStyle.ALL, false);
+		pinButton.setEnabled(false);
+		buildPinName();
 
 		float closeX = width - BORDER_INSET - FOOTER_BUTTON_WIDTH;
 		float footerY = height - BORDER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT;
@@ -134,8 +151,36 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		rightPanel.addUIElement(dModHost).inTL(0f, PICKER_GAP);
 	}
 
+	private void buildPinName() {
+		float width = pinButton.getPosition().getWidth();
+		float height = BattleNext_PageLayout.FORM_FIELD_HEIGHT;
+		float buttonTop = rightPanel.getPosition().getY() + rightPanel.getPosition().getHeight()
+				- pinButton.getPosition().getY() - pinButton.getPosition().getHeight();
+		pinNameHost = rightPanel.createUIElement(width, 0f, false);
+		BattleNext_UiTheme.configure(pinNameHost);
+		pinNameHost.setTextWidthOverride(width);
+		LabelAPI caption = pinNameHost.addPara(variantStrings.get("pin_name"), 0f);
+		caption.getPosition().inTL(0f, 0f);
+		float fieldTop = pinNameHost.getHeightSoFar();
+		pinName = new BattleNext_TextField(inputRouter, rightPanel, width, height, pinNameHost);
+		pinName.attach(pinNameHost, rightPanel);
+		pinName.getPosition().inTL(0f, fieldTop);
+		pinName.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		float blockHeight = fieldTop + height;
+		pinNameHost.setHeightSoFar(blockHeight);
+		rightPanel.addUIElement(pinNameHost).inTL(0f, buttonTop - PIN_NAME_GAP - blockHeight);
+	}
+
+	private class ActionsPanelPlugin extends BaseCustomUIPanelPlugin {
+		@Override
+		public void buttonPressed(Object buttonId) {
+			BattleNext_RefitPanelPlugin.this.buttonPressed(buttonId);
+		}
+	}
+
 	public void open(FleetMemberAPI member, Object refitScreen) {
 		closePickers();
+		if (pinName == null) buildPinName();
 		details.close();
 		details.clear();
 		details.setVariantJson(null);
@@ -153,6 +198,9 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		}
 		savedSMods = draft == null ? Set.of() : sModsOf(draft);
 		savedDMods = draft == null ? Set.of() : dModsOf(draft);
+		pinName.setText(draft == null ? "" : draft.getHullSpec().getHullName() + " - " + draft.getDisplayName());
+		draftPinned = false;
+		pinnedName = "";
 		confirmationWasActive = false;
 		updateControls();
 		refreshDetails();
@@ -160,6 +208,12 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	public void close() {
 		closePickers();
+		if (pinName != null) {
+			pinName.close();
+			rightPanel.removeComponent(pinNameHost);
+		}
+		pinName = null;
+		pinNameHost = null;
 		sModPicker.setEnabled(false);
 		dModPicker.setEnabled(false);
 		if (confirmation.isActive()) confirmation.handle("confirm_cancel");
@@ -170,6 +224,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		member = null;
 		refitScreen = null;
 		draft = null;
+		updateControls();
 	}
 
 	public void requestClose() {
@@ -291,6 +346,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		try {
 			ShipVariantAPI current = currentVariant();
 			draft = current == null ? null : current.clone();
+			draftPinned = false;
 			refreshDetails();
 		} catch (Throwable exception) {
 			details.close();
@@ -308,6 +364,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		if (confirmation.isActive()) return;
 		if ("save".equals(buttonId)) saveCurrentPage();
 		if ("close".equals(buttonId)) requestClose();
+		if ("pin_add".equals(buttonId) && canPin()) pinCurrentVariant();
 	}
 
 	@Override
@@ -316,9 +373,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	@Override
 	public void advance(float amount) {
-		if (confirmationWasActive == confirmation.isActive()) return;
-		confirmationWasActive = confirmation.isActive();
-		updateControls();
+		if (confirmationWasActive != confirmation.isActive()) {
+			confirmationWasActive = confirmation.isActive();
+			updateControls();
+		}
+		if (pinButton != null) pinButton.setEnabled(canPin());
 	}
 
 	@Override
@@ -368,6 +427,41 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		saveButton.setEnabled(enabled);
 		sModPicker.setEnabled(enabled);
 		dModPicker.setEnabled(enabled);
+		pinButton.setEnabled(canPin());
+	}
+
+	private boolean canPin() {
+		if (member == null || draft == null) return false;
+		if (confirmation.isActive() || !inputRouter.isEmpty()) return false;
+		return !draftPinned || !pinName.getText().equals(pinnedName);
+	}
+
+	private void pinCurrentVariant() {
+
+		closePickers();
+		String displayName = pinName.getText();
+		if (displayName.trim().isEmpty()) {
+			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "variant.pin.name.rejected",
+					BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
+			statusLabel.setText(variantStrings.get("pin_name_required"));
+			return;
+		}
+		try {
+			pinnedStore.reload();
+			BattleNext_PinnedVariantModel pin = pinnedStore.saveVariant(displayName, draft);
+			draftPinned = true;
+			pinnedName = displayName;
+			String status = variantStrings.format("pin_saved", pin.getDisplayName());
+			if (!pinnedStore.getLoadErrors().isEmpty()) {
+				status += "\n" + variantStrings.get("pin_load_warnings") + "\n" + String.join("\n", pinnedStore.getLoadErrors());
+			}
+			statusLabel.setText(status);
+		} catch (Exception exception) {
+			statusLabel.setText(strings.get("save_failed") + ": " + exception);
+			BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "variant.pin.save.failed",
+					BattleNext_Logger.fields().put("member", member).put("draft", draft).put("display_name", displayName).build(), exception);
+		}
+		updateControls();
 	}
 
 	private void selectSMods(List<String> ids) {
@@ -375,6 +469,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		Set<String> selected = new LinkedHashSet<>(ids);
 		if (selected.equals(sModsOf(draft))) return;
 		applySMods(draft, selected);
+		draftPinned = false;
 		statusLabel.setText("");
 		refreshDetails();
 	}
@@ -386,6 +481,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		ShipVariantAPI previous = draft.clone();
 		try {
 			applyDMods(draft, selected);
+			draftPinned = false;
 			statusLabel.setText("");
 			refreshDetails();
 		} catch (RuntimeException exception) {

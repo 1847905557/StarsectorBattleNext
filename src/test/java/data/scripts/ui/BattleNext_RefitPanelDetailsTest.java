@@ -8,9 +8,13 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
@@ -28,6 +32,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -75,6 +80,168 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(root.getPosition().getY() + 8f, buttonPositions.get("save").getY());
 		assertEquals(160f, buttonPositions.get("save").getWidth());
 		assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT, buttonPositions.get("save").getHeight());
+		PositionAPI pin = buttonPositions.get("pin_add");
+		PositionAPI pinName = ((TextFieldAPI) getField(plugin, "pinName")).getPosition();
+		assertEquals(right.getPosition().getX(), pin.getX());
+		assertEquals(right.getPosition().getY(), pin.getY());
+		assertEquals(right.getPosition().getWidth(), pin.getWidth(), 0.001f);
+		assertEquals(30f, pin.getHeight());
+		assertEquals(pin.getX(), pinName.getX());
+		assertEquals(pin.getWidth(), pinName.getWidth());
+		assertEquals(28f, pinName.getHeight());
+		assertEquals(6f, pinName.getY() - pin.getY() - pin.getHeight());
+		TooltipMakerAPI nameHost = (TooltipMakerAPI) getField(plugin, "pinNameHost");
+		LabelAPI caption = (LabelAPI) tooltips.get(nameHost).getComponents().get(0);
+		assertEquals("BattleNext_variant_pin_name", caption.getText());
+		assertEquals("small-insignia", labelFonts.get(caption.getPosition()));
+		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(caption.getPosition()));
+		assertEquals(pinName.getX(), caption.getPosition().getX());
+		assertEquals(pinName.getWidth(), caption.getPosition().getWidth());
+		assertEquals(pinName.getY() + pinName.getHeight(), caption.getPosition().getY());
+		assertEquals(caption.getPosition().getHeight() + pinName.getHeight(), nameHost.getHeightSoFar());
+		assertTrue(children.get(right).contains(nameHost));
+		assertEquals("BattleNext_variant_pin_add_action", buttonLabels.get("pin_add"));
+		assertFalse(buttons.get("pin_add").get());
+		plugin.close();
+	}
+
+	@Test
+	void pinActionUsesNameAboveButtonAndSavesCompleteUncommittedDraft() throws Exception {
+
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		String original = BattleNext_VariantBuilder.fromVariant(current.api).toJson().toString();
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		TextFieldAPI name = (TextFieldAPI) getField(plugin, "pinName");
+		assertEquals("Parent - Unsubmitted", name.getText());
+		assertTrue(buttons.get("pin_add").get());
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "ordinary"));
+		invoke(plugin, "selectDMods", List.class, List.of("d"));
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		JSONObject expected = BattleNext_VariantBuilder.fromVariant(draft).toJson();
+		name.setText("  My current draft  ");
+		CustomPanelAPI right = (CustomPanelAPI) getField(plugin, "rightPanel");
+		plugins.get(right).buttonPressed("pin_add");
+		BattleNext_PinnedVariantStore store = (BattleNext_PinnedVariantStore) getField(plugin, "pinnedStore");
+		assertEquals(1, store.getAll().size());
+		var pin = store.getAll().get(0);
+		assertEquals("My current draft", pin.getDisplayName());
+		assertJsonEquals(expected, pin.getVariantJson());
+		assertEquals(7, pin.getVariantJson().getJSONObject("modules").getJSONObject("module").getInt("fluxVents"));
+		assertTrue(Files.exists(directory.resolve(pin.getSourcePath())));
+		assertEquals(original, BattleNext_VariantBuilder.fromVariant(current.api).toJson().toString());
+		assertSame(draft, getField(plugin, "draft"));
+		assertFalse(buttons.get("pin_add").get());
+		assertTrue(status(plugin).startsWith("BattleNext_variant_pin_saved"));
+		plugin.buttonPressed("pin_add");
+		assertEquals(1, store.getAll().size());
+		BattleNext_VariantSourceProvider source = new BattleNext_VariantSourceProvider();
+		assertTrue(source.getOptions().stream().anyMatch(option -> option.getId().equals("pinned:" + pin.getPinId())));
+		assertEquals("parent_default_D", source.resolve("pinned:" + pin.getPinId()).getHullSpec().getHullId());
+		plugin.close();
+	}
+
+	@Test
+	void changedNamesAndDraftsAllowNewPinsWhileUnchangedRepeatedClicksStaySingle() throws Exception {
+
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		TextFieldAPI name = (TextFieldAPI) getField(plugin, "pinName");
+		plugin.buttonPressed("pin_add");
+		BattleNext_PinnedVariantStore store = (BattleNext_PinnedVariantStore) getField(plugin, "pinnedStore");
+		String firstId = store.getAll().get(0).getPinId();
+		name.setText("Second name");
+		plugin.advance(0f);
+		assertTrue(buttons.get("pin_add").get());
+		plugin.buttonPressed("pin_add");
+		assertEquals(2, store.getAll().size());
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "ordinary"));
+		plugin.advance(0f);
+		assertTrue(buttons.get("pin_add").get());
+		plugin.buttonPressed("pin_add");
+		assertEquals(3, store.getAll().size());
+		assertEquals("Second name", store.getAll().get(2).getDisplayName());
+		assertFalse(store.get(firstId).getVariantJson().getJSONArray("sMods").toString().contains("ordinary"));
+		assertTrue(store.getAll().get(2).getVariantJson().getJSONArray("sMods").toString().contains("ordinary"));
+		assertFalse(buttons.get("pin_add").get());
+		plugin.close();
+	}
+
+	@Test
+	void blankNameAndWriteFailurePreserveInputAndDraftForRetry() throws Exception {
+
+		BattleNext_RefitPanelPlugin plugin = opened(current());
+		TextFieldAPI name = (TextFieldAPI) getField(plugin, "pinName");
+		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
+		name.setText("   ");
+		plugin.buttonPressed("pin_add");
+		assertEquals("BattleNext_variant_pin_name_required", status(plugin));
+		assertEquals("   ", name.getText());
+		assertTrue(buttons.get("pin_add").get());
+		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
+		name.setText("Retry this draft");
+		FailingStore store = new FailingStore();
+		setField(plugin, "pinnedStore", store);
+		plugin.buttonPressed("pin_add");
+		assertTrue(store.getAll().isEmpty());
+		assertEquals("Retry this draft", name.getText());
+		assertSame(draft, getField(plugin, "draft"));
+		assertTrue(buttons.get("pin_add").get());
+		assertTrue(status(plugin).startsWith("BattleNext_common_save_failed"));
+		store.getWriter().setFail(false);
+		plugin.buttonPressed("pin_add");
+		assertEquals(1, store.getAll().size());
+		assertEquals("Retry this draft", store.getAll().get(0).getDisplayName());
+		plugin.close();
+	}
+
+	@Test
+	void pinInputRespectsModalOwnershipAndReleasesOnCloseAndReopen() throws Exception {
+
+		DraftVariant current = current();
+		current.api.addMod("ordinary");
+		BattleNext_RefitPanelPlugin plugin = opened(current);
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(plugin, "inputRouter");
+		TextFieldAPI name = (TextFieldAPI) getField(plugin, "pinName");
+		name.setText("Keep my name");
+		name.grabFocus(false);
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
+		invoke(picker, "open");
+		plugin.advance(0f);
+		assertFalse(name.hasFocus());
+		assertFalse(buttons.get("pin_add").get());
+		plugin.buttonPressed("pin_add");
+		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
+		picker.closeOverlays();
+		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "ordinary"));
+		plugin.requestClose();
+		assertFalse(buttons.get("pin_add").get());
+		plugin.buttonPressed("pin_add");
+		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
+		((BattleNext_ConfirmationDialog) getField(plugin, "confirmation")).handle("confirm_cancel");
+		plugin.advance(0f);
+		assertTrue(buttons.get("pin_add").get());
+		assertEquals("Keep my name", name.getText());
+		TooltipMakerAPI previousHost = (TooltipMakerAPI) getField(plugin, "pinNameHost");
+		CustomPanelAPI right = (CustomPanelAPI) getField(plugin, "rightPanel");
+		name.grabFocus(false);
+		plugin.close();
+		assertFalse(name.hasFocus());
+		assertFalse(children.get(right).contains(previousHost));
+		assertTrue(removedComponents.contains(previousHost));
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertFalse(buttons.get("pin_add").get());
+		plugin.close();
+		plugin.open(member(current), new Refit(member(current), current.api));
+		assertEquals("Parent - Unsubmitted", ((TextFieldAPI) getField(plugin, "pinName")).getText());
+		TooltipMakerAPI reopenedHost = (TooltipMakerAPI) getField(plugin, "pinNameHost");
+		assertNotSame(previousHost, reopenedHost);
+		assertTrue(children.get(right).contains(reopenedHost));
+		LabelAPI caption = (LabelAPI) tooltips.get(reopenedHost).getComponents().get(0);
+		assertEquals("BattleNext_variant_pin_name", caption.getText());
+		assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+		assertTrue(buttons.get("pin_add").get());
 		plugin.close();
 	}
 
@@ -112,18 +279,19 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
 		CustomPanelAPI root = (CustomPanelAPI) getField(plugin, "panel");
 		int mounted = children.get(root).size();
+		int registered = ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size();
 		for (int iteration = 0; iteration < 3; iteration++) {
 			invoke(picker, "open");
 			assertFalse(router.isEmpty());
 			assertSame(root.getPosition(), geometry.get(((CustomPanelAPI) getField(picker, "popup")).getPosition()).getParent());
-			assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
+			assertEquals(registered + 1, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
 			Map<String, Integer> selection = selection(picker);
 			selection.put("ordinary", 1);
 			picker.closeOverlays();
 			assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
 			assertEquals(mounted, children.get(root).size());
 			assertTrue(router.isEmpty());
-			assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+			assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
 		}
 		invoke(picker, "open");
 		selection(picker).put("ordinary", 1);
@@ -131,7 +299,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf((ShipVariantAPI) getField(plugin, "draft")));
 		assertEquals(Set.of("sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertTrue(router.isEmpty());
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "REGISTERED")).isEmpty());
+		assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "REGISTERED")).size());
 		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
 				getField(details(plugin), "variantJson"));
 		BattleNext_OptionPicker dPicker = (BattleNext_OptionPicker) getField(plugin, "dModPicker");
@@ -496,6 +664,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 	private DraftVariant current() throws Exception {
 
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
+		ShipHullSpecAPI parentTemplate = hulls.get("parent");
 		ShipHullSpecAPI parent = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
 			case "getHullId" -> "parent";
 			case "getHullName" -> "Parent";
@@ -503,9 +672,11 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			case "getBuiltInMods" -> List.of("built");
 			case "isBuiltInMod" -> "built".equals(args[0]);
 			case "getBuiltInWings" -> List.of();
+			case "getWeaponSlot", "getWeaponSlotAPI" -> parentTemplate.getWeaponSlot((String) args[0]);
 			default -> null;
 		});
 		hulls.put("parent", parent);
+		moduleSlots.put(parent, moduleSlots.get(parentTemplate));
 		ShipHullSpecAPI damaged = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
 			case "getHullId" -> "parent_default_D";
 			case "getHullName" -> "Damaged parent";
@@ -515,9 +686,11 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			case "getBuiltInMods" -> List.of("built");
 			case "isBuiltInMod" -> "built".equals(args[0]);
 			case "getBuiltInWings" -> List.of();
+			case "getWeaponSlot", "getWeaponSlotAPI" -> parentTemplate.getWeaponSlot((String) args[0]);
 			default -> null;
 		});
 		hulls.put("parent_default_D", damaged);
+		moduleSlots.put(damaged, moduleSlots.get(parentTemplate));
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SettingsAPI.class.getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
@@ -582,6 +755,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 				case "getHullSpec" -> hull;
 				case "setHullSpecAPI" -> { hull = (ShipHullSpecAPI) args[0]; yield null; }
 				case "getHullVariantId" -> this.json.getString("variantId");
+				case "getDisplayName" -> this.json.getString("displayName");
 				case "getHullMods" -> {
 					Set<String> installed = new LinkedHashSet<>(mods);
 					installed.addAll(permaMods);
