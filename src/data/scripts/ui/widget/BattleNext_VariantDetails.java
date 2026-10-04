@@ -41,6 +41,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private final Runnable refresh;
 	private final BooleanSupplier interactive;
 	private JSONObject variantJson;
+	private PreviewPlugin preview;
 
 	public BattleNext_VariantDetails(Runnable refresh) {
 		this(refresh, () -> true);
@@ -58,6 +59,14 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 	public void setVariantJson(JSONObject json) {
 		variantJson = json;
+	}
+
+	@Override
+	protected void clearContent() {
+		if (preview != null) {
+			preview.preview = null;
+			preview = null;
+		}
 	}
 
 	@Override
@@ -155,20 +164,16 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		identity.addPara(variantStrings.get("flux_capacitors") + ": " + json.optInt("fluxCapacitors", 0), GAP * 0.5f);
 		identity.addPara(variantStrings.get("flux_vents") + ": " + json.optInt("fluxVents", 0), GAP * 0.5f);
 		identity.setParaSmallInsignia();
-		SpriteAPI sprite = null;
-		try {
-			sprite = Global.getSettings().getSprite(hull.getSpriteName());
-		} catch (RuntimeException exception) {
-			BattleNext_Logger.warn(BattleNext_VariantDetails.class, "variant.preview.degraded",
-				BattleNext_Logger.fields().put("variant", json).put("hull_id", hull.getHullId()).put("sprite", hull.getSpriteName()).build(), exception);
-			identity.addPara(variantStrings.get("preview_error") + ": " + exception, ROW_GAP);
+		BattleNext_VariantPreview model = new BattleNext_VariantPreview(json, hull, Global.getSettings());
+		for (String error : model.getErrors()) {
+			identity.addPara(variantStrings.get("preview_error") + ": " + error, ROW_GAP);
 		}
 		float identityHeight = Math.min(identityLimit, identity.getHeightSoFar());
 		identity.getPosition().setSize(width + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, identityHeight);
-		if (sprite != null) {
-			PreviewPlugin plugin = new PreviewPlugin(sprite, Math.max(0f, height - identityHeight * 2f));
-			CustomPanelAPI image = frame.createCustomPanel(width, height, plugin);
-			plugin.position = image.getPosition();
+		if (model.hasContent()) {
+			preview = new PreviewPlugin(model, Math.max(0f, height - identityHeight * 2f));
+			CustomPanelAPI image = ownPanel(frame, frame.createCustomPanel(width, height, preview));
+			preview.position = image.getPosition();
 			frame.addComponent(image).inTL(GAP, SECTION_HEADER_HEIGHT + GAP);
 		}
 		frame.addUIElement(identity).inTL(GAP - BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
@@ -553,12 +558,12 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	private static class PreviewPlugin extends BaseCustomUIPanelPlugin {
-		private final SpriteAPI sprite;
+		private BattleNext_VariantPreview preview;
 		private final float imageHeight;
 		private PositionAPI position;
 
-		private PreviewPlugin(SpriteAPI sprite, float imageHeight) {
-			this.sprite = sprite;
+		private PreviewPlugin(BattleNext_VariantPreview preview, float imageHeight) {
+			this.preview = preview;
 			this.imageHeight = imageHeight;
 		}
 
@@ -569,8 +574,8 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 
 		@Override
 		public void render(float alphaMult) {
-			if (position == null || imageHeight <= 0f) return;
-			BattleNext_PageLayout.renderFittedSprite(sprite, position.getCenterX(), position.getCenterY(),
+			if (preview == null || position == null || imageHeight <= 0f) return;
+			preview.render(position.getCenterX(), position.getCenterY(),
 					position.getWidth(), imageHeight, alphaMult);
 		}
 	}

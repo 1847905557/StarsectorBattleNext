@@ -102,6 +102,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		inputRouter.clear();
 		float offset = contents == null || contents.getExternalScroller() == null
 				? 0f : contents.getExternalScroller().getYOffset();
+		details.close();
 		if (contentsManager != null) {
 			contentsManager.clearAllComponents();
 			rightPanel.removeComponent(contentsManager.getPanel());
@@ -210,6 +211,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 
 	void close() {
 
+		details.close();
 		inputRouter.clear();
 		if (saveButton != null) {
 			saveButton.setEnabled(false);

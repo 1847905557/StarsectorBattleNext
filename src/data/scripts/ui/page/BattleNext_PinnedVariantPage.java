@@ -64,6 +64,11 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 	}
 
 	@Override
+	protected void clearPageResources() {
+		details.close();
+	}
+
+	@Override
 	protected String pageTitle() {
 		return variantStrings.get("pinned_list_title");
 	}

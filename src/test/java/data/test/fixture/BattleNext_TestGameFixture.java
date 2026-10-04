@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -56,10 +57,14 @@ public class BattleNext_TestGameFixture {
 	protected final List<float[]> spriteRenderStates = new ArrayList<>();
 	protected final Map<SpriteAPI, float[]> sprites = new IdentityHashMap<>();
 	protected final Map<SpriteAPI, String> spritePaths = new IdentityHashMap<>();
+	protected final Map<SpriteAPI, float[]> spriteTransforms = new IdentityHashMap<>();
+	protected final List<float[]> spriteRenderTransforms = new ArrayList<>();
+	protected final List<SpriteAPI> renderedSprites = new ArrayList<>();
 	protected float spriteWidth = 120f;
 	protected float spriteHeight = 120f;
 	protected boolean failBuild;
 	protected boolean failSprites;
+	protected boolean failSpriteRender;
 	protected boolean lunaEnabled;
 
 	@BeforeEach
@@ -132,6 +137,8 @@ public class BattleNext_TestGameFixture {
 				if (failSprites) throw new IllegalArgumentException("Missing sprite");
 				float[] state = {spriteWidth, spriteHeight, 11f, 17f, 0.8f};
 				Color[] color = {Color.WHITE};
+				float[] transform = {0f, 770f, 771f};
+				SpriteAPI[] holder = new SpriteAPI[1];
 				SpriteAPI sprite = proxy(SpriteAPI.class, (name, values) -> switch (name) {
 					case "getColor" -> color[0];
 					case "setColor" -> {
@@ -143,6 +150,17 @@ public class BattleNext_TestGameFixture {
 					case "getCenterX" -> state[2];
 					case "getCenterY" -> state[3];
 					case "getAlphaMult" -> state[4];
+					case "getAngle" -> transform[0];
+					case "getBlendSrc" -> (int) transform[1];
+					case "getBlendDest" -> (int) transform[2];
+					case "setAngle" -> { transform[0] = (Float) values[0]; yield null; }
+					case "setNormalBlend" -> { transform[1] = 770f; transform[2] = 771f; yield null; }
+					case "setAdditiveBlend" -> { transform[1] = 770f; transform[2] = 1f; yield null; }
+					case "setBlendFunc" -> {
+						transform[1] = (Integer) values[0];
+						transform[2] = (Integer) values[1];
+						yield null;
+					}
 					case "setCenter" -> {
 						state[2] = (Float) values[0];
 						state[3] = (Float) values[1];
@@ -156,6 +174,9 @@ public class BattleNext_TestGameFixture {
 						spriteCenters.add(new float[]{(Float) values[0], (Float) values[1]});
 						spriteRenderColors.add(color[0]);
 						spriteRenderStates.add(state.clone());
+						spriteRenderTransforms.add(transform.clone());
+						renderedSprites.add(holder[0]);
+						if (failSpriteRender) throw new IllegalStateException("Sprite render failure");
 						yield null;
 					}
 					case "setSize" -> {
@@ -166,7 +187,9 @@ public class BattleNext_TestGameFixture {
 					}
 					default -> null;
 				});
+				holder[0] = sprite;
 				sprites.put(sprite, state);
+				spriteTransforms.put(sprite, transform);
 				spritePaths.put(sprite, args.length == 1 ? (String) args[0]
 						: args[0] + "/" + args[1]);
 				yield sprite;
@@ -209,9 +232,12 @@ public class BattleNext_TestGameFixture {
 			case "getBuiltInMods" -> List.of();
 			case "getBuiltInWeapons" -> new HashMap<String, String>();
 			case "getBuiltInWings" -> List.of();
+			case "getHints" -> EnumSet.noneOf(ShipHullSpecAPI.ShipTypeHints.class);
 			case "getWeaponSlot", "getWeaponSlotAPI" -> proxy(WeaponSlotAPI.class, (key, values) -> switch (key) {
 				case "getId" -> args[0];
 				case "isStationModule" -> moduleSlots.get(hulls.get(id)).contains(args[0]);
+				case "isTurret" -> !moduleSlots.get(hulls.get(id)).contains(args[0]);
+				case "getLocation" -> new Vector2f();
 				default -> null;
 			});
 			default -> null;

@@ -110,11 +110,13 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		BattleNext_LunaPinnedVariantPanel display = open(source(), new BattleNext_PinnedVariantStore(), 1000);
 		CustomUIPanelPlugin preview = plugins.values().stream()
 				.filter(plugin -> plugin.getClass().getSimpleName().equals("PreviewPlugin")).findFirst().orElseThrow();
-		SpriteAPI sprite = (SpriteAPI) getField(preview, "sprite");
+		Object model = getField(preview, "preview");
+		List<?> parts = (List<?>) getField(model, "parts");
+		SpriteAPI sprite = (SpriteAPI) getField(parts.get(0), "sprite");
 		float[] original = sprites.get(sprite).clone();
 		PositionAPI position = (PositionAPI) getField(preview, "position");
 		preview.render(0.5f);
-		assertEquals(1, spriteCenters.size());
+		assertEquals(2, spriteCenters.size());
 		assertArrayEquals(new float[]{position.getCenterX(), position.getCenterY()}, spriteCenters.get(0));
 		assertArrayEquals(original, sprites.get(sprite));
 		assertTrue(spriteSizes.get(0)[0] <= position.getWidth());

@@ -338,7 +338,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		invoke(plugin, "selectSMods", List.class, List.of("sm", "built", "mod_0_with_a_long_name"));
 		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
 		assertTrue(removedComponents.containsAll(previousFrames));
-		assertEquals(5, ((List<?>) getField(details(plugin), "ownedPanels")).size());
+		assertEquals(6, ((List<?>) getField(details(plugin), "ownedPanels")).size());
 		for (String key : offsets.keySet()) {
 			assertEquals(offsets.get(key), lists(plugin).get(key).getExternalScroller().getYOffset());
 		}
@@ -672,6 +672,8 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			case "getBuiltInMods" -> List.of("built");
 			case "isBuiltInMod" -> "built".equals(args[0]);
 			case "getBuiltInWings" -> List.of();
+			case "getBuiltInWeapons" -> parentTemplate.getBuiltInWeapons();
+			case "getHints" -> parentTemplate.getHints();
 			case "getWeaponSlot", "getWeaponSlotAPI" -> parentTemplate.getWeaponSlot((String) args[0]);
 			default -> null;
 		});
@@ -686,6 +688,8 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			case "getBuiltInMods" -> List.of("built");
 			case "isBuiltInMod" -> "built".equals(args[0]);
 			case "getBuiltInWings" -> List.of();
+			case "getBuiltInWeapons" -> parentTemplate.getBuiltInWeapons();
+			case "getHints" -> parentTemplate.getHints();
 			case "getWeaponSlot", "getWeaponSlotAPI" -> parentTemplate.getWeaponSlot((String) args[0]);
 			default -> null;
 		});
