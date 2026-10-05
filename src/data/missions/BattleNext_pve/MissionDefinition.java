@@ -85,6 +85,10 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			return;
 		}
 
+		for (String warning : provider.getWarnings()) {
+			api.addBriefingItem(warning);
+		}
+
 		int actualPoints = assembledEnemyFleet.getMembers().stream().mapToInt(FleetMemberAPI::getFleetPointCost).sum();
 		int map = BattleNext_MissionBattleMap.resolve(source.getMap(), quickBattleMatchIndex);
 		BattleNext_Match match = new BattleNext_Match(source.getId(), playerId, assembledEnemyFleet.getDefinition().getId(),
@@ -98,9 +102,6 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addBriefingItem(strings.format("map_summary", source.getMap(), source.getMapScale()));
 		api.addBriefingItem(strings.format("pve_selection_summary", factionIndex + 1, factions.size(),
 				quickBattleCurrentIndex + 1, matches.size() * 2));
-		for (String warning : provider.getWarnings()) {
-			api.addBriefingItem(warning);
-		}
 		BattleNext_MissionBattleMap.apply(api, map, match.getMapScale());
 
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
