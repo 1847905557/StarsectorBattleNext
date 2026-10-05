@@ -37,8 +37,19 @@ public class BattleNext_Settings {
 						BattleNext_Logger.fields().put("path", PATH + ".data").put("settings", values).build(), absent);
 			}
 		}
+		if (!values.has("cnText")) {
+			boolean cnText = Global.getSettings().getBoolean("showCNTranslationCredits");
+			put(values, "cnText", cnText);
+			BattleNext_Logger.info(BattleNext_Settings.class, "settings.field.default",
+					BattleNext_Logger.fields().put("key", "cnText").put("source_key", "showCNTranslationCredits").put("value", cnText).build());
+		}
 		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.load",
 				BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
+	}
+
+	public static boolean isCnTextEnabled() {
+		ensureLoaded();
+		return values.optBoolean("cnText");
 	}
 
 	public static boolean isFullGraphicEffect() {
@@ -75,9 +86,9 @@ public class BattleNext_Settings {
 		return values.optInt("reportKeepCount", DEFAULT_REPORT_KEEP_COUNT);
 	}
 
-	public static void save(boolean fullGraphicEffect, boolean infoLog, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
+	public static void save(boolean cnText, boolean fullGraphicEffect, boolean infoLog, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
 			float boostTimeMult, int reportKeepCount) {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("full_graphic_effect", fullGraphicEffect)
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("cn_text", cnText).put("full_graphic_effect", fullGraphicEffect)
 				.put("info_log", infoLog).put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
 				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).build();
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.save", input);
@@ -87,6 +98,7 @@ public class BattleNext_Settings {
 			if (boostTimeMult <= 0f || !Float.isFinite(boostTimeMult)) throw new IllegalArgumentException("Boost time multiplier is invalid");
 			if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
 			JSONObject next = defaults();
+			put(next, "cnText", cnText);
 			put(next, "fullGraphicEffect", fullGraphicEffect);
 			put(next, "infoLog", infoLog);
 			put(next, "rttInBattle", rttInBattle);
@@ -151,6 +163,7 @@ public class BattleNext_Settings {
 	private static void merge(JSONObject stored) {
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.merge",
 				BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
+		if (stored.has("cnText")) put(values, "cnText", stored.optBoolean("cnText"));
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
 		putIf(values, "infoLog", stored.has("infoLog") ? stored.optBoolean("infoLog") : null);
 		putIf(values, "rttInBattle", stored.has("rttInBattle") ? stored.optBoolean("rttInBattle") : null);

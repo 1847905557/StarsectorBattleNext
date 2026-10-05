@@ -43,16 +43,16 @@ public class BattleNext_MemberBuilder {
 			member.setPersonalityOverride(definition.getPersonality());
 		}
 
-		PersonAPI captain = Global.getSettings().createPerson();
+		PersonAPI officer = Global.getSettings().createPerson();
 		if (!definition.getPersonality().isEmpty()) {
-			captain.setPersonality(definition.getPersonality());
+			officer.setPersonality(definition.getPersonality());
 		}
 		if (!definition.getPortrait().isEmpty()) {
-			captain.setPortraitSprite(definition.getPortrait());
+			officer.setPortraitSprite(definition.getPortrait());
 		}
 
-		BattleNext_PersonSkills.apply(captain, definition.getSkills());
-		member.setCaptain(captain);
+		BattleNext_PersonSkills.apply(officer, definition.getSkills());
+		member.setCaptain(officer);
 
 		member.getRepairTracker().setMothballed(false);
 		member.getRepairTracker().setCrashMothballed(false);

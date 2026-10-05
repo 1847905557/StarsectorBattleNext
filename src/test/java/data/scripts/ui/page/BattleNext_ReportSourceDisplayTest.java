@@ -1,15 +1,20 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.test.fixture.BattleNext_TestGameFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-class BattleNext_ReportSourceDisplayTest {
+class BattleNext_ReportSourceDisplayTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void weaponWingAndShipUseRegisteredNamesAndImages() {
@@ -77,17 +82,24 @@ class BattleNext_ReportSourceDisplayTest {
 		assertEquals("D", BattleNext_ReportSourceDisplay.resolve(source("damage_type", "x"), missing).placeholder());
 	}
 
-	@Test
-	void arcUsesRegisteredEnergyLashIconAndName() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void arcUsesRegisteredEnergyLashIconAndSelectedLanguage(boolean cnText) throws Exception {
 		SettingsAPI settings = proxy(SettingsAPI.class, name -> switch (name) {
-			case "getString" -> "Arc";
 			case "getSpriteName" -> "graphics/icons/hullsys/energy_lash.png";
 			default -> null;
 		});
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getBoolean" -> cnText;
+					case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
+					default -> method.invoke(delegate, args);
+				}));
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source("arc", "arc"), settings);
 
-		assertEquals("Arc", visual.name());
+		assertEquals(BattleNext_TestTextCatalog.text(cnText ? "Report_CN" : "Report", "BattleNext_report_source_arc"), visual.name());
 		assertEquals("graphics/icons/hullsys/energy_lash.png", visual.primarySprite());
 		assertTrue(visual.accentIcon());
 		assertTrue(visual.resolved());

@@ -170,6 +170,16 @@ public class BattleNext_PageLayout {
 		return maker;
 	}
 
+	public static void refreshHeading(TooltipMakerAPI maker, float areaWidth, String title) {
+		LabelAPI label = (LabelAPI) maker.getPrev();
+		label.setText(maker.shortenString(title, areaWidth - PAGE_TITLE_TRUNCATION_PADDING));
+	}
+
+	public static void refreshButton(TooltipMakerAPI maker, ButtonAPI button, String title) {
+		button.setText(maker.shortenString(title,
+				Math.max(MIN_UI_WIDTH, button.getPosition().getWidth() - BUTTON_TEXT_TRUNCATION_PADDING)));
+	}
+
 	public static ButtonAPI button(TooltipMakerAPI maker, String title, Object id, float width) {
 		ButtonAPI button = maker.addButton(maker.shortenString(title,
 				Math.max(MIN_UI_WIDTH, width - BUTTON_TEXT_TRUNCATION_PADDING)), id, BattleNext_UiTheme.ACCENT,

@@ -140,7 +140,7 @@ public class BattleNext_MissionBattleMap {
 				addAsteroidField(api, 0f, 0f, 60f, 2000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
 				api.addNebula(0f, 0f, 3200f * scale);
 			}
-			default -> {
+			case 11 -> {
 				width = 18000f;
 				height = 14000f;
 				float scaledWidth = width * scale;
@@ -150,6 +150,14 @@ public class BattleNext_MissionBattleMap {
 				api.addObjective(0.05f * scaledWidth, 0.15f * scaledHeight, "sensor_array");
 				api.addObjective(-0.05f * scaledWidth, -0.15f * scaledHeight, "sensor_array");
 				api.addObjective(0.05f * scaledWidth, -0.15f * scaledHeight, "nav_buoy");
+			}
+			default -> {
+				// for error?
+				width = 6000f;
+				height = 6000f;
+				float scaledWidth = width * scale;
+				float scaledHeight = height * scale;
+				initMap(api, scaledWidth, scaledHeight);
 			}
 		}
 	}

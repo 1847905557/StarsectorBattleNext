@@ -9,6 +9,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
 	private final BattleNext_I18nSection settingsStrings = BattleNext_I18nSection.getInstance("Settings", "BattleNext_settings_");
 
+	private ButtonAPI cnTextCheckbox;
 	private ButtonAPI fullGraphicEffectCheckbox;
 	private ButtonAPI infoLogCheckbox;
 	private ButtonAPI rttInBattleCheckbox;
@@ -19,6 +20,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
 	public void open() {
 		beginSession();
+		cnTextCheckbox = null;
 		fullGraphicEffectCheckbox = null;
 		infoLogCheckbox = null;
 		rttInBattleCheckbox = null;
@@ -26,6 +28,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void buildEditorContent() {
+		boolean cnText = cnTextCheckbox == null ? BattleNext_Settings.isCnTextEnabled() : cnTextCheckbox.isChecked();
 		boolean graphics = fullGraphicEffectCheckbox == null ? BattleNext_Settings.isFullGraphicEffect() : fullGraphicEffectCheckbox.isChecked();
 		boolean logging = infoLogCheckbox == null ? BattleNext_Settings.isInfoLogEnabled() : infoLogCheckbox.isChecked();
 		boolean rtt = rttInBattleCheckbox == null ? BattleNext_Settings.isRttInBattle() : rttInBattleCheckbox.isChecked();
@@ -41,6 +44,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		BattleNext_UiTheme.configure(fieldContent);
 		fieldContent.addTitle(settingsStrings.get("heading"));
 		fieldContent.addPara(settingsStrings.get("description"), 10f);
+		cnTextCheckbox = createCheckbox("cn_text", fieldContent, areaWidth, settingsStrings.get("cn_text"), "cnText", cnText, true);
 		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, areaWidth, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);
 		infoLogCheckbox = createCheckbox("logging", fieldContent, areaWidth, settingsStrings.get("info_log"), "infoLog", logging, true);
 		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, areaWidth, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
@@ -78,7 +82,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 	@Override
 	protected String draftState() {
 		if (fullGraphicEffectCheckbox == null) return "";
-		return fullGraphicEffectCheckbox.isChecked() + "|" + infoLogCheckbox.isChecked() + "|" + rttInBattleCheckbox.isChecked() + "|" + battleTimeLimitField.getText() + "|"
+		return cnTextCheckbox.isChecked() + "|" + fullGraphicEffectCheckbox.isChecked() + "|" + infoLogCheckbox.isChecked() + "|" + rttInBattleCheckbox.isChecked() + "|" + battleTimeLimitField.getText() + "|"
 				+ defaultTimeMultField.getText() + "|" + boostTimeMultField.getText() + "|" + reportKeepCountField.getText();
 	}
 
@@ -89,7 +93,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 			float defaultMult = parsePositive(defaultTimeMultField.getText());
 			float boostMult = parsePositive(boostTimeMultField.getText());
 			int keepCount = parseCount(reportKeepCountField.getText());
-			BattleNext_Settings.save(fullGraphicEffectCheckbox.isChecked(), infoLogCheckbox.isChecked(), rttInBattleCheckbox.isChecked(),
+			BattleNext_Settings.save(cnTextCheckbox.isChecked(), fullGraphicEffectCheckbox.isChecked(), infoLogCheckbox.isChecked(), rttInBattleCheckbox.isChecked(),
 					timeLimit, defaultMult, boostMult, keepCount);
 			return true;
 		} catch (RuntimeException exception) {
@@ -101,6 +105,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 	@Override
 	protected void restoreDraft() {
 		BattleNext_Settings.load();
+		cnTextCheckbox = null;
 		fullGraphicEffectCheckbox = null;
 		infoLogCheckbox = null;
 		rttInBattleCheckbox = null;

@@ -1,17 +1,20 @@
 package data.model.quickbattle;
 
 import data.model.BattleNext_LoadSource;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.quickbattle.BattleNext_QuickBattleModel.QuickBattleRowType;
 import data.scripts.tools.BattleNext_CsvLine;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import java.util.stream.IntStream;
 
 class BattleNext_QuickBattleModelTest {
 
 	@ParameterizedTest
-	@ValueSource(ints = {-1, 0, 11})
+	@MethodSource("supportedMaps")
 	void supportedMapsAndQuotedFleetNamesRoundTrip(int map) {
 		var row = BattleNext_QuickBattleModel.fromCsvRow("\"team,one\",enemy," + map + ",1.5");
 		assertEquals("team,one", row.getPlayer());
@@ -21,7 +24,7 @@ class BattleNext_QuickBattleModelTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"a,b,-2,1", "a,b,12,1", "a,b,0,0", "a,b,0,-1", "a,b,0,NaN", "a,b,0,Infinity", "a,b,x,1", "a,b,1,x", ",b,1,1", "a,b,1", "a,b,1,1,extra"})
+	@ValueSource(strings = {"a,b,0,0", "a,b,0,-1", "a,b,0,NaN", "a,b,0,Infinity", "a,b,x,1", "a,b,1,x", ",b,1,1", "a,b,1", "a,b,1,1,extra"})
 	void invalidCsvKeepsThePriorModelAndProducesEditableRawRows(String line) {
 		var row = new BattleNext_QuickBattleModel("original", "enemy", 3, 2f);
 		String before = row.toCsvLine();
@@ -54,6 +57,21 @@ class BattleNext_QuickBattleModelTest {
 		copy.setEnabled(true);
 		assertEquals("ab_player01", row.getPlayer());
 		assertFalse(row.isEnabled());
+	}
+
+	private static IntStream supportedMaps() {
+		return IntStream.of(BattleNext_MissionBattleMap.RANDOM_MAP_ID, 0, BattleNext_MissionBattleMap.LAST_MAP_ID);
+	}
+
+	@ParameterizedTest
+	@MethodSource("unsupportedMaps")
+	void mapBoundsFollowTheMissionMapContract(int map) {
+		String line = "a,b," + map + ",1";
+		invalidCsvKeepsThePriorModelAndProducesEditableRawRows(line);
+	}
+
+	private static IntStream unsupportedMaps() {
+		return IntStream.of(BattleNext_MissionBattleMap.RANDOM_MAP_ID - 1, BattleNext_MissionBattleMap.LAST_MAP_ID + 1);
 	}
 
 	@Test

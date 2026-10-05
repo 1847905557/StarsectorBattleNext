@@ -7,6 +7,7 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_StatusBar;
@@ -51,6 +52,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private BattleNext_StatusBar statusBar;
+	private TooltipMakerAPI headingContent;
+	private ButtonAPI closeButton;
 
 	private CustomPanelAPI panel;
 	private UIRect bodyRect;
@@ -122,7 +125,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			requestClose();
 			return;
 		}
+		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		activeView().buttonPressed(buttonId);
+		if (cnText != BattleNext_Settings.isCnTextEnabled()) refreshShellText();
 		if (currentPage == BattleManagementPage.TOURNAMENTS || "tournament:start".equals(buttonId)) refreshState();
 	}
 
@@ -175,7 +180,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
 				shellWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
 
-		BattleNext_PageLayout.heading(headingRect, panel, managementStrings.get("heading"));
+		headingContent = BattleNext_PageLayout.heading(headingRect, panel, managementStrings.get("heading"));
+		headingContent.setButtonFontOrbitron20();
 
 		float tabWidth = (tabsRect.getWidth() - SHELL_TAB_GAP * (tabButtons.length - 1)) / tabButtons.length;
 		for (int index = 0; index < tabButtons.length; index++) {
@@ -192,10 +198,20 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		statusBar = new BattleNext_StatusBar(statusWidth, footerRect.getHeight());
 		statusBar.attach(footer, panel);
 		panel.addUIElement(footer).inTL(footerRect.getX(), footerRect.getY());
-		BattleNext_PageLayout.fixedButton(panel,
+		closeButton = BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth,
 						footerRect.getY(), closeWidth, footerRect.getHeight()),
 				strings.get("close"), "close", CutStyle.BOTTOM, false);
+	}
+
+	private void refreshShellText() {
+		BattleNext_PageLayout.refreshHeading(headingContent, bodyRect.getWidth(), managementStrings.get("heading"));
+		for (int index = 0; index < tabButtons.length; index++) {
+			BattleNext_PageLayout.refreshButton(headingContent, tabButtons[index],
+					managementStrings.get(BattleManagementPage.values()[index].titleKey));
+		}
+		BattleNext_PageLayout.refreshButton(headingContent, closeButton, strings.get("close"));
+		statusBar.refreshText();
 	}
 
 	private void showPage() {
@@ -357,7 +373,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public boolean saveCurrentPage() {
-		return activeView().save();
+		boolean cnText = BattleNext_Settings.isCnTextEnabled();
+		boolean saved = activeView().save();
+		if (saved && cnText != BattleNext_Settings.isCnTextEnabled()) refreshShellText();
+		return saved;
 	}
 
 	@Override

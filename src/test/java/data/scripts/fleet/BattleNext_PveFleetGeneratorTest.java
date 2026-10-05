@@ -122,7 +122,7 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
-	void preservesNativeMembersCaptainsVariantsModulesAndSkillLevels() throws Exception {
+	void preservesNativeMembersOfficersVariantsModulesAndSkillLevels() throws Exception {
 
 		var result = new BattleNext_PveFleetGenerator().generate("mod_faction", 100);
 		var nativeMembers = generatedFleets.get(0).getMembers();
@@ -143,10 +143,10 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 		assertEquals(BattleNext_PersonSkills.capture(officer), model.getSkills());
 		assertEquals("officer.png", model.getPortrait());
 		assertEquals("reckless", model.getPersonality());
-		var defaultCaptain = result.getDefinition().getMembers().get(1);
-		assertTrue(defaultCaptain.getSkills().isEmpty());
-		assertEquals("", defaultCaptain.getPortrait());
-		assertEquals("", defaultCaptain.getPersonality());
+		var defaultOfficer = result.getDefinition().getMembers().get(1);
+		assertTrue(defaultOfficer.getSkills().isEmpty());
+		assertEquals("", defaultOfficer.getPortrait());
+		assertEquals("", defaultOfficer.getPersonality());
 	}
 
 	@Test

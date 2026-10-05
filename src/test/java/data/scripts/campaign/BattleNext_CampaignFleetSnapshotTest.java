@@ -51,7 +51,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 	}
 
 	@Test
-	void capturesAllMembersAndUsesActiveRefitAndActualCaptains() throws Exception {
+	void capturesAllMembersAndUsesActiveRefitAndActualOfficers() throws Exception {
 
 		String before = BattleNext_VariantBuilder.fromVariant(activeVariant.getApi()).toJson().toString();
 		BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());

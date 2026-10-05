@@ -46,9 +46,9 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private static final class FleetMemberEditorFields {
 		private TextFieldAPI variantField;
 		private TextFieldAPI nameField;
-		private TextFieldAPI captainPersonalityField;
-		private TextFieldAPI captainSkillsField;
-		private TextFieldAPI captainPortraitField;
+		private TextFieldAPI officerPersonalityField;
+		private TextFieldAPI officerSkillsField;
+		private TextFieldAPI officerPortraitField;
 		private TextFieldAPI ordersField;
 		private TextFieldAPI tagsField;
 	}
@@ -119,14 +119,14 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
 			fields.nameField = createTextField(List.of(memberKey, "name"), bodyPanel, fieldContent, areaWidth,
 					memberStrings.get("ship_name"), member.getName(), true, fieldContent, rowsContent);
-			fields.captainPersonalityField = createOptionField(List.of(memberKey, "personality"), bodyPanel, fieldContent, areaWidth,
-					memberStrings.get("captain_personality"), member.getPersonality(), new BattleNext_PersonalitySourceProvider(),
+			fields.officerPersonalityField = createOptionField(List.of(memberKey, "personality"), bodyPanel, fieldContent, areaWidth,
+					memberStrings.get("officer_personality"), member.getPersonality(), new BattleNext_PersonalitySourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
-			fields.captainSkillsField = createOptionField(List.of(memberKey, "skills"), bodyPanel, fieldContent, areaWidth,
-					memberStrings.get("captain_skills"), String.join(",", member.getSkills()), new BattleNext_OfficerSkillSourceProvider(),
+			fields.officerSkillsField = createOptionField(List.of(memberKey, "skills"), bodyPanel, fieldContent, areaWidth,
+					memberStrings.get("officer_skills"), String.join(",", member.getSkills()), new BattleNext_OfficerSkillSourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.MULTIPLE, fieldContent, rowsContent);
-			fields.captainPortraitField = createOptionField(List.of(memberKey, "portrait"), bodyPanel, fieldContent, areaWidth,
-					memberStrings.get("captain_portrait"), member.getPortrait(), new BattleNext_PortraitSourceProvider(),
+			fields.officerPortraitField = createOptionField(List.of(memberKey, "portrait"), bodyPanel, fieldContent, areaWidth,
+					memberStrings.get("officer_portrait"), member.getPortrait(), new BattleNext_PortraitSourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
 			fields.ordersField = createTextField(List.of(memberKey, "orders"), bodyPanel, fieldContent, areaWidth,
 					memberStrings.get("orders"), member.getOrders(), true, fieldContent, rowsContent);
@@ -231,9 +231,9 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			FleetMemberEditorFields fields = memberFields.size() > index ? memberFields.get(index) : null;
 			for (String field : new String[]{value(fields == null ? null : fields.variantField, member.getVariantId()),
 					value(fields == null ? null : fields.nameField, member.getName()),
-					value(fields == null ? null : fields.captainPersonalityField, member.getPersonality()),
-					value(fields == null ? null : fields.captainSkillsField, String.join(",", member.getSkills())),
-					value(fields == null ? null : fields.captainPortraitField, member.getPortrait()),
+					value(fields == null ? null : fields.officerPersonalityField, member.getPersonality()),
+					value(fields == null ? null : fields.officerSkillsField, String.join(",", member.getSkills())),
+					value(fields == null ? null : fields.officerPortraitField, member.getPortrait()),
 					value(fields == null ? null : fields.ordersField, member.getOrders()),
 					value(fields == null ? null : fields.tagsField, String.join(",", member.getTags()))}) {
 				value.append(field.length()).append(':').append(field);
@@ -332,9 +332,9 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				}
 			}
 			members.add(new BattleNext_MemberModel(variantId, value(fields == null ? null : fields.nameField, existing.getName()),
-					value(fields == null ? null : fields.captainPersonalityField, existing.getPersonality()),
-					split(value(fields == null ? null : fields.captainSkillsField, String.join(",", existing.getSkills()))),
-					value(fields == null ? null : fields.captainPortraitField, existing.getPortrait()),
+					value(fields == null ? null : fields.officerPersonalityField, existing.getPersonality()),
+					split(value(fields == null ? null : fields.officerSkillsField, String.join(",", existing.getSkills()))),
+					value(fields == null ? null : fields.officerPortraitField, existing.getPortrait()),
 					value(fields == null ? null : fields.ordersField, existing.getOrders()),
 					split(value(fields == null ? null : fields.tagsField, String.join(",", existing.getTags())))));
 		}

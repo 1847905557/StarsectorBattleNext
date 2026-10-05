@@ -43,12 +43,12 @@ public class BattleNext_CampaignFleetSnapshot {
 				BattleNext_VariantBuilder builder = BattleNext_VariantBuilder.fromJson(json, variantId);
 				builder.build();
 				snapshot.putVariant(builder);
-				PersonAPI captain = member.getCaptain();
-				boolean assigned = captain != null && !captain.isDefault();
+				PersonAPI officer = member.getCaptain();
+				boolean assigned = officer != null && !officer.isDefault();
 				members.add(new BattleNext_MemberModel(variantId, member.getShipName(),
-						assigned ? captain.getPersonalityAPI().getId() : "",
-						assigned ? BattleNext_PersonSkills.capture(captain) : List.of(),
-						assigned ? captain.getPortraitSprite() : "", "", List.of()));
+						assigned ? officer.getPersonalityAPI().getId() : "",
+						assigned ? BattleNext_PersonSkills.capture(officer) : List.of(),
+						assigned ? officer.getPortraitSprite() : "", "", List.of()));
 			}
 			snapshot.setMembers(members);
 			BattleNext_Logger.operationSucceeded(BattleNext_CampaignFleetSnapshot.class, "fleet.player.snapshot",

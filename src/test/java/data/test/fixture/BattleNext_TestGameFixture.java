@@ -17,6 +17,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.loading.specs.Q;
 import data.scripts.tools.BattleNext_CsvLine;
+import data.scripts.tools.BattleNext_Settings;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,6 +30,7 @@ import org.lwjgl.util.vector.Vector2f;
 import java.awt.Color;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +50,8 @@ public class BattleNext_TestGameFixture {
 	protected Path directory;
 	protected SettingsAPI previousSettings;
 	protected SectorAPI previousSector;
+	private Field settingsValues;
+	private Object previousSettingsValues;
 	protected final Map<String, ShipHullSpecAPI> hulls = new LinkedHashMap<>();
 	protected final Map<String, ShipVariantAPI> registeredVariants = new LinkedHashMap<>();
 	protected final List<String> dataReads = new ArrayList<>();
@@ -69,10 +73,14 @@ public class BattleNext_TestGameFixture {
 	protected boolean lunaEnabled;
 
 	@BeforeEach
-	protected void configureGameServices() {
+	protected void configureGameServices() throws ReflectiveOperationException {
 
 		previousSettings = Global.getSettings();
 		previousSector = Global.getSector();
+		settingsValues = BattleNext_Settings.class.getDeclaredField("values");
+		settingsValues.setAccessible(true);
+		previousSettingsValues = settingsValues.get(null);
+		settingsValues.set(null, null);
 		ModSpecAPI mod = proxy(ModSpecAPI.class, (method, args) -> "getPath".equals(method) ? directory.toString() : null);
 		ModManagerAPI mods = proxy(ModManagerAPI.class, (method, args) -> switch (method) {
 			case "getModSpec" -> mod;
@@ -200,9 +208,10 @@ public class BattleNext_TestGameFixture {
 	}
 
 	@AfterEach
-	protected void restoreGameServices() {
+	protected void restoreGameServices() throws ReflectiveOperationException {
 		Global.setSettings(previousSettings);
 		Global.setSector(previousSector);
+		settingsValues.set(null, previousSettingsValues);
 	}
 
 	protected JSONArray readCsv(Path path) throws IOException, JSONException {

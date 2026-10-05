@@ -1,6 +1,7 @@
 package data.model.quickbattle;
 
 import data.model.BattleNext_CsvModel;
+import data.missions.BattleNext_MissionBattleMap;
 import data.scripts.tools.BattleNext_CsvLine;
 
 import java.util.List;
@@ -115,7 +116,8 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 			throw new IllegalArgumentException("Invalid quick battle row numbers", exception);
 		}
 		if (fields.get(0).trim().isEmpty() || fields.get(1).trim().isEmpty()
-				|| parsedMap < -1 || parsedMap > 11 || !Float.isFinite(parsedSize) || parsedSize <= 0f) {
+				|| parsedMap < BattleNext_MissionBattleMap.RANDOM_MAP_ID || parsedMap > BattleNext_MissionBattleMap.LAST_MAP_ID
+				|| !Float.isFinite(parsedSize) || parsedSize <= 0f) {
 			throw new IllegalArgumentException("Invalid quick battle row");
 		}
 		player = fields.get(0).trim();

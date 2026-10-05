@@ -6,9 +6,12 @@ import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -21,6 +24,8 @@ class BattleNext_SettingsTest {
 	private Object previousValues;
 	private final AtomicReference<JSONObject> stored = new AtomicReference<>();
 	private boolean failWrite;
+	private boolean vanillaCnText;
+	private int vanillaCnReads;
 
 	@BeforeEach
 	void configureSettings() throws ReflectiveOperationException {
@@ -30,6 +35,11 @@ class BattleNext_SettingsTest {
 		previousValues = valuesField.get(null);
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
+					case "getBoolean" -> {
+						assertEquals("showCNTranslationCredits", args[0]);
+						vanillaCnReads++;
+						yield vanillaCnText;
+					}
 					case "readJSONFromCommon" -> stored.get();
 					case "writeJSONToCommon" -> {
 						if (failWrite) throw new IOException("Injected settings write failure");
@@ -52,23 +62,23 @@ class BattleNext_SettingsTest {
 	@Test
 	void pvpRttDefaultsOffAndPersistsWhenSaved() {
 		assertFalse(BattleNext_Settings.isRttInBattle());
-		BattleNext_Settings.save(true, false, true, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, true, 500f, 1f, 3f, 50);
 		assertTrue(stored.get().optBoolean("rttInBattle"));
 		BattleNext_Settings.load();
 		assertTrue(BattleNext_Settings.isRttInBattle());
-		BattleNext_Settings.save(true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
 		assertFalse(stored.get().optBoolean("rttInBattle", true));
 	}
 
 	@Test
 	void infoLogDefaultsOffAndPersistsBothStates() {
 		assertFalse(BattleNext_Settings.isInfoLogEnabled());
-		BattleNext_Settings.save(true, true, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50);
 		assertTrue(stored.get().optBoolean("infoLog"));
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
 		BattleNext_Settings.load();
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
-		BattleNext_Settings.save(true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
 		assertFalse(stored.get().optBoolean("infoLog", true));
 		BattleNext_Settings.load();
 		assertFalse(BattleNext_Settings.isInfoLogEnabled());
@@ -76,10 +86,42 @@ class BattleNext_SettingsTest {
 
 	@Test
 	void failedWritePreservesCommittedInfoLogSetting() {
-		BattleNext_Settings.save(true, true, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50);
 		failWrite = true;
-		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(true, false, false, 500f, 1f, 3f, 50));
+		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50));
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
 		assertTrue(stored.get().optBoolean("infoLog"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void missingCnTextUsesCurrentVanillaDefaultUntilExplicitlySaved(boolean enabled) throws Exception {
+		vanillaCnText = enabled;
+		vanillaCnReads = 0;
+		stored.set(new JSONObject().put("fullGraphicEffect", false));
+		BattleNext_Settings.load();
+		assertEquals(enabled, BattleNext_Settings.isCnTextEnabled());
+		assertFalse(BattleNext_Settings.isFullGraphicEffect());
+		assertEquals(1, vanillaCnReads);
+		assertFalse(stored.get().has("cnText"));
+		vanillaCnText = !enabled;
+		BattleNext_Settings.load();
+		assertEquals(!enabled, BattleNext_Settings.isCnTextEnabled());
+		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+		assertEquals(enabled, stored.get().getBoolean("cnText"));
+		vanillaCnReads = 0;
+		BattleNext_Settings.load();
+		assertEquals(enabled, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(0, vanillaCnReads);
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void failedWritePreservesCommittedLanguage(boolean enabled) {
+		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+		failWrite = true;
+		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(!enabled, true, false, false, 500f, 1f, 3f, 50));
+		assertEquals(enabled, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(enabled, stored.get().optBoolean("cnText"));
 	}
 }

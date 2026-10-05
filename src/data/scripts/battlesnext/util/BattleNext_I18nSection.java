@@ -1,6 +1,7 @@
 package data.scripts.battlesnext.util;
 
 import com.fs.starfarer.api.Global;
+import data.scripts.tools.BattleNext_Settings;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -31,16 +32,13 @@ public class BattleNext_I18nSection {
 	}
 
 	public String get() {
-		try {
-			return Global.getSettings().getString(category, keyPrefix);
-		} catch (Exception e) {
-			return "[NULL]";
-		}
+		return get("");
 	}
 
 	public String get(String key) {
 		try {
-			return Global.getSettings().getString(category, keyPrefix + key);
+			String textCategory = BattleNext_Settings.isCnTextEnabled() ? category + "_CN" : category;
+			return Global.getSettings().getString(textCategory, keyPrefix + key);
 		} catch (Exception e) {
 			return "[NULL]";
 		}

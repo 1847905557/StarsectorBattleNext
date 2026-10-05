@@ -1,6 +1,8 @@
 package data.scripts.ui.integration;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
@@ -8,23 +10,39 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.test.fixture.BattleNext_TestVariantFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationTargetException;
 
 class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 
-	@Test
-	void fleetMetadataAndMemberEditorsUseTheirOwnSkillAndIdentityLabels() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void fleetMetadataAndMemberEditorsUseTheirOwnSkillAndIdentityLabels(boolean cnText) throws Exception {
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			try {
+				return method.invoke(delegate, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		var root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
 		editor.open(null, false);
@@ -33,10 +51,10 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		editor.setOverlayHost(root);
 		attachEditor(editor, root);
 		editor.buttonPressed("add_member");
-		assertTrue(labels.contains("BattleNext_fleet_commander_skills"));
-		assertTrue(labels.contains("BattleNext_member_captain_skills"));
-		assertTrue(labels.contains("BattleNext_member_captain_personality"));
-		assertTrue(labels.contains("BattleNext_member_captain_portrait"));
+		assertTrue(labels.contains(cnText ? "指挥官技能" : "Commander skills"));
+		assertTrue(labels.contains(cnText ? "副官技能" : "Officer skills"));
+		assertTrue(labels.contains(cnText ? "副官性格" : "Officer personality"));
+		assertTrue(labels.contains(cnText ? "副官头像" : "Officer portrait"));
 		editor.closeOverlays();
 		router.clear();
 	}

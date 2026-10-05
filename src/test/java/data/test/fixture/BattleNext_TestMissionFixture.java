@@ -146,7 +146,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 		});
 	}
 
-	protected FleetMemberAPI enemyMember(String name, Variant variant, PersonAPI captain, int points) {
+	protected FleetMemberAPI enemyMember(String name, Variant variant, PersonAPI officer, int points) {
 		float[] readiness = {0f};
 		RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (method, args) -> switch (method) {
 			case "getMaxCR" -> 0.7f;
@@ -158,7 +158,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 			case "getId" -> name;
 			case "getShipName" -> name;
 			case "getVariant" -> variant.getApi();
-			case "getCaptain" -> captain;
+			case "getCaptain" -> officer;
 			case "getFleetPointCost" -> points;
 			case "getRepairTracker" -> repair;
 			default -> null;

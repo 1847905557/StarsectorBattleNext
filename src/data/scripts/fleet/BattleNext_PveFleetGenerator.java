@@ -69,12 +69,12 @@ public class BattleNext_PveFleetGenerator {
 			PersonAPI commander = fleet.getCommander();
 			List<BattleNext_MemberModel> definitions = new ArrayList<>();
 			for (FleetMemberAPI member : members) {
-				PersonAPI captain = member.getCaptain();
-				boolean assigned = !captain.isDefault();
+				PersonAPI officer = member.getCaptain();
+				boolean assigned = !officer.isDefault();
 				definitions.add(new BattleNext_MemberModel(member.getVariant().getHullVariantId(), member.getShipName(),
-						assigned ? captain.getPersonalityAPI().getId() : "",
-						assigned ? BattleNext_PersonSkills.capture(captain) : List.of(),
-						assigned ? captain.getPortraitSprite() : "", "", List.of()));
+						assigned ? officer.getPersonalityAPI().getId() : "",
+						assigned ? BattleNext_PersonSkills.capture(officer) : List.of(),
+						assigned ? officer.getPortraitSprite() : "", "", List.of()));
 				member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
 			}
 			BattleNext_FleetModel definition = new BattleNext_FleetModel(fleet.getId(), fleet.getNameWithFaction(),

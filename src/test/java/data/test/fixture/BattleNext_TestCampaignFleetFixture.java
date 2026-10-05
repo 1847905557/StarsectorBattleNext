@@ -126,9 +126,9 @@ public class BattleNext_TestCampaignFleetFixture extends BattleNext_TestVariantF
 		BattleNext_UiInputRouter.activate(null);
 	}
 
-	protected FleetMemberAPI member(String name, ShipVariantAPI variant, PersonAPI captain, boolean mothballed) {
+	protected FleetMemberAPI member(String name, ShipVariantAPI variant, PersonAPI officer, boolean mothballed) {
 		String[] shipName = {name};
-		PersonAPI[] person = {captain};
+		PersonAPI[] person = {officer};
 		RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (method, args) ->
 				"getMaxCR".equals(method) ? 0.7f : null);
 		return proxy(FleetMemberAPI.class, (method, args) -> switch (method) {

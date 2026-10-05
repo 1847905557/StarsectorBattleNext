@@ -269,9 +269,9 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		}
 		try {
 			int map = Integer.parseInt(row.mapField.getText().trim());
-			if (map < BattleNext_MissionBattleMap.RANDOM_MAP_ID || map > BattleNext_MissionBattleMap.LAST_MAP_ID) errors.add(battleStrings.get("invalid_map"));
+			if (map < BattleNext_MissionBattleMap.RANDOM_MAP_ID || map > BattleNext_MissionBattleMap.LAST_MAP_ID) errors.add(battleStrings.format("invalid_map", BattleNext_MissionBattleMap.LAST_MAP_ID));
 		} catch (NumberFormatException exception) {
-			errors.add(battleStrings.get("invalid_map"));
+			errors.add(battleStrings.format("invalid_map", BattleNext_MissionBattleMap.LAST_MAP_ID));
 		}
 		try {
 			float mapScale = Float.parseFloat(row.mapScaleField.getText().trim());
@@ -433,7 +433,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 						|| map < BattleNext_MissionBattleMap.RANDOM_MAP_ID || map > BattleNext_MissionBattleMap.LAST_MAP_ID || !Float.isFinite(mapScale) || mapScale <= 0f) {
 					BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
 				BattleNext_Logger.fields().put("index", index).put("player", row.playerField.getText()).put("enemy", row.enemyField.getText()).put("map", row.mapField.getText()).put("scale", row.mapScaleField.getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
-					setStatus(battleStrings.get("invalid_map_settings"));
+					setStatus(battleStrings.format("invalid_map_settings", BattleNext_MissionBattleMap.LAST_MAP_ID));
 					return false;
 				}
 				model.setPlayer(row.playerField.getText());
@@ -447,7 +447,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 			} catch (NumberFormatException exception) {
 				BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
 				BattleNext_Logger.fields().put("index", index).put("player", row.playerField.getText()).put("enemy", row.enemyField.getText()).put("map", row.mapField.getText()).put("scale", row.mapScaleField.getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
-					setStatus(battleStrings.get("invalid_map_settings"));
+				setStatus(battleStrings.format("invalid_map_settings", BattleNext_MissionBattleMap.LAST_MAP_ID));
 				return false;
 			}
 		}

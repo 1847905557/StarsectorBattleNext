@@ -310,7 +310,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		quickBattles("alpha,beta,2,1.5\n");
 		fleetSkills("alpha", List.of("combat", "combat", "fleet"), List.of("full_assault"));
 		fleetSkills("beta", List.of("gunnery", "gunnery", "industry"), List.of("default_ai"));
-		BattleNext_Settings.save(true, false, rtt, 123f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50);
 		var tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
 		var tournament = new BattleNext_TournamentModel();
@@ -356,7 +356,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		write("tournament/_tournaments/meta.json", "{\"formatVersion\":1,\"activeTournamentId\":\"missing\"}");
 		var meta = directory.resolve("tournament/_tournaments/meta.json");
 		byte[] original = Files.readAllBytes(meta);
-		BattleNext_Settings.save(true, false, false, 500f, 1f, 3f, keepCount);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount);
 		var mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		var combat = new CombatState(mission);

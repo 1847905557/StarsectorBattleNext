@@ -16,6 +16,9 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	private TooltipMakerAPI content;
 	private LabelAPI statusLabel;
 	private float textWidth;
+	private String error = "";
+	private String activeTournamentId = "";
+	private boolean pendingResult;
 	private final float width;
 	private final float height;
 
@@ -34,6 +37,13 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	}
 
 	public void update(String error, String activeTournamentId, boolean pendingResult) {
+		this.error = error;
+		this.activeTournamentId = activeTournamentId;
+		this.pendingResult = pendingResult;
+		refreshText();
+	}
+
+	public void refreshText() {
 		if (statusLabel == null) return;
 		StringBuilder text = new StringBuilder();
 		if (!error.isEmpty()) {
@@ -49,6 +59,7 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	}
 
 	public void showError(String message) {
-		if (statusLabel != null) statusLabel.setText(content.shortenString(message, textWidth));
+		error = message;
+		refreshText();
 	}
 }

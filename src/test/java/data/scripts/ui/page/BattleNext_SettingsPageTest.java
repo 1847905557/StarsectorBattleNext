@@ -6,8 +6,10 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.widget.BattleNext_TextField;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
@@ -21,8 +23,12 @@ import java.util.Map;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
+	private final AtomicReference<JSONObject> savedSettings = new AtomicReference<>();
+	private boolean failSettingsWrite;
 
 	@Test
 	void infoLogCheckboxFollowsGraphicsAndPersistsThroughSaveRefreshDiscardAndReopen() throws Exception {
@@ -49,6 +55,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 			assertFalse(logging.isChecked());
 			assertEquals("Enable full graphic effects", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("fullGraphicEffect")));
 			assertEquals("Enable info log", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("infoLog")));
+			assertEquals(33f, buttonPositions.get("cnText").getY() - buttonPositions.get("fullGraphicEffect").getY());
 			assertEquals(33f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
 			assertEquals(33f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
 			logging.setChecked(true);
@@ -129,5 +136,110 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(1, children.get(root).size());
 		page.close();
 		assertEquals(0, children.get(root).size());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void languageDraftCommitRefreshDiscardAndReopenPreserveTheSession(boolean initial) throws Exception {
+
+		installSettings(new JSONObject(), initial);
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		CustomPanelAPI root = panel(600f, 300f, new BaseCustomUIPanelPlugin());
+		page.attach(root);
+		Object editor = getField(page, "editor");
+		ButtonAPI checkbox = (ButtonAPI) getField(editor, "cnTextCheckbox");
+		assertEquals(initial, checkbox.isChecked());
+		assertLanguageLabel(checkbox, initial);
+		assertEquals(buttonPositions.get("fullGraphicEffect").getX(), checkbox.getPosition().getX());
+		assertEquals(buttonPositions.get("fullGraphicEffect").getWidth(), checkbox.getPosition().getWidth());
+		assertEquals(33f, checkbox.getPosition().getY() - buttonPositions.get("fullGraphicEffect").getY());
+		checkbox.setChecked(!initial);
+		assertTrue(page.hasUnsavedChanges());
+		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
+		page.refreshContent();
+		assertEquals(!initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
+		page.discard();
+		assertEquals(initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
+		assertFalse(page.hasUnsavedChanges());
+		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(!initial);
+		BattleNext_TextField field = (BattleNext_TextField) getField(editor, "battleTimeLimitField");
+		field.restoreEditState(new BattleNext_TextField.EditState("700.50", 4, 1, 0f, "500.0", true));
+		BattleNext_TextField.EditState input = field.captureEditState();
+		Map<?, ?> viewports = (Map<?, ?>) getField(editor, "viewports");
+		var scroller = ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller();
+		scroller.setYOffset(64f);
+		float offset = scroller.getYOffset();
+		assertTrue(offset > 0f);
+		assertTrue(page.save(), page.getStatusText());
+		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
+		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
+		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), !initial);
+		assertEquals(input, ((BattleNext_TextField) getField(editor, "battleTimeLimitField")).captureEditState());
+		viewports = (Map<?, ?>) getField(editor, "viewports");
+		assertEquals(offset, ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller().getYOffset());
+		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Common_CN" : "Common", "BattleNext_common_saved"), page.getStatusText());
+		assertFalse(page.hasUnsavedChanges());
+		page.attach(root);
+		assertEquals(!initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
+		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), !initial);
+		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(initial);
+		assertTrue(page.save());
+		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
+		page.close();
+		assertTrue(children.get(root).isEmpty());
+		assertFalse(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession().hasInputState());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void rejectedSaveKeepsDraftLanguageCommittedTextAndInputState(boolean initial) throws Exception {
+		installSettings(new JSONObject().put("cnText", initial), !initial);
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		page.attach(panel(600f, 500f, new BaseCustomUIPanelPlugin()));
+		Object editor = getField(page, "editor");
+		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(!initial);
+		BattleNext_TextField field = (BattleNext_TextField) getField(editor, "battleTimeLimitField");
+		field.setText("pending");
+		assertFalse(page.save());
+		assertEquals("pending", field.getText());
+		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
+		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
+		field.restoreEditState(new BattleNext_TextField.EditState("700.50", 4, 1, 0f, "500.0", true));
+		var input = field.captureEditState();
+		failSettingsWrite = true;
+		assertFalse(page.save());
+		assertEquals(initial, savedSettings.get().getBoolean("cnText"));
+		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(input, field.captureEditState());
+		assertTrue(page.hasUnsavedChanges());
+		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
+		page.close();
+	}
+
+	private void installSettings(JSONObject initial, boolean vanillaDefault) {
+		savedSettings.set(initial);
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getBoolean") && args[0].equals("showCNTranslationCredits")) return vanillaDefault;
+			if (method.getName().equals("readJSONFromCommon")) return savedSettings.get();
+			if (method.getName().equals("writeJSONToCommon")) {
+				if (failSettingsWrite) throw new IOException("Injected settings write failure");
+				savedSettings.set(new JSONObject(((JSONObject) args[1]).toString()));
+				return null;
+			}
+			try {
+				return method.invoke(delegate, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+	}
+
+	private void assertLanguageLabel(ButtonAPI checkbox, boolean enabled) {
+		String category = enabled ? "Settings_CN" : "Settings";
+		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_cn_text"), checkbox.getText());
+		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_full_graphic_effect"), buttonLabels.get("fullGraphicEffect"));
 	}
 }

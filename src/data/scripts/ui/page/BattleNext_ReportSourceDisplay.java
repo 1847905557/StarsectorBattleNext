@@ -5,6 +5,7 @@ import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay;
@@ -47,7 +48,7 @@ public class BattleNext_ReportSourceDisplay {
 					break;
 				}
 				case "arc": {
-					return new SourceVisual(settings.getString("Report", "BattleNext_report_source_arc"),
+					return new SourceVisual(BattleNext_I18nSection.getInstance("Report", "BattleNext_report_").get("source_arc"),
 							path(settings.getSpriteName("report", "BattleNext_arc")), "", "A", true, true);
 				}
 				case "source_type": {

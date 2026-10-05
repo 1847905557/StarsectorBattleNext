@@ -59,8 +59,12 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 
 	@Override
 	protected boolean savePage() {
+		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		boolean result = editor.save();
 		setStatus(editor.getStatusText());
+		if (result && cnText != BattleNext_Settings.isCnTextEnabled()) {
+			createContents();
+		}
 		return result;
 	}
 
