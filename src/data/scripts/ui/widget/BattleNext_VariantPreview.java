@@ -151,11 +151,14 @@ public class BattleNext_VariantPreview {
 		}
 
 		private void addHullSprite(Node node) {
+			String path = "";
 			try {
-				addSprite(node.hull.getSpriteName(), node.position, node.facing - 90f, 0.5f,
-						node, "", node.hull.getHullId(), "hull.sprite", false);
+				path = node.hull.getSpriteName();
+				BattleNext_SpriteSpec spec = BattleNext_SpriteSpec.read(node.hull);
+				addSprite(path, node.position, node.facing - 90f, spec,
+						node, "", node.hull.getHullId(), "hull.sprite");
 			} catch (RuntimeException exception) {
-				failed(node, "", node.hull.getHullId(), "hull.resolve", "", exception);
+				failed(node, "", node.hull.getHullId(), "hull.resolve", path, exception);
 			}
 		}
 
@@ -208,8 +211,10 @@ public class BattleNext_VariantPreview {
 				} else {
 					path = slot.isHardpoint() ? spec.getHardpointSpriteName() : spec.getTurretSpriteName();
 				}
-				addSprite(path, position, facing - 90f, slot.isHardpoint() ? 0.25f : 0.5f,
-						node, slot.getId(), spec.getWeaponId(), stage, true);
+				if (path == null || path.isEmpty()) return;
+				SpriteAPI sprite = settings.getSprite(path);
+				parts.add(new Part(sprite, sprite.getWidth(), sprite.getHeight(), sprite.getWidth() * 0.5f,
+						sprite.getHeight() * (slot.isHardpoint() ? 0.25f : 0.5f), position, facing - 90f));
 			} catch (RuntimeException exception) {
 				failed(node, slot.getId(), spec.getWeaponId(), stage, path, exception);
 			}
@@ -220,12 +225,13 @@ public class BattleNext_VariantPreview {
 			try {
 				if (!(spec.getProjectileSpec() instanceof MissileSpecAPI missile)) return;
 				path = missile.getHullSpec().getSpriteName();
+				BattleNext_SpriteSpec spriteSpec = BattleNext_SpriteSpec.read(missile.getHullSpec());
 				List<Vector2f> offsets = slot.isHardpoint() ? spec.getHardpointFireOffsets() : spec.getTurretFireOffsets();
 				List<Float> angles = slot.isHardpoint() ? spec.getHardpointAngleOffsets() : spec.getTurretAngleOffsets();
 				for (int index = 0; index < offsets.size(); index++) {
 					float angle = facing + (angles.isEmpty() ? 0f : angles.get(index));
-					Vector2f location = Vector2f.add(position, rotate(offsets.get(index), angle), new Vector2f());
-					addSprite(path, location, angle - 90f, 0.5f, node, slot.getId(), spec.getWeaponId(), "missile.sprite", false);
+					Vector2f location = Vector2f.add(position, rotate(offsets.get(index), facing), new Vector2f());
+					addSprite(path, location, angle - 90f, spriteSpec, node, slot.getId(), spec.getWeaponId(), "missile.sprite");
 				}
 			} catch (Exception exception) {
 				failed(node, slot.getId(), spec.getWeaponId(), "missile.resolve", path, exception);
@@ -290,13 +296,11 @@ public class BattleNext_VariantPreview {
 			}
 		}
 
-		private void addSprite(String path, Vector2f position, float angle, float pivot,
-				Node node, String slot, String id, String stage, boolean optional) {
-			if (optional && (path == null || path.isEmpty())) return;
+		private void addSprite(String path, Vector2f position, float angle, BattleNext_SpriteSpec spec,
+				Node node, String slot, String id, String stage) {
 			try {
 				SpriteAPI sprite = settings.getSprite(path);
-				parts.add(new Part(sprite, sprite.getWidth(), sprite.getHeight(), sprite.getWidth() * 0.5f,
-						sprite.getHeight() * pivot, position, angle));
+				parts.add(new Part(sprite, spec.width(), spec.height(), spec.centerX(), spec.centerY(), position, angle));
 			} catch (RuntimeException exception) {
 				failed(node, slot, id, stage, path, exception);
 			}

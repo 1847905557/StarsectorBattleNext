@@ -9,6 +9,7 @@ import com.fs.starfarer.api.loading.MissileSpecAPI;
 import com.fs.starfarer.api.loading.ProjectileWeaponSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
+import com.fs.starfarer.loading.specs.Q;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_VariantPreview;
 import org.apache.log4j.AppenderSkeleton;
@@ -33,6 +34,9 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 	protected final Map<String, String> failedWeaponQueries = new HashMap<>();
 	protected final List<String> weaponReads = new ArrayList<>();
 	protected final List<String> imageReads = new ArrayList<>();
+	protected final Map<String, Q> spriteSpecs = new HashMap<>();
+	protected final Set<String> failedSpriteSpecs = new HashSet<>();
+	protected final List<String> spriteSpecReads = new ArrayList<>();
 	private final RecordingAppender appender = new RecordingAppender();
 	private Logger logger;
 
@@ -76,9 +80,11 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 
 	protected ShipHullSpecAPI previewHull(String id, Map<String, WeaponSlotAPI> slots,
 			Map<String, String> builtIns, Vector2f anchor, boolean underParent) {
+		spriteSpecs.put(id, new Q("graphics/" + id + ".png", 80f, 100f, 40f, 50f, 0f, null));
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, arguments) -> switch (method) {
 			case "getHullId", "getHullName" -> id;
 			case "getSpriteName" -> "graphics/" + id + ".png";
+			case "getSpriteSpec" -> spriteSpec(id);
 			case "getBuiltInWeapons" -> new HashMap<>(builtIns);
 			case "getBuiltInMods", "getBuiltInWings" -> List.of();
 			case "getModuleAnchor" -> anchor;
@@ -109,9 +115,11 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 	}
 
 	protected WeaponSpecAPI previewWeapon(String id, boolean missile, List<Vector2f> offsets, List<Float> angles) {
+		spriteSpecs.put(id + "_missile", new Q("graphics/" + id + "_missile.png", 10f, 14f, 5f, 7f, 0f, null));
 		ShipHullSpecAPI missileHull = proxy(ShipHullSpecAPI.class, (method, arguments) -> switch (method) {
 			case "getHullId" -> id + "_missile";
 			case "getSpriteName" -> "graphics/" + id + "_missile.png";
+			case "getSpriteSpec" -> spriteSpec(id + "_missile");
 			default -> null;
 		});
 		MissileSpecAPI projectile = proxy(MissileSpecAPI.class, (method, arguments) ->
@@ -134,6 +142,12 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 		previewWeapons.put(id, spec);
 		imageSizes.put("graphics/" + id + "_missile.png", new float[]{10f, 14f});
 		return spec;
+	}
+
+	private Q spriteSpec(String id) {
+		spriteSpecReads.add(id);
+		if (failedSpriteSpecs.contains(id)) throw new IllegalStateException("Sprite spec failure: " + id);
+		return spriteSpecs.get(id);
 	}
 
 	protected JSONObject previewJson(String id, String hullId, Map<String, String> weapons) throws JSONException {

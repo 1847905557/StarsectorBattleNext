@@ -25,8 +25,13 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.load", input);
 
 		BattleNext_Settings.load();
-		BattleNext_LunaPinnedVariantRefitButton.register();
-		BattleNext_LunaFleetSaveRefitButton.register();
+
+		if (Global.getSettings().getModManager().isModEnabled("lunalib")) {
+			BattleNext_LunaPinnedVariantRefitButton.register();
+			BattleNext_LunaFleetSaveRefitButton.register();
+		} else {
+			BattleNext_Logger.warn(BattleNextModPlugin.class, "application.load.lunalib", input);
+		}
 
 		if (Global.getSettings().getModManager().isModEnabled("aibattles")) {
 			throw new IllegalArgumentException("请关闭旧版 AI Battles，只开启最新的 AI Battles Next");

@@ -15,6 +15,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.loading.specs.Q;
 import data.scripts.tools.BattleNext_CsvLine;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -225,10 +226,13 @@ public class BattleNext_TestGameFixture {
 	}
 
 	protected ShipHullSpecAPI hull(String id, String name, List<String> slots) {
+		Q spriteSpec = new Q("graphics/" + id + ".png", spriteWidth, spriteHeight,
+				spriteWidth * 0.5f, spriteHeight * 0.5f, 0f, null);
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
 			case "getHullId" -> id;
 			case "getHullName" -> name;
 			case "getSpriteName" -> "graphics/" + id + ".png";
+			case "getSpriteSpec" -> spriteSpec;
 			case "getBuiltInMods" -> List.of();
 			case "getBuiltInWeapons" -> new HashMap<String, String>();
 			case "getBuiltInWings" -> List.of();
@@ -426,14 +430,21 @@ public class BattleNext_TestGameFixture {
 		Object apply(String method, Object[] args) throws Throwable;
 	}
 
+	public interface HullSpriteSpec {
+		Q getSpriteSpec();
+	}
+
 	protected static <T> T proxy(Class<T> type, Handler handler) {
 
-		Class<?>[] interfaces = type == LabelAPI.class ? new Class<?>[]{type, UIComponentAPI.class} : new Class<?>[]{type};
+		Class<?>[] interfaces = type == LabelAPI.class ? new Class<?>[]{type, UIComponentAPI.class}
+				: type == ShipHullSpecAPI.class ? new Class<?>[]{type, HullSpriteSpec.class} : new Class<?>[]{type};
+		Q spriteSpec = type == ShipHullSpecAPI.class ? new Q("", 120f, 120f, 60f, 60f, 0f, null) : null;
 		return type.cast(Proxy.newProxyInstance(type.getClassLoader(), interfaces, (instance, method, args) -> {
 			if ("equals".equals(method.getName())) return instance == args[0];
 			if ("hashCode".equals(method.getName())) return System.identityHashCode(instance);
 			if ("clone".equals(method.getName())) return instance;
 			Object result = handler.apply(method.getName(), args == null ? new Object[0] : args);
+			if (method.getName().equals("getSpriteSpec") && result == null) return spriteSpec;
 			if (result != null && method.getReturnType() == void.class) return null;
 			if (result != null) return result;
 			if (type == PositionAPI.class && method.getReturnType() == PositionAPI.class) return instance;

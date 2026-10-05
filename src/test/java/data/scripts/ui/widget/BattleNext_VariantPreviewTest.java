@@ -9,6 +9,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.loading.specs.Q;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -66,11 +67,107 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 					spriteCenters.get(first)[0] - spriteCenters.get(body)[0], 0.001f);
 			assertEquals(kind.equals("turret") ? 4f : 0f,
 					spriteCenters.get(first)[1] - spriteCenters.get(body)[1], 0.001f);
-			assertEquals(kind.equals("turret") ? -3f : -6f,
+			assertEquals(0f,
 					spriteCenters.get(second)[0] - spriteCenters.get(body)[0], 0.001f);
-			assertEquals(0f, spriteCenters.get(second)[1] - spriteCenters.get(body)[1], 0.001f);
+			assertEquals(kind.equals("turret") ? 3f : 6f,
+					spriteCenters.get(second)[1] - spriteCenters.get(body)[1], 0.001f);
 			assertEquals(kind.equals("turret") ? 90f : 0f, spriteRenderTransforms.get(second)[0], 0.001f);
 		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"turret", "hardpoint"})
+	void loadedHullCenterPlacesEveryWeaponAtItsSocketInsteadOfTheImageCenter(String mount) throws Exception {
+		ShipHullSpecAPI hull = previewHull("root", Map.of(
+				"first", previewSlot("first", mount, new Vector2f(-2f, 35f), 45f),
+				"second", previewSlot("second", mount, new Vector2f(148f, -25f), 0f)), Map.of(), null, false);
+		spriteSpecs.put("root", new Q("graphics/root.png", 140f, 280f, 70f, 115f, 220f, null));
+		previewWeapon("gun", false, List.of(), List.of());
+		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root",
+				Map.of("first", "gun", "second", "gun")), hull, Global.getSettings());
+		assertTrue(preview.getErrors().isEmpty());
+		renderPreview(preview, 1000f, 1000f);
+		int root = renderIndex("graphics/root.png", 0);
+		assertArrayEquals(new float[]{140f, 280f, 70f, 115f}, Arrays.copyOf(spriteRenderStates.get(root), 4));
+		float imageCenterY = spriteCenters.get(root)[1] + 280f * 0.5f - 115f;
+		for (int index = 0; index < 2; index++) {
+			int body = renderIndex("graphics/gun_" + mount + ".png", index);
+			int barrel = renderIndex("graphics/gun_" + mount + "_gun.png", index);
+			assertArrayEquals(spriteCenters.get(body), spriteCenters.get(barrel));
+			assertEquals(index == 0 ? -35f : 25f, spriteCenters.get(body)[0] - spriteCenters.get(root)[0], 0.001f);
+			assertEquals(index == 0 ? -27f : 123f, spriteCenters.get(body)[1] - imageCenterY, 0.001f);
+		}
+	}
+
+	@Test
+	void rotatedModuleUsesItsOwnLoadedCenterAndDimensionSnapshot() throws Exception {
+		ShipHullSpecAPI hull = previewHull("root", Map.of("module",
+				previewSlot("module", "module", new Vector2f(50f, 0f), 90f)), Map.of(), null, false);
+		previewHull("child", Map.of("gun", previewSlot("gun", "turret", new Vector2f(10f, 0f), 0f)),
+				Map.of(), new Vector2f(5f, 0f), false);
+		spriteSpecs.put("child", new Q("graphics/child.png", 80f, 100f, 19f, 77f, 0f, null));
+		previewWeapon("gun", false, List.of(), List.of());
+		JSONObject json = previewJson("draft", "root", Map.of()).put("modules",
+				new JSONObject().put("module", previewJson("child_variant", "child", Map.of("gun", "gun"))));
+		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(json, hull, Global.getSettings());
+		renderPreview(preview, 1000f, 1000f);
+		int root = renderIndex("graphics/root.png", 0);
+		int child = renderIndex("graphics/child.png", 0);
+		int gun = renderIndex("graphics/gun_turret.png", 0);
+		assertEquals(5f, spriteCenters.get(child)[0] - spriteCenters.get(root)[0], 0.001f);
+		assertEquals(50f, spriteCenters.get(child)[1] - spriteCenters.get(root)[1], 0.001f);
+		assertEquals(-10f, spriteCenters.get(gun)[0] - spriteCenters.get(child)[0], 0.001f);
+		assertEquals(0f, spriteCenters.get(gun)[1] - spriteCenters.get(child)[1], 0.001f);
+		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
+		assertEquals(90f, spriteRenderTransforms.get(child)[0]);
+		spriteSpecs.put("child", new Q("graphics/child.png", 140f, 180f, 61f, 83f, 0f, null));
+		renderPreview(preview, 1000f, 1000f);
+		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
+		BattleNext_VariantPreview refreshed = new BattleNext_VariantPreview(json, hull, Global.getSettings());
+		renderPreview(refreshed, 1000f, 1000f);
+		assertArrayEquals(new float[]{140f, 180f, 61f, 83f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
+	}
+
+	@Test
+	void loadedMissileCenterAndAngleOffsetsFollowTheNativePlacementRules() throws Exception {
+		ShipHullSpecAPI hull = previewHull("root", Map.of("gun",
+				previewSlot("gun", "hardpoint", new Vector2f(10f, 20f), -90f)), Map.of(), null, false);
+		previewWeapon("gun", true, List.of(new Vector2f(3f, 7f)), List.of(60f));
+		spriteSpecs.put("gun_missile", new Q("graphics/gun_missile.png", 18f, 26f, 4f, 8f, 0f, null));
+		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root", Map.of("gun", "gun")), hull, Global.getSettings());
+		renderPreview(preview, 1000f, 1000f);
+		int body = renderIndex("graphics/gun_hardpoint.png", 0);
+		int missile = renderIndex("graphics/gun_missile.png", 0);
+		assertArrayEquals(new float[]{18f, 26f, 4f, 8f}, Arrays.copyOf(spriteRenderStates.get(missile), 4));
+		assertEquals(3f, spriteCenters.get(missile)[0] - spriteCenters.get(body)[0], 0.001f);
+		assertEquals(7f, spriteCenters.get(missile)[1] - spriteCenters.get(body)[1], 0.001f);
+		assertEquals(-30f, spriteRenderTransforms.get(missile)[0]);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"root", "child", "gun_missile"})
+	void loadedSpriteSpecFailureIsReportedOnceAndKeepsOtherParts(String id) throws Exception {
+		ShipHullSpecAPI hull = previewHull("root", Map.of(
+				"module", previewSlot("module", "module", new Vector2f(), 0f),
+				"gun", previewSlot("gun", "turret", new Vector2f(), 0f)), Map.of(), null, false);
+		previewHull("child", Map.of(), Map.of(), null, false);
+		previewWeapon("gun", true, List.of(new Vector2f()), List.of());
+		failedSpriteSpecs.add(id);
+		JSONObject json = previewJson("draft", "root", Map.of("gun", "gun")).put("modules",
+				new JSONObject().put("module", previewJson("child_variant", "child", Map.of())));
+		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(json, hull, Global.getSettings());
+		assertTrue(preview.hasContent());
+		assertEquals(1, preview.getErrors().size());
+		assertTrue(preview.getErrors().get(0).contains("Could not read loaded sprite spec for hull " + id));
+		int reads = spriteSpecReads.size();
+		for (int frame = 0; frame < 3; frame++) {
+			renderPreview(preview, 1000f, 1000f);
+			assertFalse(renderedPaths().contains("graphics/" + id + ".png"));
+			assertTrue(renderedPaths().contains("graphics/gun_turret.png"));
+			assertEquals(reads, spriteSpecReads.size());
+		}
+		assertEquals(1, previewLogs().size());
+		assertEquals(id.equals("child") ? "module" : "", previewLogs().get(0).getJSONObject("fields").getString("module_path"));
 	}
 
 	@Test
@@ -166,6 +263,8 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		ShipHullSpecAPI hull = previewHull("root", Map.of("gun",
 				previewSlot("gun", "hardpoint", new Vector2f(100f, -70f), 37f)), Map.of(), null, false);
 		previewWeapon("gun", true, List.of(new Vector2f(20f, 10f)), List.of(45f));
+		spriteSpecs.put("root", new Q("graphics/root.png", 80f, 100f, 19f, 77f, 0f, null));
+		spriteSpecs.put("gun_missile", new Q("graphics/gun_missile.png", 10f, 14f, 3f, 4f, 0f, null));
 		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root", Map.of("gun", "gun")),
 				hull, Global.getSettings());
 		renderPreview(preview, width, height);
@@ -216,7 +315,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 			originalStates.put(sprite, sprites.get(sprite).clone());
 			originalTransforms.put(sprite, spriteTransforms.get(sprite).clone());
 		}
-		int reads = imageReads.size() + weaponReads.size();
+		int reads = imageReads.size() + weaponReads.size() + spriteSpecReads.size();
 		for (int cycle = 0; cycle < 4; cycle++) {
 			renderPreview(preview, 1000f, 1000f);
 			assertEquals(7, renderedSprites.size());
@@ -231,7 +330,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 				assertEquals(771f, spriteRenderTransforms.get(index)[2]);
 			}
 		}
-		assertEquals(reads, imageReads.size() + weaponReads.size());
+		assertEquals(reads, imageReads.size() + weaponReads.size() + spriteSpecReads.size());
 		assertTrue(previewLogs().isEmpty());
 	}
 
@@ -370,7 +469,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	}
 
 	@Test
-	void runtimePreviewUsesPublicApiImportsAndDirectCalls() throws Exception {
+	void runtimePreviewUsesPublicDrawingCallsAndTheFormalLoadedMetadataBoundary() throws Exception {
 		JavaParser parser = new JavaParser(new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
 				.setCharacterEncoding(StandardCharsets.UTF_8));
 		var unit = parser.parse(Path.of("src/data/scripts/ui/widget/BattleNext_VariantPreview.java")).getResult().orElseThrow();
@@ -387,6 +486,16 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		assertTrue(calls.containsAll(Set.of("getLocation", "getAngle", "getModuleAnchor", "getProjectileSpec",
 				"getHullSpec", "getTurretFireOffsets", "getHardpointFireOffsets")));
 		assertTrue(Collections.disjoint(calls, Set.of("forName", "getDeclaredMethod", "findVirtual", "loadJSON", "openStream")));
+		List<MethodCallExpr> reads = unit.findAll(MethodCallExpr.class).stream().filter(call -> call.getNameAsString().equals("read")
+				&& call.getScope().map(Object::toString).orElse("").equals("BattleNext_SpriteSpec")).toList();
+		assertEquals(List.of("node.hull", "missile.getHullSpec()"), reads.stream().map(call -> call.getArgument(0).toString()).toList());
+		var adapter = parser.parse(Path.of("src/data/scripts/ui/widget/BattleNext_SpriteSpec.java")).getResult().orElseThrow();
+		Set<String> adapterCalls = new HashSet<>();
+		for (MethodCallExpr call : adapter.findAll(MethodCallExpr.class)) {
+			adapterCalls.add(call.getNameAsString());
+		}
+		assertTrue(adapterCalls.containsAll(Set.of("publicLookup", "findVirtual", "invoke")));
+		assertTrue(Collections.disjoint(adapterCalls, Set.of("loadJSON", "loadText", "openStream", "createFXDrone")));
 	}
 
 	@ParameterizedTest
@@ -394,6 +503,8 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	void sharedEntrypointsRefreshThePreviewAndReleaseOldModels(String entry) throws Exception {
 
 		Variant variant = source();
+		Q hullSprite = ((HullSpriteSpec) variant.getApi().getHullSpec()).getSpriteSpec();
+		hullSprite.getClass().getMethod("o00000", float.class, float.class).invoke(hullSprite, 31f, 83f);
 		previewWeapon("laser", false, List.of(), List.of());
 		BattleNext_VariantDetails details;
 		Runnable refresh;
@@ -437,6 +548,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		renderPreview(first, 1000f, 1000f);
 		assertEquals(List.of("graphics/parent.png", "graphics/laser_turret.png", "graphics/laser_turret_gun.png",
 				"graphics/child.png"), renderedPaths());
+		assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
 		((Set<Integer>) getField(details, "expanded")).add(0);
 		refresh.run();
 		assertNull(getField(firstPlugin, "preview"));
@@ -445,6 +557,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		assertNotSame(firstPlugin, currentPlugin);
 		renderPreview((BattleNext_VariantPreview) getField(currentPlugin, "preview"), 1000f, 1000f);
 		assertTrue(renderedPaths().contains("graphics/laser_turret.png"));
+		assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
 		CustomPanelAPI owner = details.getPanel();
 		close.run();
 		assertNull(getField(currentPlugin, "preview"));
