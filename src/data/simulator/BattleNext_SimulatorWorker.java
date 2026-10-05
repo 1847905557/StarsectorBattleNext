@@ -11,6 +11,11 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.dark.shaders.util.GraphicsLibSettings;
+import org.dark.shaders.util.TextureData;
+import org.boxutil.config.BoxConfigs;
 
 import java.net.InetAddress;
 import java.net.Socket;
@@ -27,6 +32,7 @@ public class BattleNext_SimulatorWorker {
 	private static boolean initialized;
 	private static float previousFps;
 	private static boolean idleFpsApplied;
+	private static BattleNext_SimulatorMouse mouse;
 
 	private BattleNext_SimulatorWorker() {
 	}
@@ -40,7 +46,7 @@ public class BattleNext_SimulatorWorker {
 		System.setProperty("BattleNext.simulator.worker", "true");
 		configureLogging();
 		System.setProperty("launchDirect", "true");
-		System.setProperty("startRes", "1024x768");
+		System.setProperty("startRes", System.getProperty("startRes", "800x600"));
 		System.setProperty("startFS", "false");
 		System.setProperty("startSound", "false");
 		Socket socket = new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(arguments[0]));
@@ -48,7 +54,13 @@ public class BattleNext_SimulatorWorker {
 		Thread receiver = new Thread(BattleNext_SimulatorWorker::receive, "BattleNext simulator worker channel");
 		receiver.setDaemon(true);
 		receiver.start();
-		StarfarerLauncher.main(new String[0]);
+		try {
+			StarfarerLauncher.main(new String[0]);
+		} finally {
+			if (mouse != null) {
+				mouse.cleanup();
+			}
+		}
 	}
 
 	private static void configureLogging() {
@@ -88,13 +100,27 @@ public class BattleNext_SimulatorWorker {
 				return;
 			}
 			if (!initialized || returning) {
+				mouse = BattleNext_SimulatorMouse.getInstance();
 				Display.setLocation(-20000, -20000);
 				Display.setVSyncEnabled(false);
 				initialized = true;
 				returning = false;
 				current = null;
 				applyIdleFrameRate();
-				channel.send("READY", new JSONObject().put("fps", IDLE_FPS).put("active_fps", previousFps));
+				JSONObject graphics = new JSONObject().put("lights", GraphicsLibSettings.enableLights()).put("bloom", GraphicsLibSettings.enableBloom())
+						.put("normal", GraphicsLibSettings.enableNormal()).put("auto_normals", GraphicsLibSettings.autoGenNormals())
+						.put("material", TextureData.isLoadMaterial()).put("surface", TextureData.isLoadSurface())
+						.put("distortion", GraphicsLibSettings.enableDistortion()).put("post_process", GraphicsLibSettings.enablePostProcess())
+						.put("preload_all_maps", GraphicsLibSettings.preloadAllMaps()).put("explosion_effects", GraphicsLibSettings.enableExplosionEffects())
+						.put("explosion_shockwave", GraphicsLibSettings.enableExplosionShockwave()).put("explosion_trails", GraphicsLibSettings.enableExplosionTrails())
+						.put("box_shader", BoxConfigs.isShaderEnable()).put("box_distortion", BoxConfigs.isDistortionEnable())
+						.put("box_debug", BoxConfigs.isGLDebugEnable()).put("box_opencl", BoxConfigs.isCLEnable());
+				JSONObject display = new JSONObject().put("width", Display.getWidth()).put("height", Display.getHeight())
+						.put("aa_samples", Global.getSettings().getAASamples()).put("gl_samples", GL11.glGetInteger(GL13.GL_SAMPLES))
+						.put("shield_jitter", Global.getSettings().getBoolean("renderShieldJitterEffect"))
+						.put("version_overlay", Global.getSettings().getBoolean("renderVersionAndIdle"))
+						.put("planet_backgrounds", Global.getSettings().getBoolean("3dPlanetBackgrounds")).put("mouse_isolated", true);
+				channel.send("READY", new JSONObject().put("fps", IDLE_FPS).put("active_fps", previousFps).put("graphics", graphics).put("display", display));
 			}
 			if (current != null || pending == null) return;
 			restoreFrameRate();

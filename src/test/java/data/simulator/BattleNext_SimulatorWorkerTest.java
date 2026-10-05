@@ -4,6 +4,7 @@ import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import data.test.fixture.BattleNext_TestGameFixture;
+import data.scripts.BattleNextModPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -147,6 +150,48 @@ class BattleNext_SimulatorWorkerTest extends BattleNext_TestGameFixture {
 			}
 			LogManager.getLoggerRepository().setThreshold(threshold);
 			Logger.getRootLogger().setLevel(rootLevel);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void vanillaGraphicsSettingsBelongToTheWorkerProcess(boolean worker) throws Exception {
+
+		String previousIdentity = System.getProperty("BattleNext.simulator.worker");
+		Map<String, Boolean> changes = new LinkedHashMap<>();
+		SettingsAPI settings = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+			if (method.getName().equals("setBoolean")) {
+				changes.put((String) args[0], (Boolean) args[1]);
+				return null;
+			}
+			try {
+				return method.invoke(settings, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		try {
+			System.setProperty("BattleNext.simulator.worker", Boolean.toString(worker));
+			new BattleNextModPlugin() {
+				@Override
+				public void onDevModeF8Reload() {
+
+				}
+			}.onApplicationLoad();
+			if (worker) {
+				assertEquals(Map.of("devMode", false, "allowJVMRestartFromLauncher", false, "doRAMandVRAMChecksWhenRunningWithMods", false,
+						"idleWhileWindowNotVisible", false, "renderShieldJitterEffect", false, "renderVersionAndIdle", false, "3dPlanetBackgrounds", false), changes);
+			} else {
+				assertTrue(changes.isEmpty());
+			}
+		} finally {
+			if (previousIdentity == null) {
+				System.clearProperty("BattleNext.simulator.worker");
+			} else {
+				System.setProperty("BattleNext.simulator.worker", previousIdentity);
+			}
 		}
 	}
 

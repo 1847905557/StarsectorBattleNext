@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONObject;
+import org.json.JSONException;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -78,5 +84,96 @@ class BattleNext_SimulatorModelTest {
 		}
 		assertThrows(IllegalArgumentException.class, () -> new BattleNext_SimulationResult(UUID.randomUUID().toString(),
 				BattleNext_SimulationResult.Outcome.COMPLETED, "", 0f, 0L, 0L, 0L, ""));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void graphicsOverridesPreserveSourceAndMechanismSettingsAndRemainStableAcrossReload(boolean stored) throws Exception {
+
+		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(directory.resolve("owned"));
+		Path source = directory.resolve("source/common/LunaSettings/shaderLib.json.data");
+		JSONObject settings = new JSONObject().put("enableExplosionEffects", "启用").put("enableExplosionShockwave", true)
+				.put("explosionTrailScale", 100).put("enableShaders", true).put("custom_value", "中文 50%")
+				.put("custom_nested", new JSONObject().put("preserved", 42));
+		List<String> options = List.of("enableLights", "enableBloom", "enableNormal", "autoGenNormals", "loadMaterial",
+				"loadSurface", "enableDistortion", "enablePostProcess", "preloadAllMaps");
+		for (String option : options) {
+			settings.put(option, true);
+		}
+		byte[] original = settings.toString(2).getBytes(StandardCharsets.UTF_8);
+		if (stored) {
+			Files.createDirectories(source.getParent());
+			Files.write(source, original);
+		}
+		Path worker = storage.directory("runtime/session").resolve("saves");
+		storage.snapshotCommon(directory.resolve("source"), worker);
+		storage.configureGraphics(worker);
+		Path target = worker.resolve("common/LunaSettings/shaderLib.json.data");
+		JSONObject result = new JSONObject(Files.readString(target, StandardCharsets.UTF_8));
+		for (String option : options) {
+			assertFalse(result.getBoolean(option), option);
+		}
+		if (stored) {
+			assertArrayEquals(original, Files.readAllBytes(source));
+			for (String key : JSONObject.getNames(settings)) {
+				if (options.contains(key)) continue;
+				assertEquals(settings.get(key).toString(), result.get(key).toString(), key);
+			}
+		} else {
+			assertFalse(Files.exists(source));
+			assertEquals(options.size(), result.length());
+		}
+		byte[] configured = Files.readAllBytes(target);
+		assertFalse(configured.length >= 3 && configured[0] == (byte) 0xef && configured[1] == (byte) 0xbb && configured[2] == (byte) 0xbf);
+		storage.configureGraphics(worker);
+		assertArrayEquals(configured, Files.readAllBytes(target));
+	}
+
+	@Test
+	void malformedWorkerGraphicsSettingsRejectPreparationAndKeepTheCopiedInput() throws Exception {
+		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(directory.resolve("owned"));
+		Path worker = storage.directory("runtime/session").resolve("saves");
+		Path target = worker.resolve("common/LunaSettings/shaderLib.json.data");
+		Files.createDirectories(target.getParent());
+		byte[] invalid = "{broken".getBytes(StandardCharsets.UTF_8);
+		Files.write(target, invalid);
+		assertThrows(JSONException.class, () -> storage.configureGraphics(worker));
+		assertArrayEquals(invalid, Files.readAllBytes(target));
+	}
+
+	@Test
+	void boxConfigurationPreservesBusinessContextAndUsesCompleteDefaultsInTheWorkerCopy() throws Exception {
+
+		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(directory.resolve("owned"));
+		Path source = directory.resolve("source/common");
+		Files.createDirectories(source.resolve("shaderpacks"));
+		JSONObject configuration = new JSONObject().put("BUtil_EnableShader", true).put("BUtil_EnableDistortion", true)
+				.put("BUtil_EnableDebug", true).put("BUtil_EnableCL", true).put("BUtil_InstanceClamp", 4096)
+				.put("custom", "中文 50%");
+		JSONObject effects = new JSONObject().put("BUtil_EnableBloom", true).put("BUtil_EnableAA", true)
+				.put("BUtil_DepthAA", true).put("BUtil_AAConsole", true);
+		byte[] original = configuration.toString().getBytes(StandardCharsets.UTF_8);
+		byte[] selection = "{\"id\":\"business_shader_context\"}".getBytes(StandardCharsets.UTF_8);
+		Files.write(source.resolve("BUtil_Configs.json.data"), original);
+		Files.writeString(source.resolve("shaderpacks/BUtil_NotSelectedShaderPacks.json.data"), effects.toString(), StandardCharsets.UTF_8);
+		Files.write(source.resolve("shaderpacks/BUtil_SelectedShaderPacks.json.data"), selection);
+		Path worker = storage.directory("runtime/session").resolve("saves");
+		storage.snapshotCommon(directory.resolve("source"), worker);
+		storage.configureGraphics(worker);
+		JSONObject configured = new JSONObject(Files.readString(worker.resolve("common/BUtil_Configs.json.data"), StandardCharsets.UTF_8));
+		for (String key : List.of("BUtil_EnableShader", "BUtil_EnableDistortion", "BUtil_EnableDebug", "BUtil_EnableCL")) {
+			assertFalse(configured.getBoolean(key), key);
+		}
+		assertEquals(4096, configured.getInt("BUtil_InstanceClamp"));
+		assertEquals(32, configured.getInt("BUtil_CurveNode"));
+		assertEquals(32, configured.getInt("BUtil_CurveInterpolation"));
+		assertEquals("中文 50%", configured.getString("custom"));
+		JSONObject configuredEffects = new JSONObject(Files.readString(worker.resolve("common/shaderpacks/BUtil_NotSelectedShaderPacks.json.data"), StandardCharsets.UTF_8));
+		for (String key : List.of("BUtil_EnableBloom", "BUtil_EnableAA", "BUtil_DepthAA")) {
+			assertFalse(configuredEffects.getBoolean(key), key);
+		}
+		assertTrue(configuredEffects.getBoolean("BUtil_AAConsole"));
+		assertArrayEquals(selection, Files.readAllBytes(worker.resolve("common/shaderpacks/BUtil_SelectedShaderPacks.json.data")));
+		assertArrayEquals(original, Files.readAllBytes(source.resolve("BUtil_Configs.json.data")));
 	}
 }

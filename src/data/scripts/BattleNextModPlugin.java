@@ -34,6 +34,9 @@ public class BattleNextModPlugin extends BaseModPlugin {
 			Global.getSettings().setBoolean("allowJVMRestartFromLauncher", false);
 			Global.getSettings().setBoolean("doRAMandVRAMChecksWhenRunningWithMods", false);
 			Global.getSettings().setBoolean("idleWhileWindowNotVisible", false);
+			Global.getSettings().setBoolean("renderShieldJitterEffect", false);
+			Global.getSettings().setBoolean("renderVersionAndIdle", false);
+			Global.getSettings().setBoolean("3dPlanetBackgrounds", false);
 		}
 
 		if (Global.getSettings().getModManager().isModEnabled("lunalib")) {

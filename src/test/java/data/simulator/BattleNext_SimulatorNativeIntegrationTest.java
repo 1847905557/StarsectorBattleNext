@@ -6,6 +6,11 @@ import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.SettingsAPI;
 import org.json.JSONObject;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.PixelFormat;
+import java.awt.MouseInfo;
+import java.awt.Point;
 
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -34,6 +39,12 @@ class BattleNext_SimulatorNativeIntegrationTest {
 	}
 
 	@Test
+	void realLwjglCursorRequestsRemainVirtualAndCleanupRestoresTheOwnedBackend() throws Exception {
+		String output = runProbe(MouseProbe.class);
+		assertTrue(output.contains("Simulator mouse isolation verified"), output);
+	}
+
+	@Test
 	void crashReportsUseTheCallerOwnedPersistentDiagnosticsDirectory() {
 		Path core = Path.of("core").toAbsolutePath();
 		Path diagnostics = Path.of("diagnostics with spaces").toAbsolutePath();
@@ -57,7 +68,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(Path::toString).toList());
 		}
 		Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin/java.exe").toString(), "-Xverify:none", "-cp",
-				String.join(System.getProperty("path.separator"), classpath), probe.getName()).redirectErrorStream(true).start();
+				String.join(System.getProperty("path.separator"), classpath), "-Djava.library.path=" + core.resolve("native/windows"), probe.getName()).redirectErrorStream(true).start();
 		String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 		assertEquals(0, process.waitFor(), output);
 		return output;
@@ -67,6 +78,40 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		public static void main(String[] arguments) throws Exception {
 			new BattleNext_SimulatorNative(Probe.class.getClassLoader());
 			System.out.println("Simulator native handles bound");
+		}
+	}
+
+
+	public static class MouseProbe {
+
+		public static void main(String[] arguments) throws Exception {
+
+			Display.setLocation(-20000, -20000);
+			Display.create(new PixelFormat());
+			var implementation = Mouse.class.getDeclaredField("implementation");
+			implementation.setAccessible(true);
+			Object original = implementation.get(null);
+			BattleNext_SimulatorMouse isolated = BattleNext_SimulatorMouse.getInstance();
+			try {
+				if (BattleNext_SimulatorMouse.getInstance() != isolated) throw new AssertionError("Mouse backend must be reused");
+				for (int cycle = 0; cycle < 10; cycle++) {
+					Point before = MouseInfo.getPointerInfo().getLocation();
+					Mouse.setCursorPosition(400, 300);
+					Mouse.setGrabbed(true);
+					Mouse.setGrabbed(false);
+					Mouse.setNativeCursor(null);
+					Mouse.poll();
+					Point after = MouseInfo.getPointerInfo().getLocation();
+					if (!before.equals(after)) throw new AssertionError("Desktop pointer changed during virtual cursor requests: " + before + " -> " + after);
+				}
+				isolated.cleanup();
+				if (implementation.get(null) != original) throw new AssertionError("Mouse backend cleanup must restore its original owner");
+				isolated.cleanup();
+				System.out.println("Simulator mouse isolation verified");
+			} finally {
+				isolated.cleanup();
+				Display.destroy();
+			}
 		}
 	}
 
@@ -140,6 +185,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			Files.write(source, original);
 			Path runtime = (Path) storageType.getMethod("directory", String.class).invoke(storage, "runtime/session");
 			storageType.getMethod("snapshotCommon", Path.class, Path.class).invoke(storage, root.resolve("source"), runtime.resolve("saves"));
+			storageType.getMethod("configureGraphics", Path.class).invoke(storage, runtime.resolve("saves"));
+			JSONObject graphics = new JSONObject(Files.readString(runtime.resolve("saves/common/LunaSettings/shaderLib.json.data"), StandardCharsets.UTF_8));
+			if (graphics.getBoolean("enableLights") || graphics.getBoolean("enableNormal")) throw new AssertionError("Sandbox worker graphics configuration");
 			if (!Arrays.equals(original, Files.readAllBytes(runtime.resolve("saves/common/nested/settings.json")))) {
 				throw new AssertionError("Sandbox settings snapshot must preserve bytes");
 			}

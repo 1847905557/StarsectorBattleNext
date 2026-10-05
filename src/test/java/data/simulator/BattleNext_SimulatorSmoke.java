@@ -36,6 +36,7 @@ public class BattleNext_SimulatorSmoke {
 		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(root);
 		Path runtime = storage.directory("runtime/session");
 		storage.snapshotCommon(core.getParent().resolve("saves"), runtime.resolve("saves"));
+		storage.configureGraphics(runtime.resolve("saves"));
 		String token = UUID.randomUUID().toString();
 		Path workerLog = logs.resolve("worker-" + token + ".log");
 		Process process = null;
@@ -48,9 +49,9 @@ public class BattleNext_SimulatorSmoke {
 			List<String> command = BattleNext_SimulatorLaunch.javaCommand(core, logs);
 			if (measurements > 0) {
 				command.removeIf(Set.of("-XX:+UseG1GC", "-XX:+UseParallelGC", "-XX:+UseShenandoahGC", "-XX:+UseStringDeduplication", "-XX:-DontCompileHugeMethods")::contains);
-				command.addAll(vmOptions);
 				command.add("-Xlog:gc*:file=" + core.relativize(logs.resolve("gc-%p.log")).toString().replace('\\', '/') + ":time,level,tags");
 			}
+			command.addAll(vmOptions);
 			command.addAll(List.of(
 					"-Dcom.fs.starfarer.settings.paths.saves=" + runtime.resolve("saves"),
 					"-Dcom.fs.starfarer.settings.paths.screenshots=" + runtime.resolve("screenshots"),
@@ -72,6 +73,10 @@ public class BattleNext_SimulatorSmoke {
 			socket.setSoTimeout(1000);
 			channel = new BattleNext_SimulatorProtocol(socket, token);
 			JSONObject ready = awaitReady(channel, process, deadline);
+			JSONObject display = ready.getJSONObject("payload").getJSONObject("display");
+			if (display.getInt("width") != 800 || display.getInt("height") != 600) {
+				throw new IOException("Worker display must use the default 800x600 resolution");
+			}
 			startupSeconds = (System.nanoTime() - launching) / 1000000000d;
 			double activeFps = ready.getJSONObject("payload").getDouble("active_fps");
 			long idleStarted = System.nanoTime();
@@ -104,7 +109,7 @@ public class BattleNext_SimulatorSmoke {
 							+ ", peakHeap=" + result.peakHeapBytes());
 					if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) throw new IOException("Smoke simulation did not complete: " + result.diagnostic());
 					if (result.report().getPlayerMembers().size() != wolves.size() || result.report().getEnemyMembers().size() != wolves.size()) throw new IOException("Smoke report member count differs from the constructed input");
-					if (measurements > 0 && iteration > 0) {
+					if (measurements == 0 || iteration > 0) {
 						samples.put(result.toJson());
 						rates.add(result.simulationSeconds() / (result.executionNanos() / 1000000000d));
 					}
@@ -166,7 +171,7 @@ public class BattleNext_SimulatorSmoke {
 		rates.sort(Double::compareTo);
 		JSONObject summary = new JSONObject().put("profile", profile).put("vm_options", new JSONArray(vmOptions))
 				.put("startup_seconds", startupSeconds).put("samples", samples).put("diagnostics", logs.toString());
-		if (!rates.isEmpty()) {
+		if (measurements > 0 && !rates.isEmpty()) {
 			double median = rates.get(rates.size() / 2);
 			summary.put("median_speed", median).put("min_speed", rates.get(0)).put("max_speed", rates.get(rates.size() - 1));
 			System.out.println("Benchmark " + profile + ": samples=" + rates.size() + ", median=" + median + "x, startup=" + startupSeconds + "s");
@@ -177,6 +182,19 @@ public class BattleNext_SimulatorSmoke {
 	private static JSONObject awaitReady(BattleNext_SimulatorProtocol channel, Process process, long deadline) throws Exception {
 		JSONObject message = await(channel, process, "READY", deadline);
 		if (message.getJSONObject("payload").getDouble("fps") != 5d) throw new IOException("Smoke idle frame rate must be 5 FPS");
+		JSONObject graphics = message.getJSONObject("payload").getJSONObject("graphics");
+		for (String key : List.of("lights", "bloom", "normal", "auto_normals", "material", "surface", "distortion", "post_process", "preload_all_maps",
+				"box_shader", "box_distortion", "box_debug", "box_opencl")) {
+			if (graphics.getBoolean(key)) throw new IOException("Worker graphics option remains enabled: " + key);
+		}
+		JSONObject display = message.getJSONObject("payload").getJSONObject("display");
+		if (!display.getBoolean("mouse_isolated")) throw new IOException("Worker mouse must be isolated");
+		if (display.getInt("aa_samples") != 0 || display.getInt("gl_samples") != 0) throw new IOException("Worker actual antialiasing must be zero");
+		for (String key : List.of("shield_jitter", "version_overlay", "planet_backgrounds")) {
+			if (display.getBoolean(key)) throw new IOException("Worker vanilla display option remains enabled: " + key);
+		}
+		System.out.println("Worker display: " + display);
+		System.out.println("Worker graphics: " + graphics);
 		return message;
 	}
 

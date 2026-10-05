@@ -196,6 +196,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		runtime = storage.directory("runtime/" + UUID.randomUUID());
 		Path sourceSaves = Path.of(System.getProperty("com.fs.starfarer.settings.paths.saves", "../saves")).toAbsolutePath().normalize();
 		storage.snapshotCommon(sourceSaves, runtime.resolve("saves"));
+		storage.configureGraphics(runtime.resolve("saves"));
 		Path logs = storage.directory("diagnostics");
 		List<String> launch = new ArrayList<>(command);
 		launch.add("-Dcom.fs.starfarer.settings.paths.saves=" + runtime.resolve("saves"));

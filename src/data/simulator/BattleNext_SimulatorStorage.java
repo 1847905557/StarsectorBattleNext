@@ -17,10 +17,13 @@ import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class BattleNext_SimulatorStorage {
 
+	private static final List<String> GRAPHICS_OPTIONS = List.of("enableLights", "enableBloom", "enableNormal", "autoGenNormals",
+			"loadMaterial", "loadSurface", "enableDistortion", "enablePostProcess", "preloadAllMaps");
 	private final Path root;
 	private final FileAccess files;
 
@@ -63,6 +66,50 @@ public class BattleNext_SimulatorStorage {
 				BattleNext_Logger.operationFailed(getClass(), "simulator.settings.snapshot", fields, exception);
 				throw exception;
 			}
+		}
+	}
+
+	public void configureGraphics(Path workerSaves) throws IOException, JSONException {
+		configureOptions(workerSaves.resolve("common/LunaSettings/shaderLib.json.data"), GRAPHICS_OPTIONS, Map.of());
+		configureOptions(workerSaves.resolve("common/BUtil_Configs.json.data"),
+				List.of("BUtil_EnableShader", "BUtil_EnableDistortion", "BUtil_EnableDebug", "BUtil_EnableCL"),
+				Map.of("BUtil_InstanceClamp", 8192, "BUtil_CurveNode", 32, "BUtil_CurveInterpolation", 32, "BUtil_Language", "_en_us"));
+		configureOptions(workerSaves.resolve("common/shaderpacks/BUtil_NotSelectedShaderPacks.json.data"),
+				List.of("BUtil_EnableBloom", "BUtil_EnableAA", "BUtil_DepthAA"), Map.of());
+	}
+
+	private void configureOptions(Path target, List<String> options, Map<String, Object> defaults) throws IOException, JSONException {
+
+		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("path", target.toString()).put("options", options).build();
+		BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.configure", fields);
+		try {
+			JSONObject settings;
+			if ((boolean) invoke(files.isRegularFile, target)) {
+				BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.read", fields);
+				settings = new JSONObject(new String((byte[]) invoke(files.readAllBytes, target), StandardCharsets.UTF_8));
+				BattleNext_Logger.operationSucceeded(getClass(), "simulator.graphics.read",
+						BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
+			} else {
+				settings = new JSONObject();
+				BattleNext_Logger.info(getClass(), "simulator.graphics.defaults",
+						BattleNext_Logger.fields().put("path", target.toString()).put("source", "LunaLib missing-field defaults").build());
+			}
+			for (var entry : defaults.entrySet()) {
+				if (settings.has(entry.getKey())) continue;
+				settings.put(entry.getKey(), entry.getValue());
+			}
+			for (String option : options) {
+				settings.put(option, false);
+			}
+			invoke(files.createDirectories, target.getParent());
+			BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.write",
+					BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
+			invoke(files.write, target, settings.toString().getBytes(StandardCharsets.UTF_8));
+			BattleNext_Logger.operationSucceeded(getClass(), "simulator.graphics.configure",
+					BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
+		} catch (IOException | JSONException | RuntimeException exception) {
+			BattleNext_Logger.operationFailed(getClass(), "simulator.graphics.configure", fields, exception);
+			throw exception;
 		}
 	}
 
