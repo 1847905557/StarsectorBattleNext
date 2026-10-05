@@ -60,6 +60,11 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		editor.setInputRouter(router);
 		editor.setOverlayHost(root);
 		editor.attach(root);
+		CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
+		assertEquals(root.getPosition().getX(), editorPanel.getPosition().getX());
+		assertEquals(root.getPosition().getY(), editorPanel.getPosition().getY());
+		assertEquals(root.getPosition().getWidth(), editorPanel.getPosition().getWidth());
+		assertEquals(root.getPosition().getHeight(), editorPanel.getPosition().getHeight());
 		Map<Object, BattleNext_TextField> fields = (Map<Object, BattleNext_TextField>) getField(editor, "fields");
 		if (fields.isEmpty()) editor.buttonPressed("add");
 		Object identity = fields.keySet().iterator().next();
@@ -174,10 +179,11 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		LayoutProbeEditor editor = new LayoutProbeEditor(width, actionCount);
 		CustomPanelAPI root = panel(1000f, 900f, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, root);
-		float fieldWidth = BattleNext_PageLayout.editorFieldWidth(width);
+		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(width);
+		float fieldWidth = fieldArea.getWidth();
 		assertEquals(fieldWidth, editor.nameField.getPosition().getWidth());
 		assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT, editor.nameField.getPosition().getHeight());
-		assertEquals(editor.fieldContent.getPosition().getX() + BattleNext_PageLayout.editorFieldInset(width),
+		assertEquals(editor.fieldContent.getPosition().getX() + fieldArea.getX(),
 				editor.nameField.getPosition().getX());
 		List<UIComponentAPI> contentComponents = tooltips.get(editor.fieldContent).getComponents();
 		assertEquals(editor.nameField.getPosition().getX(), contentComponents.get(0).getPosition().getX());
@@ -242,7 +248,20 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				assertTrue(parsed.isSuccessful(), path + ": " + parsed.getProblems());
 				var unit = parsed.getResult().orElseThrow();
 				assertEquals(1, unit.getTypes().size(), path.toString());
-				if (path.getFileName().toString().equals("BattleNext_EditorView.java")) continue;
+				if (path.getFileName().toString().equals("BattleNext_EditorView.java")) {
+					var editorView = unit.getClassByName("BattleNext_EditorView").orElseThrow();
+					for (String name : List.of("createTextField", "createOptionField", "createCheckbox")) {
+						var method = editorView.getMethodsByName(name).get(0);
+						assertTrue(method.getParameters().stream().anyMatch(parameter -> parameter.getNameAsString().equals("fieldArea")
+								&& parameter.getTypeAsString().equals("UIRect")), name);
+					}
+					for (var field : editorView.getFields()) {
+						for (var variable : field.getVariables()) {
+							assertFalse(Set.of("float", "double", "Float", "Double", "UIRect").contains(variable.getTypeAsString()), variable.toString());
+						}
+					}
+					continue;
+				}
 				for (ObjectCreationExpr creation : unit.findAll(ObjectCreationExpr.class)) {
 					assertFalse(controlTypes.contains(creation.getType().asString()), path + ": " + creation);
 				}
@@ -285,11 +304,12 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		@Override
 		protected void buildEditorContent() {
 			fieldContent = panel.createUIElement(areaWidth, 700f, true);
-			nameField = createTextField("name", panel, fieldContent, areaWidth, "Name", value, true, fieldContent);
-			ruleField = createOptionField("rule", panel, fieldContent, areaWidth, "Rule", value, optionSource(),
+			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
+			nameField = createTextField("name", panel, fieldContent, fieldArea, "Name", value, true, fieldContent);
+			ruleField = createOptionField("rule", panel, fieldContent, fieldArea, "Rule", value, optionSource(),
 					BattleNext_OptionField.OptionSelectionMode.MULTIPLE, fieldContent);
-			enabledCheckbox = createCheckbox("enabled", fieldContent, areaWidth, "Enabled", "enabled", true, true);
-			createTextField("readonly", panel, fieldContent, areaWidth, "Read only", value, false, fieldContent);
+			enabledCheckbox = createCheckbox("enabled", fieldContent, fieldArea, "Enabled", "enabled", true, true);
+			createTextField("readonly", panel, fieldContent, fieldArea, "Read only", value, false, fieldContent);
 			addPicker = createPicker(panel, fieldContent, areaWidth, "Select", optionSource(),
 					BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, ids -> {}, fieldContent);
 			addButton = createButton(fieldContent, areaWidth, "Add", "add");

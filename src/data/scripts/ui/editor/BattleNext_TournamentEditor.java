@@ -113,25 +113,26 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
 	private void addDetails(TooltipMakerAPI metadataContent, float columnWidth) {
 		metadataContent.addTitle(isReadOnly() ? tournamentStrings.get("locked_message") : tournamentStrings.get("editor_title"));
-		idField = createTextField("id", panel, metadataContent, columnWidth, tournamentStrings.get("id"), draft.getId(), !isReadOnly(), metadataContent);
-		nameField = createTextField("name", panel, metadataContent, columnWidth, tournamentStrings.get("name"), draft.getName(), !isReadOnly(), metadataContent);
+		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(columnWidth);
+		idField = createTextField("id", panel, metadataContent, fieldArea, tournamentStrings.get("id"), draft.getId(), !isReadOnly(), metadataContent);
+		nameField = createTextField("name", panel, metadataContent, fieldArea, tournamentStrings.get("name"), draft.getName(), !isReadOnly(), metadataContent);
 		metadataContent.addPara(tournamentStrings.get("bracket"), BattleNext_PageLayout.EDITOR_LABEL_GAP);
 		bracketGroup = new CheckBoxGroup();
 		if (isReadOnly()) {
 			metadataContent.addPara(bracketLabel(draft.getBracketType()), BattleNext_PageLayout.EDITOR_READ_ONLY_VALUE_GAP);
 		} else {
 			for (TournamentBracketType type : TournamentBracketType.values()) {
-				ButtonAPI bracketCheckbox = createCheckbox(type, metadataContent, columnWidth,
+				ButtonAPI bracketCheckbox = createCheckbox(type, metadataContent, fieldArea,
 						bracketLabel(type), "bracket:" + type.name(), type == draft.getBracketType(), true);
 				bracketGroup.addCheckBox(bracketCheckbox, type);
 			}
 			bracketGroup.tryCheckValue(draft.getBracketType());
 			bracketGroup.updateCheck();
 		}
-		bestOfField = createTextField("best_of", panel, metadataContent, columnWidth, tournamentStrings.get("best_of_count"), Integer.toString(draft.getBoCount()), !isReadOnly(), metadataContent);
-		maxFleetsField = createTextField("max_fleets", panel, metadataContent, columnWidth, tournamentStrings.get("max_fleets"), Integer.toString(draft.getMaxFleet()), !isReadOnly(), metadataContent);
-		ruleField = createTextField("rule", panel, metadataContent, columnWidth, tournamentStrings.get("rules"), draft.getRuleId(), !isReadOnly(), metadataContent);
-		mapField = createTextField("map", panel, metadataContent, columnWidth, battleStrings.get("map_number_label"), Integer.toString(draft.getMapId()), !isReadOnly(), metadataContent);
+		bestOfField = createTextField("best_of", panel, metadataContent, fieldArea, tournamentStrings.get("best_of_count"), Integer.toString(draft.getBoCount()), !isReadOnly(), metadataContent);
+		maxFleetsField = createTextField("max_fleets", panel, metadataContent, fieldArea, tournamentStrings.get("max_fleets"), Integer.toString(draft.getMaxFleet()), !isReadOnly(), metadataContent);
+		ruleField = createTextField("rule", panel, metadataContent, fieldArea, tournamentStrings.get("rules"), draft.getRuleId(), !isReadOnly(), metadataContent);
+		mapField = createTextField("map", panel, metadataContent, fieldArea, battleStrings.get("map_number_label"), Integer.toString(draft.getMapId()), !isReadOnly(), metadataContent);
 	}
 
 	private void addFleets(TooltipMakerAPI rowsContent, float columnWidth) {

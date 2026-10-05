@@ -13,6 +13,7 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.battlesnext.util.ui.CheckBoxGroup;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
@@ -25,6 +26,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -58,15 +60,19 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		assertArrayEquals(new String[]{"BattleNext_tournament_fleet", "BattleNext_fleet_author",
 				"BattleNext_tournament_valid", "BattleNext_common_actions"}, (String[]) getField(table, "headers"));
 		assertArrayEquals(new float[]{0.3f, 0.34f, 0.16f, 0.2f}, (float[]) getField(table, "columnShares"));
-		assertEquals(rightWidth, table.getPanel().getPosition().getWidth());
-		assertEquals(676f, table.getPanel().getPosition().getHeight());
+		UIRect tableArea = BattleNext_PageLayout.pageContentRect(new UIRect(0f,
+				BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT, rightWidth,
+				700f - BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT));
+		assertEquals(tableArea.getWidth(), table.getPanel().getPosition().getWidth());
+		assertEquals(tableArea.getHeight(), table.getPanel().getPosition().getHeight());
+		assertEquals(right.getPosition().getX() + tableArea.getX(), table.getPanel().getPosition().getX());
 		assertSame(right.getPosition(), geometry.get(table.getPanel().getPosition()).getParent());
 		for (String name : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "ruleField", "mapField")) {
 			TextFieldAPI field = (TextFieldAPI) getField(editor, name);
 			assertEquals(leftWidth - 12f, field.getPosition().getWidth());
 			assertEquals(List.of(left), ((Map<?, ?>) getField(router(editor).getSession(), "registrations")).get(field));
 		}
-		float rowWidth = table.getContent().getWidthSoFar() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
+		float rowWidth = table.getPanel().getPosition().getWidth();
 		for (int index = 0; index < 2; index++) {
 			CustomPanelAPI row = row(editor, index);
 			assertEquals(rowWidth, row.getPosition().getWidth());
@@ -107,6 +113,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		LabelAPI name = rowLabels(row(editor, 0)).get(0);
 		assertTrue(hover(name).contains("first"));
 		BattleNext_OptionPicker picker = picker(editor);
+		assertTablePickerAlignment(table, picker);
 		assertEquals(Math.min(190f, rowWidth), getField(picker, "buttonWidth"));
 		assertEquals(30f, getField(picker, "buttonHeight"));
 		assertEquals(4f, getField(picker, "topGap"));
@@ -117,6 +124,29 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI add = (CustomPanelAPI) getField(picker, "row");
 		assertEquals(row(editor, 1).getPosition().getY() - 4f,
 				add.getPosition().getY() + add.getPosition().getHeight(), 0.001f);
+		editor.close();
+		assertTrue(((Map<?, ?>) getField(router(editor).getSession(), "registrations")).isEmpty());
+	}
+
+	@ParameterizedTest
+	@CsvSource({"180,0", "180,2", "1000,0", "1000,2"})
+	void fleetButtonAlignsWithTableEdgesAndRowsAcrossScrollAndRefresh(int width, int count) throws Exception {
+		deferTooltipWidth = true;
+		List<String> ids = IntStream.range(0, count).mapToObj(index -> "fleet_" + index).toList();
+		BattleNext_TournamentEditor editor = editor(fleets(ids), new BattleNext_RuleStore(), tournament(ids), width, 100f);
+		for (int iteration = 0; iteration < 3; iteration++) {
+			BattleNext_TableWidget oldTable = table(editor);
+			BattleNext_OptionPicker oldPicker = picker(editor);
+			assertTablePickerAlignment(oldTable, oldPicker);
+			oldTable.getContent().getExternalScroller().setYOffset(oldTable.getContent().getHeightSoFar());
+			float offset = oldTable.getContent().getExternalScroller().getYOffset();
+			assertTablePickerAlignment(oldTable, oldPicker);
+			editor.refreshContent();
+			assertTrue(((List<?>) getField(oldTable, "ownedPanels")).isEmpty());
+			assertTrue(((List<?>) getField(oldPicker, "ownedPanels")).isEmpty());
+			assertEquals(offset, table(editor).getContent().getExternalScroller().getYOffset());
+		}
+		assertTablePickerAlignment(table(editor), picker(editor));
 		editor.close();
 		assertTrue(((Map<?, ?>) getField(router(editor).getSession(), "registrations")).isEmpty());
 	}

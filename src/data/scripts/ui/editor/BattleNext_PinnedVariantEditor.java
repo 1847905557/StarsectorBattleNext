@@ -48,7 +48,8 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		fieldContent.setTextWidthOverride(area.getWidth());
 		fieldContent.addTitle(selected.name());
 		if (selected.model() != null && store.isLoaded()) {
-			nameField = createTextField("name", metadataPanel, fieldContent, area.getWidth(), variantStrings.get("pin_name"), edited, true, fieldContent);
+			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(area.getWidth());
+			nameField = createTextField("name", metadataPanel, fieldContent, fieldArea, variantStrings.get("pin_name"), edited, true, fieldContent);
 		}
 		fieldContent.addPara(variantStrings.get("pin_id") + ": " + selected.pinId(), 8f);
 		fieldContent.addPara(variantStrings.get("source_file") + ": " + selected.path(), 8f);

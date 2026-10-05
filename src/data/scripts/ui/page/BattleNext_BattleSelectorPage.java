@@ -102,7 +102,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + SOURCE_CONTROL_GAP,
 				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
 		CustomPanelAPI sourceButtonPanel = sourceButtonRect.createSubPanel(panel, inputOwner).getPanel();
-		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel, buttonWidth,
+		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel,
 				id -> inputOwner.buttonPressed(new BattleSourceSelectionRequest(id)));
 		sourceDropdown.attach(sourceButtonPanel);
 		sourceDropdown.setOptions(sourceOptions());
@@ -239,12 +239,16 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	private void buildTournamentDetails(CustomPanelAPI detailPanel) {
 
+		UIRect area = BattleNext_PageLayout.pageContentRect(new UIRect(0f, 0f,
+				detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight()));
+		detailPanel = area.createSubPanel(detailPanel, detailPanel.getPlugin()).getPanel();
 		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null) {
 			UIRect messageRect = new UIRect(0f, 0f, detailPanel.getPosition().getWidth(), detailPanel.getPosition().getHeight());
 			TooltipMakerAPI message = messageRect.beginTooltip(detailPanel, false);
 			BattleNext_UiTheme.configure(message);
-			message.addTitle(tournamentStrings.get("missing"));
+			message.setTextWidthOverride(messageRect.getWidth());
+			BattleNext_PageLayout.contentTitle(message, tournamentStrings.get("missing"), messageRect.getWidth(), 0f);
 			message.addPara(tournamentStrings.get("missing_detail"), TOURNAMENT_MISSING_MESSAGE_GAP);
 			messageRect.addTooltip();
 			return;

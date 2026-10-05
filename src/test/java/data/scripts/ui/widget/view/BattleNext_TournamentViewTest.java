@@ -290,8 +290,9 @@ class BattleNext_TournamentViewTest {
 		}
 		Method build = page.getClass().getDeclaredMethod("buildTournamentDetails", CustomPanelAPI.class);
 		build.setAccessible(true);
+		CustomPanelAPI detailHost = harness.detailHost(700f, 700f);
 		String initial = cup.toJson().toString();
-		build.invoke(page, harness.panel);
+		build.invoke(page, detailHost);
 		assertTrue(harness.paragraphs.contains("Completed matches: 0 / 3"));
 		assertTrue(harness.paragraphs.contains("Fleet F1"));
 		assertTrue(harness.scrollingHostCreated);
@@ -322,7 +323,7 @@ class BattleNext_TournamentViewTest {
 		});
 		harness.chartBounds.width = 700f;
 		harness.chartBounds.height = 700f;
-		build.invoke(page, harness.panel);
+		build.invoke(page, detailHost);
 		assertTrue(harness.buttonIds.contains("tournament:authorize"));
 		assertEquals(220f, harness.buttons.get(harness.buttons.size() - 1).bounds.width);
 		assertEquals(30f, harness.buttons.get(harness.buttons.size() - 1).bounds.height);
@@ -332,7 +333,7 @@ class BattleNext_TournamentViewTest {
 		harness.chartBounds.width = 700f;
 		harness.chartBounds.height = 700f;
 		harness.paragraphs.clear();
-		build.invoke(page, harness.panel);
+		build.invoke(page, detailHost);
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Chart error")));
 		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains("Unknown bracket")));
 		assertTrue(harness.paragraphs.contains("Fleet F1"));
@@ -815,7 +816,9 @@ class BattleNext_TournamentViewTest {
 		private final TooltipMakerAPI host = proxy(TooltipMakerAPI.class, this::hostCall);
 		private final CustomPanelAPI panel = proxy(CustomPanelAPI.class, this::panelCall);
 		private final CustomPanelAPI row = proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
-			case "getPosition" -> rowBounds.api;
+			case "getPosition", "addUIElement" -> rowBounds.api;
+			case "getPlugin" -> displayPlugin;
+			case "createUIElement" -> panelCall(name, args);
 			case "createCustomPanel" -> {
 				summaryBounds.api.setSize((Float) args[0], (Float) args[1]);
 				yield this.summary;
@@ -879,6 +882,24 @@ class BattleNext_TournamentViewTest {
 		private Harness() {
 			viewport.width = 700f;
 			viewport.height = 380f;
+		}
+
+		private CustomPanelAPI detailHost(float width, float height) {
+			Bounds bounds = new Bounds();
+			bounds.api.setSize(width, height);
+			return proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
+				case "getPosition" -> bounds.api;
+				case "getPlugin" -> new BaseCustomUIPanelPlugin();
+				case "createCustomPanel" -> {
+					chartBounds.api.setSize((Float) args[0], (Float) args[1]);
+					yield panel;
+				}
+				case "addComponent" -> {
+					chartBounds.parent = bounds;
+					yield chartBounds.api;
+				}
+				default -> null;
+			});
 		}
 
 		private Object panelCall(String name, Object[] args) {

@@ -29,16 +29,17 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	protected void buildPage() {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel, managementStrings.get("page_settings"));
-		UIRect footer = new UIRect(0f, root.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT - 4f,
-				root.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT);
-		contentRect = new UIRect(0f, BattleNext_PageLayout.CONTENT_TOP, root.getWidth(),
-				footer.getY() - BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.FOOTER_MARGIN);
+		UIRect footer = BattleNext_PageLayout.pageContentRect(new UIRect(0f,
+				root.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT - 4f,
+				root.getWidth(), BattleNext_PageLayout.FOOTER_HEIGHT));
+		contentRect = BattleNext_PageLayout.pageContentRect(new UIRect(0f, BattleNext_PageLayout.CONTENT_TOP, root.getWidth(),
+				footer.getY() - BattleNext_PageLayout.CONTENT_TOP - BattleNext_PageLayout.FOOTER_MARGIN));
 		float width = BattleNext_PageLayout.managementFooterButtonWidth(footer, 1);
 		BattleNext_PageLayout.fixedButton(panel, BattleNext_PageLayout.managementFooterButtonRect(footer, width, 0),
 				strings.get("save"), "settings_save", CutStyle.ALL, true);
 		TooltipMakerAPI status = panel.createUIElement(footer.getWidth() - width - 10f, footer.getHeight(), false);
 		statusLabel = status.addPara("", 0f);
-		panel.addUIElement(status).inTL(width + 10f, footer.getY());
+		panel.addUIElement(status).inTL(footer.getX() + width + 10f, footer.getY());
 	}
 
 	@Override

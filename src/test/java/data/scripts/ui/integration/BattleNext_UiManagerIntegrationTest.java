@@ -134,6 +134,9 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.attach(panel(1400f, 900f, manager));
 		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
 		Object settings = Arrays.stream(tabs).filter(tab -> tab.toString().equals("SETTINGS")).findFirst().orElseThrow();
+		LabelAPI headingLabel = (LabelAPI) getField(manager, "headingLabel");
+		float headingX = headingLabel.getPosition().getX();
+		float headingWidth = headingLabel.getPosition().getWidth();
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		Object editor = getField(page, "editor");
@@ -161,7 +164,12 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 			assertEquals(BattleNext_TestTextCatalog.text(category, key), buttons[index].getText());
 		}
 		TooltipMakerAPI heading = (TooltipMakerAPI) getField(manager, "headingContent");
-		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_management_heading"), ((LabelAPI) heading.getPrev()).getText());
+		assertFalse(heading.getPrev() instanceof LabelAPI);
+		assertTrue(tooltips.get(heading).getComponents().contains(heading.getPrev()));
+		assertSame(headingLabel, getField(manager, "headingLabel"));
+		assertEquals(headingX, headingLabel.getPosition().getX());
+		assertEquals(headingWidth, headingLabel.getPosition().getWidth());
+		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_management_heading"), headingLabel.getText());
 		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Common_CN" : "Common", "BattleNext_common_close"),
 				((ButtonAPI) getField(manager, "closeButton")).getText());
 		if (!route.equals("confirm")) {
@@ -169,6 +177,16 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 			assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_management_active_tournament") + ": example",
 					((LabelAPI) getField(statusBar, "statusLabel")).getText());
 		}
+		manager.buttonPressed(settings);
+		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(initial);
+		manager.buttonPressed("settings_save");
+		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(initial, savedSettings.get().getBoolean("cnText"));
+		assertSame(headingLabel, getField(manager, "headingLabel"));
+		assertEquals(BattleNext_TestTextCatalog.text(initial ? "Management_CN" : "Management", "BattleNext_management_heading"),
+				headingLabel.getText());
+		assertEquals(BattleNext_TestTextCatalog.text(initial ? "Common_CN" : "Common", "BattleNext_common_close"),
+				((ButtonAPI) getField(manager, "closeButton")).getText());
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(manager, "inputRouter");
 		assertTrue(router.isEmpty());
 		manager.buttonPressed("close");

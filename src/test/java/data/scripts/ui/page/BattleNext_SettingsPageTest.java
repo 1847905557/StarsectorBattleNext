@@ -90,20 +90,30 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = {180, 1400})
-	void deferredGeometryUsesLayoutWidthForAllFieldsAndPreservesDraftOnRefresh(int width) throws Exception {
+	@ValueSource(ints = {180, 335, 336, 337, 1400})
+	void numericFieldsUseBoundedWidthInTheFullEditorHostAndPreserveDraftOnRefresh(int width) throws Exception {
 
 		deferTooltipWidth = true;
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
 		CustomPanelAPI root = panel(width, 900f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
-		float expectedWidth = width - 12f;
+		Object editor = getField(page, "editor");
+		CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
+		CustomPanelAPI owner = (CustomPanelAPI) getField(editor, "owner");
+		assertEquals(8f, owner.getPosition().getX() - root.getPosition().getX());
+		assertEquals(width - 16f, owner.getPosition().getWidth());
+		assertEquals(owner.getPosition().getX(), editorPanel.getPosition().getX());
+		assertEquals(owner.getPosition().getY(), editorPanel.getPosition().getY());
+		assertEquals(owner.getPosition().getWidth(), editorPanel.getPosition().getWidth());
+		assertEquals(owner.getPosition().getHeight(), editorPanel.getPosition().getHeight());
+		float expectedWidth = Math.min(320f, owner.getPosition().getWidth());
 		List<String> names = List.of("battleTimeLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField");
 		List<String> values = List.of("700.5", "pending", "4.5", "75");
 		assertFalse(page.hasUnsavedChanges());
 		for (int index = 0; index < names.size(); index++) {
 			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
 			assertEquals(expectedWidth, field.getPosition().getWidth(), names.get(index));
+			assertEquals(owner.getPosition().getX(), field.getPosition().getX(), names.get(index));
 			assertEquals(28f, field.getPosition().getHeight(), names.get(index));
 			field.setText(values.get(index));
 		}
@@ -112,6 +122,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		for (int index = 0; index < names.size(); index++) {
 			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
 			assertEquals(expectedWidth, field.getPosition().getWidth(), names.get(index));
+			assertEquals(owner.getPosition().getX(), field.getPosition().getX(), names.get(index));
 			assertEquals(28f, field.getPosition().getHeight(), names.get(index));
 			assertEquals(values.get(index), field.getText(), names.get(index));
 		}

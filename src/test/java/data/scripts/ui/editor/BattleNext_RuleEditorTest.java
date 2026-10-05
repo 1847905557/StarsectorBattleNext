@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -170,18 +172,20 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		editor.refreshContent();
 	}
 
-	@Test
-	void restrictionButtonUsesTableWidthTitleAndNestedViewports() throws Exception {
+	@ParameterizedTest
+	@ValueSource(ints = {180, 1000})
+	void restrictionButtonUsesTableWidthTitleAlignmentAndNestedViewports(int width) throws Exception {
 		deferTooltipWidth = true;
 		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
-		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI root = panel(width, 700f, new BaseCustomUIPanelPlugin());
 		editor.open(null);
 		editor.setInputRouter(router);
 		attachEditor(editor, root);
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
 		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
-		float rowWidth = table.getContent().getWidthSoFar() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
+		assertTablePickerAlignment(table, picker);
+		float rowWidth = table.getPanel().getPosition().getWidth();
 		assertEquals(Math.min(190f, rowWidth), getField(picker, "buttonWidth"));
 		assertEquals(30f, getField(picker, "buttonHeight"));
 		assertEquals("BattleNext_rule_add_restriction", buttonLabels.get("TOGGLE"));
@@ -194,5 +198,19 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals("rule_draft", editor.getDraftId());
 		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
 		assertEquals(2, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
+				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+		confirmRestrictions(editor, List.of("limitNumber", "limitList"));
+		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
+				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+		editor.buttonPressed("rule:remove:0");
+		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
+				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+		editor.buttonPressed("rule:remove:0");
+		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
+				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+		editor.close();
+		assertTrue(children.get(root).isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 	}
 }

@@ -12,7 +12,6 @@ import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_PageLayout;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -101,8 +100,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (BattleNext_ReportTarget entry : entries) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, listLabel(entry),
-					"report:" + entry.identity(), BattleNext_PageLayout.managementListButtonWidth(listRect));
+			addListItem(listContent, listLabel(entry), "report:" + entry.identity());
 		}
 	}
 

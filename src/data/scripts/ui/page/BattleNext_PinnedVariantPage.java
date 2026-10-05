@@ -95,9 +95,8 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (CatalogEntry entry : sorted(store.getCatalog())) {
-			BattleNext_PageLayout.button(listContent, (entry.error().isEmpty() ? "" : variantStrings.get("error_marker") + " ")
-					+ entry.name(), "pin:" + entry.path(), BattleNext_PageLayout.managementListButtonWidth(listRect));
-			listContent.addTooltipToPrevious(new BaseTooltipCreator() {
+			addListItem(listContent, (entry.error().isEmpty() ? "" : variantStrings.get("error_marker") + " ")
+					+ entry.name(), "pin:" + entry.path(), new BaseTooltipCreator() {
 				@Override
 				public float getTooltipWidth(Object ignored) {
 					return 400f;
@@ -122,7 +121,7 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 						tooltip.addPara(entry.error(), 5f);
 					}
 				}
-			}, TooltipMakerAPI.TooltipLocation.RIGHT);
+			});
 		}
 	}
 

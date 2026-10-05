@@ -105,16 +105,16 @@ public abstract class BattleNext_EditorView {
 	}
 
 	protected final TextFieldAPI createTextField(Object key, CustomPanelAPI hostPanel, TooltipMakerAPI fieldContent,
-			float areaWidth, String label, String value, boolean editable, TooltipMakerAPI... viewports) {
+			UIRect fieldArea, String label, String value, boolean editable, TooltipMakerAPI... viewports) {
 		LabelAPI fieldLabel = fieldContent.addPara(label, BattleNext_PageLayout.EDITOR_LABEL_GAP);
-		fieldLabel.getPosition().inTL(BattleNext_PageLayout.editorFieldInset(areaWidth),
+		fieldLabel.getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - fieldLabel.getPosition().getHeight());
 		if (!editable) {
 			fieldContent.addPara(value, BattleNext_PageLayout.EDITOR_READ_ONLY_VALUE_GAP);
 			return null;
 		}
 		BattleNext_TextField field = own(BattleNext_PageLayout.editorTextField(inputRouter, hostPanel, fieldContent,
-				areaWidth, value, viewports));
+				fieldArea, value, viewports));
 		return bindField(key, field);
 	}
 
@@ -132,18 +132,18 @@ public abstract class BattleNext_EditorView {
 	}
 
 	protected final TextFieldAPI createOptionField(Object key, CustomPanelAPI hostPanel, TooltipMakerAPI fieldContent,
-			float areaWidth, String label, String value, BattleNext_OptionPicker.OptionChoiceSource source,
+			UIRect fieldArea, String label, String value, BattleNext_OptionPicker.OptionChoiceSource source,
 			BattleNext_OptionField.OptionSelectionMode mode, TooltipMakerAPI... viewports) {
 		LabelAPI fieldLabel = fieldContent.addPara(label, BattleNext_PageLayout.EDITOR_LABEL_GAP);
-		fieldLabel.getPosition().inTL(BattleNext_PageLayout.editorFieldInset(areaWidth),
+		fieldLabel.getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - fieldLabel.getPosition().getHeight());
 		BattleNext_OptionField optionField = own(new BattleNext_OptionField(inputRouter, overlayHost,
-				BattleNext_PageLayout.editorFieldWidth(areaWidth), source, mode, viewports));
+				fieldArea.getWidth(), source, mode, viewports));
 		optionField.attach(fieldContent, hostPanel);
 		TextFieldAPI field = optionField.getField();
 		field.setMaxChars(-1);
 		field.setText(value);
-		fieldContent.getPrev().getPosition().inTL(BattleNext_PageLayout.editorFieldInset(areaWidth),
+		fieldContent.getPrev().getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		return bindField(key, field);
 	}
@@ -156,15 +156,17 @@ public abstract class BattleNext_EditorView {
 				BattleNext_PageLayout.editorButtonWidth(areaWidth), BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT,
 				label, BattleNext_PageLayout.EDITOR_BUTTON_GAP, source, mode, initialSelection, onConfirmed, viewports));
 		picker.attach(fieldContent, hostPanel);
+		fieldContent.getPrev().getPosition().inTL(BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
+				fieldContent.getHeightSoFar() - BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT);
 		return picker;
 	}
 
-	protected final ButtonAPI createCheckbox(Object key, TooltipMakerAPI fieldContent, float areaWidth,
+	protected final ButtonAPI createCheckbox(Object key, TooltipMakerAPI fieldContent, UIRect fieldArea,
 			String label, Object action, boolean selected, boolean editable) {
-		ButtonAPI enabledCheckbox = fieldContent.addCheckbox(BattleNext_PageLayout.editorFieldWidth(areaWidth),
+		ButtonAPI enabledCheckbox = fieldContent.addCheckbox(fieldArea.getWidth(),
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, label, action, ButtonAPI.UICheckboxSize.SMALL,
 				BattleNext_PageLayout.EDITOR_LABEL_GAP);
-		enabledCheckbox.getPosition().inTL(BattleNext_PageLayout.editorFieldInset(areaWidth),
+		enabledCheckbox.getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		enabledCheckbox.setChecked(selected);
 		enabledCheckbox.setEnabled(editable);
@@ -236,8 +238,10 @@ public abstract class BattleNext_EditorView {
 			BiConsumer<Float, TooltipMakerAPI> contentBuilder) {
 		rowsContent.addTitle(title);
 		float areaHeight = Math.max(1f, panel.getPosition().getHeight() - BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT);
-		CustomPanelAPI tablePanel = panel.createCustomPanel(areaWidth, areaHeight, panel.getPlugin());
-		rowsContent.addComponent(tablePanel).inTL(0f, BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT);
+		UIRect tableArea = BattleNext_PageLayout.pageContentRect(new UIRect(0f,
+				BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT, areaWidth, areaHeight));
+		CustomPanelAPI tablePanel = panel.createCustomPanel(tableArea.getWidth(), tableArea.getHeight(), panel.getPlugin());
+		rowsContent.addComponent(tablePanel).inTL(tableArea.getX(), tableArea.getY());
 		BattleNext_TableWidget tableWidget = own(new BattleNext_TableWidget(panel.getPlugin(), headers, columnShares,
 				rowCount, rowBuilder, contentBuilder));
 		tableWidget.attach(tablePanel);

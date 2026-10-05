@@ -6,7 +6,6 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_RuleEditor;
 
@@ -107,8 +106,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (BattleNext_RuleModel rule : store.getAll()) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, rule.getName(),
-					"rules:select:" + rule.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
+			addListItem(listContent, rule.getName(), "rules:select:" + rule.getId());
 		}
 	}
 

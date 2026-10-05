@@ -7,6 +7,8 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -55,13 +57,24 @@ class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 		}
 	}
 
-	@Test
-	void attachRefreshAndClosePreserveHostPanel() {
+	@ParameterizedTest
+	@ValueSource(ints = {180, 1400})
+	void attachAndRefreshUseTheCompleteHostPanel(int width) {
 		ProbeWidget widget = new ProbeWidget();
-		CustomPanelAPI root = panel(400f, 300f, new BaseCustomUIPanelPlugin());
-		assertEquals(root, widget.attach(root));
-		assertNotNull(root);
-		widget.refreshContent();
+		CustomPanelAPI root = panel(width, 300f, new BaseCustomUIPanelPlugin());
+		assertSame(root, widget.attach(root));
+		for (int iteration = 0; iteration < 3; iteration++) {
+			assertSame(root, widget.getPanel());
+			assertEquals(width, root.getPosition().getWidth());
+			assertEquals(300f, root.getPosition().getHeight());
+			var components = children.get(root);
+			var viewport = tooltips.get(components.get(components.size() - 1)).getViewport();
+			assertEquals(root.getPosition().getX(), viewport.getX());
+			assertEquals(root.getPosition().getY(), viewport.getY());
+			assertEquals(root.getPosition().getWidth(), viewport.getWidth());
+			assertEquals(root.getPosition().getHeight(), viewport.getHeight());
+			widget.refreshContent();
+		}
 		widget.close();
 		assertNotNull(root.getPosition());
 	}

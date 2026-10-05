@@ -8,7 +8,9 @@ import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.BattleNext_ReportTarget;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_ReportDetails;
 
 public class BattleNext_ReportEditor extends BattleNext_EditorView {
@@ -42,7 +44,8 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 		String edited = nameField == null ? savedName : nameField.getText();
 		TooltipMakerAPI metadataContent = panel.createUIElement(areaWidth, 0f, false);
 		metadataContent.addTitle(target.report().getName());
-		nameField = createTextField("name", panel, metadataContent, areaWidth, reportStrings.get("name"), edited, true, metadataContent);
+		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
+		nameField = createTextField("name", panel, metadataContent, fieldArea, reportStrings.get("name"), edited, true, metadataContent);
 		float top = metadataContent.getHeightSoFar() + 8f;
 		panel.addUIElement(metadataContent).inTL(0f, 0f);
 		CustomPanelAPI contentPanel = panel.createCustomPanel(areaWidth, Math.max(1f, areaHeight - top), new BaseCustomUIPanelPlugin());

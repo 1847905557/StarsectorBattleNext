@@ -9,10 +9,12 @@ import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.provider.*;
@@ -78,16 +80,17 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
 	private void fillMeta(TooltipMakerAPI metadataContent, float columnWidth) {
 		metadataContent.addTitle(fleetStrings.get("details_heading"));
+		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(columnWidth);
 
-		idField = createTextField("id", panel, metadataContent, columnWidth, fleetStrings.get("id"), draft.getId(), true, metadataContent);
-		folderNameField = createTextField("folder", panel, metadataContent, columnWidth, fleetStrings.get("folder_name"), draft.getFolderName(), true, metadataContent);
-		nameField = createTextField("name", panel, metadataContent, columnWidth, fleetStrings.get("name"), draft.getName(), true, metadataContent);
-		authorField = createTextField("author", panel, metadataContent, columnWidth, fleetStrings.get("author"), draft.getAuthor(), true, metadataContent);
-		descriptionField = createTextField("description", panel, metadataContent, columnWidth, fleetStrings.get("description"), draft.getDescription(), true, metadataContent);
-		commanderSkillsField = createOptionField("skills", panel, metadataContent, columnWidth, fleetStrings.get("commander_skills"),
+		idField = createTextField("id", panel, metadataContent, fieldArea, fleetStrings.get("id"), draft.getId(), true, metadataContent);
+		folderNameField = createTextField("folder", panel, metadataContent, fieldArea, fleetStrings.get("folder_name"), draft.getFolderName(), true, metadataContent);
+		nameField = createTextField("name", panel, metadataContent, fieldArea, fleetStrings.get("name"), draft.getName(), true, metadataContent);
+		authorField = createTextField("author", panel, metadataContent, fieldArea, fleetStrings.get("author"), draft.getAuthor(), true, metadataContent);
+		descriptionField = createTextField("description", panel, metadataContent, fieldArea, fleetStrings.get("description"), draft.getDescription(), true, metadataContent);
+		commanderSkillsField = createOptionField("skills", panel, metadataContent, fieldArea, fleetStrings.get("commander_skills"),
 				String.join(",", draft.getSkills()), new BattleNext_CommanderSkillSourceProvider(),
 				BattleNext_OptionField.OptionSelectionMode.MULTIPLE, metadataContent);
-		tagsField = createTextField("tags", panel, metadataContent, columnWidth, fleetStrings.get("tags"), String.join(",", draft.getTags()), true, metadataContent);
+		tagsField = createTextField("tags", panel, metadataContent, fieldArea, fleetStrings.get("tags"), String.join(",", draft.getTags()), true, metadataContent);
 	}
 
 	private void fillMembers(TooltipMakerAPI rowsContent, float columnWidth) {
@@ -112,25 +115,26 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expanded, 0f, header,
 				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float areaWidth = columnWidth - MEMBER_DETAIL_INSET * 2f;
+			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
 			TooltipMakerAPI fieldContent = bodyPanel.createUIElement(areaWidth, 0f, false);
 			fieldContent.addPara(memberStrings.get("label") + " " + (index + 1), 0f);
 			Object memberKey = memberKeys.get(index);
-			fields.variantField = createOptionField(List.of(memberKey, "variant"), bodyPanel, fieldContent, areaWidth,
+			fields.variantField = createOptionField(List.of(memberKey, "variant"), bodyPanel, fieldContent, fieldArea,
 					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
-			fields.nameField = createTextField(List.of(memberKey, "name"), bodyPanel, fieldContent, areaWidth,
+			fields.nameField = createTextField(List.of(memberKey, "name"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("ship_name"), member.getName(), true, fieldContent, rowsContent);
-			fields.officerPersonalityField = createOptionField(List.of(memberKey, "personality"), bodyPanel, fieldContent, areaWidth,
+			fields.officerPersonalityField = createOptionField(List.of(memberKey, "personality"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_personality"), member.getPersonality(), new BattleNext_PersonalitySourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
-			fields.officerSkillsField = createOptionField(List.of(memberKey, "skills"), bodyPanel, fieldContent, areaWidth,
+			fields.officerSkillsField = createOptionField(List.of(memberKey, "skills"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_skills"), String.join(",", member.getSkills()), new BattleNext_OfficerSkillSourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.MULTIPLE, fieldContent, rowsContent);
-			fields.officerPortraitField = createOptionField(List.of(memberKey, "portrait"), bodyPanel, fieldContent, areaWidth,
+			fields.officerPortraitField = createOptionField(List.of(memberKey, "portrait"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_portrait"), member.getPortrait(), new BattleNext_PortraitSourceProvider(),
 					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
-			fields.ordersField = createTextField(List.of(memberKey, "orders"), bodyPanel, fieldContent, areaWidth,
+			fields.ordersField = createTextField(List.of(memberKey, "orders"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("orders"), member.getOrders(), true, fieldContent, rowsContent);
-			fields.tagsField = createTextField(List.of(memberKey, "tags"), bodyPanel, fieldContent, areaWidth,
+			fields.tagsField = createTextField(List.of(memberKey, "tags"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("tags"), String.join(",", member.getTags()), true, fieldContent, rowsContent);
 			createButton(fieldContent, areaWidth, fleetStrings.get("remove_member"), "remove_member:" + index);
 			float contentHeight = fieldContent.getHeightSoFar();

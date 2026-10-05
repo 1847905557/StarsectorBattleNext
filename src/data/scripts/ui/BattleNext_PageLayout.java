@@ -18,12 +18,10 @@ public class BattleNext_PageLayout {
 	public static final float FOOTER_HEIGHT = 30f;
 	public static final float CONTENT_BOTTOM = 48f;
 	public static final float FOOTER_MARGIN = 8f;
+	public static final float PAGE_CONTENT_INSET = 8f;
 
-	public static final float MANAGEMENT_CONTENT_INSET = 8f;
-	public static final float MANAGEMENT_SCROLLBAR_RESERVE = 2f;
+	public static final float MANAGEMENT_CONTENT_INSET = PAGE_CONTENT_INSET;
 	public static final float MANAGEMENT_REGION_BORDER_THICKNESS = 2f;
-	public static final float MANAGEMENT_LIST_BUTTON_MIN_WIDTH = 80f;
-	public static final float MANAGEMENT_LIST_BUTTON_WIDTH_RESERVE = 30f;
 	public static final float MANAGEMENT_LIST_ERROR_TOP_GAP = 8f;
 	public static final float MANAGEMENT_LIST_EMPTY_TOP_GAP = 10f;
 	public static final float MANAGEMENT_EDITOR_FOOTER_RESERVE = 42f;
@@ -55,7 +53,6 @@ public class BattleNext_PageLayout {
 	public static final float TABLE_COLUMN_GAP = 8f;
 	public static final float TABLE_ROW_BOTTOM_PADDING = 10f;
 	public static final float TABLE_ROW_BORDER_THICKNESS = 2f;
-	public static final float TABLE_SIDE_MARGIN = 12f;
 	public static final float SECTION_HEADING_EXTRA_WIDTH = 10f;
 	public static final float SCROLLBAR_RESERVED_WIDTH = 5f;
 	public static final float CUSTOM_COMPONENT_LEFT_INSET = 5f;
@@ -80,7 +77,7 @@ public class BattleNext_PageLayout {
 	private static final float TOOLTIP_MAX_WIDTH = 500f;
 	private static final float TOOLTIP_WIDTH_PER_CHAR = 10f;
 
-	private static final float MANAGEMENT_OUTER_MARGIN = 8f;
+	private static final float MANAGEMENT_OUTER_MARGIN = PAGE_CONTENT_INSET;
 	private static final float MANAGEMENT_COLUMN_GAP = 20f;
 	private static final float MANAGEMENT_LIST_MIN_WIDTH = 260f;
 	private static final float MANAGEMENT_LIST_MAX_WIDTH = 400f;
@@ -150,15 +147,19 @@ public class BattleNext_PageLayout {
 		}
 	}
 
-	public static TooltipMakerAPI heading(UIRect rect, CustomPanelAPI panel, String title) {
+	public static LabelAPI heading(UIRect rect, CustomPanelAPI panel, String title) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH, rect.getWidth()), rect.getHeight(), false);
+		return heading(rect, panel, maker, title);
+	}
+
+	public static LabelAPI heading(UIRect rect, CustomPanelAPI panel, TooltipMakerAPI maker, String title) {
 		LabelAPI label = maker.addSectionHeading(maker.shortenString(title,
 				rect.getWidth() - PAGE_TITLE_TRUNCATION_PADDING), BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
 		label.getPosition().inTL(0f, 0f);
 		maker.setHeightSoFar(rect.getHeight());
 		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
-		return maker;
+		return label;
 	}
 
 	public static TooltipMakerAPI column(UIRect rect, CustomPanelAPI panel) {
@@ -170,8 +171,21 @@ public class BattleNext_PageLayout {
 		return maker;
 	}
 
-	public static void refreshHeading(TooltipMakerAPI maker, float areaWidth, String title) {
-		LabelAPI label = (LabelAPI) maker.getPrev();
+	public static UIRect pageContentRect(UIRect area) {
+		return area.shrink(0f, 0f, PAGE_CONTENT_INSET, PAGE_CONTENT_INSET);
+	}
+
+	public static LabelAPI contentTitle(TooltipMakerAPI content, String title, float areaWidth, float inset) {
+		LabelAPI label = content.addTitle(title);
+		float previousHeight = label.getPosition().getHeight();
+		float top = content.getHeightSoFar() - previousHeight;
+		label.autoSizeToWidth(Math.max(MIN_UI_WIDTH, areaWidth - inset * 2f));
+		label.getPosition().inTL(inset, top);
+		content.setHeightSoFar(top + label.getPosition().getHeight());
+		return label;
+	}
+
+	public static void refreshHeading(TooltipMakerAPI maker, LabelAPI label, float areaWidth, String title) {
 		label.setText(maker.shortenString(title, areaWidth - PAGE_TITLE_TRUNCATION_PADDING));
 	}
 
@@ -203,13 +217,13 @@ public class BattleNext_PageLayout {
 	}
 
 	public static BattleNext_TextField editorTextField(BattleNext_UiInputRouter router, CustomPanelAPI hostPanel,
-			TooltipMakerAPI fieldContent, float areaWidth, String value, TooltipMakerAPI... viewports) {
+			TooltipMakerAPI fieldContent, UIRect fieldArea, String value, TooltipMakerAPI... viewports) {
 		BattleNext_TextField field = new BattleNext_TextField(router, hostPanel,
-				editorFieldWidth(areaWidth), FORM_FIELD_HEIGHT, viewports);
+				fieldArea.getWidth(), FORM_FIELD_HEIGHT, viewports);
 		field.attach(fieldContent, hostPanel);
 		field.setText(value);
 		field.setMaxChars(-1);
-		field.getPosition().inTL(editorFieldInset(areaWidth), fieldContent.getHeightSoFar() - FORM_FIELD_HEIGHT);
+		field.getPosition().inTL(fieldArea.getX(), fieldContent.getHeightSoFar() - FORM_FIELD_HEIGHT);
 		return field;
 	}
 
@@ -219,6 +233,12 @@ public class BattleNext_PageLayout {
 
 	public static float editorFieldInset(float areaWidth) {
 		return Math.min(EDITOR_FIELD_INSET, Math.max(0f, (areaWidth - MIN_UI_WIDTH) * 0.5f));
+	}
+
+	public static UIRect editorFieldArea(float areaWidth) {
+		float inset = editorFieldInset(areaWidth);
+		float fieldWidth = editorFieldWidth(areaWidth);
+		return new UIRect(inset, 0f, fieldWidth, FORM_FIELD_HEIGHT);
 	}
 
 	public static UIRect[] editorColumns(float areaWidth, float areaHeight) {
@@ -257,9 +277,11 @@ public class BattleNext_PageLayout {
 		return actions;
 	}
 
-	public static ButtonAPI buttonWithTooltip(TooltipMakerAPI maker, String title, Object id, float width) {
+	public static ButtonAPI listButton(TooltipMakerAPI maker, String title, Object id, float width,
+			TooltipMakerAPI.TooltipCreator tooltip) {
 		ButtonAPI button = button(maker, title, id, width);
-		maker.addTooltipToPrevious(new BaseTooltipCreator() {
+		button.getPosition().inTL(0f, maker.getHeightSoFar() - FOOTER_HEIGHT);
+		maker.addTooltipToPrevious(tooltip == null ? new BaseTooltipCreator() {
 			@Override
 			public float getTooltipWidth(Object ignored) {
 				return Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH,
@@ -269,7 +291,7 @@ public class BattleNext_PageLayout {
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
 				tooltip.addPara(title, 0f);
 			}
-		}, TooltipLocation.RIGHT);
+		} : tooltip, TooltipLocation.RIGHT);
 		return button;
 	}
 
@@ -326,7 +348,7 @@ public class BattleNext_PageLayout {
 		float height = panel.getPosition().getHeight();
 		float listWidth = Math.min(MANAGEMENT_LIST_MAX_WIDTH,
 				Math.max(MANAGEMENT_LIST_MIN_WIDTH, width * MANAGEMENT_LIST_WIDTH_SHARE));
-		listWidth = Math.min(listWidth, width * MANAGEMENT_LIST_MAX_SHARE);
+		listWidth = (float) Math.floor(Math.min(listWidth, width * MANAGEMENT_LIST_MAX_SHARE));
 		float contentHeight = height - CONTENT_TOP - CONTENT_BOTTOM - FOOTER_MARGIN;
 		UIRect list = new UIRect(MANAGEMENT_OUTER_MARGIN, CONTENT_TOP, listWidth, contentHeight);
 		UIRect detail = new UIRect(MANAGEMENT_OUTER_MARGIN + MANAGEMENT_COLUMN_GAP + listWidth,
@@ -338,7 +360,7 @@ public class BattleNext_PageLayout {
 
 	public static UIRect managementContentRect(UIRect rect) {
 		return rect.shrink(MANAGEMENT_CONTENT_INSET, MANAGEMENT_CONTENT_INSET,
-				MANAGEMENT_CONTENT_INSET, MANAGEMENT_CONTENT_INSET + MANAGEMENT_SCROLLBAR_RESERVE);
+				MANAGEMENT_CONTENT_INSET, MANAGEMENT_CONTENT_INSET);
 	}
 
 	public static UIRect managementEditorRect(UIRect rect) {
@@ -351,11 +373,6 @@ public class BattleNext_PageLayout {
 		return new UIRect(MANAGEMENT_CONTENT_INSET,
 				rect.getHeight() - MANAGEMENT_DELETE_BUTTON_BOTTOM_INSET - MANAGEMENT_DELETE_BUTTON_HEIGHT,
 				MANAGEMENT_DELETE_BUTTON_WIDTH, MANAGEMENT_DELETE_BUTTON_HEIGHT);
-	}
-
-	public static float managementListButtonWidth(UIRect rect) {
-		return Math.max(MANAGEMENT_LIST_BUTTON_MIN_WIDTH,
-				rect.getWidth() - MANAGEMENT_LIST_BUTTON_WIDTH_RESERVE);
 	}
 
 	public static UIRect managementSourceNoteLocalRect(UIRect rect) {

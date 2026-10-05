@@ -115,8 +115,9 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		valueFields.clear();
 		createColumns("metadata", "restrictions", (metadataContent, columnWidth) -> {
 			metadataContent.addTitle(ruleStrings.get("editor_title"));
-			idField = createTextField("id", panel, metadataContent, columnWidth, ruleStrings.get("id"), draft.getId(), true, metadataContent);
-			nameField = createTextField("name", panel, metadataContent, columnWidth, ruleStrings.get("name"), draft.getName(), true, metadataContent);
+			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(columnWidth);
+			idField = createTextField("id", panel, metadataContent, fieldArea, ruleStrings.get("id"), draft.getId(), true, metadataContent);
+			nameField = createTextField("name", panel, metadataContent, fieldArea, ruleStrings.get("name"), draft.getName(), true, metadataContent);
 		}, (rowsContent, columnWidth) -> {
 			String[] headers = {ruleStrings.get("restriction"), ruleStrings.get("value_or_items"), strings.get("enabled"), strings.get("actions")};
 			tableWidget = createTable("rows", rowsContent, columnWidth, ruleStrings.get("restrictions"), headers, COLUMN_SHARES,

@@ -45,7 +45,6 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 
 	private enum DropdownAction { TOGGLE }
 
-	private final float width;
 	private final CustomPanelAPI overlayHost;
 	private final DropdownSelectionListener listener;
 	private final List<DropdownChoice> options = new ArrayList<>();
@@ -59,6 +58,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
 		row = ownPanel(panel, panel.createCustomPanel(width, height, new DropdownButtonPlugin()));
 		button = BattleNext_PageLayout.fixedButton(row,
@@ -68,9 +68,8 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	}
 
 	public BattleNext_DropdownField(BattleNext_UiInputRouter inputRouter,
-			CustomPanelAPI overlayHost, float width, DropdownSelectionListener listener) {
+			CustomPanelAPI overlayHost, DropdownSelectionListener listener) {
 		super(inputRouter);
-		this.width = width;
 		this.overlayHost = overlayHost;
 		this.listener = listener;
 	}
@@ -174,6 +173,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 		inputRouter.releaseFocus();
 		float hostHeight = overlayHost.getPosition().getHeight();
 		PositionAPI rowPosition = row.getPosition();
+		float width = rowPosition.getWidth();
 		PositionAPI ownerPosition = overlayHost.getPosition();
 		float rowTop = ownerPosition.getY() + hostHeight - rowPosition.getY() - rowPosition.getHeight();
 		float rowX = rowPosition.getX() - ownerPosition.getX();

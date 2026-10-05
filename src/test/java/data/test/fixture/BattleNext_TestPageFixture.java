@@ -2,6 +2,9 @@ package data.test.fixture;
 
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
@@ -9,11 +12,13 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.scripts.ui.page.BattleNext_PageView;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,6 +44,29 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	protected List<BattleNext_OptionField> optionFields(BattleNext_EditorView editor) throws Exception {
 		return ((List<?>) getField(editor, "tooltipWidgets")).stream()
 				.filter(BattleNext_OptionField.class::isInstance).map(BattleNext_OptionField.class::cast).toList();
+	}
+
+	protected void assertTablePickerAlignment(BattleNext_TableWidget table, BattleNext_OptionPicker picker) throws Exception {
+		PositionAPI tableBounds = table.getPanel().getPosition();
+		CustomPanelAPI pickerRow = (CustomPanelAPI) getField(picker, "row");
+		ButtonAPI button = (ButtonAPI) getField(picker, "toggle");
+		float left = tableBounds.getX();
+		float rowWidth = tableBounds.getWidth();
+		assertEquals(left, pickerRow.getPosition().getX(), 0.001f);
+		assertEquals(left, button.getPosition().getX(), 0.001f);
+		assertEquals(BattleNext_PageLayout.editorButtonWidth(rowWidth), button.getPosition().getWidth(), 0.001f);
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT, button.getPosition().getHeight(), 0.001f);
+		assertTrue(button.getPosition().getX() + button.getPosition().getWidth()
+				<= tableBounds.getX() + tableBounds.getWidth() + 0.001f);
+		int rows = 0;
+		for (UIComponentAPI component : tooltips.get(table.getContent()).getComponents()) {
+			if (component == pickerRow) continue;
+			assertEquals(left, component.getPosition().getX(), 0.001f);
+			rows++;
+		}
+		PositionAPI contentBounds = table.getContent().getPosition();
+		assertEquals(rows * BattleNext_PageLayout.TABLE_ROW_HEIGHT + BattleNext_PageLayout.EDITOR_BUTTON_GAP,
+				contentBounds.getY() + contentBounds.getHeight() - pickerRow.getPosition().getY() - pickerRow.getPosition().getHeight(), 0.001f);
 	}
 
 	protected void confirmTournamentFleets(BattleNext_TournamentEditor editor, List<String> ids) throws Exception {

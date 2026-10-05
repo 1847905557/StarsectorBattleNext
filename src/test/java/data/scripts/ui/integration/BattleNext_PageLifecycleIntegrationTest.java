@@ -4,6 +4,10 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.BattleNext_BaseStore;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rule.BattleNext_RuleModel;
+import data.model.rule.BattleNext_RuleStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
@@ -13,22 +17,162 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.ui.editor.BattleNext_EditorView;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.page.*;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
+
+	@ParameterizedTest
+	@ValueSource(ints = {1024, 1400})
+	void everyPageUsesShellAndMainContentInsetsAndAlignedFooters(int width) throws Exception {
+
+		deferTooltipWidth = true;
+		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
+		for (Object tab : tabs) {
+			BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
+			CustomPanelAPI root = panel(width, 900f, manager);
+			manager.attach(root);
+			manager.open();
+			manager.buttonPressed(tab);
+			BattleNext_PageView page = (BattleNext_PageView) getField(manager, "attachedView");
+			CustomPanelAPI body = (CustomPanelAPI) getField(page, "panel");
+			assertEquals(8f, body.getPosition().getX() - root.getPosition().getX());
+			assertEquals(8f, root.getPosition().getX() + width - body.getPosition().getX() - body.getPosition().getWidth());
+			if (page instanceof BattleNext_ManagementPage) {
+				UIRect list = (UIRect) getField(page, "listRect");
+				UIRect detail = (UIRect) getField(page, "detailRect");
+				UIRect footer = (UIRect) getField(page, "footerRect");
+				assertEquals(16f, body.getPosition().getX() - root.getPosition().getX() + list.getX());
+				assertEquals(16f, width - 8f - detail.getX() - detail.getWidth());
+				assertEquals(8f, footer.getX());
+				assertEquals(8f, body.getPosition().getWidth() - footer.getX() - footer.getWidth());
+			} else if (page instanceof BattleNext_SettingsPage) {
+				Object editor = getField(page, "editor");
+				TextFieldAPI field = (TextFieldAPI) getField(editor, "battleTimeLimitField");
+				CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
+				assertEquals(16f, field.getPosition().getX() - root.getPosition().getX());
+				assertEquals(320f, field.getPosition().getWidth());
+				assertEquals(16f, editorPanel.getPosition().getX() - root.getPosition().getX());
+				assertEquals(16f, root.getPosition().getX() + width - editorPanel.getPosition().getX() - editorPanel.getPosition().getWidth());
+				Map<?, ?> viewports = (Map<?, ?>) getField(editor, "viewports");
+				List<UIComponentAPI> components = tooltips.get(viewports.get("settings")).getComponents();
+				assertEquals(field.getPosition().getX(), components.get(0).getPosition().getX());
+				assertEquals(field.getPosition().getX(), components.get(1).getPosition().getX());
+				assertEquals(16f, buttonPositions.get("settings_save").getX() - root.getPosition().getX());
+			} else {
+				Object editor = getField(page, "quickBattleEditor");
+				BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+				TooltipMakerAPI header = (TooltipMakerAPI) children.get(table.getPanel()).get(0);
+				assertEquals(16f, header.getPosition().getX() - root.getPosition().getX());
+				assertEquals(16f, root.getPosition().getX() + width - header.getPosition().getX() - header.getPosition().getWidth());
+				assertEquals(16f, buttonPositions.get("add").getX() - root.getPosition().getX());
+			}
+			manager.buttonPressed("close");
+			assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).getSession().hasInputState());
+		}
+	}
+
+	@ParameterizedTest
+	@CsvSource({"fleet,180", "fleet,1400", "pin,180", "pin,1400", "report,180", "report,1400",
+			"rules,180", "rules,1400", "tournament,180", "tournament,1400"})
+	void catalogsUseSymmetricButtonsDeclaredWidthsAndCompleteHoverText(String kind, int width) throws Exception {
+
+		deferTooltipWidth = true;
+		shortenLabels = true;
+		String name = "目录 中文 😀 50% " + "完整名称 ".repeat(20);
+		BattleNext_ManagementPage page = directoryPage(kind);
+		saveDirectoryEntries(kind, page, name);
+		CustomPanelAPI root = panel(width, 200f, new BaseCustomUIPanelPlugin());
+		page.attach(root);
+		for (int iteration = 0; iteration < 3; iteration++) {
+			CustomPanelAPI listPanel = (CustomPanelAPI) getField(page, "listPanel");
+			TooltipMakerAPI list = (TooltipMakerAPI) getField(page, "listContent");
+			TooltipState state = tooltips.get(list);
+			List<UIComponentAPI> components = state.getComponents();
+			assertEquals(8f, components.get(0).getPosition().getX() - listPanel.getPosition().getX());
+			int count = 0;
+			for (UIComponentAPI component : components) {
+				if (!(component instanceof ButtonAPI button)) continue;
+				count++;
+				PositionAPI bounds = button.getPosition();
+				assertEquals(8f, bounds.getX() - listPanel.getPosition().getX());
+				assertEquals(8f, listPanel.getPosition().getX() + listPanel.getPosition().getWidth() - bounds.getX() - bounds.getWidth());
+				assertEquals(listPanel.getPosition().getWidth() - 16f, bounds.getWidth());
+				assertEquals(bounds.getWidth() - 10f, list.getWidthSoFar());
+				assertEquals(bounds.getWidth() + 5f, state.getViewport().getWidth());
+				assertTrue(button.getText().endsWith("..."));
+				TooltipMakerAPI hover = tooltip(400f, 0f, false);
+				attachedTooltips.get(button).createTooltip(hover, false, null);
+				assertTrue(tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+						.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(value -> value.contains(name)));
+			}
+			assertEquals(List.of("first", "second").size(), count);
+			state.getScroller().setYOffset(state.getUsedHeight());
+			float offset = state.getScroller().getYOffset();
+			state.getScroller().setYOffset(0f);
+			ButtonAPI selected = components.stream().filter(ButtonAPI.class::isInstance).map(ButtonAPI.class::cast).findFirst().orElseThrow();
+			Object action = selected.getCustomData();
+			page.buttonPressed(action);
+			assertNotNull(getField(getField(page, "editor"), "nameField"));
+			assertFalse(page.hasUnsavedChanges());
+			page.refreshContent();
+			TooltipMakerAPI next = (TooltipMakerAPI) getField(page, "listContent");
+			next.getExternalScroller().setYOffset(offset);
+			page.refreshContent();
+			next = (TooltipMakerAPI) getField(page, "listContent");
+			assertEquals(offset, next.getExternalScroller().getYOffset());
+		}
+		page.close();
+		assertTrue(children.get(root).isEmpty());
+	}
+
+	private BattleNext_ManagementPage directoryPage(String kind) {
+		return switch (kind) {
+			case "fleet" -> new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
+			case "pin" -> new BattleNext_PinnedVariantPage(() -> {}, Runnable::run, (description, action) -> {});
+			case "report" -> new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
+			case "rules" -> new BattleNext_RulesPage(() -> {}, Runnable::run, (description, action) -> {});
+			default -> new BattleNext_TournamentPage(() -> {}, Runnable::run, (description, action) -> {});
+		};
+	}
+
+	private void saveDirectoryEntries(String kind, BattleNext_ManagementPage page, String name) throws Exception {
+		String field = kind.equals("tournament") ? "tournamentStore" : kind.equals("report") ? "reportStore" : "store";
+		BattleNext_BaseStore<?> store = (BattleNext_BaseStore<?>) getField(page, field);
+		store.reload();
+		for (String id : List.of("first", "second")) {
+			String entryName = name + id;
+			switch (kind) {
+				case "fleet" -> ((BattleNext_FleetStore) store).save(new BattleNext_FleetModel(id, entryName, List.of(), List.of(), List.of()));
+				case "pin" -> ((BattleNext_PinnedVariantStore) store).saveVariant(entryName, source().getApi());
+				case "report" -> {
+					BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
+					report.setId(id);
+					report.setName(entryName);
+					((BattleNext_BattleReportStore) store).save(report);
+				}
+				case "rules" -> ((BattleNext_RuleStore) store).save(new BattleNext_RuleModel(id, entryName));
+				default -> ((BattleNext_TournamentStore) store).save(new BattleNext_TournamentModel(id, entryName,
+						BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2));
+			}
+		}
+	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {500, 800, 1400})

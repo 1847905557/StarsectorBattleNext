@@ -51,14 +51,13 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
-		float tableWidth = panel.getPosition().getWidth() - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
+		float tableWidth = panel.getPosition().getWidth();
 		float availableHeight = Math.max(0f, panel.getPosition().getHeight() - BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		if (!headerBuilt) {
 			createHeader();
 			headerBuilt = true;
 		}
-		rowsBounds = new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN
-				- BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
+		rowsBounds = new UIRect(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
 				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
 		rowsPanel = ownPanel(panel, rowsBounds.createSubPanel(panel, inputOwner).getPanel());
@@ -108,7 +107,7 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 	}
 
 	private void createHeader() {
-		float tableWidth = panel.getPosition().getWidth() - BattleNext_PageLayout.TABLE_SIDE_MARGIN * 2f;
+		float tableWidth = panel.getPosition().getWidth();
 		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
 		LabelAPI headerStrip = headerBackground.addSectionHeading("", BattleNext_UiTheme.TEXT,
@@ -116,15 +115,13 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
 		headerStrip.getPosition().inTL(0f, 0f);
 		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		panel.addUIElement(headerBackground).inTL(BattleNext_PageLayout.TABLE_SIDE_MARGIN,
-				0f);
+		panel.addUIElement(headerBackground).inTL(0f, 0f);
 		float stripHeight = Math.min(BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
 				headerStrip.getPosition().getHeight());
 		UIRect[] headingCells = columns(tableWidth, stripHeight);
 		for (int index = 0; index < headingCells.length; index++) {
 			UIRect cell = headingCells[index];
-			addLabel(new UIRect(BattleNext_PageLayout.TABLE_SIDE_MARGIN + cell.getX(),
-					cell.getY(), cell.getWidth(), cell.getHeight()), headers[index]);
+			addLabel(cell, headers[index]);
 		}
 	}
 

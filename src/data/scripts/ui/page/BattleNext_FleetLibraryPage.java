@@ -6,7 +6,6 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 import org.json.JSONException;
@@ -91,8 +90,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (BattleNext_FleetModel fleet : store.getAll()) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, fleet.getName(),
-					"fleet:" + fleet.getId(), BattleNext_PageLayout.managementListButtonWidth(listRect));
+			addListItem(listContent, fleet.getName(), "fleet:" + fleet.getId());
 		}
 	}
 

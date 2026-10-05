@@ -10,7 +10,6 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
@@ -114,9 +113,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
-			BattleNext_PageLayout.buttonWithTooltip(listContent, tournament.getName(),
-					"tournament:select:" + tournament.getId(),
-					BattleNext_PageLayout.managementListButtonWidth(listRect));
+			addListItem(listContent, tournament.getName(), "tournament:select:" + tournament.getId());
 		}
 	}
 

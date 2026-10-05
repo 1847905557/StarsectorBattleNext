@@ -2,8 +2,10 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_PageLayout;
 
 public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
@@ -42,16 +44,19 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		float areaWidth = panel.getPosition().getWidth();
 		TooltipMakerAPI fieldContent = panel.createUIElement(areaWidth, panel.getPosition().getHeight(), true);
 		BattleNext_UiTheme.configure(fieldContent);
-		fieldContent.addTitle(settingsStrings.get("heading"));
+		UIRect checkboxArea = new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		UIRect fieldArea = new UIRect(0f, 0f, Math.min(320f, areaWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		fieldContent.setTextWidthOverride(areaWidth);
+		BattleNext_PageLayout.contentTitle(fieldContent, settingsStrings.get("heading"), areaWidth, 0f);
 		fieldContent.addPara(settingsStrings.get("description"), 10f);
-		cnTextCheckbox = createCheckbox("cn_text", fieldContent, areaWidth, settingsStrings.get("cn_text"), "cnText", cnText, true);
-		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, areaWidth, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);
-		infoLogCheckbox = createCheckbox("logging", fieldContent, areaWidth, settingsStrings.get("info_log"), "infoLog", logging, true);
-		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, areaWidth, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
-		battleTimeLimitField = createTextField("battle_time_limit", panel, fieldContent, areaWidth, settingsStrings.get("battle_time_limit"), values[0], true, fieldContent);
-		defaultTimeMultField = createTextField("default_time_mult", panel, fieldContent, areaWidth, settingsStrings.get("default_time_mult"), values[1], true, fieldContent);
-		boostTimeMultField = createTextField("boost_time_mult", panel, fieldContent, areaWidth, settingsStrings.get("boost_time_mult"), values[2], true, fieldContent);
-		reportKeepCountField = createTextField("report_keep_count", panel, fieldContent, areaWidth, settingsStrings.get("report_keep_count"), values[3], true, fieldContent);
+		cnTextCheckbox = createCheckbox("cn_text", fieldContent, checkboxArea, settingsStrings.get("cn_text"), "cnText", cnText, true);
+		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, checkboxArea, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);
+		infoLogCheckbox = createCheckbox("logging", fieldContent, checkboxArea, settingsStrings.get("info_log"), "infoLog", logging, true);
+		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, checkboxArea, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
+		battleTimeLimitField = createTextField("battle_time_limit", panel, fieldContent, fieldArea, settingsStrings.get("battle_time_limit"), values[0], true, fieldContent);
+		defaultTimeMultField = createTextField("default_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("default_time_mult"), values[1], true, fieldContent);
+		boostTimeMultField = createTextField("boost_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("boost_time_mult"), values[2], true, fieldContent);
+		reportKeepCountField = createTextField("report_keep_count", panel, fieldContent, fieldArea, settingsStrings.get("report_keep_count"), values[3], true, fieldContent);
 		panel.addUIElement(fieldContent).inTL(0f, 0f);
 		bindViewport("settings", fieldContent);
 	}

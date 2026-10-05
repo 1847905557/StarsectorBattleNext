@@ -53,20 +53,24 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	@Override
 	protected final void refreshPage() {
 
+		float scrollOffset = listContent == null ? 0f : listContent.getExternalScroller().getYOffset();
 		listRect.removeLatestSubPanel();
 		listPanel = listRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		UIRect listContentRect = BattleNext_PageLayout.managementContentRect(listRect);
-		listContent = listPanel.createUIElement(listContentRect.getWidth(), listContentRect.getHeight(), true);
+		listContent = listPanel.createUIElement(listContentRect.getWidth() + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH,
+				listContentRect.getHeight(), true);
+		listContent.setTextWidthOverride(listContentRect.getWidth());
 		buildList(listContent);
 		listPanel.addUIElement(listContent).inTL(listContentRect.getX() - listRect.getX(),
 				listContentRect.getY() - listRect.getY());
+		listContent.getExternalScroller().setYOffset(scrollOffset);
 
 		detailRect.removeLatestSubPanel();
 		detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!isDetailOpen()) {
 			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
 			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
-			prompt.addTitle(promptText());
+			BattleNext_PageLayout.contentTitle(prompt, promptText(), promptRect.getWidth(), 0f);
 			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
 					promptRect.getY() - detailRect.getY());
 			return;
@@ -99,6 +103,11 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	}
 
 	@Override
+	protected void establishPageState() {
+		listContent.getExternalScroller().setYOffset(0f);
+	}
+
+	@Override
 	public boolean handleEscape() {
 		buttonPressed("back");
 		return true;
@@ -111,6 +120,16 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	protected abstract String promptText();
 
 	protected abstract void buildListItems(TooltipMakerAPI listContent);
+
+	protected final void addListItem(TooltipMakerAPI listContent, String name, Object action) {
+		addListItem(listContent, name, action, null);
+	}
+
+	protected final void addListItem(TooltipMakerAPI listContent, String name, Object action,
+			TooltipMakerAPI.TooltipCreator tooltip) {
+		float areaWidth = BattleNext_PageLayout.managementContentRect(listRect).getWidth();
+		BattleNext_PageLayout.listButton(listContent, name, action, areaWidth, tooltip);
+	}
 
 	protected abstract boolean isListLoaded();
 
@@ -155,7 +174,8 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	}
 
 	private void buildList(TooltipMakerAPI listContent) {
-		listContent.addTitle(listTitle());
+		float areaWidth = BattleNext_PageLayout.managementContentRect(listRect).getWidth();
+		BattleNext_PageLayout.contentTitle(listContent, listTitle(), areaWidth, 0f);
 		if (!isListLoaded()) {
 			listContent.addPara(strings.get("load_failed") + ": " + listError(), listErrorGap());
 		}

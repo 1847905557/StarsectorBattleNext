@@ -53,6 +53,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private BattleNext_StatusBar statusBar;
 	private TooltipMakerAPI headingContent;
+	private LabelAPI headingLabel;
 	private ButtonAPI closeButton;
 
 	private CustomPanelAPI panel;
@@ -180,7 +181,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
 				shellWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
 
-		headingContent = BattleNext_PageLayout.heading(headingRect, panel, managementStrings.get("heading"));
+		headingContent = panel.createUIElement(headingRect.getWidth(), headingRect.getHeight(), false);
+		headingLabel = BattleNext_PageLayout.heading(headingRect, panel, headingContent, managementStrings.get("heading"));
 		headingContent.setButtonFontOrbitron20();
 
 		float tabWidth = (tabsRect.getWidth() - SHELL_TAB_GAP * (tabButtons.length - 1)) / tabButtons.length;
@@ -205,7 +207,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void refreshShellText() {
-		BattleNext_PageLayout.refreshHeading(headingContent, bodyRect.getWidth(), managementStrings.get("heading"));
+		BattleNext_PageLayout.refreshHeading(headingContent, headingLabel, bodyRect.getWidth(), managementStrings.get("heading"));
 		for (int index = 0; index < tabButtons.length; index++) {
 			BattleNext_PageLayout.refreshButton(headingContent, tabButtons[index],
 					managementStrings.get(BattleManagementPage.values()[index].titleKey));

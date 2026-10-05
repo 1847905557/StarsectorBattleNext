@@ -75,6 +75,9 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			case "createCustomPanel" -> panel((Float) args[0], (Float) args[1], (CustomUIPanelPlugin) args[2]);
 			case "createUIElement" -> {
 				TooltipMakerAPI tooltip = tooltip((Float) args[0], (Float) args[1], (Boolean) args[2]);
+				TooltipState state = tooltips.get(tooltip);
+				state.uiElement = true;
+				state.textWidth = Math.max(1f, state.width - (state.scrollable ? 15f : 10f));
 				owned.put(tooltip, true);
 				yield tooltip;
 			}
@@ -128,6 +131,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private float textWidth;
 		private float offset;
 		private boolean mounted;
+		private boolean uiElement;
 		private UIComponentAPI previous;
 		private TableState table;
 		private String paraFont = "default";
@@ -139,7 +143,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			this.width = width;
 			this.position = position(deferTooltipWidth ? 0f : width, height);
 			this.viewport = position(width, height);
-			this.textWidth = Math.max(1f, width - 10f);
+			this.textWidth = Math.max(1f, width);
 			this.scrollable = scrollable;
 			this.scroller = proxy(ScrollPanelAPI.class, (method, args) -> switch (method) {
 				case "getPosition" -> viewport;
@@ -193,14 +197,17 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			viewport.setSize(width, height);
 			geometry.get(viewport).parent = owner;
 			geometry.get(position).parent = viewport;
-			position.setSize(width, Math.max(height, usedHeight));
+			position.setSize(uiElement && scrollable ? width - 5f : width, Math.max(height, usedHeight));
 			mounted = true;
 		}
 
 		protected UIComponentAPI append(UIComponentAPI component, float pad) {
 			assertFalse(mounted, "Contents must be complete before mounting");
 			geometry.get(component.getPosition()).parent = position;
-			component.getPosition().inTL(5f, usedHeight + pad);
+			float left = previous == null ? 5f : previous.getPosition().getX() - position.getX();
+			float top = previous == null ? pad
+					: position.getY() + position.getHeight() - previous.getPosition().getY() + pad;
+			component.getPosition().inTL(left, top);
 			usedHeight += pad + component.getPosition().getHeight();
 			components.add(component);
 			previous = component;
@@ -246,7 +253,30 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					labelColors.put(label.getPosition(), (Color) args[1]);
 					yield label;
 				}
-				case "addTitle", "addPara", "addSectionHeading" -> {
+				case "addSectionHeading" -> {
+					String value = (String) args[0];
+					float headingWidth = args.length == 6 ? (Float) args[4]
+							: uiElement ? width - (scrollable ? 15f : 10f) : width;
+					float pad = (Float) args[args.length - 1];
+					LabelAPI label = label(value, headingWidth + 10f);
+					label.getPosition().setSize(headingWidth + 10f, paragraphLineHeight + 3f);
+					label.setAlignment((Alignment) args[args.length - (args.length == 6 ? 3 : 2)]);
+					labels.add(value);
+					labelFonts.put(label.getPosition(), "orbitron12-condensed");
+					labelColors.put(label.getPosition(), args[1] instanceof Color color ? color : paraColor);
+					labelPatterns.put(label.getPosition(), value);
+					PositionAPI anchorPosition = position(headingWidth, label.getPosition().getHeight());
+					UIComponentAPI anchor = proxy(UIComponentAPI.class,
+							(name, values) -> "getPosition".equals(name) ? anchorPosition : null);
+					boolean first = previous == null;
+					append(anchor, pad);
+					geometry.get(label.getPosition()).parent = position;
+					label.getPosition().inTL(first ? 0f : anchorPosition.getX() - position.getX() - 5f,
+							position.getY() + position.getHeight() - anchorPosition.getY() - anchorPosition.getHeight());
+					components.add(components.size() - 1, (UIComponentAPI) label);
+					yield label;
+				}
+				case "addTitle", "addPara" -> {
 					String value = (String) args[0];
 					String[] highlights = args[args.length - 1] instanceof String[] values ? values : new String[0];
 					if (method.equals("addPara") && args[args.length - 1] instanceof String[]) {
@@ -292,7 +322,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					yield null;
 				}
 				case "getHeightSoFar" -> usedHeight;
-				case "getWidthSoFar" -> width;
+				case "getWidthSoFar" -> uiElement ? width - (scrollable ? 15f : 10f) : width;
 				case "setHeightSoFar" -> {
 					assertFalse(mounted);
 					usedHeight = (Float) args[0];
@@ -356,6 +386,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 						if ("isEnabled".equals(name)) return enabled.get();
 						if ("setText".equals(name)) buttonLabels.put(id, (String) values[0]);
 						if ("getText".equals(name)) return buttonLabels.get(id);
+						if ("getCustomData".equals(name)) return buttonIds.get(id);
 						if ("getPosition".equals(name)) return buttonPosition;
 						return null;
 					});
@@ -393,11 +424,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	}
 
 	protected LabelAPI label(String text, float width) {
-		float height = 0f;
-		for (String line : text.split("\\n", -1)) {
-			height += paragraphLineHeight * Math.max(1, Math.ceil(line.length() * 7f / Math.max(1f, width)));
-		}
-		PositionAPI position = position(width, height);
+		PositionAPI position = position(width, labelHeight(text, width));
 		String[] value = {text};
 		return proxy(LabelAPI.class, (method, args) -> switch (method) {
 			case "getPosition" -> position;
@@ -407,6 +434,11 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			}
 			case "computeTextWidth" -> ((String) args[0]).length() * 7f;
 			case "computeTextHeight" -> position.getHeight();
+			case "autoSizeToWidth" -> {
+				float labelWidth = (Float) args[0];
+				position.setSize(labelWidth, labelHeight(value[0], labelWidth));
+				yield position;
+			}
 			case "getText" -> value[0];
 			case "setText" -> {
 				value[0] = (String) args[0];
@@ -414,6 +446,14 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			}
 			default -> null;
 		});
+	}
+
+	protected float labelHeight(String text, float width) {
+		float height = 0f;
+		for (String line : text.split("\\n", -1)) {
+			height += paragraphLineHeight * Math.max(1, Math.ceil(line.length() * 7f / Math.max(1f, width)));
+		}
+		return height;
 	}
 
 	protected PositionAPI position(float width, float height) {

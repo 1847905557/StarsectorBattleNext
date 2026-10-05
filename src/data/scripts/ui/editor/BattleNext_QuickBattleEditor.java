@@ -90,14 +90,15 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		String[] labels = {"#", battleStrings.get("player_fleet_id_label"), battleStrings.get("enemy_fleet_id_label"), battleStrings.get("map_label"),
 				battleStrings.get("map_scale_label"), strings.get("status"), strings.get("enabled"), strings.get("actions")};
-		UIRect tableRect = new UIRect(0f, table[0].getY(), table[0].getWidth(),
-				table[0].getHeight() + table[1].getHeight());
+		UIRect tableRect = BattleNext_PageLayout.pageContentRect(new UIRect(0f, table[0].getY(), table[0].getWidth(),
+				table[0].getHeight() + table[1].getHeight()));
 		CustomPanelAPI tablePanel = tableRect.createSubPanel(panel, inputOwner).getPanel();
 		tableWidget = own(new BattleNext_TableWidget(inputOwner, labels, COLUMN_SHARES,
 				entries.size(), this::addRow));
 		tableWidget.attach(tablePanel);
 
-		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f);
+		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN,
+				BattleNext_PageLayout.PAGE_CONTENT_INSET, BattleNext_PageLayout.PAGE_CONTENT_INSET);
 		float buttonWidth = Math.min(FOOTER_BUTTON_MAX_WIDTH,
 				(footerRect.getWidth() - FOOTER_BUTTON_GAP * (FOOTER_BUTTON_COUNT - 1)) / FOOTER_BUTTON_COUNT);
 		createFixedButton(panel,
