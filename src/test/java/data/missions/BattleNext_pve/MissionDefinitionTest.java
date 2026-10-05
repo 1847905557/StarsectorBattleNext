@@ -182,12 +182,12 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
-	void successfulBriefingAppendsWarningsAfterMapAndSelection() throws Exception {
+	void successfulBriefingPlacesWarningsBeforeMapAndSelectionLikePvp() throws Exception {
 		quickBattles("missing,beta,0,1\nalpha,beta,2,1.5\n");
 		var mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
-		assertEquals(List.of("Map 2, map scale 1.5", "Faction 1 / 2, Player 1 / 2"), mission.getBriefing().subList(0, 2));
-		assertTrue(mission.getBriefing().get(2).contains("missing player/enemy fleet reference"));
+		assertTrue(mission.getBriefing().get(0).contains("missing player/enemy fleet reference"));
+		assertEquals(List.of("Map 2, map scale 1.5", "Faction 1 / 2, Player 1 / 2"), mission.getBriefing().subList(1, 3));
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 				"mod_faction", 100, 45), mission.getNames().get(FleetSide.ENEMY));
 	}

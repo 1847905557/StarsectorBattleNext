@@ -1,14 +1,23 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.util.Misc;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.test.fixture.BattleNext_TestVariantFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,12 +25,97 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import java.awt.Color;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
+
+	@ParameterizedTest
+	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
+	void hullmodTypeLabelsUseNativeColorsAcrossLanguagesAndRefresh(
+			boolean cnText, boolean colorblind) throws Exception {
+
+		Variant selected = source();
+		JSONObject json = BattleNext_VariantBuilder.fromVariant(selected.getApi()).toJson();
+		List<String> ids = List.of("ordinary", "built", "smod", "built_smod", "dmod");
+		json.put("hullMods", new JSONArray(ids)).put("permaMods", new JSONArray())
+				.put("sMods", new JSONArray().put("smod").put("dmod"))
+				.put("sModdedBuiltIns", new JSONArray().put("built_smod"))
+				.put("suppressedMods", new JSONArray());
+		configureHullmodLabelAssets(selected.getApi().getHullSpec(), colorblind);
+		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
+		details.setVariantJson(json);
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
+		Map<String, String> types = Map.of("built", "built_in", "smod", "s_mod", "built_smod", "s_mod", "dmod", "d_mod");
+		for (boolean language : List.of(cnText, !cnText, cnText)) {
+			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+			details.refreshContent();
+			List<UIComponentAPI> cards = tooltips.get(lists(details).get("plugins")).getComponents().stream()
+					.filter(CustomPanelAPI.class::isInstance).toList();
+			assertEquals(ids.size(), cards.size());
+			for (UIComponentAPI component : cards) {
+				CustomPanelAPI card = (CustomPanelAPI) component;
+				List<UIComponentAPI> text = tooltips.get(children.get(card).get(0)).getComponents();
+				LabelAPI title = (LabelAPI) text.get(0);
+				String id = title.getText().substring("S-mod D-mod ".length());
+				assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(title.getPosition()));
+				if (id.equals("ordinary")) {
+					assertEquals(1, text.size());
+					continue;
+				}
+				LabelAPI label = (LabelAPI) text.get(1);
+				assertEquals(BattleNext_TestTextCatalog.text(language ? "Variant_CN" : "Variant", "BattleNext_variant_" + types.get(id)),
+						label.getText());
+				Color expected = id.equals("dmod") ? Misc.getNegativeHighlightColor()
+						: id.equals("built") ? Misc.getGrayColor() : Misc.getStoryOptionColor();
+				assertEquals(expected, labelColors.get(label.getPosition()));
+				assertEquals(4f, title.getPosition().getY() - label.getPosition().getY() - label.getPosition().getHeight());
+			}
+		}
+		details.close();
+	}
+
+	private void configureHullmodLabelAssets(ShipHullSpecAPI originalHull, boolean colorblind) {
+
+		ShipHullSpecAPI hull = (ShipHullSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{ShipHullSpecAPI.class}, (instance, method, args) -> {
+			if (method.getName().equals("isBuiltInMod")) return List.of("built", "built_smod").contains(args[0]);
+			try {
+				return method.invoke(originalHull, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		});
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getBoolean") && args[0].equals("colorblindMode")) return colorblind;
+			if (method.getName().equals("getColor") && args[0].equals("textEnemyColor")) return Color.RED;
+			if (method.getName().equals("getHullSpec") && args[0].equals(originalHull.getHullId())) return hull;
+			if (method.getName().equals("getHullModSpec")) {
+				String id = (String) args[0];
+				return proxy(HullModSpecAPI.class, (name, values) -> switch (name) {
+					case "getDisplayName" -> "S-mod D-mod " + id;
+					case "getSpriteName" -> "graphics/mod.png";
+					case "hasTag" -> id.equals("dmod") && values[0].equals(Tags.HULLMOD_DMOD);
+					default -> null;
+				});
+			}
+			try {
+				return method.invoke(delegate, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+	}
 
 	@Test
 	void moduleSummariesRetainIdentityAndIsolateErrors() throws Exception {

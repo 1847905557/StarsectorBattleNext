@@ -8,6 +8,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
+import com.fs.starfarer.api.util.Misc;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_ReportTarget;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -76,9 +77,9 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 				+ " / " + reportStrings.get("duration") + ": " + report.getDurationMillis() + " ms", REPORT_SUMMARY_TOP_GAP);
 		if (!target.context().isEmpty()) content.addPara(target.context(), REPORT_CONTEXT_TOP_GAP);
 		content.addPara(reportStrings.get("damage_dealt"), REPORT_SECTION_TOP_GAP);
-		appendMembers(content, panel, width, sorted(report, true), true);
+		appendMembers(content, panel, width, sorted(report, true));
 		content.addPara(reportStrings.get("damage_taken"), REPORT_SECTION_TOP_GAP);
-		appendMembers(content, panel, width, sorted(report, false), false);
+		appendMembers(content, panel, width, sorted(report, false));
 		panel.addUIElement(content).inTL(0f, 0f);
 		content.getExternalScroller().setYOffset(offset);
 	}
@@ -92,10 +93,10 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	private void appendMembers(TooltipMakerAPI detailContent, CustomPanelAPI detailPanel, float contentWidth,
-			List<BattleNext_MemberReport> members, boolean dealt) {
-		for (BattleNext_MemberReport member : members) {
+			List<MemberRow> members) {
+		for (MemberRow row : members) {
+			BattleNext_MemberReport member = row.member();
 			String action = "member:" + memberActionIndex++;
-			MemberRow row = new MemberRow(member, dealt);
 			memberActions.put(action, row);
 			boolean expanded = expandedMembers.contains(row);
 			float width = detailControlWidth(contentWidth);
@@ -103,14 +104,17 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 			float bodyHeight = expanded ? memberBodyHeight(sources.size()) : 0f;
 			HullSummary hull = resolveHull(member.getVariantId(), this::loadVariant);
 			String shipName = member.getName().isEmpty() ? member.getVariantId() : member.getName();
+			String side = reportStrings.get(row.playerSide() ? "side_player" : "side_enemy");
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
-					hull.spritePath(), false, "", shipName, hull.name(),
+					hull.spritePath(), false, "", shipName + " - " + side, hull.name(),
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
 					reportStrings.get("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
 							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()), null);
-			BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
+			LabelAPI nameLabel = BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
+			nameLabel.highlightLast(side);
+			nameLabel.setHighlightColor(row.playerSide() ? Misc.getPositiveHighlightColor() : Misc.getNegativeHighlightColor());
 		}
 	}
 
@@ -347,7 +351,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		if (!expanded.add(row)) expanded.remove(row);
 	}
 
-	record MemberRow(BattleNext_MemberReport member, boolean dealt) { }
+	record MemberRow(BattleNext_MemberReport member, boolean dealt, boolean playerSide) { }
 	record HullSummary(String name, String spritePath) { }
 
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
@@ -386,10 +390,15 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		}
 	}
 
-	private List<BattleNext_MemberReport> sorted(BattleNext_BattleReportModel report, boolean dealt) {
-		List<BattleNext_MemberReport> result = new ArrayList<>(report.getPlayerMembers());
-		result.addAll(report.getEnemyMembers());
-		result.sort(BattleNext_MemberReport.damageOrder(dealt));
+	private List<MemberRow> sorted(BattleNext_BattleReportModel report, boolean dealt) {
+		List<MemberRow> result = new ArrayList<>();
+		for (BattleNext_MemberReport member : report.getPlayerMembers()) {
+			result.add(new MemberRow(member, dealt, true));
+		}
+		for (BattleNext_MemberReport member : report.getEnemyMembers()) {
+			result.add(new MemberRow(member, dealt, false));
+		}
+		result.sort(Comparator.comparing(MemberRow::member, BattleNext_MemberReport.damageOrder(dealt)));
 		return result;
 	}
 }

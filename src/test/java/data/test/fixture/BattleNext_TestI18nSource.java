@@ -41,10 +41,11 @@ public class BattleNext_TestI18nSource {
 
 	public BattleNext_TestI18nSource(Path root) throws IOException {
 
-		CombinedTypeSolver solver = new CombinedTypeSolver(
-				new JavaParserTypeSolver(root.getParent()),
-				new ClassLoaderTypeSolver(getClass().getClassLoader()));
+		CombinedTypeSolver solver = new CombinedTypeSolver();
 		resolver = new JavaSymbolSolver(solver);
+		solver.add(new JavaParserTypeSolver(root.getParent(), new ParserConfiguration()
+				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setSymbolResolver(resolver)));
+		solver.add(new ClassLoaderTypeSolver(getClass().getClassLoader()));
 		JavaParser parser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
 				.setCharacterEncoding(StandardCharsets.UTF_8)

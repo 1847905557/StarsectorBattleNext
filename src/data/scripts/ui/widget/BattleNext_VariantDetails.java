@@ -9,6 +9,7 @@ import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.util.Misc;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
@@ -208,10 +209,14 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				list.addPara(strings.get("unavailable") + ": " + id, ROW_GAP);
 				continue;
 			}
-			String label = spec.hasTag(Tags.HULLMOD_DMOD) ? variantStrings.get("d_mod")
-					: sMods.contains(id) || builtInSMods.contains(id) ? variantStrings.get("s_mod")
+			boolean dMod = spec.hasTag(Tags.HULLMOD_DMOD);
+			boolean sMod = sMods.contains(id) || builtInSMods.contains(id);
+			String label = dMod ? variantStrings.get("d_mod")
+					: sMod ? variantStrings.get("s_mod")
 					: hull.isBuiltInMod(id) ? variantStrings.get("built_in") : "";
-			CustomPanelAPI card = card(owner, width, spec.getSpriteName(), spec.getDisplayName(), label, null);
+			Color labelColor = dMod ? Misc.getNegativeHighlightColor()
+					: sMod ? Misc.getStoryOptionColor() : Misc.getGrayColor();
+			CustomPanelAPI card = card(owner, width, spec.getSpriteName(), spec.getDisplayName(), label, labelColor, null);
 			list.addCustom(card, ROW_GAP);
 			list.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
@@ -490,7 +495,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	private CustomPanelAPI card(CustomPanelAPI owner, float width, String spriteName, String title,
-			String subtitle, String id) {
+			String subtitle, Color subtitleColor, String id) {
 
 		SpriteAPI sprite = null;
 		boolean icon = spriteName != null && !spriteName.isBlank();
@@ -514,7 +519,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		if (id != null && !id.isEmpty()) BattleNext_PageLayout.addIdTooltip(text, title, id);
 		if (!subtitle.isBlank()) {
 			float top = text.getHeightSoFar() + ROW_GAP;
-			text.addPara(subtitle, ROW_GAP).getPosition().inTL(0f, top);
+			text.addPara(subtitle, subtitleColor, ROW_GAP).getPosition().inTL(0f, top);
 		}
 		float height = Math.max(ICON_SIZE + GAP * 2f, text.getHeightSoFar() + GAP * 2f);
 		card.getPosition().setSize(width, height);

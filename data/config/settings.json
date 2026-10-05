@@ -1,5 +1,6 @@
 {
 	"plugins": {
+		"BattleNextSimulatorMonitor": "data.simulator.BattleNext_SimulatorMonitor",
 		"BattleNextTitleEntry": "data.scripts.ui.BattleNext_TitleEntry"
 	},
 	"graphics": {

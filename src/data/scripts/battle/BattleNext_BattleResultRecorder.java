@@ -101,17 +101,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		BattleNext_TournamentModel tournament = provider == null ? null : provider.getActiveTournament();
 		int keepCount = -1;
 		if (tournament == null) {
-			BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
-			store.reload();
-			store.save(report);
-			keepCount = BattleNext_Settings.getReportKeepCount();
-			List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
-			reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
-			BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
-				BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
-			for (int index = keepCount; index < reports.size(); index++) {
-				store.delete(reports.get(index).getId());
-			}
+			return saveStandalone(report) ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
 		} else {
 			BattleNext_TournamentEngine engine = provider.getTournamentEngine();
 			engine.recordRound(tournament, match.getId(), resolveWinner(match, report.getWinner()), report);
@@ -120,6 +110,22 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		}
 		BattleNext_BattleSignals.markPendingResult();
 		return outcomeFor(tournament != null, keepCount);
+	}
+
+	public static boolean saveStandalone(BattleNext_BattleReportModel report) throws IOException, JSONException {
+		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
+		store.reload();
+		store.save(report);
+		int keepCount = BattleNext_Settings.getReportKeepCount();
+		List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
+		reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
+		BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
+				BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
+		for (int index = keepCount; index < reports.size(); index++) {
+			store.delete(reports.get(index).getId());
+		}
+		BattleNext_BattleSignals.markPendingResult();
+		return reports.subList(0, Math.min(keepCount, reports.size())).stream().anyMatch(retained -> retained.getId().equals(report.getId()));
 	}
 
 	static SaveOutcome outcomeFor(boolean tournament, int keepCount) {

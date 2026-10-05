@@ -19,6 +19,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<PositionAPI, List<String>> labelHighlights = new IdentityHashMap<>();
 	protected final Map<PositionAPI, String> labelPatterns = new IdentityHashMap<>();
 	protected final Map<PositionAPI, List<Color>> labelHighlightColors = new IdentityHashMap<>();
+	protected final Map<PositionAPI, List<Integer>> labelHighlightRanges = new IdentityHashMap<>();
 	protected final Map<String, AtomicBoolean> buttons = new LinkedHashMap<>();
 	protected final Map<String, PositionAPI> buttonPositions = new LinkedHashMap<>();
 	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
@@ -428,6 +429,17 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		String[] value = {text};
 		return proxy(LabelAPI.class, (method, args) -> switch (method) {
 			case "getPosition" -> position;
+			case "highlightLast" -> {
+				String highlight = (String) args[0];
+				int start = value[0].lastIndexOf(highlight);
+				labelHighlights.put(position, List.of(highlight));
+				labelHighlightRanges.put(position, List.of(start, start + highlight.length()));
+				yield null;
+			}
+			case "setHighlightColor" -> {
+				labelHighlightColors.put(position, List.of((Color) args[0]));
+				yield null;
+			}
 			case "setAlignment" -> {
 				labelAlignments.put(position, (Alignment) args[0]);
 				yield null;

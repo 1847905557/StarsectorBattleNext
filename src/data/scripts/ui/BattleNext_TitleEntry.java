@@ -15,6 +15,7 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.state.AppDriver;
 import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.scripts.tools.BattleNext_Logger;
+import data.simulator.BattleNext_SimulatorWorker;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 import org.boxutil.manager.ShaderCore;
@@ -72,6 +73,12 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
+
+		if (BattleNext_SimulatorWorker.isWorker()) {
+			engine.removePlugin(this);
+			return;
+		}
+
 		if (Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
 			BattleNext_MissionRestrictedUnlock.getInstance().forget();
 			engine.removePlugin(this);

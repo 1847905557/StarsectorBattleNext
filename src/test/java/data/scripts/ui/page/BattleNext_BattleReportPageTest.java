@@ -11,25 +11,144 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.util.Misc;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.report.BattleNext_MemberReport;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_ReportTarget;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.widget.BattleNext_ReportDetails;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 
 	private boolean mixedLabelHeights;
+
+	@ParameterizedTest
+	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
+	void reportSidesKeepTheirColorsAndMembershipAcrossSortingExpansionAndLanguageRefresh(
+			boolean embedded, boolean cnText) throws Exception {
+
+		configureRowAssets();
+		useReportTextAndSideColors();
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		String name = "Player Enemy 我方 敌方 50%";
+		BattleNext_MemberReport firstPlayer = reportMember(name, 100d, 300d, 0.75f, 0.7f, "alive");
+		BattleNext_MemberReport secondPlayer = reportMember(name, 200d, 100d, 0.25f, 0.6f, "retreated");
+		BattleNext_MemberReport enemy = reportMember(name, 300d, 200d, 0f, 0.5f, "destroyed");
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
+		report.addPlayerMember(firstPlayer);
+		report.addPlayerMember(secondPlayer);
+		report.addEnemyMember(enemy);
+		String saved = report.toJson().toString();
+		BattleNext_ReportTarget target = new BattleNext_ReportTarget(report, embedded ? "Tournament / match / 1" : "",
+				embedded ? new BattleNext_TournamentModel() : null, embedded ? "match" : "", embedded ? 0 : -1);
+		AtomicReference<BattleNext_ReportDetails> owner = new AtomicReference<>();
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), target,
+				() -> owner.get().refreshContent());
+		owner.set(details);
+		details.attach(panel(1400f, 160f, new BaseCustomUIPanelPlugin()));
+		List<BattleNext_MemberReport> ordered = List.of(enemy, secondPlayer, firstPlayer, firstPlayer, enemy, secondPlayer);
+		List<Boolean> playerSides = List.of(false, true, true, true, false, true);
+		assertReportHeaders(details, ordered, playerSides, cnText);
+		details.getContent().getExternalScroller().setYOffset(40f);
+		details.buttonPressed("member:0");
+		assertEquals(2, children.get(reportRows(details).get(0)).size());
+		assertEquals(1, children.get(reportRows(details).get(4)).size());
+		for (boolean language : List.of(!cnText, cnText)) {
+			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+			details.refreshContent();
+			assertReportHeaders(details, ordered, playerSides, language);
+			assertEquals(2, children.get(reportRows(details).get(0)).size());
+			assertEquals(40f, details.getContent().getExternalScroller().getYOffset());
+		}
+		details.buttonPressed("member:0");
+		assertEquals(1, children.get(reportRows(details).get(0)).size());
+		assertReportHeaders(details, ordered, playerSides, cnText);
+		assertEquals(saved, report.toJson().toString());
+		details.close();
+	}
+
+	private BattleNext_MemberReport reportMember(String name, double dealt, double taken,
+			float hull, float cr, String status) {
+		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", name);
+		member.addDamageDealt("ship", "wolf", dealt, 0d, 0d, 20d);
+		member.addDamageTaken("ship", "wolf", taken, 0d, 0d, 10d);
+		member.setFinalState(hull, cr, status);
+		return member;
+	}
+
+	private List<CustomPanelAPI> reportRows(BattleNext_ReportDetails details) {
+		return tooltips.get(details.getContent()).getComponents().stream()
+				.filter(CustomPanelAPI.class::isInstance).map(CustomPanelAPI.class::cast).toList();
+	}
+
+	private void assertReportHeaders(BattleNext_ReportDetails details, List<BattleNext_MemberReport> members,
+			List<Boolean> playerSides, boolean cnText) {
+
+		List<CustomPanelAPI> rows = reportRows(details);
+		assertEquals(members.size(), rows.size());
+		String category = cnText ? "Report_CN" : "Report";
+		for (int index = 0; index < rows.size(); index++) {
+			BattleNext_MemberReport member = members.get(index);
+			boolean playerSide = playerSides.get(index);
+			String side = BattleNext_TestTextCatalog.text(category, "BattleNext_report_side_" + (playerSide ? "player" : "enemy"));
+			CustomPanelAPI top = (CustomPanelAPI) children.get(rows.get(index)).get(0);
+			List<UIComponentAPI> names = tooltips.get(children.get(top).get(0)).getComponents();
+			LabelAPI firstLine = (LabelAPI) names.get(0);
+			assertEquals(member.getName() + " - " + side, firstLine.getText());
+			assertEquals("Wolf", ((LabelAPI) names.get(1)).getText());
+			assertEquals(List.of(side), labelHighlights.get(firstLine.getPosition()));
+			assertEquals(List.of(firstLine.getText().length() - side.length(), firstLine.getText().length()),
+					labelHighlightRanges.get(firstLine.getPosition()));
+			assertEquals(List.of(playerSide ? Misc.getPositiveHighlightColor() : Misc.getNegativeHighlightColor()),
+					labelHighlightColors.get(firstLine.getPosition()));
+			assertEquals(Color.WHITE, labelColors.get(firstLine.getPosition()));
+			List<UIComponentAPI> metrics = tooltips.get(children.get(top).get(1)).getComponents();
+			String damage = BattleNext_TestTextCatalog.text(category, "BattleNext_report_damage_" + (index < members.size() / 2 ? "dealt" : "taken"));
+			double total = index < members.size() / 2 ? member.getDamageDealt() : member.getDamageTaken();
+			assertEquals(damage + ": " + String.format(Locale.ROOT, "%,.1f", total) + "  "
+					+ BattleNext_TestTextCatalog.text(category, "BattleNext_report_status_" + member.getStatus()),
+					((LabelAPI) metrics.get(0)).getText());
+			assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_report_final_hull") + ": "
+					+ String.format(Locale.ROOT, "%.1f%%", member.getFinalHullFraction() * 100f) + "  "
+					+ BattleNext_TestTextCatalog.text(category, "BattleNext_report_final_cr") + ": "
+					+ String.format(Locale.ROOT, "%.1f%%", member.getFinalCr() * 100f),
+					((LabelAPI) metrics.get(1)).getText());
+		}
+	}
+
+	private void useReportTextAndSideColors() {
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getColor") && args[0].equals("textFriendColor")) return Color.GREEN;
+			if (method.getName().equals("getColor") && args[0].equals("textEnemyColor")) return Color.RED;
+			try {
+				return method.invoke(delegate, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+	}
 
 	@Test
 	void attachRefreshAndCloseOwnThePagePanel() throws Exception {
@@ -192,6 +311,8 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 					});
 				case "getHullSpec":
 					return hull;
+				case "getVariant":
+					return variant;
 				case "getSpriteName":
 					return "graphics/icon.png";
 				default:

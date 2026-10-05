@@ -58,7 +58,9 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		}
 		if (battleStarted) {
 			String winner = determineWinner();
-			if (winner != null) freeze(winner);
+			if (winner != null) {
+				freeze(winner);
+			}
 		}
 	}
 
@@ -69,8 +71,8 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 				&& result.getDamageToShields() <= 0f && result.getEmpDamage() <= 0f) return;
 		Object damageParam = targetShip.getParamAboutToApplyDamage();
 		BattleNext_DamageAttribution.SourceKey key = BattleNext_DamageAttribution.sourceKey(source, damageParam, result);
-		if (!targetShip.isFighter() && !targetShip.isStationModule()) {
-			ScoreTrackedFleetMember targetMember = findTracked(targetShip);
+		if (!targetShip.isFighter()) {
+			ScoreTrackedFleetMember targetMember = findTracked(BattleNext_DamageAttribution.memberShip(targetShip));
 			if (targetMember != null) {
 				targetMember.report.addDamageTaken(key.kind(), key.id(), result.getDamageToHull(),
 						result.getTotalDamageToArmor(), result.getDamageToShields(), result.getEmpDamage());
@@ -122,7 +124,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		for (ShipAPI ship : engine.getShips()) {
 			FleetMemberAPI member = ship.getFleetMember();
 			ScoreTrackedFleetMember tracked = membersByFleetMember.get(member);
-			if (tracked != null) {
+			if (tracked != null && !ship.isStationModule() && !ship.isFighter()) {
 				tracked.ship = ship;
 				tracked.everDeployed = true;
 			}
@@ -131,8 +133,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	private boolean hasActiveShip() {
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
-			if (tracked.ship != null && tracked.ship.isAlive() && !tracked.ship.isFighter()
-					&& !tracked.ship.isStation()) return true;
+			if (tracked.ship != null && tracked.ship.isAlive() && !tracked.ship.isFighter()) return true;
 		}
 		return false;
 	}
@@ -149,7 +150,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	private boolean hasAliveShips(FleetSide side) {
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
 			if (tracked.ship != null && tracked.ship.getOwner() == side.ordinal() && tracked.ship.isAlive()
-					&& !tracked.ship.isFighter() && !tracked.ship.isStation()) return true;
+					&& !tracked.ship.isFighter()) return true;
 		}
 		return false;
 	}
@@ -161,8 +162,11 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		report.setDurationMillis((long)(engine.getTotalElapsedTime(false) * 1000f));
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
 			tracked.freeze();
-			if (tracked.playerSide) report.addPlayerMember(tracked.report);
-			else report.addEnemyMember(tracked.report);
+			if (tracked.playerSide) {
+				report.addPlayerMember(tracked.report);
+			} else {
+				report.addEnemyMember(tracked.report);
+			}
 		}
 		frozenReport = report;
 		BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.result.frozen",
@@ -171,6 +175,14 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	private ScoreTrackedFleetMember findTracked(ShipAPI ship) {
 		return ship == null ? null : membersByFleetMember.get(ship.getFleetMember());
+	}
+
+	public void cleanup() {
+		engine.getListenerManager().removeListener(this);
+		if (engine.getCustomData().get(getCustomDataKey()) == this) {
+			engine.getCustomData().remove(getCustomDataKey());
+		}
+		engine.removePlugin(this);
 	}
 
 	private static class ScoreTrackedFleetMember {
@@ -191,7 +203,9 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			float hullFraction = 1f;
 			if (ship != null) {
 				hullFraction = ship.getHullLevel();
-				if (!ship.isAlive()) status = "destroyed";
+				if (!ship.isAlive()) {
+					status = "destroyed";
+				}
 			} else if (everDeployed) {
 				status = "retreated";
 			}

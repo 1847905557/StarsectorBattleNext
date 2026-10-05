@@ -105,6 +105,22 @@ tasks.named("jar") {
 	destinationDirectory = file("jars")
 }
 
+tasks.register("simulatorSmoke", JavaExec) {
+	group = "verification"
+	description = "Runs both simulator strategies in a real isolated OpenGL worker."
+	dependsOn "jar", "compileTestJava"
+	mainClass = "data.simulator.BattleNext_SimulatorSmoke"
+	classpath = sourceSets.test.runtimeClasspath
+}
+
+tasks.register("simulatorBenchmark", JavaExec) {
+	group = "verification"
+	description = "Compares worker GC, string deduplication, and large-method compilation in warmed OpenGL sessions."
+	dependsOn "jar", "compileTestJava"
+	mainClass = "data.simulator.BattleNext_SimulatorBenchmark"
+	classpath = sourceSets.test.runtimeClasspath
+}
+
 tasks.register("distZip", Zip) {
 	group = "distribution"
 	description = "Builds a distributable mod archive under dist."

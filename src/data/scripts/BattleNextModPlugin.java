@@ -10,6 +10,9 @@ import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
 import data.scripts.campaign.BattleNext_LunaPinnedVariantRefitButton;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
+import data.simulator.BattleNext_SimulatorCampaignMonitor;
+import data.simulator.BattleNext_SimulatorService;
+import data.simulator.BattleNext_SimulatorWorker;
 
 public class BattleNextModPlugin extends BaseModPlugin {
 
@@ -25,6 +28,13 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.load", input);
 
 		BattleNext_Settings.load();
+
+		if (BattleNext_SimulatorWorker.isWorker()) {
+			Global.getSettings().setBoolean("devMode", false);
+			Global.getSettings().setBoolean("allowJVMRestartFromLauncher", false);
+			Global.getSettings().setBoolean("doRAMandVRAMChecksWhenRunningWithMods", false);
+			Global.getSettings().setBoolean("idleWhileWindowNotVisible", false);
+		}
 
 		if (Global.getSettings().getModManager().isModEnabled("lunalib")) {
 			BattleNext_LunaPinnedVariantRefitButton.register();
@@ -61,6 +71,8 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "campaign.load", input);
 
 		BattleNext_MissionRestrictedUnlock.getInstance().forget();
+		Global.getSector().removeTransientScriptsOfClass(BattleNext_SimulatorCampaignMonitor.class);
+		Global.getSector().addTransientScript(new BattleNext_SimulatorCampaignMonitor());
 		BattleNext_LunaPinnedVariantRefitButton.onGameLoad();
 		BattleNext_LunaFleetSaveRefitButton.onGameLoad();
 
@@ -99,6 +111,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.registries.reload", input);
 		BattleNext_OrderRegistry.loadFromSettings();
 		BattleNext_RestrictionRegistry.loadFromSettings();
+		BattleNext_SimulatorService.resourcesReloaded();
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "application.registries.reload",
 				BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
 	}

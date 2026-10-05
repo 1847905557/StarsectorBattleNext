@@ -35,7 +35,7 @@ public class BattleNext_ExpandablePanel {
 	private BattleNext_ExpandablePanel() {
 	}
 
-	public static void add(TooltipMakerAPI list, CustomPanelAPI owner, float width,
+	public static LabelAPI add(TooltipMakerAPI list, CustomPanelAPI owner, float width,
 			boolean expanded, float bodyHeight, Header header, Runnable onToggle,
 			Consumer<Object> onBodyAction, Consumer<CustomPanelAPI> buildBody) {
 		CustomPanelAPI root = owner.createCustomPanel(width, panelHeight(expanded, bodyHeight),
@@ -43,7 +43,7 @@ public class BattleNext_ExpandablePanel {
 		HeaderPlugin headerPlugin = new HeaderPlugin(expanded, list, onToggle);
 		CustomPanelAPI top = root.createCustomPanel(width, HEADER_HEIGHT, headerPlugin);
 		headerPlugin.setPosition(top.getPosition());
-		addHeaderContent(top, width, header, headerPlugin);
+		LabelAPI firstLine = addHeaderContent(top, width, header, headerPlugin);
 		root.addComponent(top).inTL(0f, 0f);
 		if (expanded) {
 			BodyPlugin bodyPlugin = new BodyPlugin(onBodyAction);
@@ -55,6 +55,7 @@ public class BattleNext_ExpandablePanel {
 			root.addComponent(body).inTL(0f, HEADER_HEIGHT);
 		}
 		list.addCustom(root, ROW_GAP);
+		return firstLine;
 	}
 
 	public static HeaderLayout headerLayout(float width, boolean secondarySlot, boolean rightSummary) {
@@ -74,7 +75,7 @@ public class BattleNext_ExpandablePanel {
 		return expanded ? panelColor : panelColor.darker();
 	}
 
-	private static void addHeaderContent(CustomPanelAPI top, float width,
+	private static LabelAPI addHeaderContent(CustomPanelAPI top, float width,
 			Header header, HeaderPlugin plugin) {
 		plugin.primarySprite = loadSprite(header.primarySprite());
 		plugin.primaryTint = header.primaryTint();
@@ -97,6 +98,7 @@ public class BattleNext_ExpandablePanel {
 			secondMetric.getPosition().inTL(0f, firstMetric.getPosition().getHeight() + 4f);
 			top.addUIElement(metrics).inTL(layout.metricsX(), 0f);
 		}
+		return firstLine;
 	}
 
 	private static SpriteAPI loadSprite(String path) {

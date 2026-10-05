@@ -55,13 +55,13 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		assertEquals("talon_wing", playerReport.getDealtBySource().get(1).getId());
 		assertEquals("modulegun", playerReport.getDealtBySource().get(2).getId());
 		assertEquals(24d, enemyReport.getDamageTaken());
-		assertEquals(0d, playerReport.getDamageTaken());
+		assertEquals(6d, playerReport.getDamageTaken());
 		assertEquals(12d, playerReport.getArmorDamageDealt());
 		assertEquals(24d, playerReport.getEmpDamageDealt());
 	}
 
 	@Test
-	void targetFighterOrModuleDoesNotAddCarrierIncomingAndFriendlyHitsStillCount() throws Exception {
+	void targetModuleAddsRootIncomingWhileFightersRemainSeparateAndFriendlyHitsCount() throws Exception {
 		FleetMemberAPI playerMember = member("player");
 		ShipAPI player = ship(playerMember, false, false, null, null);
 		FighterWingAPI wing = proxy(FighterWingAPI.class, (name, args) -> switch (name) {
@@ -80,7 +80,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 		BattleNext_MemberReport report = report(scorekeeper, 0);
 		assertEquals(18d, report.getDamageDealt());
-		assertEquals(12d, report.getDamageTaken());
+		assertEquals(18d, report.getDamageTaken());
 		assertEquals("damage_type", report.getTakenBySource().get(1).getKind());
 	}
 
