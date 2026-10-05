@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.List;
 
-class BattleNext_FleetLegacyLoaderTest extends BattleNext_TestFleetIoFixture {
+class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void nativeCsvColumnsKeepIdentityMetadataEliteSkillsAndFileOrder() throws Exception {
 
-		legacy("", "01", "");
+		csvFleet("", "01", "");
 		write("tournament/player01_data.csv", "tags,skills,author,name\n,,,,\n# comment\n"
 				+ "full_assault,\"fleet,fleet\",作者,\"队伍,名称\"\n");
 		write("tournament/player01_fleet.csv", "variant,name,rowNumber,skills,personality,portrait,orders,tags\n"
@@ -37,7 +37,7 @@ class BattleNext_FleetLegacyLoaderTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void emptyMetadataReportsBothSourcePaths() throws Exception {
-		legacy("", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		write("tournament/player1_data.csv", "name,author,skills,tags\n,,,,\n");
 		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetLegacyLoader().load());
 		assertTrue(failure.getMessage().contains("player1_data.csv"));
@@ -46,8 +46,8 @@ class BattleNext_FleetLegacyLoaderTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void rootSourceRecognizesItsOwnCompletePairs() throws Exception {
-		legacy("", "1", "1,parent_variant,,,,,,\n");
-		legacy("nested", "2", "1,parent_variant,,,,,,\n");
+		csvFleet("", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("nested", "2", "1,parent_variant,,,,,,\n");
 		write("tournament/player3_data.csv", "name,author,skills,tags\nTeam,,,\n");
 		assertEquals(List.of("ab_player1"), new BattleNext_FleetLegacyLoader().load().stream().map(fleet -> fleet.getId()).toList());
 	}

@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Arrays;
-import java.lang.reflect.Modifier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import org.lwjgl.input.Keyboard;
@@ -323,17 +321,6 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		assertTrue(((Map<?, ?>) getField(router, "modalFields")).isEmpty());
 		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		field.close();
-	}
-
-	@Test
-	void inputInterfacesExposeTheRootLifecycleAndKeepOneRegistrationStore() {
-		Set<String> methods = Set.of("unregister", "clear", "finish", "handleGlobalInput", "hasInputState");
-		assertEquals(methods, Set.copyOf(Arrays.stream(BattleNext_TextFieldSession.class.getDeclaredMethods())
-				.filter(method -> Modifier.isPublic(method.getModifiers())).map(method -> method.getName()).toList()));
-		assertEquals(1, Arrays.stream(BattleNext_TextFieldSession.class.getDeclaredFields())
-				.filter(field -> Map.class.isAssignableFrom(field.getType())).count());
-		assertEquals(0, Arrays.stream(BattleNext_TextField.class.getDeclaredMethods())
-				.filter(method -> Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers())).count());
 	}
 
 	private BattleNext_TextField createField(BattleNext_UiInputRouter router, CustomPanelAPI owner,

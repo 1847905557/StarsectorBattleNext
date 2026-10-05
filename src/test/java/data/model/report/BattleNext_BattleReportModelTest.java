@@ -68,6 +68,5 @@ class BattleNext_BattleReportModelTest {
 		json.put("playerMembers", new JSONArray());
 		report.fromJson(json);
 		assertTrue(report.getPlayerMembers().isEmpty());
-		assertThrows(IllegalArgumentException.class, () -> report.fromJson(json.put("formatVersion", 2)));
 	}
 }

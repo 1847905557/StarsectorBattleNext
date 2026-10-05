@@ -72,29 +72,18 @@ class BattleNext_SimulatorWorkerTest extends BattleNext_TestGameFixture {
 		idleFpsAppliedField.set(null, previousIdleFpsApplied);
 	}
 
-	@ParameterizedTest
-	@ValueSource(floats = {30f, 60f, 144f})
-	void idleFrameRateRestoresTheExactOriginalSettingAndReleasesOwnership(float original) throws Exception {
-		fps = original;
-		invokeLifecycle("applyIdleFrameRate");
-		assertEquals(5f, fps);
-		assertEquals(original, previousFpsField.getFloat(null));
-		assertTrue(idleFpsAppliedField.getBoolean(null));
-		invokeLifecycle("restoreFrameRate");
-		assertEquals(original, fps);
-		assertFalse(idleFpsAppliedField.getBoolean(null));
-		invokeLifecycle("restoreFrameRate");
-		assertEquals(List.of(5f, original), writes);
-	}
-
 	@Test
-	void consecutiveIdleCyclesCaptureTheCurrentActiveFrameRate() throws Exception {
+	void consecutiveIdleCyclesRestoreCurrentFrameRatesAndReleaseOwnershipIdempotently() throws Exception {
 		for (float active : List.of(60f, 90f, 144f)) {
 			fps = active;
 			invokeLifecycle("applyIdleFrameRate");
 			assertEquals(5f, fps);
+			assertEquals(active, previousFpsField.getFloat(null));
+			assertTrue(idleFpsAppliedField.getBoolean(null));
 			invokeLifecycle("restoreFrameRate");
 			assertEquals(active, fps);
+			assertFalse(idleFpsAppliedField.getBoolean(null));
+			invokeLifecycle("restoreFrameRate");
 		}
 		assertEquals(List.of(5f, 60f, 5f, 90f, 5f, 144f), writes);
 	}

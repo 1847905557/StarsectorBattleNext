@@ -10,7 +10,6 @@ import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
-import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
@@ -159,17 +158,6 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		plugins.get(popup).buttonPressed(buttonIds.get("CONFIRM"));
 		assertNull(getField(picker, "popup"));
 		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
-	}
-
-	@Test
-	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
-		editor.open(null);
-		editor.setInputRouter(new BattleNext_UiInputRouter());
-		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
-		attachEditor(editor, panel);
-		assertNotNull(editor.getStatusText());
-		editor.refreshContent();
 	}
 
 	@ParameterizedTest

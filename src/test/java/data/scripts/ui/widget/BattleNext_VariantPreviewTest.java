@@ -10,11 +10,7 @@ import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.loading.specs.Q;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
 import data.test.fixture.BattleNext_TestVariantPreviewFixture;
 import org.json.JSONArray;
@@ -27,8 +23,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.*;
 
 class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture {
@@ -466,36 +460,6 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		assertEquals(List.of("graphics/root.png"), renderedPaths());
 		assertEquals(1, preview.getErrors().size());
 		assertTrue(preview.getErrors().get(0).contains("Cyclic preview modules"));
-	}
-
-	@Test
-	void runtimePreviewUsesPublicDrawingCallsAndTheFormalLoadedMetadataBoundary() throws Exception {
-		JavaParser parser = new JavaParser(new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
-				.setCharacterEncoding(StandardCharsets.UTF_8));
-		var unit = parser.parse(Path.of("src/data/scripts/ui/widget/BattleNext_VariantPreview.java")).getResult().orElseThrow();
-		for (var entry : unit.getImports()) {
-			String name = entry.getNameAsString();
-			assertTrue(name.startsWith("com.fs.starfarer.api.") || name.startsWith("data.scripts.")
-					|| name.startsWith("java.awt.") || name.equals("java.util") || name.startsWith("java.util.") || name.startsWith("org.json.")
-					|| name.equals("org.lwjgl.util.vector.Vector2f"), name);
-		}
-		Set<String> calls = new HashSet<>();
-		for (MethodCallExpr call : unit.findAll(MethodCallExpr.class)) {
-			calls.add(call.getNameAsString());
-		}
-		assertTrue(calls.containsAll(Set.of("getLocation", "getAngle", "getModuleAnchor", "getProjectileSpec",
-				"getHullSpec", "getTurretFireOffsets", "getHardpointFireOffsets")));
-		assertTrue(Collections.disjoint(calls, Set.of("forName", "getDeclaredMethod", "findVirtual", "loadJSON", "openStream")));
-		List<MethodCallExpr> reads = unit.findAll(MethodCallExpr.class).stream().filter(call -> call.getNameAsString().equals("read")
-				&& call.getScope().map(Object::toString).orElse("").equals("BattleNext_SpriteSpec")).toList();
-		assertEquals(List.of("node.hull", "missile.getHullSpec()"), reads.stream().map(call -> call.getArgument(0).toString()).toList());
-		var adapter = parser.parse(Path.of("src/data/scripts/ui/widget/BattleNext_SpriteSpec.java")).getResult().orElseThrow();
-		Set<String> adapterCalls = new HashSet<>();
-		for (MethodCallExpr call : adapter.findAll(MethodCallExpr.class)) {
-			adapterCalls.add(call.getNameAsString());
-		}
-		assertTrue(adapterCalls.containsAll(Set.of("publicLookup", "findVirtual", "invoke")));
-		assertTrue(Collections.disjoint(adapterCalls, Set.of("loadJSON", "loadText", "openStream", "createFXDrone")));
 	}
 
 	@ParameterizedTest

@@ -23,7 +23,7 @@ public class BattleNext_TestFleetIoFixture extends BattleNext_TestCampaignFleetF
 		Files.writeString(directory.resolve(path), text, StandardCharsets.UTF_8);
 	}
 
-	protected void legacy(String folder, String number, String members) throws Exception {
+	protected void csvFleet(String folder, String number, String members) throws Exception {
 		String prefix = folder.isEmpty() ? "tournament/" : "tournament/" + folder + "/";
 		write(prefix + "player" + number + "_data.csv", "name,author,skills,tags\nTeam,Author,,\n");
 		write(prefix + "player" + number + "_fleet.csv", "rowNumber,variant,personality,skills,name,portrait,orders,tags\n" + members);

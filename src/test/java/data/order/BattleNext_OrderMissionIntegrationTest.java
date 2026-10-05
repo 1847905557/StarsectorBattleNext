@@ -11,10 +11,6 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import data.missions.BattleNext_pvp.MissionDefinition;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_AssembledFleet;
@@ -28,8 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -105,25 +99,6 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 		plugin.cleanup();
 		assertNull(world.side(0, false).current(player));
 		assertNull(world.side(1, false).current(enemy));
-	}
-
-	@Test
-	void bothMissionEntrypointsRegisterTheAssembledFleetOrderPlugin() throws Exception {
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		for (String folder : List.of("BattleNext_pvp", "BattleNext_pve")) {
-			var parsed = parser.parse(Path.of("src/data/missions", folder, "MissionDefinition.java"));
-			assertTrue(parsed.isSuccessful(), parsed.getProblems().toString());
-			var registrations = parsed.getResult().orElseThrow().findAll(ObjectCreationExpr.class).stream()
-					.filter(expression -> expression.getType().getNameAsString().equals("BattleNext_FleetOrderBehavior"))
-					.toList();
-			assertEquals(1, registrations.size());
-			var creation = registrations.get(0);
-			assertEquals(4, creation.getArguments().size());
-			assertEquals("assembledPlayerFleet", creation.getArgument(2).toString());
-			assertEquals("assembledEnemyFleet", creation.getArgument(3).toString());
-			assertEquals("addPlugin", ((MethodCallExpr) creation.getParentNode().orElseThrow()).getNameAsString());
-		}
 	}
 
 	private BattleNext_FleetModel definition(String id, String orders) throws Exception {

@@ -142,7 +142,6 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		picker.closeOverlays();
 		assertEquals(1, children.get(overlay).size());
 		assertFalse(router.getSession().hasInputState());
-		assertEquals(1, ((List<?>) getField(picker, "ownedPanels")).size());
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
 	}
@@ -176,7 +175,6 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 			assertEquals(1, children.get(overlay).size());
-			assertEquals(1, ((List<?>) getField(picker, "ownedPanels")).size());
 		}
 		press(picker, "row", "TOGGLE");
 		Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");

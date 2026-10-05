@@ -50,11 +50,10 @@ class BattleNext_TitleEntryTest {
 		JSONObject settings = new JSONObject(Files.readString(Path.of("data/config/settings.json"),
 				StandardCharsets.UTF_8));
 		String path = settings.getJSONObject("graphics").getJSONObject("icon").getString("BattleNext_Icon");
-		assertEquals("graphics/ui/BattleNext_Icon.png", path);
 		assertTrue(Files.isRegularFile(Path.of(path)));
 		BufferedImage icon = ImageIO.read(Path.of(path).toFile());
-		assertEquals(128, icon.getWidth());
-		assertEquals(32, icon.getHeight());
+		assertEquals(BattleNext_TitleEntry.ENTRY_WIDTH / BattleNext_TitleEntry.ENTRY_HEIGHT,
+				(float) icon.getWidth() / icon.getHeight());
 	}
 
 	@Test

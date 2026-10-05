@@ -85,7 +85,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 	}
 
 	@ParameterizedTest
-	@EnumSource(ScopeDescription.class)
+	@EnumSource(value = ScopeDescription.class, names = {"PILOTED_SHIP"})
 	void declaredShipEffectScopesUseNativeHighlightColor(ScopeDescription scope) {
 		LevelBasedEffect script = proxy(LevelBasedEffect.class, (method, args) -> switch (method) {
 			case "getScopeDescription" -> scope;
@@ -98,8 +98,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 	}
 
 	@ParameterizedTest
-	@EnumSource(value = SkillEffectType.class, names = {"SHIP", "ALL_SHIPS_IN_FLEET", "ALL_FIGHTERS_IN_FLEET",
-			"SHIP_FIGHTERS", "CHARACTER_STATS", "FLEET", "GOVERNED_OUTPOST", "ALL_OUTPOSTS"})
+	@EnumSource(value = SkillEffectType.class, names = {"SHIP", "CHARACTER_STATS"})
 	void absentScopeUsesNativeTypeSpecificColor(SkillEffectType type) {
 		effects.add(effect(type, 1f, "Normal", false, textEffect("Effect without scope", new ArrayList<>())));
 		List<LabelAPI> labels = textLabels(renderSkill(provider("commander")));

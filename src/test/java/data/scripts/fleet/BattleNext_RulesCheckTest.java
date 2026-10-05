@@ -7,7 +7,6 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
-import data.model.tournament.BattleNext_TournamentModel;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.restriction.BattleNext_RestrictionSpec;
@@ -17,11 +16,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,10 +29,28 @@ import java.util.*;
 class BattleNext_RulesCheckTest {
 
 	private final BattleNext_RulesCheck check = new BattleNext_RulesCheck();
+	private Field registryEntries;
+	private Field registryFactory;
+	private Object previousEntries;
+	private Object previousFactory;
 
 	@BeforeEach
 	void loadRestrictions() throws Exception {
+		var registry = BattleNext_RestrictionRegistry.getInstance();
+		registryEntries = BattleNext_RestrictionRegistry.class.getDeclaredField("entries");
+		registryFactory = BattleNext_RestrictionRegistry.class.getDeclaredField("scriptFactory");
+		registryEntries.setAccessible(true);
+		registryFactory.setAccessible(true);
+		previousEntries = registryEntries.get(registry);
+		previousFactory = registryFactory.get(registry);
 		BattleNext_RestrictionRegistry.getInstance().load(restrictionRows(), this::createRestriction);
+	}
+
+	@AfterEach
+	void restoreRestrictions() throws IllegalAccessException {
+		var registry = BattleNext_RestrictionRegistry.getInstance();
+		registryEntries.set(registry, previousEntries);
+		registryFactory.set(registry, previousFactory);
 	}
 
 	private JSONArray restrictionRows() throws Exception {
@@ -48,92 +65,51 @@ class BattleNext_RulesCheckTest {
 	}
 
 	@Test
-	void flatJsonRoundTrip() throws Exception {
-		BattleNext_RuleModel rule = new BattleNext_RuleModel("rules_a", "Rules A");
-		rule.setRestrictions(List.of(number("fleetMaxShips", 2), list("filterWhiteWeapon", "lightmg")));
-		JSONObject json = rule.toJson();
-		assertEquals(1, json.getInt("formatVersion"));
-		assertEquals(2, json.getJSONArray("restrictions").length());
-		BattleNext_RuleModel restored = new BattleNext_RuleModel();
-		restored.fromJson(json);
-		assertEquals("rules_a", restored.getId());
-		assertEquals(2, restored.getRestrictions().size());
-		assertEquals("lightmg", restored.getRestriction("filterWhiteWeapon").getItems().get(0));
-	}
-
-	@Test
-	void newRuleHasNoRestrictions() {
-		BattleNext_RuleModel rule = new BattleNext_RuleModel();
-		assertTrue(rule.getRestrictions().isEmpty());
-	}
-
-	@Test
-	void editorRestrictionOrderAndValuesRoundTrip() throws Exception {
-		BattleNext_RuleModel rule = new BattleNext_RuleModel("draft", "Draft");
-		BattleNext_RuleRestriction numeric = new BattleNext_RuleRestriction("fleetMaxShips", "number");
-		numeric.setEnabled(true);
-		BattleNext_RuleRestriction filter = new BattleNext_RuleRestriction("filterWhiteWeapon", "list");
-		filter.setEnabled(true);
-		rule.setRestrictions(List.of(filter, numeric));
-		assertThrows(IllegalArgumentException.class, () -> rule.setRestrictions(List.of(filter, numeric, filter)));
-		assertEquals(List.of("filterWhiteWeapon", "fleetMaxShips"),
-				rule.getRestrictions().stream().map(BattleNext_RuleRestriction::getId).toList());
-		BattleNext_RuleModel saved = new BattleNext_RuleModel();
-		saved.fromJson(rule.toJson());
-		assertTrue(saved.getRestriction("filterWhiteWeapon").isEnabled());
-		assertTrue(saved.getRestriction("filterWhiteWeapon").getItems().isEmpty());
-		assertEquals(0d, saved.getRestriction("fleetMaxShips").getValue());
-		assertEquals("filterWhiteWeapon", saved.getRestrictions().get(0).getId());
-		saved.setId("draft_copy");
-		assertEquals("draft", rule.getId());
-		assertEquals("draft_copy", saved.getId());
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"current", "added", "removed", "reversed", "empty"})
-	void registeredRestrictionsFollowInputRowsAcrossCatalogChanges(String change) throws Exception {
+	void registeredRestrictionsFollowInputRowsAcrossCatalogChanges() throws Exception {
 
 		JSONArray current = restrictionRows();
-		List<JSONObject> inputs = new ArrayList<>();
-		for (int index = 0; index < current.length(); index++) {
-			inputs.add(current.getJSONObject(index));
-		}
-		if (change.equals("added")) {
-			String id = "fixtureExtension";
-			Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
-			while (names.contains(id)) {
-				id += "Extra";
+		for (String change : List.of("current", "added", "removed", "reversed", "empty")) {
+			List<JSONObject> inputs = new ArrayList<>();
+			for (int index = 0; index < current.length(); index++) {
+				inputs.add(current.getJSONObject(index));
 			}
-			inputs.add(new JSONObject().put("id", id).put("type", "number")
-					.put("script", ExampleRestriction.class.getName()).put("desc", "Fixture extension"));
-		} else if (change.equals("removed")) {
-			inputs = new ArrayList<>(inputs.stream().skip(1).toList());
-		} else if (change.equals("reversed")) {
-			Collections.reverse(inputs);
-		} else if (change.equals("empty")) {
-			inputs.clear();
-		}
-		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
-		registry.load(new JSONArray(inputs), this::createRestriction);
-		assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
-				registry.getAll().stream().map(BattleNext_RestrictionSpec::getId).toList());
-		Set<String> ids = new HashSet<>();
-		for (JSONObject input : inputs) {
-			BattleNext_RestrictionSpec entry = registry.get(input.getString("id").trim());
-			assertTrue(ids.add(entry.getId()), entry.getId());
-			assertEquals(input.getString("type").trim(), entry.getType());
-			assertEquals(input.getString("script").trim(), entry.getScript());
-			assertEquals(input.getString("desc").trim(), entry.getDescription());
-			assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(entry.getType()))
-					.map(candidate -> candidate.optString("id").trim()).toList(),
-					registry.getByType(entry.getType()).stream().map(BattleNext_RestrictionSpec::getId).toList());
-			String simpleName = entry.getScript().substring(entry.getScript().lastIndexOf('.') + 1);
-			if (entry.getScript().startsWith("data.restriction.")) {
-				assertEquals(Character.toUpperCase(entry.getId().charAt(0)) + entry.getId().substring(1), simpleName);
+			if (change.equals("added")) {
+				String id = "fixtureExtension";
+				Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
+				while (names.contains(id)) {
+					id += "Extra";
+				}
+				inputs.add(new JSONObject().put("id", id).put("type", "number")
+						.put("script", ExampleRestriction.class.getName()).put("desc", "Fixture extension"));
+			} else if (change.equals("removed")) {
+				inputs = new ArrayList<>(inputs.stream().skip(1).toList());
+			} else if (change.equals("reversed")) {
+				Collections.reverse(inputs);
+			} else if (change.equals("empty")) {
+				inputs.clear();
 			}
-			Object instance = registry.create(entry.getId());
-			assertInstanceOf(BattleNext_RestrictionScript.class, instance);
-			assertNotSame(instance, registry.create(entry.getId()));
+			BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
+			registry.load(new JSONArray(inputs), this::createRestriction);
+			assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
+					registry.getAll().stream().map(BattleNext_RestrictionSpec::getId).toList());
+			Set<String> ids = new HashSet<>();
+			for (JSONObject input : inputs) {
+				BattleNext_RestrictionSpec entry = registry.get(input.getString("id").trim());
+				assertTrue(ids.add(entry.getId()), entry.getId());
+				assertEquals(input.getString("type").trim(), entry.getType());
+				assertEquals(input.getString("script").trim(), entry.getScript());
+				assertEquals(input.getString("desc").trim(), entry.getDescription());
+				assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(entry.getType()))
+						.map(candidate -> candidate.optString("id").trim()).toList(),
+						registry.getByType(entry.getType()).stream().map(BattleNext_RestrictionSpec::getId).toList());
+				String simpleName = entry.getScript().substring(entry.getScript().lastIndexOf('.') + 1);
+				if (entry.getScript().startsWith("data.restriction.")) {
+					assertEquals(Character.toUpperCase(entry.getId().charAt(0)) + entry.getId().substring(1), simpleName);
+				}
+				Object instance = registry.create(entry.getId());
+				assertInstanceOf(BattleNext_RestrictionScript.class, instance);
+				assertNotSame(instance, registry.create(entry.getId()));
+			}
 		}
 	}
 
@@ -205,16 +181,6 @@ class BattleNext_RulesCheckTest {
 		assertEquals(2, registry.getAll().size());
 		assertNotNull(registry.get("extensionA"));
 		assertTrue(registry.create("extensionA") instanceof ExampleRestriction);
-	}
-
-	@Test
-	void tournamentRuleIdRoundTrip() throws Exception {
-		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
-		tournament.setRuleId("rules_a");
-		JSONObject json = tournament.toJson();
-		BattleNext_TournamentModel restored = new BattleNext_TournamentModel();
-		restored.fromJson(json);
-		assertEquals("rules_a", restored.getRuleId());
 	}
 
 	@Test

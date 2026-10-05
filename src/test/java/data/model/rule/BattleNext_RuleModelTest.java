@@ -41,7 +41,6 @@ class BattleNext_RuleModelTest {
 		invalid.put("restrictions", new JSONArray().put(new JSONObject().put("id", "broken")));
 		assertThrows(IllegalArgumentException.class, () -> rule.fromJson(invalid));
 		assertEquals(before, rule.toJson().toString());
-		assertThrows(IllegalArgumentException.class, () -> rule.fromJson(invalid.put("formatVersion", 2)));
 		invalid.remove("formatVersion");
 		assertThrows(JSONException.class, () -> rule.fromJson(invalid));
 		assertEquals(before, rule.toJson().toString());

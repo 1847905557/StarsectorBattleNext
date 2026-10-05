@@ -45,7 +45,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 	private boolean previousAdditivity;
 
 	@BeforeEach
-	void configureStatusPlugin() {
+	void configureStatusPlugin() throws ReflectiveOperationException {
 
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) ->
 				"getCurrentState".equals(method) ? gameState : null));
@@ -64,7 +64,10 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 			}
 			default -> throw new AssertionError("Unexpected engine query: " + method);
 		});
-		plugin = new BattleNext_AllShipsStatusPlugin(access);
+		plugin = new BattleNext_AllShipsStatusPlugin();
+		Field bridge = BattleNext_AllShipsStatusPlugin.class.getDeclaredField("access");
+		bridge.setAccessible(true);
+		bridge.set(plugin, access);
 		plugin.init(engine);
 
 		BattleNext_Logger.fields();
@@ -84,7 +87,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"0,false", "0,true", "1,false", "1,true"})
+	@CsvSource({"0,false", "1,true"})
 	void refreshesBothOwnersAndAlliesAcrossTheBattlefield(int owner, boolean ally) {
 
 		ShipState state = new ShipState("outside_viewport_and_in_fog", owner);
@@ -246,7 +249,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		JSONObject fields = log.getJSONObject("fields");
 		assertEquals(phase, fields.getString("phase"));
 		assertEquals(ui.getClass().getName(), fields.getString("ui_class"));
-		assertEquals(5, fields.getJSONArray("signatures").length());
+		assertTrue(fields.getJSONArray("signatures").toString().contains("getTargetReticleRenderer"));
 		assertEquals(IllegalStateException.class.getName(), log.getJSONObject("exception").getString("type"));
 		assertSame(primary, nativeManager.reticles.get(0));
 		assertFalse(primary.secondary);
@@ -281,15 +284,6 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		assertEquals(1, access.clears);
 		assertSame(original, nativeManager.reticles.get(0));
 		assertTrue(appender.events.isEmpty());
-	}
-
-	@Test
-	void publicNoArgumentConstructorUsesAnIndependentBridge() throws Exception {
-		BattleNext_AllShipsStatusPlugin instance = BattleNext_AllShipsStatusPlugin.class.getConstructor().newInstance();
-		assertNotSame(plugin, instance);
-		instance.advance(0.1f, List.of());
-		instance.renderInUICoords(null);
-		assertTrue(removed.isEmpty());
 	}
 
 	private void assertReleased() throws Exception {

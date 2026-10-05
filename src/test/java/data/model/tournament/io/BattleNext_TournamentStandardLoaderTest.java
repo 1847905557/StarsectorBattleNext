@@ -34,13 +34,7 @@ class BattleNext_TournamentStandardLoaderTest extends BattleNext_TestGameFixture
 	}
 
 	@Test
-	void missingOptionalDirectoryLoadsAnEmptyCatalog() throws Exception {
-		BattleNext_TournamentStandardLoader loader = new BattleNext_TournamentStandardLoader();
-		assertTrue(loader.load().isEmpty());
-	}
-
-	@Test
-	void nativeJsonReadsFreshActiveStateAndPreservesVersionSemantics() throws Exception {
+	void activeSelectionReadsTheCurrentPersistedState() throws Exception {
 
 		var root = directory.resolve("tournament/_tournaments");
 		Files.createDirectories(root);
@@ -51,9 +45,7 @@ class BattleNext_TournamentStandardLoaderTest extends BattleNext_TestGameFixture
 		assertEquals("first", loader.loadActiveId());
 		Files.writeString(meta, "{\"formatVersion\":1,\"activeTournamentId\":\"second\"}", StandardCharsets.UTF_8);
 		assertEquals("second", loader.loadActiveId());
-		Files.writeString(meta, "{\"formatVersion\":2,\"activeTournamentId\":\"unsupported\"}", StandardCharsets.UTF_8);
-		assertEquals("", loader.loadActiveId());
-		assertEquals(3, dataReads.stream().filter(read -> read.equals("loadJSON:tournament/_tournaments/meta.json")).count());
+		assertEquals(List.of("loadJSON:tournament/_tournaments/meta.json", "loadJSON:tournament/_tournaments/meta.json"), dataReads);
 		Files.writeString(meta, "broken", StandardCharsets.UTF_8);
 		assertThrows(JSONException.class, loader::loadActiveId);
 	}

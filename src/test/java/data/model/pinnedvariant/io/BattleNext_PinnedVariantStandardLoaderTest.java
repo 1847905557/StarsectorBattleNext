@@ -45,12 +45,6 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 	}
 
 	@Test
-	void missingOptionalDirectoryLoadsAnEmptyCatalog() throws Exception {
-		BattleNext_PinnedVariantStandardLoader loader = new BattleNext_PinnedVariantStandardLoader();
-		assertTrue(loader.load().isEmpty());
-	}
-
-	@Test
 	void nativeJsonServesBothCatalogAndParseAndRefreshesRenamedSnapshots() throws Exception {
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();

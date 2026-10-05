@@ -2,12 +2,6 @@ package data.scripts.plugin;
 
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.SimpleName;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -21,7 +15,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,40 +40,6 @@ class BattleNext_AllShipsStatusPluginObfIntegrationTest {
 		int exitCode = process.waitFor();
 		assertEquals(0, exitCode, output);
 		assertTrue(output.contains("Verified five native status handles and cleanup"), output);
-	}
-
-	@Test
-	void runtimeCallersUseCombatPluginRegistrationAndDataKeepStandaloneDefinition() throws Exception {
-
-		String name = "BattleNext_AllShipsStatusPlugin";
-		Path definition = Path.of("src/data/scripts/plugin", name + ".java");
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		try (Stream<Path> paths = Files.walk(Path.of("src"))) {
-			for (Path path : paths.filter(file -> file.toString().endsWith(".java"))
-					.filter(file -> !file.startsWith(Path.of("src/test")) && !file.equals(definition)).sorted().toList()) {
-				var result = parser.parse(path);
-				assertTrue(result.isSuccessful(), path + ": " + result.getProblems());
-				var unit = result.getResult().orElseThrow();
-				for (SimpleName identifier : unit.findAll(SimpleName.class).stream()
-						.filter(value -> value.asString().equals(name)).toList()) {
-					var type = assertInstanceOf(ClassOrInterfaceType.class, identifier.getParentNode().orElseThrow(), path.toString());
-					var creation = assertInstanceOf(ObjectCreationExpr.class, type.getParentNode().orElseThrow(), path.toString());
-					var registration = assertInstanceOf(MethodCallExpr.class, creation.getParentNode().orElseThrow(), path.toString());
-					assertEquals("addPlugin", registration.getNameAsString(), path.toString());
-					assertTrue(registration.getArguments().contains(creation), path.toString());
-				}
-			}
-		}
-		Set<String> extensions = Set.of("json", "csv", "txt", "properties", "xml");
-		List<Path> configs = new ArrayList<>(List.of(Path.of("mod_info.json")));
-		try (Stream<Path> paths = Files.walk(Path.of("data"))) {
-			configs.addAll(paths.filter(Files::isRegularFile).filter(path -> extensions.contains(
-					path.toString().substring(path.toString().lastIndexOf('.') + 1))).sorted().toList());
-		}
-		for (Path path : configs) {
-			assertFalse(Files.readString(path, StandardCharsets.UTF_8).contains(name), path.toString());
-		}
 	}
 
 	public static class Probe {

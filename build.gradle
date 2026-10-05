@@ -80,6 +80,9 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
+	maxHeapSize = "512m"
+	maxParallelForks = 8
+	jvmArgs "-XX:ActiveProcessorCount=1"
 	inputs.files file("data/config/BattleNext_orders.csv"),
 			file("data/config/BattleNext_pveFactions.csv"),
 			file("data/config/BattleNext_restrictions.csv"),

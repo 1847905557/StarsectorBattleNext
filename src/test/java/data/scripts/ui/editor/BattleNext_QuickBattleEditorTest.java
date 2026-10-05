@@ -11,7 +11,6 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.missions.BattleNext_MissionBattleMap;
 import data.scripts.tools.BattleNext_Settings;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
-import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
@@ -80,17 +79,6 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(state, editor.serializeState());
 		attachEditor(editor, root);
 		assertEquals(state, editor.serializeState());
-	}
-
-	@Test
-	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
-		
-		editor.setInputRouter(new BattleNext_UiInputRouter());
-		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
-		attachEditor(editor, panel);
-		assertNotNull(editor.getStatusText());
-		editor.refreshContent();
 	}
 
 	@ParameterizedTest

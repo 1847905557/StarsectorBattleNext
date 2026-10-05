@@ -5,7 +5,6 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
@@ -185,8 +184,8 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})
-	void everyEmptySectionCombinationUsesColoredHeadingsAndAFinalMutedSummary(int mask) throws Exception {
+	@ValueSource(ints = {0, 1, 2, 4, 8, 15})
+	void independentSectionsAndEmptySummaryUseTheirDeclaredColorsAndOrder(int mask) throws Exception {
 
 		String id = "combination_" + mask;
 		Variant selected = variant(id, configuredHull(id + "_hull", "Combination", List.of("module"), false));

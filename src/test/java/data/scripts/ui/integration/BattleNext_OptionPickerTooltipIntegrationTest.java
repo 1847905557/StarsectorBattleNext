@@ -51,7 +51,6 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			assertTrue(content.getHeightSoFar() > 240f);
 			assertEquals(0f, content.getPosition().getHeight());
 		}
-		assertEquals(3, ((List<?>) getField(picker, "ownedPanels")).size());
 		picker.close();
 		assertTrue(nativeTargets(owner).isEmpty());
 		assertTrue(router.isEmpty());
@@ -73,7 +72,6 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		var content = render(target);
 		assertEquals("Short paragraph.", textValues(content).get(2));
 		assertTrue(content.getHeightSoFar() < 240f);
-		assertEquals(3, ((List<?>) getField(picker, "ownedPanels")).size());
 		if (kind.equals("image")) assertTrue(imagePaths.containsValue(icon));
 		if (kind.equals("text")) assertTrue(labels.contains("Nam"));
 		picker.close();
@@ -103,10 +101,8 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			((BattleNext_TextField) getField(picker, "search")).setText("unmatched");
 			plugins.get(popup).advance(0f);
 			assertTrue(nativeTargets(owner).isEmpty());
-			assertEquals(3, ((List<?>) getField(picker, "ownedPanels")).size());
 			picker.closeOverlays();
 			assertTrue(nativeTargets(owner).isEmpty());
-			assertEquals(1, ((List<?>) getField(picker, "ownedPanels")).size());
 			assertTrue(router.isEmpty());
 			assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		}

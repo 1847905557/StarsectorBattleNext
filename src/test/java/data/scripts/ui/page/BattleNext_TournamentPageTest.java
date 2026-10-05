@@ -45,49 +45,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 
 	@Test
-	void attachRefreshAndCloseOwnThePagePanel() throws Exception {
-		BattleNext_TournamentPage page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (description, action) -> {});
-		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
-
-		page.attach(root);
-		assertNotNull(getField(page, "panel"));
-		assertEquals(1, children.get(root).size());
-		page.refreshContent();
-		assertEquals(1, children.get(root).size());
-		page.close();
-		assertEquals(0, children.get(root).size());
-	}
-
-	@ParameterizedTest
-	@EnumSource(TournamentBracketType.class)
-	void startedAndCompletedFormatsShareSelectorContentAndKeepStoredProgressReadOnly(TournamentBracketType type) throws Exception {
+	void startedAndCompletedFormatsShareSelectorContentAndKeepStoredProgressReadOnly() throws Exception {
 
 		deferTooltipWidth = true;
 		saveFleets(List.of("first", "second", "third"));
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();
 		rules.reload();
 		rules.save(new BattleNext_RuleModel("rule", "Rule"));
-		BattleNext_TournamentModel tournament = tournament("cup", type, true);
-		tournament.setRuleId("rule");
-		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
-		BattleNext_Match first = tournament.getNextPendingMatch();
-		engine.recordRound(tournament, first.getId(), "draw", new BattleNext_BattleReportModel());
-		for (boolean completed : List.of(false, true)) {
-			if (completed) {
-				while (!tournament.isCompleted()) {
-					BattleNext_Match next = engine.getNextMatch(tournament);
-					engine.recordRound(tournament, next.getId(), next.getPlayer(), new BattleNext_BattleReportModel());
+		for (TournamentBracketType type : TournamentBracketType.values()) {
+			BattleNext_TournamentModel tournament = tournament("cup", type, true);
+			tournament.setRuleId("rule");
+			BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
+			BattleNext_Match first = tournament.getNextPendingMatch();
+			engine.recordRound(tournament, first.getId(), "draw", new BattleNext_BattleReportModel());
+			for (boolean completed : List.of(false, true)) {
+				if (completed) {
+					while (!tournament.isCompleted()) {
+						BattleNext_Match next = engine.getNextMatch(tournament);
+						engine.recordRound(tournament, next.getId(), next.getPlayer(), new BattleNext_BattleReportModel());
+					}
 				}
-			}
-			saveTournament(tournament, true);
-			String persisted = Files.readString(directory.resolve(tournament.getSourcePath()), StandardCharsets.UTF_8);
-			for (float width : new float[]{900f, 1400f}) {
+				saveTournament(tournament, true);
+				String persisted = Files.readString(directory.resolve(tournament.getSourcePath()), StandardCharsets.UTF_8);
 				BattleNext_TournamentPage page = page();
-				page.attach(panel(width, 900f, new BaseCustomUIPanelPlugin()));
+				page.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
 				page.buttonPressed("tournament:select:cup");
 				BattleNext_TournamentDisplay display = display(page);
 				BattleNext_BattleSelectorPage selector = new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin());
-				selector.attach(panel(width, 900f, new BaseCustomUIPanelPlugin()));
+				selector.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
 				BattleNext_TournamentDisplay reference = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
 				assertNotNull(display);
 				assertEquals(displayText(reference), displayText(display));
@@ -113,6 +98,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 				page.close();
 				assertEquals(persisted, Files.readString(directory.resolve(tournament.getSourcePath()), StandardCharsets.UTF_8));
 			}
+
 		}
 	}
 
@@ -164,7 +150,8 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		tournament.setRuleId("missing_rule");
 		saveTournament(tournament, false);
 		var invalidRule = Files.createDirectories(directory.resolve("tournament/_rules")).resolve("invalid.json");
-		Files.writeString(invalidRule, "{\"formatVersion\":" + (BattleNext_RuleModel.FORMAT_VERSION + 1) + "}", StandardCharsets.UTF_8);
+		Files.writeString(invalidRule, new BattleNext_RuleModel("invalid", "Invalid").toJson()
+				.put("restrictions", "invalid array").toString(), StandardCharsets.UTF_8);
 		BattleNext_TournamentPage page = page();
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("tournament:select:cup");

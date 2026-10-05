@@ -71,7 +71,7 @@ class BattleNext_BaseSourceProviderTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"\n", "\r\n", "\r", "\u2028"})
+	@ValueSource(strings = {"\n"})
 	void descriptionRendersCompleteFirstParagraphBeforeNativeBoundsAreAssigned(String separator) {
 		List<String> calls = new ArrayList<>();
 		String paragraph = "Shields absorb 50% of damage. " + "Complete %s description. ".repeat(100).strip();

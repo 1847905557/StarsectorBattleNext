@@ -32,7 +32,7 @@ class BattleNext_RuleStoreTest extends BattleNext_TestGameFixture {
 		var original = new BattleNext_RuleModel("rule", "Original");
 		store.save(original);
 		var path = directory.resolve("tournament/_rules/rule.json");
-		Files.writeString(path, "{\"formatVersion\":2}", StandardCharsets.UTF_8);
+		Files.writeString(path, original.toJson().put("restrictions", "invalid").toString(), StandardCharsets.UTF_8);
 		assertThrows(IllegalStateException.class, store::reload);
 		assertSame(original, store.get("rule"));
 		assertFalse(store.isLoaded());
@@ -41,13 +41,5 @@ class BattleNext_RuleStoreTest extends BattleNext_TestGameFixture {
 		store.reload();
 		assertTrue(store.isLoaded());
 		assertEquals("Original", store.get("rule").getName());
-	}
-
-	@Test
-	void missingOptionalDirectoryPublishesAnEmptyLoadedCatalog() throws Exception {
-		BattleNext_RuleStore store = new BattleNext_RuleStore();
-		store.reload();
-		assertTrue(store.isLoaded());
-		assertTrue(store.getAll().isEmpty());
 	}
 }

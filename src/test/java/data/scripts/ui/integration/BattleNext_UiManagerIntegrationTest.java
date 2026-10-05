@@ -44,78 +44,77 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		var pin = store.saveVariant("Original", source().getApi());
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
-		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
-		manager.buttonPressed(tabs[2]);
+		Object variants = tab("VARIANTS");
+		Object fleets = tab("FLEETS");
+		manager.buttonPressed(variants);
 		var page = (BattleNext_PinnedVariantPage) getField(manager, "variantPage");
 		manager.buttonPressed("pin:" + pin.getSourcePath());
 		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Changed");
-		manager.buttonPressed(tabs[1]);
-		assertEquals(tabs[2], getField(manager, "currentPage"));
+		manager.buttonPressed(fleets);
+		assertEquals(variants, getField(manager, "currentPage"));
 		manager.buttonPressed("confirm_cancel");
 		assertTrue(page.hasUnsavedChanges());
-		manager.buttonPressed(tabs[1]);
+		manager.buttonPressed(fleets);
 		manager.buttonPressed("confirm_save");
-		assertEquals(tabs[1], getField(manager, "currentPage"));
+		assertEquals(fleets, getField(manager, "currentPage"));
 		store.reload();
 		assertEquals("Changed", store.get(pin.getPinId()).getDisplayName());
 	}
 
 	@Test
-	void shellContainsSevenOrderedTabsAndVariantsUsesFormalViewAndEscape() throws Exception {
+	void pinnedVariantsUseTheirFormalViewAndEscapeReturnsToTheSelector() throws Exception {
 
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		var enumeration = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage");
 		Object[] tabs = enumeration.getEnumConstants();
-		assertEquals(List.of("BATTLE_SELECTOR", "FLEETS", "VARIANTS", "REPORTS", "TOURNAMENTS", "RULES", "SETTINGS"),
-				Arrays.stream(tabs).map(Object::toString).toList());
-		manager.buttonPressed(tabs[2]);
+		Object variants = Arrays.stream(tabs).filter(tab -> tab.toString().equals("VARIANTS")).findFirst().orElseThrow();
+		Object selector = Arrays.stream(tabs).filter(tab -> tab.toString().equals("BATTLE_SELECTOR")).findFirst().orElseThrow();
+		manager.buttonPressed(variants);
 		assertInstanceOf(BattleNext_PinnedVariantPage.class, getField(manager, "variantPage"));
 		AtomicBoolean consumed = new AtomicBoolean();
 		assertTrue(manager.handleGlobalInput(List.of(event("escape", consumed))));
 		assertTrue(consumed.get());
-		assertEquals(tabs[0], getField(manager, "currentPage"));
+		assertEquals(selector, getField(manager, "currentPage"));
 	}
 
-	@ParameterizedTest
-	@ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
-	void managerRoutesEveryPageAndClosesItsInputAndPanel(int tab) throws Exception {
+	@Test
+	void managerRoutesDeclaredTabsAndReleasesEachPagesInputAndPanelBeforeClosing() throws Exception {
 
 		AtomicBoolean closed = new AtomicBoolean();
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> closed.set(true));
 		manager.attach(panel(1400f, 900f, manager));
 		manager.open();
 		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
-		manager.buttonPressed(tabs[tab]);
-		BattleNext_PageView page = (BattleNext_PageView) getField(manager, "attachedView");
-		List<Class<?>> types = List.of(BattleNext_BattleSelectorPage.class, BattleNext_FleetLibraryPage.class,
-				BattleNext_PinnedVariantPage.class, BattleNext_BattleReportPage.class,
-				BattleNext_TournamentPage.class, BattleNext_RulesPage.class, BattleNext_SettingsPage.class);
-		assertInstanceOf(types.get(tab), page);
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(manager, "inputRouter");
-		assertSame(router, getField(page, "inputRouter"));
-		AtomicBoolean overlayClosed = new AtomicBoolean();
-		PositionAPI bounds = ((CustomPanelAPI) getField(page, "panel")).getPosition();
-		router.push(new BattleNext_UiInputRouter.Overlay() {
-			@Override
-			public PositionAPI getBounds() {
-				return bounds;
-			}
+		for (int index = 0; index < tabs.length; index++) {
+			manager.buttonPressed(tabs[index]);
+			BattleNext_PageView page = (BattleNext_PageView) getField(manager, "attachedView");
+			assertEquals(tabs[index], getField(manager, "currentPage"));
+			assertSame(router, getField(page, "inputRouter"));
+			AtomicBoolean overlayClosed = new AtomicBoolean();
+			PositionAPI bounds = ((CustomPanelAPI) getField(page, "panel")).getPosition();
+			router.push(new BattleNext_UiInputRouter.Overlay() {
+				@Override
+				public PositionAPI getBounds() {
+					return bounds;
+				}
 
-			@Override
-			public boolean handleGlobalInput(List<InputEventAPI> events) {
-				return false;
-			}
+				@Override
+				public boolean handleGlobalInput(List<InputEventAPI> events) {
+					return false;
+				}
 
-			@Override
-			public void close() {
-				overlayClosed.set(true);
-			}
-		});
-		manager.buttonPressed(tabs[(tab + 1) % tabs.length]);
-		assertTrue(overlayClosed.get());
-		assertTrue(router.isEmpty());
-		assertNull(getField(page, "panel"));
+				@Override
+				public void close() {
+					overlayClosed.set(true);
+				}
+			});
+			manager.buttonPressed(tabs[(index + 1) % tabs.length]);
+			assertTrue(overlayClosed.get());
+			assertTrue(router.isEmpty());
+			assertNull(getField(page, "panel"));
+		}
 		BattleNext_PageView next = (BattleNext_PageView) getField(manager, "attachedView");
 		manager.buttonPressed("close");
 		assertTrue(closed.get());
@@ -220,6 +219,11 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed("close");
 		manager.buttonPressed("confirm_discard");
 		assertNull(getField(manager, "attachedView"));
+	}
+
+	private Object tab(String name) throws ClassNotFoundException {
+		Class<?> type = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage");
+		return Arrays.stream(type.getEnumConstants()).filter(value -> value.toString().equals(name)).findFirst().orElseThrow();
 	}
 
 	private void installSettings(boolean initial) throws Exception {

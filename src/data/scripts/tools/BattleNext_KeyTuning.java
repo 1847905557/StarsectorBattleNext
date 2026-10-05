@@ -12,20 +12,24 @@ public class BattleNext_KeyTuning {
 
 	}
 
+	public static boolean isPressed(int key) {
+		return keyPressed.test(key);
+	}
+
 	public static int adjustHorizontalWrapped(int value, int size) {
-		return adjustWrapped(value, size, keyPressed.test(Keyboard.KEY_LEFT), keyPressed.test(Keyboard.KEY_RIGHT));
+		return adjustWrapped(value, size, isPressed(Keyboard.KEY_LEFT), isPressed(Keyboard.KEY_RIGHT));
 	}
 
 	public static int adjustAdWrapped(int value, int size) {
-		return adjustWrapped(value, size, keyPressed.test(Keyboard.KEY_A), keyPressed.test(Keyboard.KEY_D));
+		return adjustWrapped(value, size, isPressed(Keyboard.KEY_A), isPressed(Keyboard.KEY_D));
 	}
 
 	public static int adjustHorizontalClamped(int value, int min, int max) {
-		return adjustClamped(value, 1, min, max, keyPressed.test(Keyboard.KEY_LEFT), keyPressed.test(Keyboard.KEY_RIGHT));
+		return adjustClamped(value, 1, min, max, isPressed(Keyboard.KEY_LEFT), isPressed(Keyboard.KEY_RIGHT));
 	}
 
 	public static int adjustVerticalClamped(int value, int step, int min, int max) {
-		return adjustClamped(value, step, min, max, keyPressed.test(Keyboard.KEY_DOWN), keyPressed.test(Keyboard.KEY_UP));
+		return adjustClamped(value, step, min, max, isPressed(Keyboard.KEY_DOWN), isPressed(Keyboard.KEY_UP));
 	}
 
 	private static int adjustWrapped(int value, int size, boolean decrease, boolean increase) {

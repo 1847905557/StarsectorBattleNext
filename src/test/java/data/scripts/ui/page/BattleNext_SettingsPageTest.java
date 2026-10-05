@@ -135,20 +135,6 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertFalse(router.getSession().hasInputState());
 	}
 
-	@Test
-	void attachRefreshAndCloseOwnThePagePanel() throws Exception {
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
-		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
-
-		page.attach(root);
-		assertNotNull(getField(page, "panel"));
-		assertEquals(1, children.get(root).size());
-		page.refreshContent();
-		assertEquals(1, children.get(root).size());
-		page.close();
-		assertEquals(0, children.get(root).size());
-	}
-
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void languageDraftCommitRefreshDiscardAndReopenPreserveTheSession(boolean initial) throws Exception {

@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,7 +68,8 @@ class BattleNext_SimulatorModelTest {
 			Path runtime = storage.directory("runtime/session");
 			storage.cleanup(runtime);
 			assertEquals(1, storage.pending().size());
-			assertThrows(Exception.class, () -> storage.cleanup(directory.resolve("pending")));
+			IOException failure = assertThrows(IOException.class, () -> storage.cleanup(directory.resolve("pending")));
+			assertTrue(failure.getMessage().contains(directory.resolve("pending").toString()));
 			storage.acknowledge(request.id());
 			assertTrue(storage.pending().isEmpty());
 		} finally {

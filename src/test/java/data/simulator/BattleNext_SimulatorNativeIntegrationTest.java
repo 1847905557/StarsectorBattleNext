@@ -9,8 +9,7 @@ import org.json.JSONObject;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.PixelFormat;
-import java.awt.MouseInfo;
-import java.awt.Point;
+import org.lwjgl.opengl.InputImplementation;
 
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -27,6 +26,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Comparator;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -81,7 +82,6 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		}
 	}
 
-
 	public static class MouseProbe {
 
 		public static void main(String[] arguments) throws Exception {
@@ -91,25 +91,34 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			var implementation = Mouse.class.getDeclaredField("implementation");
 			implementation.setAccessible(true);
 			Object original = implementation.get(null);
+			AtomicInteger nativeMouseCalls = new AtomicInteger();
+			InputImplementation observed = (InputImplementation) Proxy.newProxyInstance(MouseProbe.class.getClassLoader(),
+					new Class<?>[]{InputImplementation.class}, (instance, method, values) -> {
+				if (Set.of("setCursorPosition", "grabMouse", "setNativeCursor", "pollMouse", "readMouse").contains(method.getName())) {
+					nativeMouseCalls.incrementAndGet();
+				}
+				return method.invoke(original, values);
+			});
+			implementation.set(null, observed);
 			BattleNext_SimulatorMouse isolated = BattleNext_SimulatorMouse.getInstance();
 			try {
 				if (BattleNext_SimulatorMouse.getInstance() != isolated) throw new AssertionError("Mouse backend must be reused");
 				for (int cycle = 0; cycle < 10; cycle++) {
-					Point before = MouseInfo.getPointerInfo().getLocation();
 					Mouse.setCursorPosition(400, 300);
 					Mouse.setGrabbed(true);
 					Mouse.setGrabbed(false);
 					Mouse.setNativeCursor(null);
 					Mouse.poll();
-					Point after = MouseInfo.getPointerInfo().getLocation();
-					if (!before.equals(after)) throw new AssertionError("Desktop pointer changed during virtual cursor requests: " + before + " -> " + after);
+					if (nativeMouseCalls.get() != 0) throw new AssertionError("Virtual cursor requests reached the native mouse backend");
+					if (Mouse.isInsideWindow() || Mouse.getDWheel() != 0 || Mouse.isButtonDown(0)) throw new AssertionError("Virtual mouse must keep physical input isolated");
 				}
 				isolated.cleanup();
-				if (implementation.get(null) != original) throw new AssertionError("Mouse backend cleanup must restore its original owner");
+				if (implementation.get(null) != observed) throw new AssertionError("Mouse backend cleanup must restore its original owner");
 				isolated.cleanup();
 				System.out.println("Simulator mouse isolation verified");
 			} finally {
 				isolated.cleanup();
+				implementation.set(null, original);
 				Display.destroy();
 			}
 		}

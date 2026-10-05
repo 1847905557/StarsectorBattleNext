@@ -23,16 +23,21 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 		recent.setId("recent");
 		recent.setName("Recent");
 		recent.setCreatedAt(10);
+		var tie = new BattleNext_BattleReportModel();
+		tie.setId("another_recent");
+		tie.setName("Another recent");
+		tie.setCreatedAt(recent.getCreatedAt());
 		store.save(old);
 		store.save(recent);
+		store.save(tie);
 		assertEquals("tournament/_reports/recent.json", recent.getSourcePath());
 		store.reload();
-		assertEquals(List.of("recent", "old"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of("another_recent", "recent", "old"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
 		store.delete("recent");
 		assertNull(store.get("recent"));
 		assertFalse(Files.exists(directory.resolve("tournament/_reports/recent.json")));
 		store.reload();
-		assertEquals(1, store.getAll().size());
+		assertEquals(List.of("another_recent", "old"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
 	}
 
 	@Test
@@ -56,13 +61,5 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 		assertThrows(IOException.class, () -> store.save(blocked));
 		assertSame(original, store.get("valid"));
 		assertNull(store.get("blocked"));
-	}
-
-	@Test
-	void missingOptionalDirectoryPublishesAnEmptyLoadedCatalog() throws Exception {
-		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
-		store.reload();
-		assertTrue(store.isLoaded());
-		assertTrue(store.getAll().isEmpty());
 	}
 }

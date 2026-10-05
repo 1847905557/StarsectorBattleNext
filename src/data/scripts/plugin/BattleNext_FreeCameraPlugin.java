@@ -6,12 +6,12 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_CombatInput;
+import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tools.BattleNext_Settings;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.List;
-import java.util.function.IntPredicate;
 
 public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
@@ -33,7 +33,6 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float CAMERA_MAX_ZOOM = 10f;
 
 	private CombatEngineAPI engine;
-	private final IntPredicate keyPressed;
 
 	private CameraToggleState cameraToggle = CameraToggleState.READY;
 	private boolean cameraEnabled;
@@ -46,14 +45,6 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private float viewportHeight;
 	private float screenWidth;
 	private float screenHeight;
-
-	public BattleNext_FreeCameraPlugin() {
-		this(Keyboard::isKeyDown);
-	}
-
-	BattleNext_FreeCameraPlugin(IntPredicate keyPressed) {
-		this.keyPressed = keyPressed;
-	}
 
 	@Override
 	public void init(CombatEngineAPI engine) {
@@ -106,7 +97,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 			return;
 		}
 
-		boolean boosting = keyPressed.test(Keyboard.KEY_LSHIFT);
+		boolean boosting = BattleNext_KeyTuning.isPressed(Keyboard.KEY_LSHIFT);
 		float timeMult = boosting ? BattleNext_Settings.getBoostTimeMult() : BattleNext_Settings.getDefaultTimeMult();
 		engine.getTimeMult().modifyMult(ID, timeMult);
 		if (boosting != boostActive) {
@@ -116,7 +107,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 		if (BattleNext_CombatInput.isUiCovered(engine)) return;
 
-		boolean toggleDown = keyPressed.test(Keyboard.KEY_RCONTROL);
+		boolean toggleDown = BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL);
 		if (cameraToggle == CameraToggleState.BLOCKED) {
 			if (!toggleDown) {
 				cameraToggle = CameraToggleState.READY;
@@ -131,8 +122,8 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		}
 
 		if (externalCamera) {
-			float dx = (keyPressed.test(Keyboard.KEY_D) ? 1f : 0f) - (keyPressed.test(Keyboard.KEY_A) ? 1f : 0f);
-			float dy = (keyPressed.test(Keyboard.KEY_W) ? 1f : 0f) - (keyPressed.test(Keyboard.KEY_S) ? 1f : 0f);
+			float dx = (BattleNext_KeyTuning.isPressed(Keyboard.KEY_D) ? 1f : 0f) - (BattleNext_KeyTuning.isPressed(Keyboard.KEY_A) ? 1f : 0f);
+			float dy = (BattleNext_KeyTuning.isPressed(Keyboard.KEY_W) ? 1f : 0f) - (BattleNext_KeyTuning.isPressed(Keyboard.KEY_S) ? 1f : 0f);
 			Vector2f center = new Vector2f(cameraCenter);
 
 			if (dx != 0f || dy != 0f) {
@@ -168,7 +159,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		}
 		boolean active = cameraEnabled && !blocked;
 		if (blocked || externalCamera && !active) {
-			cameraToggle = keyPressed.test(Keyboard.KEY_RCONTROL) ? CameraToggleState.BLOCKED : CameraToggleState.READY;
+			cameraToggle = BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL) ? CameraToggleState.BLOCKED : CameraToggleState.READY;
 			moveHoldTime = 0f;
 		}
 		if (active == externalCamera) return;

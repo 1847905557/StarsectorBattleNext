@@ -18,7 +18,6 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.page.BattleNext_BattleReportPage;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -179,6 +178,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	@Test
 	void imageFailuresAndRepeatedRefreshKeepGroupStateAndScrollOffsets() throws Exception {
 		var details = details(640, Collections.nCopies(12, "broken"));
+		int frameCount = children.get(details.getPanel()).size();
 		lists(details).get("groups").getExternalScroller().setYOffset(90f);
 		for (int cycle = 0; cycle < 3; cycle++) {
 			details.refreshContent();
@@ -186,7 +186,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 			assertEquals(90f, lists(details).get("groups").getExternalScroller().getYOffset());
 			var content = tooltips.get(children.get(groupBody(details)).get(0));
 			assertEquals(12, content.getComponents().size());
-			assertEquals(5, children.get(details.getPanel()).size());
+			assertEquals(frameCount, children.get(details.getPanel()).size());
 		}
 		((Set<Integer>) getField(details, "expanded")).clear();
 		details.refreshContent();

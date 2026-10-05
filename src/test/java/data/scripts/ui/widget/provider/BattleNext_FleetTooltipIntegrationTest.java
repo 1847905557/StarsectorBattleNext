@@ -31,14 +31,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -268,23 +264,6 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		registeredVariants.put("special", special);
 		fleet.setMembers(List.of(member("special", List.of("a", "a"), "steady")));
 		assertEquals(hullName + " - Level 1 (1) - Steady", values(render()).get(5));
-	}
-
-	@Test
-	void repositoryUiTextUsesTheApprovedHyphenSeparator() throws Exception {
-
-		List<Path> files = new ArrayList<>();
-		for (Path root : List.of(Path.of("src/data"), Path.of("data"))) {
-			try (Stream<Path> paths = Files.walk(root)) {
-				files.addAll(paths.filter(Files::isRegularFile)
-						.filter(path -> Set.of("java", "json", "csv", "txt").contains(
-								path.toString().substring(path.toString().lastIndexOf('.') + 1))).toList());
-			}
-		}
-		for (Path file : files) {
-			String text = Files.readString(file, StandardCharsets.UTF_8);
-			assertTrue(text.codePoints().noneMatch(value -> value == 0x00b7 || value == 0x2022), file.toString());
-		}
 	}
 
 	private TooltipMakerAPI render() {

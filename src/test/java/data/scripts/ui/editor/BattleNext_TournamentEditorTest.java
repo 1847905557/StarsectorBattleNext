@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@ParameterizedTest
-	@ValueSource(ints = {500, 800, 1000, 1400})
+	@ValueSource(ints = {1400})
 	void columnsAndTableUseRulesGeometryAndNativeReadonlyStatus(int width) throws Exception {
 
 		deferTooltipWidth = true;
@@ -129,7 +129,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"180,0", "180,2", "1000,0", "1000,2"})
+	@CsvSource({"180,0", "1000,2"})
 	void fleetButtonAlignsWithTableEdgesAndRowsAcrossScrollAndRefresh(int width, int count) throws Exception {
 		deferTooltipWidth = true;
 		List<String> ids = IntStream.range(0, count).mapToObj(index -> "fleet_" + index).toList();

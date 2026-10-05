@@ -7,8 +7,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,46 +37,47 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 		assertNotNull(registry.create("custom"));
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"current", "added", "removed", "reversed", "empty"})
-	void registeredOrdersFollowInputRowsAcrossCatalogChanges(String change) throws Exception {
+	@Test
+	void registeredOrdersFollowInputRowsAcrossCatalogChanges() throws Exception {
 
 		List<String> lines = Files.readAllLines(Path.of(BattleNext_OrderRegistry.PATH), StandardCharsets.UTF_8);
 		assertEquals(List.of("id", "type", "script", "desc"), BattleNext_CsvLine.parse(lines.get(0)));
 		JSONArray current = csvRows();
-		List<JSONObject> inputs = new ArrayList<>();
-		for (int index = 0; index < current.length(); index++) {
-			inputs.add(current.getJSONObject(index));
-		}
-		if (change.equals("added")) {
-			String id = "fixture_extension";
-			Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
-			while (names.contains(id)) {
-				id += "_extra";
+		for (String change : List.of("current", "added", "removed", "reversed", "empty")) {
+			List<JSONObject> inputs = new ArrayList<>();
+			for (int index = 0; index < current.length(); index++) {
+				inputs.add(current.getJSONObject(index));
 			}
-			inputs.add(row(id, "starter", AssaultStarter.class.getName()));
-		} else if (change.equals("removed")) {
-			inputs = new ArrayList<>(inputs.stream().skip(1).toList());
-		} else if (change.equals("reversed")) {
-			Collections.reverse(inputs);
-		} else if (change.equals("empty")) {
-			inputs.clear();
-		}
-		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
-		registry.load(new JSONArray(inputs), BattleNext_OrderRegistryTest::instantiate);
-		assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
-				registry.getAll().stream().map(BattleNext_OrderSpec::getId).toList());
-		Set<String> ids = new HashSet<>();
-		for (JSONObject input : inputs) {
-			BattleNext_OrderSpec spec = registry.get(input.getString("id").trim());
-			assertTrue(ids.add(spec.getId()), spec.getId());
-			assertEquals(input.getString("type").trim(), spec.getType());
-			assertEquals(input.getString("script").trim(), spec.getScript());
-			assertEquals(input.getString("desc").trim(), spec.getDescription());
-			assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(spec.getType()))
-					.map(candidate -> candidate.optString("id").trim()).toList(),
-					registry.getByType(spec.getType()).stream().map(BattleNext_OrderSpec::getId).toList());
-			assertNotSame(registry.create(spec.getId()), registry.create(spec.getId()));
+			if (change.equals("added")) {
+				String id = "fixture_extension";
+				Set<String> names = new HashSet<>(inputs.stream().map(input -> input.optString("id")).toList());
+				while (names.contains(id)) {
+					id += "_extra";
+				}
+				inputs.add(row(id, "starter", AssaultStarter.class.getName()));
+			} else if (change.equals("removed")) {
+				inputs = new ArrayList<>(inputs.stream().skip(1).toList());
+			} else if (change.equals("reversed")) {
+				Collections.reverse(inputs);
+			} else if (change.equals("empty")) {
+				inputs.clear();
+			}
+			BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+			registry.load(new JSONArray(inputs), BattleNext_OrderRegistryTest::instantiate);
+			assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
+					registry.getAll().stream().map(BattleNext_OrderSpec::getId).toList());
+			Set<String> ids = new HashSet<>();
+			for (JSONObject input : inputs) {
+				BattleNext_OrderSpec spec = registry.get(input.getString("id").trim());
+				assertTrue(ids.add(spec.getId()), spec.getId());
+				assertEquals(input.getString("type").trim(), spec.getType());
+				assertEquals(input.getString("script").trim(), spec.getScript());
+				assertEquals(input.getString("desc").trim(), spec.getDescription());
+				assertEquals(inputs.stream().filter(candidate -> candidate.optString("type").trim().equals(spec.getType()))
+						.map(candidate -> candidate.optString("id").trim()).toList(),
+						registry.getByType(spec.getType()).stream().map(BattleNext_OrderSpec::getId).toList());
+				assertNotSame(registry.create(spec.getId()), registry.create(spec.getId()));
+			}
 		}
 	}
 

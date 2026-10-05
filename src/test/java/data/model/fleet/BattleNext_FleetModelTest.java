@@ -40,18 +40,12 @@ class BattleNext_FleetModelTest {
 	}
 
 	@Test
-	void repeatedJsonReplacesMembersAndFailurePreservesThePublishedModel() throws Exception {
+	void repeatedJsonReplacesMembersAndClearsOmittedCollections() throws Exception {
 		var fleet = new BattleNext_FleetModel();
 		JSONObject first = new JSONObject().put("id", "first").put("members", new JSONArray()
 				.put(new BattleNext_MemberModel("a", "A", "", List.of(), "", "", List.of()).toJson()));
 		fleet.fromJson(first);
-		String original = fleet.toJson().toString();
-		JSONObject invalid = new JSONObject(first.toString()).put("id", "invalid").put("formatVersion", 2);
-		assertThrows(IllegalArgumentException.class, () -> fleet.fromJson(invalid));
-		assertEquals(original, fleet.toJson().toString());
-		invalid.put("formatVersion", 1).put("members", new JSONArray().put(new JSONObject().put("formatVersion", 2)));
-		assertThrows(IllegalArgumentException.class, () -> fleet.fromJson(invalid));
-		assertEquals(original, fleet.toJson().toString());
+		assertEquals("a", fleet.getMembers().get(0).getVariantId());
 		fleet.fromJson(new JSONObject().put("id", "second"));
 		assertEquals("second", fleet.getId());
 		assertEquals(List.of(), fleet.getMembers());

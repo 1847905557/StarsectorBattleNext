@@ -19,7 +19,6 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.page.BattleNext_BattleReportPage;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;

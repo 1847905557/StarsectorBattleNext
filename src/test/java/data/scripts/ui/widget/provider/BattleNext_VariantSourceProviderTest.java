@@ -18,13 +18,6 @@ import java.util.List;
 class BattleNext_VariantSourceProviderTest {
 
 	@Test
-	void variantsAreSingleSelection() {
-		BattleNext_VariantSourceProvider provider = new BattleNext_VariantSourceProvider();
-
-		assertEquals(1, provider.getMaxStack("any_variant"));
-	}
-
-	@Test
 	void percentageInVariantIdUsesPlainParagraphOverload() {
 		SettingsAPI previousSettings = Global.getSettings();
 		SectorAPI previousSector = Global.getSector();

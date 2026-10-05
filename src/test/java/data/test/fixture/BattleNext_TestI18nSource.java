@@ -1,7 +1,5 @@
 package data.test.fixture;
 
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
@@ -12,17 +10,11 @@ import com.github.javaparser.ast.stmt.SwitchEntry;
 import com.github.javaparser.ast.stmt.YieldStmt;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
-import com.github.javaparser.symbolsolver.JavaSymbolSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import data.test.fixture.BattleNext_TestTextCatalog.TextKey;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -32,7 +24,6 @@ public class BattleNext_TestI18nSource {
 
 	public record Read(TextKey key, List<Expression> arguments, Node origin) { }
 
-	private final JavaSymbolSolver resolver;
 	private final List<CompilationUnit> units;
 	private final List<MethodCallExpr> calls;
 	private final Set<String> sectionNames;
@@ -41,23 +32,8 @@ public class BattleNext_TestI18nSource {
 
 	public BattleNext_TestI18nSource(Path root) throws IOException {
 
-		CombinedTypeSolver solver = new CombinedTypeSolver();
-		resolver = new JavaSymbolSolver(solver);
-		solver.add(new JavaParserTypeSolver(root.getParent(), new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setSymbolResolver(resolver)));
-		solver.add(new ClassLoaderTypeSolver(getClass().getClassLoader()));
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
-				.setCharacterEncoding(StandardCharsets.UTF_8)
-				.setSymbolResolver(resolver));
-		units = new ArrayList<>();
-		try (var paths = Files.walk(root)) {
-			for (Path path : paths.filter(file -> file.toString().endsWith(".java")).sorted().toList()) {
-				var result = parser.parse(path);
-				assertTrue(result.isSuccessful(), path + ": " + result.getProblems());
-				units.add(result.getResult().orElseThrow());
-			}
-		}
+		units = BattleNext_TestSourceIndex.getInstance().getSources().entrySet().stream()
+				.filter(entry -> entry.getKey().startsWith(root)).map(Map.Entry::getValue).toList();
 		calls = units.stream().flatMap(unit -> unit.findAll(MethodCallExpr.class).stream()).toList();
 		sectionNames = new HashSet<>();
 		for (CompilationUnit unit : units) {
@@ -122,7 +98,6 @@ public class BattleNext_TestI18nSource {
 	}
 
 	private Set<Object> evaluate(Expression expression) {
-		expression.findCompilationUnit().orElseThrow().setData(Node.SYMBOL_RESOLVER_KEY, resolver);
 		if (values.containsKey(expression)) return values.get(expression);
 		assertTrue(active.add(expression), "Cyclic text expression: " + expression);
 		Set<Object> result = compute(expression);
@@ -198,7 +173,6 @@ public class BattleNext_TestI18nSource {
 
 	private Set<Object> declarationValues(Node node, String name) {
 
-		node.findCompilationUnit().orElseThrow().setData(Node.SYMBOL_RESOLVER_KEY, resolver);
 		if (node instanceof Parameter parameter) {
 			MethodDeclaration method = parameter.findAncestor(MethodDeclaration.class).orElseThrow();
 			int index = method.getParameters().indexOf(parameter);

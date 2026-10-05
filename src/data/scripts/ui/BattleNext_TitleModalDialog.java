@@ -23,18 +23,10 @@ class BattleNext_TitleModalDialog {
 		void detach(UIPanelAPI screen, Object dialog) throws Throwable;
 	}
 
-	private final Access access;
+	private final Access access = new VanillaAccess();
 	private Object owned;
 	private UIPanelAPI ownerScreen;
 	private boolean errorLogged;
-
-	BattleNext_TitleModalDialog() {
-		this(new VanillaAccess());
-	}
-
-	BattleNext_TitleModalDialog(Access access) {
-		this.access = access;
-	}
 
 	void open(UIPanelAPI screen, Object titleState) {
 

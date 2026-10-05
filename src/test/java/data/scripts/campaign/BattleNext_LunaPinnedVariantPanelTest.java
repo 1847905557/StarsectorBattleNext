@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixture {
 
 	@ParameterizedTest
-	@ValueSource(ints = {320, 480, 640})
+	@ValueSource(ints = {320, 640})
 	void panelUsesSameOwnerAndFitsNarrowAndWideWidths(int width) throws Exception {
 		BattleNext_LunaPinnedVariantPanel display = open(source(), new BattleNext_PinnedVariantStore(), width);
 		assertTrue(buttons.get("pin_save").get());

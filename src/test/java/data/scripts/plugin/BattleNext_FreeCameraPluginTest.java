@@ -7,6 +7,7 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tools.BattleNext_KeyTuning;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.IntPredicate;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,10 +48,16 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 	private CombatEngineAPI engine;
 	private Field settingsValues;
 	private Object previousValues;
+	private Field keyboardInput;
+	private Object previousKeyboardInput;
 
 	@BeforeEach
 	void configureCamera() throws Exception {
 
+		keyboardInput = BattleNext_KeyTuning.class.getDeclaredField("keyPressed");
+		keyboardInput.setAccessible(true);
+		previousKeyboardInput = keyboardInput.get(null);
+		keyboardInput.set(null, (IntPredicate) keys::contains);
 		settingsValues = BattleNext_Settings.class.getDeclaredField("values");
 		settingsValues.setAccessible(true);
 		previousValues = settingsValues.get(null);
@@ -106,13 +114,14 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			case "getMapWidth", "getMapHeight" -> 50000f;
 			default -> null;
 		});
-		camera = new BattleNext_FreeCameraPlugin(keys::contains);
+		camera = new BattleNext_FreeCameraPlugin();
 		camera.init(engine);
 	}
 
 	@AfterEach
 	void restoreSettingsValues() throws Exception {
 		settingsValues.set(null, previousValues);
+		keyboardInput.set(null, previousKeyboardInput);
 	}
 
 	@ParameterizedTest

@@ -17,10 +17,10 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 	@Test
 	void selectorAndMissionAgreeOnModularSelfBattlesAndAssemblyErrors() throws Exception {
 
-		legacy("valid", "1", "1,parent_local,,,,,,\n");
+		csvFleet("valid", "1", "1,parent_local,,,,,,\n");
 		variant("valid", "parent_local", "parent", 3, new JSONObject().put("module", "child_local"));
 		variant("valid", "child_local", "child", 7, null);
-		legacy("broken", "2", "1,broken_local,,,,,,\n");
+		csvFleet("broken", "2", "1,broken_local,,,,,,\n");
 		variant("broken", "broken_local", "unknown_hull", 0, null);
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nab_player1,ab_player1,-1,1\nab_player2,ab_player2,-1,1\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
@@ -54,7 +54,7 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 	@Test
 	void reloadRecomputesAssemblyResultsAfterAResourceIsRepaired() throws Exception {
 
-		legacy("repair", "1", "1,parent_local,,,,,,\n");
+		csvFleet("repair", "1", "1,parent_local,,,,,,\n");
 		variant("repair", "parent_local", "unknown_hull", 0, null);
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nab_player1,ab_player1,-1,1\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");

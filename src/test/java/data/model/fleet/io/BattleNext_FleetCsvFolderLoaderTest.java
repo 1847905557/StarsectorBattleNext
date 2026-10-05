@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.List;
 
-class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixture {
+class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void chinesePackageLoadsAllPairsAndResolvesLocalModulesBeforeGlobalResources() throws Exception {
 
-		legacy("中文目录", "1", "1,local_parent,,,,,,\n2,parent_variant,,,,,,\n");
-		legacy("中文目录", "02", "1,local_child,,,,,,\n");
+		csvFleet("中文目录", "1", "1,local_parent,,,,,,\n2,parent_variant,,,,,,\n");
+		csvFleet("中文目录", "02", "1,local_child,,,,,,\n");
 		variant("中文目录", "local_parent", "parent", 21, new JSONArray().put(new JSONObject().put("module", "local_child")));
 		variant("中文目录", "local_child", "child", 17, null);
 		registeredVariants.put("local_child", selectedVariant.getModules().get("module"));
@@ -39,11 +39,11 @@ class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixtu
 	@Test
 	void sourceBoundariesAndStandardMetadataDetermineDirectoryOwnership() throws Exception {
 
-		legacy("", "1", "1,parent_variant,,,,,,\n");
-		legacy("included", "2", "1,parent_variant,,,,,,\n");
-		legacy("included/deep", "3", "1,parent_variant,,,,,,\n");
-		legacy("_rules", "4", "1,parent_variant,,,,,,\n");
-		legacy("standard", "5", "1,parent_variant,,,,,,\n");
+		csvFleet("", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("included", "2", "1,parent_variant,,,,,,\n");
+		csvFleet("included/deep", "3", "1,parent_variant,,,,,,\n");
+		csvFleet("_rules", "4", "1,parent_variant,,,,,,\n");
+		csvFleet("standard", "5", "1,parent_variant,,,,,,\n");
 		standard("standard", "standard_id", "parent_variant");
 		write("tournament/incomplete/player6_data.csv", "name,author,skills,tags\nTeam,,,\n");
 		assertEquals(List.of("ab_player2"), new BattleNext_FleetLegacyFolderLoader().load().stream().map(fleet -> fleet.getId()).toList());
@@ -56,8 +56,8 @@ class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixtu
 	@Test
 	void localModulesRemainIsolatedBetweenPackagesAndAcrossReloads() throws Exception {
 
-		legacy("alpha", "1", "1,parent_local,,,,,,\n");
-		legacy("beta", "2", "1,parent_local,,,,,,\n");
+		csvFleet("alpha", "1", "1,parent_local,,,,,,\n");
+		csvFleet("beta", "2", "1,parent_local,,,,,,\n");
 		for (String folder : List.of("alpha", "beta")) {
 			variant(folder, "parent_local", "parent", 0, new JSONObject().put("module", "child_local"));
 			variant(folder, "child_local", "child", folder.equals("alpha") ? 11 : 22, null);
@@ -74,7 +74,7 @@ class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixtu
 	void nestedInlineModulesResolveLocalReferencesAndGlobalExternalModules() throws Exception {
 
 		hull("middle", "Middle", List.of("nested"));
-		legacy("nested", "1", "1,parent_local,,,,,,\n");
+		csvFleet("nested", "1", "1,parent_local,,,,,,\n");
 		JSONObject inline = new JSONObject().put("variantId", "inline").put("hullId", "middle")
 				.put("modules", new JSONObject().put("nested", "child_local"));
 		variant("nested", "parent_local", "parent", 0, new JSONObject().put("module", inline));
@@ -89,7 +89,7 @@ class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixtu
 	@Test
 	void cyclicAndDuplicateVariantsReportTheirSourcePaths() throws Exception {
 
-		legacy("cycle", "1", "1,parent_local,,,,,,\n");
+		csvFleet("cycle", "1", "1,parent_local,,,,,,\n");
 		variant("cycle", "parent_local", "parent", 0, new JSONObject().put("module", "child_local"));
 		variant("cycle", "child_local", "child", 0, new JSONObject().put("back", "parent_local"));
 		IOException cycle = assertThrows(IOException.class, () -> new BattleNext_FleetLegacyFolderLoader().load());
@@ -105,7 +105,7 @@ class BattleNext_FleetLegacyFolderLoaderTest extends BattleNext_TestFleetIoFixtu
 	@Test
 	void missingMembersAndModulesUseTheExistingErrorChannels() throws Exception {
 
-		legacy("missing", "1", "1,parent_local,,,,,,\n2,unknown_member,,,,,,\n");
+		csvFleet("missing", "1", "1,parent_local,,,,,,\n2,unknown_member,,,,,,\n");
 		variant("missing", "parent_local", "parent", 0, new JSONObject().put("module", "unknown_module"));
 		var fleet = new BattleNext_FleetLegacyFolderLoader().load().get(0);
 		assertEquals(1, fleet.getLoadErrors().size());

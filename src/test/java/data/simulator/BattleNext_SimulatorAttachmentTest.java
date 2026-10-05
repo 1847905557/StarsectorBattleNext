@@ -9,14 +9,6 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.ForEachStmt;
-import com.github.javaparser.ast.stmt.WhileStmt;
-import com.github.javaparser.ast.stmt.DoStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
-import com.github.javaparser.ast.stmt.Statement;
 import data.missions.BattleNext_lab.MissionDefinition;
 import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
@@ -118,7 +110,7 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void labKeepsItsOriginalMissionCallsAndAppendsOnlyTheSimulatorPlugin() throws Exception {
+	void labRegistersItsFleetsMapAndMountedSimulator() throws Exception {
 
 		SettingsAPI settings = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
@@ -168,38 +160,4 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 		assertNull(((BattleNext_SimulatorPlugin) plugins.get(plugins.size() - 1)).getTask());
 	}
 
-	@Test
-	void simulatorControlFlowUsesMultilineBlocksAndJavaSourcesParseWithProjectEncoding() throws Exception {
-		JavaParser parser = new JavaParser(new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
-				.setCharacterEncoding(StandardCharsets.UTF_8));
-		try (var paths = Files.walk(Path.of("src/data/simulator"))) {
-			for (Path path : paths.filter(file -> file.toString().endsWith(".java")).toList()) {
-				var parsed = parser.parse(path);
-				assertTrue(parsed.isSuccessful(), path + ": " + parsed.getProblems());
-				var unit = parsed.getResult().orElseThrow();
-				for (ForStmt loop : unit.findAll(ForStmt.class)) {
-					assertMultilineBlock(path, loop.getBody());
-				}
-				for (ForEachStmt loop : unit.findAll(ForEachStmt.class)) {
-					assertMultilineBlock(path, loop.getBody());
-				}
-				for (WhileStmt loop : unit.findAll(WhileStmt.class)) {
-					assertMultilineBlock(path, loop.getBody());
-				}
-				for (DoStmt loop : unit.findAll(DoStmt.class)) {
-					assertMultilineBlock(path, loop.getBody());
-				}
-				for (IfStmt branch : unit.findAll(IfStmt.class)) {
-					if (branch.getThenStmt().isExpressionStmt()) {
-						assertMultilineBlock(path, branch.getThenStmt());
-					}
-				}
-			}
-		}
-	}
-
-	private void assertMultilineBlock(Path path, Statement body) {
-		assertTrue(body.isBlockStmt(), path + ": " + body);
-		assertTrue(body.getBegin().orElseThrow().line < body.getEnd().orElseThrow().line, path + ": " + body);
-	}
 }

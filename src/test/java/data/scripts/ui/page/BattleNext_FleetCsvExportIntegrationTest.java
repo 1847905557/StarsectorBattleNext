@@ -11,12 +11,12 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 
-class BattleNext_LegacyFleetExportIntegrationTest extends BattleNext_TestFleetIoFixture {
+class BattleNext_FleetCsvExportIntegrationTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void editorExportsToANewDirectoryThenRefreshesTheFormalCatalog() throws Exception {
 
-		legacy("package", "01", "1,parent_local,,,,,,\n");
+		csvFleet("package", "01", "1,parent_local,,,,,,\n");
 		variant("package", "parent_local", "parent", 12, new JSONObject().put("module", "child_local"));
 		variant("package", "child_local", "child", 19, null);
 		var original = Files.readAllBytes(directory.resolve("tournament/package/parent_local.variant"));

@@ -1,12 +1,16 @@
 package data.model;
 
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.io.BattleNext_BattleReportSaver;
 import data.model.rule.BattleNext_RuleModel;
+import data.model.rule.BattleNext_RuleStore;
 import data.model.rule.io.BattleNext_RuleSaver;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.model.tournament.BattleNext_TournamentStore;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONObject;
@@ -17,8 +21,44 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 
 class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
+
+	@ParameterizedTest
+	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
+	void optionalResourceRootsPublishLoadedEmptyCatalogsWithoutReadingFiles(String kind) throws Exception {
+		var store = store(kind);
+		store.reload();
+		assertTrue(store.isLoaded());
+		assertTrue(store.getAll().isEmpty());
+		assertTrue(dataReads.isEmpty());
+		assertFalse(Files.exists(directory.resolve(root(kind))));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
+	void storesLoadFlatResourcesInPathOrderAndPreserveTheirContentAndOrigins(String kind) throws Exception {
+
+		hull("wolf", "Wolf", List.of());
+		var root = directory.resolve(root(kind));
+		Files.createDirectories(root.resolve("nested"));
+		for (String id : List.of("b", "a")) {
+			Files.writeString(root.resolve(id + ".json"), model(kind, id).toJson().toString(), StandardCharsets.UTF_8);
+		}
+		Files.writeString(root.resolve("nested/ignored.json"), "invalid", StandardCharsets.UTF_8);
+		Files.writeString(root.resolve("ignored.txt"), "invalid", StandardCharsets.UTF_8);
+		var store = store(kind);
+		store.reload();
+		assertTrue(store.isLoaded());
+		assertEquals(List.of("a", "b"), store.getAll().stream().map(BattleNext_BaseModel::getId).toList());
+		for (var entry : store.getAll()) {
+			assertEquals(BattleNext_LoadSource.STANDARD, entry.getSourceType());
+			assertEquals(root(kind) + "/" + entry.getId() + ".json", entry.getSourcePath());
+			assertEquals(model(kind, entry.getId()).toJson().toString(), entry.toJson().toString());
+		}
+		assertEquals(List.of("loadJSON:" + root(kind) + "/a.json", "loadJSON:" + root(kind) + "/b.json"), dataReads);
+	}
 
 	@ParameterizedTest
 	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
@@ -64,6 +104,15 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 		assertEquals("existing.json", model.getSourcePath());
 		assertEquals(BattleNext_LoadSource.STANDARD, model.getSourceType());
 		assertEquals("blocked", Files.readString(blocked, StandardCharsets.UTF_8));
+	}
+
+	private BattleNext_BaseStore<? extends BattleNext_JsonModel> store(String kind) {
+		return switch (kind) {
+			case "rule" -> new BattleNext_RuleStore();
+			case "tournament" -> new BattleNext_TournamentStore();
+			case "pin" -> new BattleNext_PinnedVariantStore();
+			default -> new BattleNext_BattleReportStore();
+		};
 	}
 
 	private BattleNext_JsonModel model(String kind, String id) throws Exception {

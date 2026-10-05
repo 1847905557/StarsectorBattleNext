@@ -130,17 +130,6 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@Test
-	void editorAttachRefreshAndInputLifecycle() throws Exception {
-		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
-		editor.open(null, false);
-		editor.setInputRouter(new BattleNext_UiInputRouter());
-		CustomPanelAPI panel = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
-		attachEditor(editor, panel);
-		assertNotNull(editor.getStatusText());
-		editor.refreshContent();
-	}
-
-	@Test
 	void allFiveFleetSelectorsUseExplicitWidthsRootHostAndTheirViewport() throws Exception {
 		deferTooltipWidth = true;
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());

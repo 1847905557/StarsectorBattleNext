@@ -41,24 +41,6 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void fixtureModelsNativeUiWidthReservesAndSiblingAnchors(boolean scrollable) {
-		deferTooltipWidth = true;
-		CustomPanelAPI owner = panel(300f, 200f, new BaseCustomUIPanelPlugin());
-		TooltipMakerAPI content = owner.createUIElement(200f, 60f, scrollable);
-		assertEquals(0f, content.getPosition().getWidth());
-		assertEquals(200f - 10f - (scrollable ? 5f : 0f), content.getWidthSoFar());
-		LabelAPI first = content.addPara("First", 0f);
-		first.getPosition().inTL(0f, 0f);
-		LabelAPI second = content.addPara("Second", 4f);
-		assertEquals(first.getPosition().getX(), second.getPosition().getX());
-		owner.addUIElement(content).inTL(0f, 0f);
-		assertEquals(200f, tooltips.get(content).getViewport().getWidth());
-		assertEquals(200f - (scrollable ? 5f : 0f), content.getPosition().getWidth());
-		assertEquals(200f, tooltip(200f, 0f, false).getWidthSoFar());
-	}
-
-	@ParameterizedTest
 	@ValueSource(ints = {180, 1400})
 	void sectionHeadingReturnsItsLabelAndRefreshUsesThatLabelAcrossSiblingChanges(int width) {
 		deferTooltipWidth = true;

@@ -18,17 +18,11 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.function.Function;
 
 public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin {
 	private static final int MESSAGE_PRIORITY = 0;
 
 	enum SaveOutcome { RETAINED, NOT_RETAINED }
-
-	@FunctionalInterface
-	interface ReportWriter {
-		SaveOutcome save(BattleNext_BattleReportModel report) throws IOException, JSONException;
-	}
 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private final BattleNext_Match match;
@@ -36,28 +30,18 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	private final String playerName;
 	private final String enemyName;
 	private final String marker;
-	private final ReportWriter writer;
-	private final Function<String, String> messages;
+	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private CombatEngineAPI combatEngine;
 	private boolean recorded;
 
 	public BattleNext_BattleResultRecorder(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_Match match,
 			BattleNext_BattleSourceProvider provider, String playerName, String enemyName, String marker) {
-		this(scorekeeper, match, provider, playerName, enemyName, marker, null, null);
-	}
-
-	BattleNext_BattleResultRecorder(BattleNext_ScorekeeperPlugin scorekeeper, BattleNext_Match match,
-			BattleNext_BattleSourceProvider provider, String playerName, String enemyName, String marker,
-			ReportWriter writer, Function<String, String> messages) {
 		this.scorekeeper = scorekeeper;
 		this.match = match;
 		this.provider = provider;
 		this.playerName = playerName;
 		this.enemyName = enemyName;
 		this.marker = marker;
-		this.writer = writer == null ? this::record : writer;
-		this.messages = messages == null
-				? BattleNext_I18nSection.getInstance("Report", "BattleNext_report_")::get : messages;
 	}
 
 	@Override
@@ -74,17 +58,17 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		BattleNext_Logger.operationStarted(BattleNext_BattleResultRecorder.class, "battle.report.record",
 				BattleNext_Logger.fields().put("report", report).put("match", match).build());
 		try {
-			outcome = writer.save(report);
+			outcome = record(report);
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_BattleResultRecorder.class, "battle.report.record",
 				BattleNext_Logger.fields().put("report", report).put("match", match).build(), exception);
-			combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, messages.apply("save_failed"));
+			combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, reportStrings.get("save_failed"));
 			return;
 		}
 		BattleNext_Logger.operationSucceeded(BattleNext_BattleResultRecorder.class, "battle.report.record",
 				BattleNext_Logger.fields().put("report", report).put("match", match).put("outcome", outcome).build());
 		String message = outcome == SaveOutcome.RETAINED
-				? String.format(messages.apply("generated"), report.getName()) : messages.apply("not_retained");
+				? reportStrings.format("generated", report.getName()) : reportStrings.get("not_retained");
 		combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, message);
 	}
 
@@ -99,17 +83,15 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		String enemyLabel = enemyName == null || enemyName.isBlank() ? match.getEnemy() : enemyName;
 		if (report.getName().isEmpty()) report.setName(defaultName(playerLabel, enemyLabel, marker, report.getCreatedAt()));
 		BattleNext_TournamentModel tournament = provider == null ? null : provider.getActiveTournament();
-		int keepCount = -1;
 		if (tournament == null) {
 			return saveStandalone(report) ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
-		} else {
-			BattleNext_TournamentEngine engine = provider.getTournamentEngine();
-			engine.recordRound(tournament, match.getId(), resolveWinner(match, report.getWinner()), report);
-			BattleNext_TournamentStore store = provider.getTournamentStore();
-			store.save(tournament);
 		}
+		BattleNext_TournamentEngine engine = provider.getTournamentEngine();
+		engine.recordRound(tournament, match.getId(), resolveWinner(match, report.getWinner()), report);
+		BattleNext_TournamentStore store = provider.getTournamentStore();
+		store.save(tournament);
 		BattleNext_BattleSignals.markPendingResult();
-		return outcomeFor(tournament != null, keepCount);
+		return SaveOutcome.RETAINED;
 	}
 
 	public static boolean saveStandalone(BattleNext_BattleReportModel report) throws IOException, JSONException {
@@ -126,10 +108,6 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		}
 		BattleNext_BattleSignals.markPendingResult();
 		return reports.subList(0, Math.min(keepCount, reports.size())).stream().anyMatch(retained -> retained.getId().equals(report.getId()));
-	}
-
-	static SaveOutcome outcomeFor(boolean tournament, int keepCount) {
-		return tournament || keepCount > 0 ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
 	}
 
 	public static String defaultName(String playerName, String enemyName, String marker, long createdAt) {

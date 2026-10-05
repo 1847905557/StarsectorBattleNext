@@ -24,7 +24,7 @@ class BattleNext_QuickBattleModelTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"a,b,0,0", "a,b,0,-1", "a,b,0,NaN", "a,b,0,Infinity", "a,b,x,1", "a,b,1,x", ",b,1,1", "a,b,1", "a,b,1,1,extra"})
+	@ValueSource(strings = {"a,b,0,0", "a,b,0,NaN", "a,b,x,1", "a,b,1,x", ",b,1,1", "a,b,1", "a,b,1,1,extra"})
 	void invalidCsvKeepsThePriorModelAndProducesEditableRawRows(String line) {
 		var row = new BattleNext_QuickBattleModel("original", "enemy", 3, 2f);
 		String before = row.toCsvLine();

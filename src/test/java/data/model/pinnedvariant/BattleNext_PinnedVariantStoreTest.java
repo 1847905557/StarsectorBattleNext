@@ -90,12 +90,13 @@ class BattleNext_PinnedVariantStoreTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void catalogSortUsesNameIdAndPath() {
-		var a = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("z", "Same", "b", "", null, "");
-		var b = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("a", "Same", "b", "", null, "");
-		var c = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("c", "Same", "a", "", null, "");
-		var d = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("d", "Alpha", "z", "", null, "");
-		assertEquals(List.of(d, c, b, a), BattleNext_PinnedVariantPage.sorted(List.of(a, b, c, d)));
+	void catalogOrdersNamesThenIdentitiesThenPathsWithoutChangingTheInput() {
+		var pathLast = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("z", "Same", "b", "", null, "");
+		var pathFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("a", "Same", "b", "", null, "");
+		var identityFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("c", "Same", "a", "", null, "");
+		var nameFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("d", "Alpha", "z", "", null, "");
+		var entries = List.of(pathLast, pathFirst, identityFirst, nameFirst);
+		assertEquals(List.of(nameFirst, identityFirst, pathFirst, pathLast), BattleNext_PinnedVariantPage.sorted(entries));
+		assertEquals(List.of(pathLast, pathFirst, identityFirst, nameFirst), entries);
 	}
-
 }

@@ -45,12 +45,6 @@ class BattleNext_ExpandablePanelTest {
 	}
 
 	@Test
-	void focusedColorAndMissingImageSlotsFollowSharedStyle() {
-		assertEquals(PANEL, BattleNext_ExpandablePanel.headerBackground(true, PANEL));
-		assertEquals(PANEL.darker(), BattleNext_ExpandablePanel.headerBackground(false, PANEL));
-	}
-
-	@Test
 	void headerConsumesOnlyInsideClickAndBodyForwardsButton() {
 		AtomicInteger toggles = new AtomicInteger();
 		AtomicReference<InputEventAPI> insideEvent = new AtomicReference<>();

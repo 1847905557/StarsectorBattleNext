@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-class BattleNext_FleetLegacyPackageIntegrationTest extends BattleNext_TestFleetIoFixture {
+class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFixture {
 
 	@ParameterizedTest
 	@ValueSource(ints = {3, 7})
@@ -45,7 +45,7 @@ class BattleNext_FleetLegacyPackageIntegrationTest extends BattleNext_TestFleetI
 					String.join(",", input.getTags())).stream().map(BattleNext_CsvLine::escape)
 					.reduce((left, right) -> left + "," + right).orElseThrow());
 		}
-		legacy(folder, number, String.join("\n", memberRows) + "\n");
+		csvFleet(folder, number, String.join("\n", memberRows) + "\n");
 		String metadataPath = "tournament/" + folder + "/player" + number + "_data.csv";
 		String membersPath = "tournament/" + folder + "/player" + number + "_fleet.csv";
 		write(metadataPath, "name,author,skills,tags\n" + List.of(name, author, String.join(",", skills), String.join(",", tags))
@@ -100,7 +100,7 @@ class BattleNext_FleetLegacyPackageIntegrationTest extends BattleNext_TestFleetI
 		}
 		standard("alpha", "alpha", "parent_variant");
 		standard("beta", "beta", "parent_variant");
-		legacy("", "42", "1,child_variant,,,,,,\n");
+		csvFleet("", "42", "1,child_variant,,,,,,\n");
 		List<List<String>> quickBattles = List.of(List.of("alpha", "beta"), List.of("beta", "alpha"),
 				List.of(id, "alpha"), List.of("alpha", id));
 		write("tournament/quick_battle.csv", "player,enemy,map,size\n" + quickBattles.stream()

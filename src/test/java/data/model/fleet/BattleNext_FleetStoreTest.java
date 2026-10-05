@@ -17,7 +17,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void managedDeletionReleasesItsDirectoryAndLegacyDeletionPreservesTheSource() throws Exception {
-		legacy("", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		standard("managed", "managed", "parent_variant");
 		var store = new BattleNext_FleetStore();
 		store.reload();
@@ -43,7 +43,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	@Test
 	void legacyAndStandardConflictNamesBothSourcesAndKeepsThePreviousCatalog() throws Exception {
 
-		legacy("", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		standard("standard", "ab_player1", "parent_variant");
@@ -58,8 +58,8 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void rootAndFolderConflictUsesTheSameLegacyIdentity() throws Exception {
-		legacy("", "01", "1,parent_variant,,,,,,\n");
-		legacy("package", "01", "1,parent_variant,,,,,,\n");
+		csvFleet("", "01", "1,parent_variant,,,,,,\n");
+		csvFleet("package", "01", "1,parent_variant,,,,,,\n");
 		IOException failure = assertThrows(IOException.class, new BattleNext_FleetStore()::reload);
 		assertTrue(failure.getMessage().contains("ab_player01"));
 		assertTrue(failure.getMessage().contains("tournament/player01_data.csv"));
@@ -68,8 +68,8 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void leadingZerosKeepTheExistingDistinctNumberStrings() throws Exception {
-		legacy("", "01", "1,parent_variant,,,,,,\n");
-		legacy("package", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("", "01", "1,parent_variant,,,,,,\n");
+		csvFleet("package", "1", "1,parent_variant,,,,,,\n");
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		assertEquals(2, store.getAll().size());
@@ -79,8 +79,8 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void distinctPackagesAndStandardDirectoriesReportDuplicateIds() throws Exception {
-		legacy("alpha", "1", "1,parent_variant,,,,,,\n");
-		legacy("beta", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("alpha", "1", "1,parent_variant,,,,,,\n");
+		csvFleet("beta", "1", "1,parent_variant,,,,,,\n");
 		IOException legacyFailure = assertThrows(IOException.class, new BattleNext_FleetStore()::reload);
 		assertTrue(legacyFailure.getMessage().contains("tournament/alpha/player1_data.csv"));
 		assertTrue(legacyFailure.getMessage().contains("tournament/beta/player1_data.csv"));
@@ -94,8 +94,8 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	@Test
 	void exportPreservesEveryLegacyByteAndReloadsCompleteLocalModules() throws Exception {
 
-		legacy("package", "1", "1,parent_local,,,,,,\n");
-		legacy("other", "2", "1,parent_variant,,,,,,\n");
+		csvFleet("package", "1", "1,parent_local,,,,,,\n");
+		csvFleet("other", "2", "1,parent_variant,,,,,,\n");
 		variant("package", "parent_local", "parent", 4, new JSONObject().put("module", "child_local"));
 		variant("package", "child_local", "child", 27, null);
 		write("tournament/package/使用须知.txt", "说明内容\n");

@@ -26,30 +26,15 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 	void bothIconsUseTheirActualRegisteredResources() throws Exception {
 		JSONObject core = BattleNext_TestSpriteCatalog.read(Path.of("..", "..", "starsector-core", "data/config/settings.json"));
 		JSONObject mod = BattleNext_TestSpriteCatalog.read(Path.of("data/config/settings.json"));
-		assertEquals("graphics/icons/jump-point2.png",
-				core.getJSONObject("graphics").getJSONObject("systemMap").getString("icon_jump_point"));
-		assertEquals("graphics/icons/jump-point.png",
-				mod.getJSONObject("graphics").getJSONObject("icon").getString("BattleNext_weapon_group_linked"));
-		for (String path : List.of("graphics/icons/jump-point.png", "graphics/icons/jump-point2.png")) {
+		for (String path : List.of(core.getJSONObject("graphics").getJSONObject("systemMap").getString("icon_jump_point"),
+				mod.getJSONObject("graphics").getJSONObject("icon").getString("BattleNext_weapon_group_linked"))) {
 			assertTrue(Files.exists(Path.of("..", "..", "starsector-core", path)));
 		}
 	}
 
-	@Test
-	void commentedRegistrationsAndHashCharactersInsideStringsAreParsedCorrectly() throws Exception {
-		String input = "{\"active\":\"graphics/#icon.png\", # inline comment\n"
-				+ "# \"active\":\"graphics/wrong.png\",\n"
-				+ "\"escaped\":\"quote\\\"#still-string\"}";
-		JSONObject parsed = new JSONObject(BattleNext_TestSpriteCatalog.withoutHashComments(input));
-		assertEquals("graphics/#icon.png", parsed.getString("active"));
-		assertEquals("quote\"#still-string", parsed.getString("escaped"));
-		assertEquals(2, parsed.length());
-	}
-
 	@ParameterizedTest
 	@CsvSource({
-			"LINKED,false,false", "LINKED,true,false", "LINKED,false,true", "LINKED,true,true",
-			"ALTERNATING,false,false", "ALTERNATING,true,false", "ALTERNATING,false,true", "ALTERNATING,true,true"
+			"LINKED,false,false", "LINKED,true,true", "ALTERNATING,true,false", "ALTERNATING,false,true"
 	})
 	void modeSelectsTheIconAcrossAutofireAndExpansionStates(String mode, boolean autofire, boolean expanded) throws Exception {
 

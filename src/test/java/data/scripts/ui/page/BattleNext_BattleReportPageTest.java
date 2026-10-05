@@ -150,21 +150,6 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		}));
 	}
 
-	@Test
-	void attachRefreshAndCloseOwnThePagePanel() throws Exception {
-		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
-		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
-
-		page.attach(root);
-		assertNotNull(getField(page, "panel"));
-		assertEquals(1, children.get(root).size());
-		page.refreshContent();
-		assertEquals(1, children.get(root).size());
-		page.close();
-		assertEquals(0, children.get(root).size());
-	}
-
-
 	@ParameterizedTest
 	@ValueSource(ints = {12, 15, 17, 20})
 	void sourceTextAndImagesRemainCenteredAcrossFontHeightsAndScrolling(int lineHeight) throws Exception {

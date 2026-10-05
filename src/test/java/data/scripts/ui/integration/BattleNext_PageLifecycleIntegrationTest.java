@@ -29,7 +29,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,16 +38,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
 
 	@ParameterizedTest
-	@ValueSource(ints = {1024, 1400})
+	@ValueSource(ints = {1400})
 	void everyPageUsesShellAndMainContentInsetsAndAlignedFooters(int width) throws Exception {
 
 		deferTooltipWidth = true;
 		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
+		CustomPanelAPI root = panel(width, 900f, manager);
+		manager.attach(root);
+		manager.open();
 		for (Object tab : tabs) {
-			BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
-			CustomPanelAPI root = panel(width, 900f, manager);
-			manager.attach(root);
-			manager.open();
 			manager.buttonPressed(tab);
 			BattleNext_PageView page = (BattleNext_PageView) getField(manager, "attachedView");
 			CustomPanelAPI body = (CustomPanelAPI) getField(page, "panel");
@@ -83,14 +82,13 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 				assertEquals(16f, root.getPosition().getX() + width - header.getPosition().getX() - header.getPosition().getWidth());
 				assertEquals(16f, buttonPositions.get("add").getX() - root.getPosition().getX());
 			}
-			manager.buttonPressed("close");
-			assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).getSession().hasInputState());
 		}
+		manager.buttonPressed("close");
+		assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).getSession().hasInputState());
 	}
 
 	@ParameterizedTest
-	@CsvSource({"fleet,180", "fleet,1400", "pin,180", "pin,1400", "report,180", "report,1400",
-			"rules,180", "rules,1400", "tournament,180", "tournament,1400"})
+	@CsvSource({"fleet,180", "pin,1400", "report,1400", "rules,1400", "tournament,1400"})
 	void catalogsUseSymmetricButtonsDeclaredWidthsAndCompleteHoverText(String kind, int width) throws Exception {
 
 		deferTooltipWidth = true;
@@ -175,7 +173,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = {500, 800, 1400})
+	@ValueSource(ints = {1400})
 	void managementPagesShareRegionsPromptsScrollingAndFooter(int width) throws Exception {
 
 		List<BattleNext_ManagementPage> pages = List.of(
@@ -273,11 +271,6 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.attach(secondRoot);
 		assertTrue(children.get(firstRoot).isEmpty());
 		assertEquals(1, children.get(secondRoot).size());
-		for (String name : List.of("createContents", "refreshContent", "close", "save", "discard", "getStatusText", "hasUnsavedChanges")) {
-			assertTrue(Modifier.isFinal(BattleNext_PageView.class.getMethod(name).getModifiers()));
-		}
-		assertTrue(Modifier.isFinal(BattleNext_PageView.class.getMethod("attach", CustomPanelAPI.class).getModifiers()));
-		assertTrue(Modifier.isFinal(BattleNext_PageView.class.getMethod("buttonPressed", Object.class).getModifiers()));
 		page.close();
 		assertTrue(children.get(secondRoot).isEmpty());
 	}

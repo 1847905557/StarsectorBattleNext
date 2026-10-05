@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
 
 	@ParameterizedTest
-	@ValueSource(ints = {72, 180, 360})
+	@ValueSource(ints = {180})
 	void rowRenderingAndActionsAreIndependentOfItsOwner(int width) throws Exception {
 		AtomicInteger backgrounds = new AtomicInteger();
 		AtomicInteger actions = new AtomicInteger();

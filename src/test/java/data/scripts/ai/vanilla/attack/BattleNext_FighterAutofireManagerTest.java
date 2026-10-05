@@ -142,12 +142,6 @@ class BattleNext_FighterAutofireManagerTest {
 	}
 
 	@Test
-	void baseThreatFactorIsPointEight() {
-		Harness harness = new Harness();
-		assertEquals(0.8f, harness.manager().getThreatFactor(null));
-	}
-
-	@Test
 	void largerFasterThreatRaisesRuntimeThreshold() throws Exception {
 		Harness baseline = new Harness();
 		baseline.autofiring = true;
@@ -156,7 +150,9 @@ class BattleNext_FighterAutofireManagerTest {
 		baseline.evaluation.setUsesEnergy(true);
 		baseline.evaluation.setFluxPerSecond(300f);
 		baseline.weapon(WeaponType.ENERGY, 0, false, false);
-		baseline.manager().advance(1f, null, null);
+		var baselineManager = baseline.manager();
+		assertEquals(0.8f, baselineManager.getThreatFactor(null));
+		baselineManager.advance(1f, null, null);
 		assertTrue(baseline.autofiring);
 
 		Harness threatened = new Harness();

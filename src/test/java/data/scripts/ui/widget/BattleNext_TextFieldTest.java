@@ -1,29 +1,32 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.test.fixture.BattleNext_TestUiFixture;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.input.Keyboard;
-import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-class BattleNext_TextFieldTest {
+class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 	private final List<String> sounds = new ArrayList<>();
 	private final BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+	private BattleNext_TextField inputField;
 
 	@AfterEach
 	void clearFocus() {
+		if (inputField != null) {
+			inputField.close();
+		}
 		router.clear();
 	}
 
@@ -225,38 +228,13 @@ class BattleNext_TextFieldTest {
 	}
 
 	private BattleNext_TextField field() throws Exception {
-		PositionAPI position = proxy(PositionAPI.class, (name, args) -> switch (name) {
-			case "getX", "getY" -> 0f;
-			case "getWidth" -> 300f;
-			case "getHeight" -> 28f;
-			case "containsEvent" -> true;
-			default -> null;
-		});
-		LabelAPI label = proxy(LabelAPI.class, (name, args) -> switch (name) {
-			case "computeTextWidth" -> ((String) args[0]).length() * 8f;
-			case "getPosition" -> position;
-			default -> null;
-		});
-		CustomPanelAPI panel = proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
-			case "getPosition" -> position;
-			default -> null;
-		});
-		Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-		unsafeField.setAccessible(true);
-		Unsafe unsafe = (Unsafe) unsafeField.get(null);
-		BattleNext_TextField field = (BattleNext_TextField) unsafe.allocateInstance(BattleNext_TextField.class);
-		setField(field, "session", router.getSession());
-		setField(field, "panel", panel);
-		setField(field, "textLabel", label);
-		setField(field, "width", 300f);
-		setField(field, "height", 28f);
-		setField(field, "pad", 3f);
-		setField(field, "maxChars", -1);
-		setField(field, "text", "");
-		setField(field, "undoText", "");
-		setField(field, "handleCtrlV", true);
-		setField(field, "soundSink", (Consumer<String>) sounds::add);
-		return field;
+		CustomPanelAPI owner = panel(300f, 28f, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI host = owner.createUIElement(300f, 28f, false);
+		inputField = new BattleNext_TextField(router, owner, 300f, 28f, host);
+		setField(inputField, "soundSink", (Consumer<String>) sounds::add);
+		inputField.attach(host, owner);
+		owner.addUIElement(host).inTL(0f, 0f);
+		return inputField;
 	}
 
 	private InputEventAPI pointer() {
@@ -297,18 +275,4 @@ class BattleNext_TextFieldTest {
 		});
 	}
 
-	private interface Call {
-		Object invoke(String name, Object[] args);
-	}
-
-	private <T> T proxy(Class<T> type, Call call) {
-		return type.cast(Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{type},
-				(instance, method, args) -> {
-					if ("hashCode".equals(method.getName())) return System.identityHashCode(instance);
-					if ("equals".equals(method.getName())) return instance == args[0];
-					Object result = call.invoke(method.getName(), args);
-					if (result == null && method.getReturnType() == boolean.class) return false;
-					return result;
-				}));
-	}
 }

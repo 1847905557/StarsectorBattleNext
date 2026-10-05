@@ -494,17 +494,13 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		}
 
 		protected Object call(String method, Object[] args) {
-			float x = left + (parent == null ? 0f : parent.getX()
-					+ (middleX ? (parent.getWidth() - width) * 0.5f : 0f));
-			float y = parent == null ? 0f - top : parent.getY()
-					+ (middleY ? (parent.getHeight() - height) * 0.5f : parent.getHeight() - height - top);
 			return switch (method) {
-				case "getX" -> x;
-				case "getY" -> y;
+				case "getX" -> horizontal();
+				case "getY" -> vertical();
 				case "getWidth" -> width;
 				case "getHeight" -> height;
-				case "getCenterX" -> x + width * 0.5f;
-				case "getCenterY" -> y + height * 0.5f;
+				case "getCenterX" -> horizontal() + width * 0.5f;
+				case "getCenterY" -> vertical() + height * 0.5f;
 				case "setSize" -> {
 					width = (Float) args[0];
 					height = (Float) args[1];
@@ -531,11 +527,23 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				case "containsEvent" -> {
 					InputEventAPI event = (InputEventAPI) args[0];
+					float x = horizontal();
+					float y = vertical();
 					yield event.getX() >= x && event.getX() < x + width
 							&& event.getY() >= y && event.getY() < y + height;
 				}
 				default -> null;
 			};
+		}
+
+		private float horizontal() {
+			return left + (parent == null ? 0f : parent.getX()
+					+ (middleX ? (parent.getWidth() - width) * 0.5f : 0f));
+		}
+
+		private float vertical() {
+			return parent == null ? 0f - top : parent.getY()
+					+ (middleY ? (parent.getHeight() - height) * 0.5f : parent.getHeight() - height - top);
 		}
 	}
 

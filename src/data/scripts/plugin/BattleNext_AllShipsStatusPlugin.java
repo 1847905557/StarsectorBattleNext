@@ -36,17 +36,9 @@ public class BattleNext_AllShipsStatusPlugin extends BaseEveryFrameCombatPlugin 
 		void clear();
 	}
 
-	private final Access access;
+	private final Access access = new VanillaAccess();
 	private CombatEngineAPI engine;
 	private boolean bound;
-
-	public BattleNext_AllShipsStatusPlugin() {
-		this(new VanillaAccess());
-	}
-
-	BattleNext_AllShipsStatusPlugin(Access access) {
-		this.access = access;
-	}
 
 	@Override
 	public void init(CombatEngineAPI engine) {

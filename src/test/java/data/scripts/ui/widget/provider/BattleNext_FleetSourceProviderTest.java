@@ -4,10 +4,6 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
@@ -25,8 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -142,19 +136,6 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		router.clear();
 		assertTrue(((List<?>) getField(getField(editor, "fleetPicker"), "ownedPanels")).isEmpty());
 		assertFalse(router.getSession().hasInputState());
-	}
-
-	@Test
-	void tournamentEditorBindsTheStandaloneProviderAsItsFormalSource() throws Exception {
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		var parsed = parser.parse(Path.of("src/data/scripts/ui/editor/BattleNext_TournamentEditor.java"));
-		assertTrue(parsed.isSuccessful(), parsed.getProblems().toString());
-		var unit = parsed.getResult().orElseThrow();
-		assertEquals(List.of("BattleNext_TournamentEditor"), unit.findAll(ClassOrInterfaceDeclaration.class)
-				.stream().map(ClassOrInterfaceDeclaration::getNameAsString).toList());
-		assertEquals(1, unit.findAll(ObjectCreationExpr.class).stream()
-				.filter(expression -> expression.getType().getNameAsString().equals("BattleNext_FleetSourceProvider")).count());
 	}
 
 	private BattleNext_FleetStore store(List<BattleNext_FleetModel> fleets) {

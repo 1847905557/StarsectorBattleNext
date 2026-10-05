@@ -1,6 +1,5 @@
 package data.scripts.tournament;
 
-import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -18,27 +17,6 @@ import java.util.Map;
 class BattleNext_TournamentEngineTest {
 
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
-
-	@Test
-	void jsonUsesNewFieldsAndRejectsUnknownEnums() throws Exception {
-		BattleNext_TournamentModel tournament = tournament(3, TournamentBracketType.DOUBLE_ELIMINATION, 4);
-		engine.start(tournament);
-		JSONObject json = tournament.toJson();
-		assertEquals(1, json.getInt("formatVersion"));
-		assertEquals("DOUBLE_ELIMINATION", json.getString("bracketType"));
-		assertEquals(4, json.getInt("boCount"));
-		assertEquals(3, json.getInt("maxFleet"));
-		assertFalse(json.has("matchFormat"));
-		assertFalse(json.has("teams"));
-		BattleNext_TournamentModel restored = new BattleNext_TournamentModel();
-		restored.fromJson(json);
-		assertEquals(tournament.getMatches().size(), restored.getMatches().size());
-		json.put("bracketType", "UNKNOWN");
-		assertThrows(IllegalArgumentException.class, () -> restored.fromJson(json));
-		json.put("bracketType", "DOUBLE_ELIMINATION");
-		json.remove("boCount");
-		assertThrows(Exception.class, () -> restored.fromJson(json));
-	}
 
 	@Test
 	void drawAndSideSwapUseOrderedRounds() {
@@ -192,23 +170,6 @@ class BattleNext_TournamentEngineTest {
 		BattleNext_TournamentModel tournament = tournament(5, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		tournament.setMaxFleet(4);
 		assertThrows(IllegalArgumentException.class, () -> engine.start(tournament));
-	}
-
-	@Test
-	void quickBattleCsvKeepsSizeColumnAsMapScale() {
-		BattleNext_QuickBattleModel battle = BattleNext_QuickBattleModel.fromCsvRow("F1,F2,3,2.5");
-		assertNotNull(battle);
-		assertEquals(2.5f, battle.getMapScale());
-		assertEquals("F1,F2,3,2.5", battle.toCsvLine());
-	}
-
-	@Test
-	void rawCommentEditDoesNotDuplicateCommentPrefix() {
-		BattleNext_QuickBattleModel comment = BattleNext_QuickBattleModel.parseLine("# 文本", false);
-		assertEquals(BattleNext_QuickBattleModel.QuickBattleRowType.RAW, comment.getRowType());
-		assertEquals("# 文本", comment.getRawContent());
-		comment.promoteRaw("# 文本1");
-		assertEquals("# 文本1", comment.toSourceLine());
 	}
 
 	@Test

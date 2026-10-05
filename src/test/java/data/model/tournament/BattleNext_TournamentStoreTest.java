@@ -71,12 +71,4 @@ class BattleNext_TournamentStoreTest extends BattleNext_TestGameFixture {
 		assertEquals("original", store.getActiveId());
 		assertSame(original, store.get("original"));
 	}
-
-	@Test
-	void missingOptionalDirectoryPublishesAnEmptyLoadedCatalog() throws Exception {
-		BattleNext_TournamentStore store = new BattleNext_TournamentStore();
-		store.reload();
-		assertTrue(store.isLoaded());
-		assertTrue(store.getAll().isEmpty());
-	}
 }

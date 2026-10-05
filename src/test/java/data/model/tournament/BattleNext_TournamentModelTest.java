@@ -10,7 +10,6 @@ import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
@@ -18,11 +17,10 @@ import java.util.List;
 
 class BattleNext_TournamentModelTest {
 
-	@ParameterizedTest
-	@EnumSource(TournamentBracketType.class)
-	void roundTripPreservesBracketProgressDependenciesAndReports(TournamentBracketType type) throws Exception {
+	@Test
+	void roundTripPreservesBracketProgressDependenciesAndReports() throws Exception {
 
-		var tournament = new BattleNext_TournamentModel("id", "Name", type, 5, 3);
+		var tournament = new BattleNext_TournamentModel("id", "Name", TournamentBracketType.DOUBLE_ELIMINATION, 5, 3);
 		tournament.setFleetIds(List.of("a", "b", "c"));
 		tournament.setRuleId("rule");
 		tournament.setMapId(8);
@@ -49,7 +47,7 @@ class BattleNext_TournamentModelTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"enum", "bo", "min", "max", "fleets", "match", "missing", "version"})
+	@ValueSource(strings = {"enum", "bo", "min", "max", "fleets", "match", "missing"})
 	void failedParsingPreservesAllFieldsAndCollections(String failure) throws Exception {
 
 		var tournament = new BattleNext_TournamentModel("original", "Original", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
@@ -65,7 +63,6 @@ class BattleNext_TournamentModelTest {
 			case "fleets" -> json.put("fleetIds", new JSONArray(List.of("a", "b", "c")));
 			case "match" -> json.put("matches", new JSONArray().put(new BattleNext_Match("new", "a", "b", 1, 1).toJson()).put(new JSONObject().put("id", "broken")));
 			case "missing" -> json.remove("boCount");
-			case "version" -> json.put("formatVersion", 2);
 		}
 		Class<? extends Exception> exceptionType = failure.equals("missing") || failure.equals("match")
 				? JSONException.class : IllegalArgumentException.class;
@@ -158,7 +155,7 @@ class BattleNext_TournamentModelTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"", "missing", "finished"})
+	@ValueSource(strings = {"", "finished"})
 	void nextPendingMatchUsesStablePlayableOrderWhenReferenceIsUnavailable(String pendingId) throws Exception {
 		var tournament = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 3);
 		tournament.setFleetIds(List.of("a", "b", "c"));

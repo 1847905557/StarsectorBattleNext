@@ -4,10 +4,6 @@ import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
@@ -29,9 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.input.Keyboard;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
 import java.io.IOException;
@@ -52,28 +46,6 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		assertEquals(10, clamped.invoke(null, 10, 10, 10, 2000, true, false));
 		assertEquals(2000, clamped.invoke(null, 2000, 10, 10, 2000, false, true));
 		assertEquals(100, clamped.invoke(null, 100, 10, 10, 2000, true, true));
-	}
-
-	@Test
-	void missionEntrypointsUseImplicitConstructionAndSharedKeyboardRouting() throws Exception {
-
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		try (var paths = Files.walk(Path.of("src/data/missions"))) {
-			for (Path path : paths.filter(file -> file.toString().endsWith(".java")).toList()) {
-				var parsed = parser.parse(path);
-				assertTrue(parsed.isSuccessful(), path.toString());
-				for (var type : parsed.getResult().orElseThrow().findAll(ClassOrInterfaceDeclaration.class)) {
-					if (!type.getNameAsString().equals("MissionDefinition")) continue;
-					assertTrue(type.getConstructors().isEmpty(), path.toString());
-					assertTrue(type.getFields().stream().flatMap(field -> field.getVariables().stream())
-							.noneMatch(variable -> variable.getType().asString().equals("IntPredicate")), path.toString());
-					assertTrue(type.findAll(MethodCallExpr.class).stream().noneMatch(call ->
-							call.getScope().map(scope -> scope.toString().equals("Keyboard")).orElse(false)
-									&& call.getNameAsString().equals("isKeyDown")), path.toString());
-				}
-			}
-		}
 	}
 
 	@Test

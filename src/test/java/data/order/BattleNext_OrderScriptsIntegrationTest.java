@@ -17,22 +17,30 @@ import java.util.List;
 class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture {
 
 	@ParameterizedTest
-	@CsvSource({"targetHp,4000,1", "targetHp,1,0", "targetHp,50%,1", "targetHp,0,0",
-			"targetFlux,2000,1", "targetFlux,1,0", "targetFlux,20%,1", "targetFlux,150%,1",
-			"selfHp,4000,1", "selfHp,1,0", "selfHp,50%,1", "selfHp,0,0",
-			"selfFlux,2000,1", "selfFlux,1,0", "selfFlux,20%,1", "selfFlux,150%,1"})
-	void singleBoundsKeepTheirDeclaredUnitAndIncludeUpperEndpoint(String id, String bound, int count) {
-		ShipState ship = world.ship(0, 0f);
-		assertEquals(count, filtered(id, List.of(bound), ship, List.of(ship.getApi())).size());
-	}
-
-	@ParameterizedTest
 	@ValueSource(strings = {"targetHp", "selfHp", "targetFlux", "selfFlux"})
-	void zeroUpperBoundMatchesExactlyZero(String id) {
-		ShipState ship = world.ship(0, 0f);
-		ship.setHp(0f, 0f);
-		ship.setFlux(0f, 0f);
-		assertEquals(List.of(ship.getApi()), filtered(id, List.of("0"), ship, List.of(ship.getApi())));
+	void singleBoundsUseTheDeclaredReceiverAndUnitWithInclusiveZeroAndUpperEndpoints(String id) {
+
+		ShipState source = world.ship(0, 0f);
+		ShipState target = world.ship(1, 10f);
+		source.setHp(4000f, 0.5f);
+		source.setFlux(2000f, 0.2f);
+		target.setHp(1000f, 0.1f);
+		target.setFlux(1000f, 0.1f);
+		List<CombatEntityAPI> candidates = List.of(target.getApi());
+		int absolute = id.startsWith("self") ? id.endsWith("Hp") ? 4000 : 2000 : 1000;
+		int percent = id.startsWith("self") ? id.endsWith("Hp") ? 50 : 20 : 10;
+		assertEquals(candidates, filtered(id, List.of(Integer.toString(absolute)), source, candidates));
+		assertTrue(filtered(id, List.of(Integer.toString(absolute - 1)), source, candidates).isEmpty());
+		assertEquals(candidates, filtered(id, List.of(percent + "%"), source, candidates));
+		assertTrue(filtered(id, List.of((percent - 1) + "%"), source, candidates).isEmpty());
+		assertEquals(candidates, filtered(id, List.of("150%"), source, candidates));
+		assertTrue(filtered(id, List.of("0"), source, candidates).isEmpty());
+		source.setHp(0f, 0f);
+		source.setFlux(0f, 0f);
+		target.setHp(0f, 0f);
+		target.setFlux(0f, 0f);
+		assertEquals(candidates, filtered(id, List.of("0"), source, candidates));
+		assertEquals(candidates, filtered(id, List.of("0%"), source, candidates));
 	}
 
 	@ParameterizedTest

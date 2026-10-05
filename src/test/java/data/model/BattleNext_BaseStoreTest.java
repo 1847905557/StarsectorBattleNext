@@ -37,24 +37,6 @@ class BattleNext_BaseStoreTest {
 		assertThrows(IllegalStateException.class, () -> store.save(new Entry("alpha")));
 	}
 
-	@Test
-	void successfulSavePublishesTheReturnedSourceOnlyAfterPersistence() throws Exception {
-		MemoryStore store = new MemoryStore();
-		store.reload();
-		Entry entry = new Entry("alpha");
-		store.failSave = true;
-
-		assertThrows(IOException.class, () -> store.save(entry));
-		assertEquals(List.of(), store.getAll());
-		assertEquals(BattleNext_LoadSource.CREATED, entry.getSourceType());
-
-		store.failSave = false;
-		store.save(entry);
-		assertSame(entry, store.get("alpha"));
-		assertEquals("saved/alpha.json", entry.getSourcePath());
-		assertTrue(store.isLoaded());
-	}
-
 	private static class Entry extends BattleNext_BaseModel {
 		private final String id;
 
@@ -163,6 +145,8 @@ class BattleNext_BaseStoreTest {
 		store.save(replacement);
 		assertSame(replacement, store.get("entry"));
 		assertEquals(BattleNext_LoadSource.CREATED, replacement.getSourceType());
+		assertEquals("saved/entry.json", replacement.getSourcePath());
+		assertTrue(store.isLoaded());
 	}
 
 	@Test

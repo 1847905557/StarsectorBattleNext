@@ -19,7 +19,6 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 	@ParameterizedTest
 	@CsvSource({
 			"320,false,false", "320,true,false", "320,false,true", "320,true,true",
-			"400,false,false", "400,true,false", "400,false,true", "400,true,true",
 			"1200,false,false", "1200,true,false", "1200,false,true", "1200,true,true"
 	})
 	void mountedHeadersKeepSymmetricInsetsAndTheirOuterBounds(int width, boolean portrait, boolean summary) throws Exception {

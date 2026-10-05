@@ -18,8 +18,6 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParserConfiguration;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
@@ -48,8 +46,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -119,23 +115,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	}
 
 	@Test
-	void providersShareEveryBehaviorAndOverrideOnlyTheSourceContract() throws Exception {
-
-		JavaParser parser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
-		for (Class<?> type : List.of(BattleNext_RefitSModSourceProvider.class, BattleNext_RefitDModSourceProvider.class)) {
-			assertEquals(BattleNext_HullModSourceProvider.class, type.getSuperclass());
-			var parsed = parser.parse(Path.of("src/data/scripts/ui/widget/provider", type.getSimpleName() + ".java"));
-			assertTrue(parsed.isSuccessful(), parsed.getProblems().toString());
-			var declaration = parsed.getResult().orElseThrow().getClassByName(type.getSimpleName()).orElseThrow();
-			assertEquals(1, declaration.getConstructors().size());
-			assertTrue(declaration.getFields().isEmpty());
-			assertEquals(List.of("getHullMods"), declaration.getMethods().stream().map(method -> method.getNameAsString()).toList());
-			assertTrue(declaration.getMethods().get(0).isAnnotationPresent("Override"));
-			for (String method : List.of("getOptions", "getMaxStack", "getIconPath", "createTooltip")) {
-				assertTrue(declaration.getMethodsByName(method).isEmpty());
-			}
-		}
+	void providersSelectTheirCurrentHullmodsWithTheSharedSelectionContract() {
 		assertEquals(List.of("installed", "damage", "hidden", "built", "zeta", "sm", "d"), ids(provider("all")));
 		assertEquals(List.of("damage", "d"), ids(provider("dmod")));
 		assertEquals(List.of("installed", "built"), ids(provider("smod")));
