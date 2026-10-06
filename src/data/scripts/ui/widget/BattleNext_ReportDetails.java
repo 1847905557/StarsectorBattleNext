@@ -74,7 +74,6 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		String time = report.getCreatedAt() <= 0L ? "" : new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(report.getCreatedAt()));
 		content.addPara((time.isEmpty() ? "" : time + " / ") + strings.get("winner") + ": " + report.getWinner()
 				+ " / " + reportStrings.get("duration") + ": " + report.getDurationMillis() + " ms", REPORT_SUMMARY_TOP_GAP);
-		if (!target.context().isEmpty()) content.addPara(target.context(), REPORT_CONTEXT_TOP_GAP);
 		content.addPara(reportStrings.get("damage_dealt"), REPORT_SECTION_TOP_GAP);
 		appendMembers(content, panel, width, sorted(report, true));
 		content.addPara(reportStrings.get("damage_taken"), REPORT_SECTION_TOP_GAP);

@@ -1,13 +1,12 @@
 package data.model;
 
+import data.model.BattleNext_BaseLoader.LoadError;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
@@ -29,6 +28,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	private final Map<String, T> entries = new LinkedHashMap<>();
 	private String loadError;
 	private long revision;
+	private List<LoadError> errors = List.of();
 
 	protected BattleNext_BaseStore(String notLoadedMessage) {
 		loadError = notLoadedMessage;
@@ -39,23 +39,45 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 				BattleNext_Logger.fields().put("previous_entries", getAll()).build());
 		try {
 			Map<String, T> loaded = new LinkedHashMap<>();
+			List<T> all = new ArrayList<>();
+			List<LoadError> failures = new ArrayList<>();
+			List<LoadError> inputs = new ArrayList<>();
 			for (BattleNext_BaseLoader<T> loader : sources()) {
 				BattleNext_Logger.operationStarted(loader.getClass(), "catalog.source.load",
 						BattleNext_Logger.fields().put("store", getClass()).build());
 				List<T> models;
 				try {
 					models = loader.load();
-				} catch (IOException | JSONException | RuntimeException exception) {
+				} catch (IOException | JSONException | IllegalArgumentException exception) {
 					BattleNext_Logger.operationFailed(loader.getClass(), "catalog.source.load",
 							BattleNext_Logger.fields().put("store", getClass()).build(), exception);
-					throw exception;
+					failures.add(new LoadError("", -1, "", "", exception.toString()));
+					continue;
 				}
 				BattleNext_Logger.operationSucceeded(loader.getClass(), "catalog.source.load",
 						BattleNext_Logger.fields().put("store", getClass()).put("models", models).build());
-				for (T model : models) {
-					mergeLoaded(loaded, model);
-				}
+				all.addAll(models);
+				failures.addAll(loader.getErrors());
+				inputs.addAll(loader.getInputs());
 			}
+			Map<String, Integer> counts = new HashMap<>();
+			for (T model : all) {
+				counts.merge(model.getId(), 1, Integer::sum);
+			}
+			for (LoadError failure : failures) {
+				if (failure.id().isEmpty()) continue;
+				counts.merge(failure.id(), 1, Integer::sum);
+			}
+			for (T model : all) {
+				if (counts.get(model.getId()) > 1) {
+					LoadError input = inputs.stream().filter(value -> value.path().equals(model.getSourcePath())).findFirst()
+							.orElseThrow();
+					failures.add(new LoadError(input.path(), input.position(), model.getId(), input.raw(), "Duplicate ID: " + model.getId()));
+					continue;
+				}
+				mergeLoaded(loaded, model);
+			}
+			errors = List.copyOf(failures);
 			loadState();
 			replaceEntries(loaded);
 			succeedLoad();
@@ -75,9 +97,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 		BattleNext_Logger.operationStarted(getClass(), "store.save", input);
 		try {
 			requireLoaded();
-			if (model == null || !BattleNext_EntryId.isValidPathSegment(model.getId())) {
+			if (!BattleNext_EntryId.isValidPathSegment(model.getId())) {
 				throw new IllegalArgumentException("Entry id is required");
 			}
+			if (model instanceof BattleNext_JsonModel json && !json.getLoadErrors().isEmpty()) throw new IllegalArgumentException("Entry is incomplete: " + json.getLoadErrors());
 			boolean created = !entries.containsKey(model.getId());
 			register(model, saver().save(model));
 			BattleNext_Logger.operationSucceeded(getClass(), "store.save",
@@ -141,6 +164,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public long getRevision() {
 		return revision;
+	}
+
+	public List<LoadError> getErrors() {
+		return errors;
 	}
 
 	public T get(String id) {

@@ -9,15 +9,12 @@ import data.scripts.tools.BattleNext_CsvLine;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFixture {
 

@@ -5,8 +5,7 @@ import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_LoadSource;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.model.tournament.io.BattleNext_TournamentStandardLoader;
-import data.scripts.tools.BattleNext_Logger;
-import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -16,7 +15,6 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 
 	private final BattleNext_TournamentStandardLoader standardLoader = new BattleNext_TournamentStandardLoader();
 	private final BattleNext_TournamentSaver saver = new BattleNext_TournamentSaver();
-	private String activeId = "";
 
 	public BattleNext_TournamentStore() {
 		super("Tournament catalog has not been loaded");
@@ -32,44 +30,34 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 		return List.of(standardLoader);
 	}
 
-	@Override
-	protected void loadState() throws IOException, JSONException {
-		activeId = standardLoader.loadActiveId();
-	}
 
 	@Override
-	protected void onEntryRemoved(String id) throws IOException, JSONException {
-		if (id.equals(activeId)) setActiveId("");
+	public void save(BattleNext_TournamentModel configuration) throws IOException, JSONException {
+		requireEditable(configuration.getId());
+		super.save(configuration);
 	}
 
-	public void setActiveId(String id) throws IOException, JSONException {
-
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("previous_id", activeId).put("requested_id", id).build();
-		BattleNext_Logger.operationStarted(BattleNext_TournamentStore.class, "tournament.activation.commit", input);
-		try {
-			requireLoaded();
-			if (!id.isEmpty() && get(id) == null) throw new IllegalArgumentException("Unknown tournament: " + id);
-			saver.saveActiveId(id);
-			activeId = id;
-			BattleNext_Logger.operationSucceeded(BattleNext_TournamentStore.class, "tournament.activation.commit",
-					BattleNext_Logger.fields().put("active_id", activeId).put("tournament", get(id)).build());
-		} catch (IOException | JSONException | RuntimeException exception) {
-			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
-				BattleNext_Logger.warn(BattleNext_TournamentStore.class, "tournament.activation.commit.rejected", input, exception);
-			} else {
-				BattleNext_Logger.operationFailed(BattleNext_TournamentStore.class, "tournament.activation.commit", input, exception);
-			}
-			throw exception;
-		}
+	@Override
+	public void saveEdited(BattleNext_TournamentModel configuration, String sourceId) throws IOException, JSONException {
+		requireEditable(sourceId);
+		super.saveEdited(configuration, sourceId);
 	}
 
-	public String getActiveId() {
-		return activeId;
+	@Override
+	public void delete(String id) throws IOException, JSONException {
+		requireEditable(id);
+		super.delete(id);
 	}
 
-	public void activate(String id) throws IOException, JSONException {
-		setActiveId(id);
-		BattleNext_BattleSignals.clearAuthorization();
+	public boolean isLocked(String id) throws IOException, JSONException {
+		BattleNext_StartedTournamentStore started = new BattleNext_StartedTournamentStore();
+		started.reload();
+		return started.hasInstances(id);
+	}
+
+	private void requireEditable(String id) throws IOException, JSONException {
+		if (BattleNext_StartedTournamentStore.FILE_NAME_WITHOUT_FORMAT.equalsIgnoreCase(id)) throw new IllegalArgumentException("Reserved tournament ID: " + id);
+		if (isLocked(id)) throw new IllegalStateException("Tournament configuration has started instances: " + id);
 	}
 
 	public boolean isManaged(String id) {

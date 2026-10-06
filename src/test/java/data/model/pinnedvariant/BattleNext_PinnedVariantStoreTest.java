@@ -29,8 +29,8 @@ class BattleNext_PinnedVariantStoreTest extends BattleNext_TestGameFixture {
 		Files.writeString(root.resolve("missing.json"), unavailable.toString());
 		store.reload();
 		assertEquals(4, store.getCatalog().size());
-		assertEquals(1, store.getAll().size());
-		assertEquals(3, store.getLoadErrors().size());
+		assertEquals(0, store.getAll().size());
+		assertEquals(5, store.getLoadErrors().size());
 		var missing = store.getCatalog().stream().filter(entry -> entry.path().endsWith("missing.json")).findFirst().orElseThrow();
 		assertEquals("Valid", missing.name());
 		assertEquals("unknown", missing.hullId());
@@ -91,10 +91,10 @@ class BattleNext_PinnedVariantStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void catalogOrdersNamesThenIdentitiesThenPathsWithoutChangingTheInput() {
-		var pathLast = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("z", "Same", "b", "", null, "");
-		var pathFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("a", "Same", "b", "", null, "");
-		var identityFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("c", "Same", "a", "", null, "");
-		var nameFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("d", "Alpha", "z", "", null, "");
+		var pathLast = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("z", "Same", "b", "", null, "", "");
+		var pathFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("a", "Same", "b", "", null, "", "");
+		var identityFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("c", "Same", "a", "", null, "", "");
+		var nameFirst = new BattleNext_PinnedVariantStandardLoader.CatalogEntry("d", "Alpha", "z", "", null, "", "");
 		var entries = List.of(pathLast, pathFirst, identityFirst, nameFirst);
 		assertEquals(List.of(nameFirst, identityFirst, pathFirst, pathLast), BattleNext_PinnedVariantPage.sorted(entries));
 		assertEquals(List.of(pathLast, pathFirst, identityFirst, nameFirst), entries);

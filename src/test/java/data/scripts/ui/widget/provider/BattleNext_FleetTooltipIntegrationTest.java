@@ -24,6 +24,8 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,8 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 
@@ -107,8 +107,8 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 
 		fleet.setMembers(List.of(member("root", List.of(), "aggressive"), member("root", List.of("one"), "")));
 		TooltipMakerAPI tooltip = render();
-		assertEquals(List.of("Fleet 50%", "fleet", "Ships: 2 - Fighter wings: 18", "Base DP: 11 - Base FP: 8",
-				"Fleet members", "Wolf - No officer - Steady", "Wolf - Level 1 - Steady"), values(tooltip));
+		assertEquals(List.of("Fleet 50%", "fleet", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 2 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 18", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 11 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 8",
+				BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_members_heading"), "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady", "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 1 - Steady"), values(tooltip));
 		assertEquals(1, personalityReads);
 		assertEquals(2, parent.getApi().getStationModules().size());
 		assertEquals(5.5f, parent.getApi().getHullSpec().getSuppliesToRecover());
@@ -122,10 +122,10 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 				member("root", List.of("a", "b", "c"), "aggressive"),
 				member("root", List.of(), "aggressive")));
 		TooltipMakerAPI tooltip = render();
-		assertEquals(List.of("Wolf - Level 5 (3) - Steady", "Wolf - Level 3 - Aggressive", "Wolf - No officer - Steady"),
+		assertEquals(List.of("Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 5 (3) - Steady", "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 3 - Aggressive", "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady"),
 				values(tooltip).subList(5, 8));
 		LabelAPI elite = textLabels(tooltip).get(5);
-		assertEquals(List.of("Wolf", "Level 5", "3", "Steady"), labelHighlights.get(elite.getPosition()));
+		assertEquals(List.of("Wolf", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 5", "3", "Steady"), labelHighlights.get(elite.getPosition()));
 		assertEquals(List.of(BattleNext_UiTheme.TEXT, BattleNext_UiTheme.TEXT,
 				Misc.getPositiveHighlightColor(), BattleNext_UiTheme.TEXT), labelHighlightColors.get(elite.getPosition()));
 		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(elite.getPosition()));
@@ -166,15 +166,15 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		local.getApi().setWingId(0, "local_wing");
 		fleet.putVariant(BattleNext_VariantBuilder.fromVariant(local.getApi()));
 		registeredVariants.remove("root");
-		assertEquals(List.of("Fleet 50%", "fleet", "Ships: 1 - Fighter wings: 1", "Base DP: 7.25 - Base FP: 9",
-				"Fleet members", "Local hull - No officer - Steady"), values(render()));
+		assertEquals(List.of("Fleet 50%", "fleet", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 1", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 7.25 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 9",
+				BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_members_heading"), "Local hull - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady"), values(render()));
 		assertTrue(previewLogs().isEmpty());
 	}
 
 	@Test
 	void emptyFleetProducesZeroTotalsWithTheNormalMemberHeading() {
-		assertEquals(List.of("Fleet 50%", "fleet", "Ships: 0 - Fighter wings: 0", "Base DP: 0 - Base FP: 0",
-				"Fleet members"), values(render()));
+		assertEquals(List.of("Fleet 50%", "fleet", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 0", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0",
+				BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_members_heading")), values(render()));
 		assertEquals(0, personalityReads);
 	}
 
@@ -184,10 +184,10 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		fleet.setMembers(List.of(member("root", List.of(), ""), member("missing", List.of("a"), "steady"),
 				member("root", List.of(), "")));
 		List<String> text = values(render());
-		assertEquals("Ships: 3 - Fighter wings: 18 (Partial)", text.get(2));
-		assertEquals("Base DP: 11 (Partial) - Base FP: 8 (Partial)", text.get(3));
-		assertEquals(List.of("Wolf - No officer - Steady", "Unavailable: missing - Level 1 - Steady",
-				"Wolf - No officer - Steady"), text.subList(5, 8));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 3 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 18 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")", text.get(2));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 11 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ") - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 8 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")", text.get(3));
+		assertEquals(List.of("Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady", BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable") + ": missing - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 1 - Steady",
+				"Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady"), text.subList(5, 8));
 		assertTrue(text.get(8).contains("missing"));
 		assertEquals(1, previewLogs().size());
 		assertEquals("variant", previewLogs().get(0).getJSONObject("fields").optString("phase"));
@@ -200,13 +200,13 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		failPhase = phase;
 		fleet.setMembers(List.of(member("root", List.of(), "")));
 		List<String> text = values(render());
-		assertEquals(phase.equals("wings") ? "Ships: 1 - Fighter wings: 6 (Partial)"
-				: phase.equals("modules") ? "Ships: 1 - Fighter wings: 3 (Partial)"
-				: "Ships: 1 - Fighter wings: 9", text.get(2));
-		assertEquals(phase.equals("base_dp") ? "Base DP: 0 (Partial) - Base FP: 4"
-				: phase.equals("base_fp") ? "Base DP: 5.5 - Base FP: 0 (Partial)"
-				: "Base DP: 5.5 - Base FP: 4", text.get(3));
-		assertEquals("Wolf - No officer - Steady", text.get(5));
+		assertEquals(phase.equals("wings") ? BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 6 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")"
+				: phase.equals("modules") ? BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 3 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")"
+				: BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 9", text.get(2));
+		assertEquals(phase.equals("base_dp") ? BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ") - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 4"
+				: phase.equals("base_fp") ? BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 5.5 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")"
+				: BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 5.5 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 4", text.get(3));
+		assertEquals("Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady", text.get(5));
 		assertEquals(1, previewLogs().size());
 		JSONObject fields = previewLogs().get(0).getJSONObject("fields");
 		assertEquals("fleet", fields.getString("fleet_id"));
@@ -221,8 +221,8 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		parent.getModules().put("left", null);
 		fleet.setMembers(List.of(member("root", List.of(), "")));
 		var text = values(render());
-		assertEquals("Ships: 1 - Fighter wings: 6 (Partial)", text.get(2));
-		assertEquals("Base DP: 5.5 - Base FP: 4", text.get(3));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 6 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")", text.get(2));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 5.5 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 4", text.get(3));
 		assertEquals("left", previewLogs().get(0).getJSONObject("fields").getString("module_path"));
 	}
 
@@ -231,7 +231,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		module.getApi().setModuleVariant("nested", parent.getApi());
 		registeredVariants.put("root", parent.getApi());
 		fleet.setMembers(List.of(member("root", List.of(), "")));
-		assertEquals("Ships: 1 - Fighter wings: 5 (Partial)", values(render()).get(2));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 5 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")", values(render()).get(2));
 		assertEquals(List.of("left/nested", "right/nested"), previewLogs().stream()
 				.map(log -> log.optJSONObject("fields").optString("module_path")).toList());
 	}
@@ -243,9 +243,9 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		failPersonalities = loadFailure;
 		fleet.setMembers(List.of(member("root", List.of("a"), "unknown_personality")));
 		List<String> text = values(render());
-		assertEquals("Ships: 1 - Fighter wings: 9", text.get(2));
-		assertEquals("Base DP: 5.5 - Base FP: 4", text.get(3));
-		assertEquals("Wolf - Level 1 - unknown_personality", text.get(5));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 9", text.get(2));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 5.5 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 4", text.get(3));
+		assertEquals("Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 1 - unknown_personality", text.get(5));
 		assertEquals(loadFailure ? 2 : 1, previewLogs().size());
 		assertEquals(1, personalityReads);
 	}
@@ -263,7 +263,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		});
 		registeredVariants.put("special", special);
 		fleet.setMembers(List.of(member("special", List.of("a", "a"), "steady")));
-		assertEquals(hullName + " - Level 1 (1) - Steady", values(render()).get(5));
+		assertEquals(hullName + " - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 1 (1) - Steady", values(render()).get(5));
 	}
 
 	private TooltipMakerAPI render() {

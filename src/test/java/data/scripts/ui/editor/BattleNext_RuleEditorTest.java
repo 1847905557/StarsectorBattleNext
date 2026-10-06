@@ -1,27 +1,28 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.model.rule.BattleNext_RuleStore;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
+import data.model.rule.BattleNext_RuleStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.test.fixture.BattleNext_TestPageFixture;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -176,7 +177,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		float rowWidth = table.getPanel().getPosition().getWidth();
 		assertEquals(Math.min(190f, rowWidth), getField(picker, "buttonWidth"));
 		assertEquals(30f, getField(picker, "buttonHeight"));
-		assertEquals("BattleNext_rule_add_restriction", buttonLabels.get("TOGGLE"));
+		assertEquals(BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_add_restriction"), buttonLabels.get("TOGGLE"));
 		assertSame(root, getField(picker, "overlayHost"));
 		TooltipMakerAPI[] viewports = (TooltipMakerAPI[]) getField(picker, "viewports");
 		assertEquals(2, viewports.length);

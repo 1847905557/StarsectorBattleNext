@@ -16,11 +16,13 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 	private static final String LEGACY_PATH = "tournament/PvP_matches.csv";
 	@Override
 	public List<BattleNext_QuickBattleModel> load() throws IOException, JSONException {
+		beginLoad();
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
 		String text;
 		try {
 			text = BattleNext_ModFileManager.readText(BattleNext_QuickBattleLegacyLoader.class, LEGACY_PATH, MOD_ID);
 		} catch (IOException | JSONException exception) {
+			reject(LEGACY_PATH, -1, "", "", exception);
 			BattleNext_Logger.warn(BattleNext_QuickBattleLegacyLoader.class, "quick_battle.legacy.load.degraded",
 				BattleNext_Logger.fields().put("path", LEGACY_PATH).put("fallback", result).build(), exception);
 			return result;

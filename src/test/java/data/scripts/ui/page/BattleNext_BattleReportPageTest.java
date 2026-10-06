@@ -7,35 +7,29 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
-import data.scripts.report.BattleNext_DamageSourceReport;
-import data.scripts.report.BattleNext_MemberReport;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.BattleNext_ReportTarget;
-import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.tools.BattleNext_Settings;
-import data.scripts.ui.widget.BattleNext_ReportDetails;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.widget.BattleNext_ReportDetails;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -76,7 +70,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		store.save(report);
 		store.reload();
 		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(),
-				new BattleNext_ReportTarget(store.get("local_report"), "", null, "", -1), () -> {});
+				new BattleNext_ReportTarget(store.get("local_report")), () -> {});
 		try {
 			details.attach(panel(1400f, 500f, new BaseCustomUIPanelPlugin()));
 			List<CustomPanelAPI> rows = reportRows(details);
@@ -98,9 +92,9 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
+	@ValueSource(booleans = {false, true})
 	void reportSidesKeepTheirColorsAndMembershipAcrossSortingExpansionAndLanguageRefresh(
-			boolean embedded, boolean cnText) throws Exception {
+			boolean cnText) throws Exception {
 
 		configureRowAssets();
 		useReportTextAndSideColors();
@@ -114,8 +108,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		report.addPlayerMember(secondPlayer);
 		report.addEnemyMember(enemy);
 		String saved = report.toJson().toString();
-		BattleNext_ReportTarget target = new BattleNext_ReportTarget(report, embedded ? "Tournament / match / 1" : "",
-				embedded ? new BattleNext_TournamentModel() : null, embedded ? "match" : "", embedded ? 0 : -1);
+		BattleNext_ReportTarget target = new BattleNext_ReportTarget(report);
 		AtomicReference<BattleNext_ReportDetails> owner = new AtomicReference<>();
 		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), target,
 				() -> owner.get().refreshContent());
@@ -161,7 +154,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 
 		List<CustomPanelAPI> rows = reportRows(details);
 		assertEquals(members.size(), rows.size());
-		String category = cnText ? "Report_CN" : "Report";
+		String category = "Report";
 		for (int index = 0; index < rows.size(); index++) {
 			BattleNext_MemberReport member = members.get(index);
 			boolean playerSide = playerSides.get(index);
@@ -214,7 +207,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		configureRowAssets();
 		CustomPanelAPI body = panel(1400f, 80f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 80f, true);
-		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
 		for (String kind : List.of("weapon", "ship", "fighter_wing")) {
 			appendSource(details, body, content, kind);
 		}
@@ -250,7 +243,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		mixedLabelHeights = true;
 		CustomPanelAPI body = panel(1400f, 100f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 100f, false);
-		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
 		appendSource(details, body, content, kind);
 		body.addUIElement(content).inTL(8f, 8f);
 		CustomPanelAPI row = (CustomPanelAPI) tooltips.get(content).getComponents().get(0);
@@ -269,7 +262,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		paragraphLineHeight = 15f;
 		CustomPanelAPI body = panel(1400f, 100f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = body.createUIElement(1300f, 100f, false);
-		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
 		failSprites = true;
 		appendSource(details, body, content, "damage_type");
 		appendSource(details, body, content, "weapon");
@@ -288,7 +281,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 	@Override
 	protected LabelAPI label(String text, float width) {
 		LabelAPI label = super.label(text, width);
-		if (mixedLabelHeights && text.startsWith("BattleNext_report_armor:")) {
+		if (mixedLabelHeights && text.startsWith(BattleNext_TestTextCatalog.text("Report", "BattleNext_report_armor") + ":")) {
 			label.getPosition().setSize(width, 19f);
 		}
 		return label;

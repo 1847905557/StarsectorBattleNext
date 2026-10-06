@@ -1,35 +1,29 @@
 package data.simulator;
 
-import org.junit.jupiter.api.Test;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.SettingsAPI;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
-import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.opengl.InputImplementation;
+import org.lwjgl.opengl.PixelFormat;
 
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Proxy;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Comparator;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_SimulatorNativeIntegrationTest {
 
@@ -129,7 +123,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		public static void main(String[] arguments) throws Exception {
 
 			Path root = Files.createTempDirectory("BattleNext-simulator-sandbox-");
-			Path mod = Path.of("").toAbsolutePath();
+			Path mod = root.resolve("game/mods/fixture");
+			Files.createDirectories(mod);
+			Files.createDirectories(root.resolve("game/starsector-core"));
 			SettingsAPI previous = Global.getSettings();
 			String saves = System.getProperty("com.fs.starfarer.settings.paths.saves");
 			System.setProperty("com.fs.starfarer.settings.paths.saves", root.resolve("saves").toString());
@@ -188,18 +184,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 
 			Class<?> storageType = loader.loadClass("data.simulator.BattleNext_SimulatorStorage");
 			Object storage = storageType.getConstructor(Path.class).newInstance(root.resolve("owned"));
-			Path source = root.resolve("source/common/nested/settings.json");
-			Files.createDirectories(source.getParent());
-			byte[] original = "中文 50%".getBytes(StandardCharsets.UTF_8);
-			Files.write(source, original);
-			Path runtime = (Path) storageType.getMethod("directory", String.class).invoke(storage, "runtime/session");
-			storageType.getMethod("snapshotCommon", Path.class, Path.class).invoke(storage, root.resolve("source"), runtime.resolve("saves"));
-			storageType.getMethod("configureGraphics", Path.class).invoke(storage, runtime.resolve("saves"));
-			JSONObject graphics = new JSONObject(Files.readString(runtime.resolve("saves/common/LunaSettings/shaderLib.json.data"), StandardCharsets.UTF_8));
-			if (graphics.getBoolean("enableLights") || graphics.getBoolean("enableNormal")) throw new AssertionError("Sandbox worker graphics configuration");
-			if (!Arrays.equals(original, Files.readAllBytes(runtime.resolve("saves/common/nested/settings.json")))) {
-				throw new AssertionError("Sandbox settings snapshot must preserve bytes");
-			}
+			Path runtime = (Path) storageType.getMethod("directory", String.class).invoke(storage, "_runtime/session");
 			Class<?> configType = loader.loadClass("data.simulator.BattleNext_SimulationConfig");
 			Object config = configType.getMethod("defaults").invoke(null);
 			Class<?> requestType = loader.loadClass("data.simulator.BattleNext_SimulationRequest");
@@ -212,7 +197,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			Object result = resultType.getMethod("fromJson", JSONObject.class).invoke(null, json);
 			storageType.getMethod("write", requestType, resultType).invoke(storage, request, result);
 			List<?> pending = (List<?>) storageType.getMethod("pending").invoke(storage);
-			if (!pending.equals(List.of(root.resolve("owned/pending/" + id + ".json")))) throw new AssertionError("Sandbox journal listing");
+			if (!pending.equals(List.of(root.resolve("owned/_pending/" + id + ".json")))) throw new AssertionError("Sandbox journal listing");
 			Object stored = storageType.getMethod("read", Path.class).invoke(storage, pending.get(0));
 			if (!result.equals(stored.getClass().getMethod("result").invoke(stored))) throw new AssertionError("Sandbox journal round trip");
 			storageType.getMethod("acknowledge", String.class).invoke(storage, id);
@@ -252,7 +237,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				}
 				if (result == null) throw new AssertionError("Sandbox startup failure must resolve the task");
 				if (!result.getClass().getMethod("outcome").invoke(result).toString().equals("FAILED")) throw new AssertionError("Sandbox startup outcome");
-				Path diagnostics = root.resolve("saves/common/AI_Battles_Next/simulator/diagnostics");
+				Path diagnostics = root.resolve("game/mods/fixture/tournament/_simulations/_diagnostics");
 				try (var paths = Files.list(diagnostics)) {
 					List<Path> logs = paths.toList();
 					if (logs.isEmpty()) throw new AssertionError("Sandbox launch must redirect worker output");
@@ -261,7 +246,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 					}
 				}
 			}
-			try (var paths = Files.list(root.resolve("saves/common/AI_Battles_Next/simulator/runtime"))) {
+			try (var paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations/_runtime"))) {
 				if (paths.findAny().isPresent()) throw new AssertionError("Sandbox service must release owned runtime");
 			}
 		}

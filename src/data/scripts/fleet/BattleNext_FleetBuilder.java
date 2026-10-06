@@ -3,8 +3,8 @@ package data.scripts.fleet;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetGoal;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.model.fleet.BattleNext_FleetModel;
@@ -24,12 +24,9 @@ public class BattleNext_FleetBuilder {
 	}
 
 	public BattleNext_AssembledFleet build(BattleNext_FleetModel definition) {
-		if (definition == null) {
-			throw new IllegalArgumentException("Fleet definition is required");
-		}
 		PersonAPI commander = createCommander(definition);
 		List<FleetMemberAPI> members = new ArrayList<>();
-		List<String> errors = new ArrayList<>();
+		List<String> errors = new ArrayList<>(definition.getLoadErrors());
 		for (int index = 0; index < definition.getMembers().size(); index++) {
 			try {
 				String variantId = definition.getMembers().get(index).getVariantId();

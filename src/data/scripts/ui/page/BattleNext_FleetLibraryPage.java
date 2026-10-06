@@ -89,6 +89,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
+		addCatalogDiagnostics(listContent, store.getErrors());
 		for (BattleNext_FleetModel fleet : store.getAll()) {
 			addListItem(listContent, fleet.getName(), "fleet:" + fleet.getId());
 		}

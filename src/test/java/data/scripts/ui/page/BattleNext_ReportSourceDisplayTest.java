@@ -1,7 +1,7 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.DamageType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -99,7 +99,7 @@ class BattleNext_ReportSourceDisplayTest extends BattleNext_TestGameFixture {
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source("arc", "arc"), settings);
 
-		assertEquals(BattleNext_TestTextCatalog.text(cnText ? "Report_CN" : "Report", "BattleNext_report_source_arc"), visual.name());
+		assertEquals(BattleNext_TestTextCatalog.text("Report", "BattleNext_report_source_arc"), visual.name());
 		assertEquals("graphics/icons/hullsys/energy_lash.png", visual.primarySprite());
 		assertTrue(visual.accentIcon());
 		assertTrue(visual.resolved());

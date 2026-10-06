@@ -1,22 +1,26 @@
 package data.model;
 
+import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-class BattleNext_CatalogLoaderTest {
+class BattleNext_CatalogLoaderTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void catalogPreservesOrderMarksSourcesAndFiltersEmptyIdentities() throws Exception {
 		MemoryLoader loader = new MemoryLoader();
 		loader.paths = List.of("first", "empty", "last");
+		writeEntries(loader.paths);
 		List<Entry> entries = loader.load();
 		assertEquals(List.of("first", "empty", "last"), loader.parsed);
 		assertEquals(List.of("first", "last"), entries.stream().map(Entry::getId).toList());
@@ -28,14 +32,16 @@ class BattleNext_CatalogLoaderTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"io", "json", "argument"})
-	void parseFailureRetainsCauseAndIdentifiesTheResource(String kind) {
+	void parseFailureRetainsCauseAndIdentifiesTheResource(String kind) throws Exception {
 		MemoryLoader loader = new MemoryLoader();
 		loader.paths = List.of("first", "broken", "last");
 		loader.failure = kind;
-		IllegalStateException failure = assertThrows(IllegalStateException.class, loader::load);
-		assertEquals("Unable to load test catalog: broken", failure.getMessage());
-		assertEquals(kind, failure.getCause().getMessage());
-		assertEquals(List.of("first", "broken"), loader.parsed);
+		writeEntries(loader.paths);
+		assertEquals(List.of("first", "last"), loader.load().stream().map(Entry::getId).toList());
+		assertEquals("broken", loader.getErrors().get(0).path());
+		assertEquals("broken", loader.getErrors().get(0).id());
+		assertTrue(loader.getErrors().get(0).diagnostic().contains(kind));
+		assertEquals(List.of("first", "broken", "last"), loader.parsed);
 	}
 
 	@Test
@@ -84,7 +90,8 @@ class BattleNext_CatalogLoaderTest {
 		}
 
 		@Override
-		protected Entry parse(String path) throws IOException, JSONException {
+		protected Entry parse(JSONObject json) throws IOException, JSONException {
+			String path = json.getString("id");
 			parsed.add(path);
 			if (path.equals("broken")) {
 				if (failure.equals("io")) throw new IOException(failure);
@@ -102,6 +109,12 @@ class BattleNext_CatalogLoaderTest {
 		@Override
 		protected String kind() {
 			return "test catalog";
+		}
+	}
+
+	private void writeEntries(List<String> paths) throws Exception {
+		for (String path : paths) {
+			Files.writeString(directory.resolve(path), new JSONObject().put("id", path).toString(), StandardCharsets.UTF_8);
 		}
 	}
 }

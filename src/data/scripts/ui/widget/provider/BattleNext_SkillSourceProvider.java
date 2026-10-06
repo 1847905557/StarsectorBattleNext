@@ -1,11 +1,7 @@
 package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.characters.CustomSkillDescription;
-import com.fs.starfarer.api.characters.LevelBasedEffect;
-import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
-import com.fs.starfarer.api.characters.SkillEffectType;
-import com.fs.starfarer.api.characters.SkillSpecAPI;
+import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.ui.Alignment;
@@ -16,11 +12,11 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
-import java.awt.Color;
 
 public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvider {
 

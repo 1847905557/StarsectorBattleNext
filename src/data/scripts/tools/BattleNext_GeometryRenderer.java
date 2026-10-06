@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.PositionAPI;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL15;
 
 import java.awt.Color;
@@ -130,6 +131,9 @@ public class BattleNext_GeometryRenderer {
 		withState(() -> {
 			upload(positionVbo, geometryData);
 			GL11.glDisable(GL11.GL_TEXTURE_2D);
+			GL11.glEnable(GL11.GL_BLEND);
+			GL14.glBlendEquation(GL14.GL_FUNC_ADD);
+			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 			GL11.glColor4f(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f,
 					color.getAlpha() / 255f * alpha);
 			if (mode == GL11.GL_POINTS) GL11.glPointSize(lineWidth);
@@ -182,13 +186,16 @@ public class BattleNext_GeometryRenderer {
 
 	private static void withState(Runnable draw) {
 		int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
-		GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_LINE_BIT
+		GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_LINE_BIT | GL11.GL_POINT_BIT
 				| GL11.GL_COLOR_BUFFER_BIT | GL11.GL_TEXTURE_BIT);
 		GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
-		draw.run();
-		GL11.glPopClientAttrib();
-		GL11.glPopAttrib();
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
+		try {
+			draw.run();
+		} finally {
+			GL11.glPopClientAttrib();
+			GL11.glPopAttrib();
+			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
+		}
 	}
 
 	public static class GeometryClipState {

@@ -1,21 +1,21 @@
 package data.simulator;
 
+import com.fs.starfarer.StarfarerLauncher;
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
-import com.fs.starfarer.StarfarerLauncher;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.tools.BattleNext_Logger;
-import org.json.JSONObject;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.boxutil.config.BoxConfigs;
+import org.dark.shaders.util.GraphicsLibSettings;
+import org.dark.shaders.util.TextureData;
+import org.json.JSONObject;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
-import org.dark.shaders.util.GraphicsLibSettings;
-import org.dark.shaders.util.TextureData;
-import org.boxutil.config.BoxConfigs;
 
 import java.net.InetAddress;
 import java.net.Socket;
@@ -100,6 +100,7 @@ public class BattleNext_SimulatorWorker {
 				return;
 			}
 			if (!initialized || returning) {
+				new BattleNext_SimulatorNative(BattleNext_SimulatorWorker.class.getClassLoader()).configureGraphics();
 				mouse = BattleNext_SimulatorMouse.getInstance();
 				Display.setLocation(-20000, -20000);
 				Display.setVSyncEnabled(false);

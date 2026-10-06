@@ -1,13 +1,11 @@
 package data.scripts.tournament;
 
-import data.model.report.BattleNext_BattleReportModel;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
-import data.model.tournament.BattleNext_TournamentStore;
-import data.missions.BattleNext_MissionBattleMap;
-import data.scripts.battle.BattleNext_BattleValidation;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
+import data.scripts.battle.BattleNext_BattleValidation;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Match.MatchStage;
 import data.scripts.battle.BattleNext_Match.MatchStatus;
@@ -18,7 +16,7 @@ import java.util.*;
 
 public class BattleNext_TournamentEngine {
 
-	public enum ConfigurationReason { MAP, LIMITS, PARTICIPANTS }
+	public enum ConfigurationReason { MAP, LIMITS, DUPLICATE_FLEETS, MINIMUM_FLEETS }
 
 	public static class ConfigurationRejection extends IllegalArgumentException {
 		private final ConfigurationReason reason;
@@ -33,40 +31,37 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	public void startAndActivate(BattleNext_TournamentModel source, BattleNext_TournamentStore tournaments,
+	public BattleNext_StartedTournament create(BattleNext_TournamentModel configuration, List<String> fleetIds,
+			BattleNext_StartedTournament.ExecutionKind executionKind, BattleNext_StartedTournamentStore startedStore,
 			BattleNext_FleetStore fleets, BattleNext_RuleStore rules) throws Exception {
-		if (!tournaments.isLoaded() || !fleets.isLoaded() || !rules.isLoaded()) {
-			throw new IllegalStateException(!tournaments.isLoaded() ? tournaments.getLoadError()
-					: !fleets.isLoaded() ? fleets.getLoadError() : rules.getLoadError());
-		}
-		validateConfiguration(source);
-		BattleNext_BattleValidation validation = new BattleNext_BattleValidation(fleets);
-		List<String> ruleErrors = validation.ruleResult(source.getRuleId(), rules).messages();
-		if (!ruleErrors.isEmpty()) throw new IllegalArgumentException(String.join("; ", ruleErrors));
-		for (String id : source.getFleetIds()) {
-			List<String> errors = validation.referenceResult(id).messages();
-			if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("; ", errors));
-		}
-		BattleNext_TournamentModel prepared = new BattleNext_TournamentModel();
-		prepared.fromJson(source.toJson());
-		start(prepared);
-		tournaments.save(prepared);
-		tournaments.activate(prepared.getId());
+		BattleNext_BattleValidation.Result result = new BattleNext_BattleValidation(fleets).tournamentResult(configuration, fleetIds, rules);
+		if (!result.failures().isEmpty()) throw new BattleNext_BattleValidation.Rejection(configuration.getId(), result);
+		BattleNext_StartedTournament started = start(configuration, fleetIds, executionKind);
+		startedStore.save(started);
+		return started;
 	}
 
-	public void start(BattleNext_TournamentModel tournament) {
+	public BattleNext_StartedTournament start(BattleNext_TournamentModel configuration, List<String> fleetIds,
+			BattleNext_StartedTournament.ExecutionKind executionKind) {
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), configuration.getId(), executionKind, fleetIds);
+		initialize(configuration, started);
+		return started;
+	}
+
+	public void initialize(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament) {
 
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.start", input);
 		try {
-			if (tournament.isStarted()) throw new IllegalStateException("Tournament has already started");
-			validateConfiguration(tournament);
+			if (!tournament.getMatches().isEmpty()) throw new IllegalStateException("Tournament has already started");
+			validateConfiguration(configuration);
+			validateParticipants(configuration, tournament.getFleetIds());
 			tournament.clearGeneratedMatches();
-			tournament.setStarted(true);
 			tournament.setCompleted(false);
 			tournament.setChampionFleetId("");
-			createOpeningMatches(tournament, Map.of());
-			reconcile(tournament, Map.of());
+			tournament.changed();
+			createOpeningMatches(configuration, tournament, Map.of());
+			reconcile(configuration, tournament, Map.of());
 			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.start",
 					BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build());
 		} catch (RuntimeException exception) {
@@ -79,41 +74,47 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	public BattleNext_Match getNextMatch(BattleNext_TournamentModel tournament) {
-		if (!tournament.isStarted() || tournament.isCompleted()) return null;
+	public BattleNext_Match getNextMatch(BattleNext_StartedTournament tournament) {
+		if (tournament.isCompleted()) return null;
 		BattleNext_Match match = tournament.findMatch(tournament.getPendingMatchId());
 		if (match != null && match.getStatus() == MatchStatus.PENDING) return match;
 		selectPendingMatch(tournament);
 		return tournament.findMatch(tournament.getPendingMatchId());
 	}
 
-	public void recordRound(BattleNext_TournamentModel tournament, String matchId, String winner,
-			BattleNext_BattleReportModel report) {
+	public void recordRound(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String matchId, String winner,
+			String reportId) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build();
+		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report_id", reportId).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.round.record", input);
 		try {
+			for (BattleNext_Match recordedMatch : tournament.getMatches()) {
+				for (BattleNext_Round recordedRound : recordedMatch.getRounds()) {
+					if (!reportId.isEmpty() && recordedRound.getReportId().equals(reportId)) return;
+				}
+			}
 			BattleNext_Match match = tournament.findMatch(matchId);
-			if (!tournament.isStarted() || tournament.isCompleted() || match == null || match.getStatus() != MatchStatus.PENDING) {
+			if (tournament.isCompleted() || match == null || match.getStatus() != MatchStatus.PENDING) {
 				throw new IllegalStateException("Tournament match is unavailable");
 			}
 			BattleNext_Round.RoundStatus result = resultFor(winner, match);
 			BattleNext_Round round = new BattleNext_Round(match.getPlayer(), match.getEnemy());
 			round.setStatus(result);
-			round.setReport(report);
+			round.setReportId(reportId);
 			match.addRound(round);
+			tournament.changed();
 			if (result == BattleNext_Round.RoundStatus.DRAW) return;
-			int winsNeeded = tournament.getWinTarget();
+			int winsNeeded = configuration.getWinTarget();
 			if (match.getPlayerWins() >= winsNeeded || match.getEnemyWins() >= winsNeeded) {
 				match.setStatus(MatchStatus.COMPLETE);
-				reconcile(tournament, Map.of());
+				reconcile(configuration, tournament, Map.of());
 				BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.round.record",
-					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build());
+					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report_id", reportId).put("scope", "memory").build());
 				return;
 			}
 			match.setSides(match.getEnemy(), match.getPlayer());
 			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.round.record",
-					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report", report).put("scope", "memory").build());
+					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report_id", reportId).put("scope", "memory").build());
 		} catch (RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_TournamentEngine.class, "tournament.round.record.rejected", input, exception);
@@ -124,7 +125,7 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	public void rollback(BattleNext_TournamentModel tournament, String matchId) {
+	public void rollback(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String matchId) {
 
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.rollback", input);
@@ -139,19 +140,24 @@ public class BattleNext_TournamentEngine {
 				changed = false;
 				for (BattleNext_Match match : tournament.getMatches()) {
 					for (String dependency : match.getDependencies()) {
-						if (affected.contains(dependency) && affected.add(match.getId())) changed = true;
+						if (affected.contains(dependency) && affected.add(match.getId())) {
+							changed = true;
+						}
 					}
 				}
 			} while (changed);
 			Map<String, BattleNext_Match> preserved = new HashMap<>();
 			for (BattleNext_Match match : tournament.getMatches()) {
-				if (!affected.contains(match.getId())) preserved.put(match.getId(), match);
+				if (!affected.contains(match.getId())) {
+					preserved.put(match.getId(), match);
+				}
 			}
 			tournament.clearGeneratedMatches();
 			tournament.setCompleted(false);
 			tournament.setChampionFleetId("");
-			createOpeningMatches(tournament, preserved);
-			reconcile(tournament, preserved);
+			tournament.changed();
+			createOpeningMatches(configuration, tournament, preserved);
+			reconcile(configuration, tournament, preserved);
 			BattleNext_Logger.operationSucceeded(BattleNext_TournamentEngine.class, "tournament.rollback",
 					BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build());
 		} catch (RuntimeException exception) {
@@ -164,40 +170,54 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	public void validateConfiguration(BattleNext_TournamentModel tournament) {
+	public void validateConfiguration(BattleNext_TournamentModel configuration) {
 
-		if (tournament.getMapId() < BattleNext_MissionBattleMap.RANDOM_MAP_ID || tournament.getMapId() > BattleNext_MissionBattleMap.LAST_MAP_ID) {
-			throw new ConfigurationRejection(ConfigurationReason.MAP, "Tournament map is outside the supported range: " + tournament.getMapId());
+		if (configuration.getMapId() < BattleNext_MissionBattleMap.RANDOM_MAP_ID || configuration.getMapId() > BattleNext_MissionBattleMap.LAST_MAP_ID) {
+			throw new ConfigurationRejection(ConfigurationReason.MAP, "Tournament map is outside the supported range: " + configuration.getMapId());
 		}
-		List<String> fleets = tournament.getFleetIds();
-		if (tournament.getBracketType() == null || tournament.getBoCount() < 1
-				|| tournament.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-				|| tournament.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
-				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-				|| fleets.size() > tournament.getMaxFleet()) {
+		if (configuration.getBracketType() == null || configuration.getBoCount() < 1
+				|| configuration.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
+				|| configuration.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT) {
 			throw new ConfigurationRejection(ConfigurationReason.LIMITS, "Invalid tournament configuration");
-		}
-		Set<String> seen = new HashSet<>();
-		for (String fleet : fleets) {
-			if (fleet.isEmpty() || !seen.add(fleet)) {
-				throw new ConfigurationRejection(ConfigurationReason.PARTICIPANTS, "Tournament fleets must be unique");
-			}
 		}
 	}
 
-	private void createOpeningMatches(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+	public void validateParticipants(BattleNext_TournamentModel configuration, List<String> fleets) {
+		if (fleets.size() != configuration.getMaxFleet()) {
+			throw new ConfigurationRejection(ConfigurationReason.LIMITS, "Tournament seed positions must match maxFleet");
+		}
+		Set<String> seen = new HashSet<>();
+		for (String fleet : fleets) {
+			if (fleet.isEmpty()) continue;
+			if (!seen.add(fleet)) {
+				throw new ConfigurationRejection(ConfigurationReason.DUPLICATE_FLEETS, "Tournament fleets must be unique");
+			}
+		}
+		if (seen.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT) {
+			throw new ConfigurationRejection(ConfigurationReason.MINIMUM_FLEETS, "Tournament requires at least two fleets");
+		}
+	}
+
+	public static int playableMatchTotal(BattleNext_TournamentModel configuration, List<String> fleetIds) {
+		int count = (int) fleetIds.stream().filter(id -> !id.isEmpty()).count();
+		if (configuration.getBracketType() == TournamentBracketType.ROUND_ROBIN) return count * (count - 1) / 2;
+		if (configuration.getBracketType() == TournamentBracketType.DOUBLE_ELIMINATION) return Math.max(0, 2 * count - 2);
+		return Math.max(0, count - 1);
+	}
+
+	private void createOpeningMatches(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, Map<String, BattleNext_Match> preserved) {
 		List<String> fleets = tournament.getFleetIds();
-		if (tournament.getBracketType() == TournamentBracketType.ROUND_ROBIN) {
+		if (configuration.getBracketType() == TournamentBracketType.ROUND_ROBIN) {
 			for (int first = 0; first < fleets.size(); first++) {
 				for (int second = first + 1; second < fleets.size(); second++) {
-					addMatch(tournament, "RR-" + first + "-" + second, new BracketFleetParticipant(fleets.get(first), ""),
+					addMatch(configuration, tournament, "RR-" + first + "-" + second, new BracketFleetParticipant(fleets.get(first), ""),
 							new BracketFleetParticipant(fleets.get(second), ""), MatchStage.ROUND_ROBIN, preserved);
 				}
 			}
 			return;
 		}
-		if (tournament.getBracketType() == TournamentBracketType.KING_OF_THE_HILL) {
-			addMatch(tournament, "K-1", new BracketFleetParticipant(fleets.get(0), ""), new BracketFleetParticipant(fleets.get(1), ""),
+		if (configuration.getBracketType() == TournamentBracketType.KING_OF_THE_HILL) {
+			addMatch(configuration, tournament, "K-1", new BracketFleetParticipant(fleets.get(0), ""), new BracketFleetParticipant(fleets.get(1), ""),
 					MatchStage.KING_OF_THE_HILL, preserved);
 			return;
 		}
@@ -215,28 +235,30 @@ public class BattleNext_TournamentEngine {
 		for (int seed : seedOrder) {
 			entries.add(new BracketFleetParticipant(seed <= fleets.size() ? fleets.get(seed - 1) : "", ""));
 		}
-		pair(tournament, "W1", entries, tournament.getBracketType() == TournamentBracketType.DOUBLE_ELIMINATION
+		pair(configuration, tournament, "W1", entries, configuration.getBracketType() == TournamentBracketType.DOUBLE_ELIMINATION
 				? MatchStage.WINNERS : MatchStage.MAIN, preserved);
 	}
 
-	private void reconcile(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+	private void reconcile(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, Map<String, BattleNext_Match> preserved) {
 		boolean changed;
 		do {
 			int count = tournament.getMatches().size();
-			TournamentBracketType type = tournament.getBracketType();
+			TournamentBracketType type = configuration.getBracketType();
 			if (type == TournamentBracketType.ROUND_ROBIN) {
-				if (allComplete(tournament.getMatches())) finish(tournament, roundRobinChampion(tournament));
+				if (allComplete(tournament.getMatches())) {
+					finish(tournament, roundRobinChampion(configuration, tournament));
+				}
 			} else if (type == TournamentBracketType.KING_OF_THE_HILL) {
-				advanceKof(tournament, preserved);
+				advanceKof(configuration, tournament, preserved);
 			} else {
-				advanceBracket(tournament, type == TournamentBracketType.DOUBLE_ELIMINATION, preserved);
+				advanceBracket(configuration, tournament, type == TournamentBracketType.DOUBLE_ELIMINATION, preserved);
 			}
 			changed = tournament.getMatches().size() != count;
 		} while (changed);
 		selectPendingMatch(tournament);
 	}
 
-	private void advanceKof(BattleNext_TournamentModel tournament, Map<String, BattleNext_Match> preserved) {
+	private void advanceKof(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, Map<String, BattleNext_Match> preserved) {
 		int index = tournament.getMatches().size();
 		BattleNext_Match last = tournament.findMatch("K-" + index);
 		if (last == null || last.getStatus() != MatchStatus.COMPLETE) return;
@@ -244,18 +266,18 @@ public class BattleNext_TournamentEngine {
 			finish(tournament, last.getWinnerFleetId());
 			return;
 		}
-		addMatch(tournament, "K-" + (index + 1), new BracketFleetParticipant(last.getWinnerFleetId(), last.getId()),
+		addMatch(configuration, tournament, "K-" + (index + 1), new BracketFleetParticipant(last.getWinnerFleetId(), last.getId()),
 				new BracketFleetParticipant(tournament.getFleetIds().get(index + 1), ""), MatchStage.KING_OF_THE_HILL, preserved);
 	}
 
-	private void advanceBracket(BattleNext_TournamentModel tournament, boolean doubleElim,
+	private void advanceBracket(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, boolean doubleElim,
 			Map<String, BattleNext_Match> preserved) {
 		int width = bracketWidth(tournament.getFleetIds().size());
 		int levels = Integer.numberOfTrailingZeros(width);
 		for (int round = 1; round < levels; round++) {
 			if (roundComplete(tournament, "W" + round, width >> round)
 					&& tournament.findMatch("W" + (round + 1) + "-1") == null) {
-				pair(tournament, "W" + (round + 1), winners(tournament, "W" + round, width >> round),
+				pair(configuration, tournament, "W" + (round + 1), winners(tournament, "W" + round, width >> round),
 						doubleElim ? MatchStage.WINNERS : MatchStage.MAIN, preserved);
 			}
 		}
@@ -266,7 +288,7 @@ public class BattleNext_TournamentEngine {
 			return;
 		}
 		if (roundComplete(tournament, "W1", width / 2) && tournament.findMatch("L1-1") == null) {
-			pair(tournament, "L1", losers(tournament, "W1", width / 2), MatchStage.LOSERS, preserved);
+			pair(configuration, tournament, "L1", losers(tournament, "W1", width / 2), MatchStage.LOSERS, preserved);
 		}
 		for (int round = 2; round <= levels; round++) {
 			int previousLoserRound = round == 2 ? 1 : 2 * round - 3;
@@ -278,13 +300,13 @@ public class BattleNext_TournamentEngine {
 				List<BracketFleetParticipant> survivors = winners(tournament, "L" + previousLoserRound, previousCount);
 				List<BracketFleetParticipant> fallen = losers(tournament, "W" + round, width >> round);
 				for (int index = 0; index < fallen.size(); index++) {
-					addMatch(tournament, "L" + loserRound + "-" + (index + 1), survivors.get(index),
+					addMatch(configuration, tournament, "L" + loserRound + "-" + (index + 1), survivors.get(index),
 							fallen.get(index), MatchStage.LOSERS, preserved);
 				}
 			}
 			if (round < levels && roundComplete(tournament, "L" + loserRound, width >> round)
 					&& tournament.findMatch("L" + (loserRound + 1) + "-1") == null) {
-				pair(tournament, "L" + (loserRound + 1), winners(tournament, "L" + loserRound, width >> round),
+				pair(configuration, tournament, "L" + (loserRound + 1), winners(tournament, "L" + loserRound, width >> round),
 						MatchStage.LOSERS, preserved);
 			}
 		}
@@ -292,7 +314,7 @@ public class BattleNext_TournamentEngine {
 		if (roundComplete(tournament, "W" + levels, 1)
 				&& roundComplete(tournament, "L" + finalLoserRound, 1)
 				&& tournament.findMatch("GF") == null) {
-			addMatch(tournament, "GF", winner(tournament.findMatch("W" + levels + "-1")),
+			addMatch(configuration, tournament, "GF", winner(tournament.findMatch("W" + levels + "-1")),
 					winner(tournament.findMatch("L" + finalLoserRound + "-1")), MatchStage.GRAND_FINAL, preserved);
 		}
 		BattleNext_Match grandFinal = tournament.findMatch("GF");
@@ -303,30 +325,34 @@ public class BattleNext_TournamentEngine {
 			return;
 		}
 		if (tournament.findMatch("GF_RESET") == null) {
-			addMatch(tournament, "GF_RESET", new BracketFleetParticipant(winnersChampion, "GF"),
+			addMatch(configuration, tournament, "GF_RESET", new BracketFleetParticipant(winnersChampion, "GF"),
 					new BracketFleetParticipant(grandFinal.getWinnerFleetId(), "GF"), MatchStage.GRAND_FINAL_RESET, preserved);
 		}
 		BattleNext_Match reset = tournament.findMatch("GF_RESET");
-		if (reset.getStatus() == MatchStatus.COMPLETE) finish(tournament, reset.getWinnerFleetId());
-	}
-
-	private void pair(BattleNext_TournamentModel tournament, String prefix, List<BracketFleetParticipant> entries,
-			MatchStage stage, Map<String, BattleNext_Match> preserved) {
-		for (int index = 0; index < entries.size(); index += 2) {
-			BracketFleetParticipant second = index + 1 < entries.size() ? entries.get(index + 1) : new BracketFleetParticipant("", "");
-			addMatch(tournament, prefix + "-" + (index / 2 + 1), entries.get(index), second, stage, preserved);
+		if (reset.getStatus() == MatchStatus.COMPLETE) {
+			finish(tournament, reset.getWinnerFleetId());
 		}
 	}
 
-	private void addMatch(BattleNext_TournamentModel tournament, String id, BracketFleetParticipant first, BracketFleetParticipant second,
+	private void pair(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String prefix, List<BracketFleetParticipant> entries,
+			MatchStage stage, Map<String, BattleNext_Match> preserved) {
+		for (int index = 0; index < entries.size(); index += 2) {
+			BracketFleetParticipant second = index + 1 < entries.size() ? entries.get(index + 1) : new BracketFleetParticipant("", "");
+			addMatch(configuration, tournament, prefix + "-" + (index / 2 + 1), entries.get(index), second, stage, preserved);
+		}
+	}
+
+	private void addMatch(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String id, BracketFleetParticipant first, BracketFleetParticipant second,
 			MatchStage stage, Map<String, BattleNext_Match> preserved) {
 		BracketFleetParticipant player = first.fleetId.isEmpty() ? second : first;
 		BracketFleetParticipant enemy = first.fleetId.isEmpty() ? first : second;
-		BattleNext_Match match = new BattleNext_Match(id, player.fleetId, enemy.fleetId, tournament.getMapId(), 1f);
+		BattleNext_Match match = new BattleNext_Match(id, player.fleetId, enemy.fleetId, configuration.getMapId(), 1f);
 		match.setStage(enemy.fleetId.isEmpty() ? MatchStage.BYE : stage);
 		match.addDependency(first.sourceId);
 		match.addDependency(second.sourceId);
-		if (enemy.fleetId.isEmpty()) match.setStatus(MatchStatus.COMPLETE);
+		if (enemy.fleetId.isEmpty()) {
+			match.setStatus(MatchStatus.COMPLETE);
+		}
 		BattleNext_Match old = preserved.get(id);
 		if (old != null && old.getStage() == match.getStage()
 				&& initialPlayer(old).equals(match.getPlayer()) && initialEnemy(old).equals(match.getEnemy())
@@ -346,7 +372,7 @@ public class BattleNext_TournamentEngine {
 		return match.getRounds().isEmpty() ? match.getEnemy() : match.getRounds().get(0).getEnemy();
 	}
 
-	private boolean roundComplete(BattleNext_TournamentModel tournament, String prefix, int count) {
+	private boolean roundComplete(BattleNext_StartedTournament tournament, String prefix, int count) {
 		for (int index = 1; index <= count; index++) {
 			BattleNext_Match match = tournament.findMatch(prefix + "-" + index);
 			if (match == null || match.getStatus() != MatchStatus.COMPLETE) return false;
@@ -354,13 +380,15 @@ public class BattleNext_TournamentEngine {
 		return true;
 	}
 
-	private List<BracketFleetParticipant> winners(BattleNext_TournamentModel tournament, String prefix, int count) {
+	private List<BracketFleetParticipant> winners(BattleNext_StartedTournament tournament, String prefix, int count) {
 		List<BracketFleetParticipant> result = new ArrayList<>();
-		for (int index = 1; index <= count; index++) result.add(winner(tournament.findMatch(prefix + "-" + index)));
+		for (int index = 1; index <= count; index++) {
+			result.add(winner(tournament.findMatch(prefix + "-" + index)));
+		}
 		return result;
 	}
 
-	private List<BracketFleetParticipant> losers(BattleNext_TournamentModel tournament, String prefix, int count) {
+	private List<BracketFleetParticipant> losers(BattleNext_StartedTournament tournament, String prefix, int count) {
 		List<BracketFleetParticipant> result = new ArrayList<>();
 		for (int index = 1; index <= count; index++) {
 			BattleNext_Match match = tournament.findMatch(prefix + "-" + index);
@@ -373,15 +401,22 @@ public class BattleNext_TournamentEngine {
 		return new BracketFleetParticipant(match.getWinnerFleetId(), match.getId());
 	}
 
-	private String roundRobinChampion(BattleNext_TournamentModel tournament) {
-		List<String> fleets = tournament.getFleetIds();
+	private String roundRobinChampion(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament) {
+		List<String> fleets = tournament.getFleetIds().stream().filter(id -> !id.isEmpty()).toList();
 		Map<String, Integer> wins = new HashMap<>();
-		for (BattleNext_Match match : tournament.getMatches()) wins.merge(match.getWinnerFleetId(), 1, Integer::sum);
+		for (BattleNext_Match match : tournament.getMatches()) {
+			if (match.getEnemy().isEmpty()) continue;
+			wins.merge(match.getWinnerFleetId(), 1, Integer::sum);
+		}
 		int best = -1;
-		for (String fleet : fleets) best = Math.max(best, wins.getOrDefault(fleet, 0));
+		for (String fleet : fleets) {
+			best = Math.max(best, wins.getOrDefault(fleet, 0));
+		}
 		Set<String> tied = new HashSet<>();
 		for (String fleet : fleets) {
-			if (wins.getOrDefault(fleet, 0) == best) tied.add(fleet);
+			if (wins.getOrDefault(fleet, 0) == best) {
+				tied.add(fleet);
+			}
 		}
 		String champion = "";
 		int headToHead = -1;
@@ -389,7 +424,9 @@ public class BattleNext_TournamentEngine {
 			if (!tied.contains(fleet)) continue;
 			int score = 0;
 			for (BattleNext_Match match : tournament.getMatches()) {
-				if (fleet.equals(match.getWinnerFleetId()) && tied.contains(match.getLoserFleetId())) score++;
+				if (fleet.equals(match.getWinnerFleetId()) && tied.contains(match.getLoserFleetId())) {
+					score++;
+				}
 			}
 			// Three-way cycles are rare; seed order resolves a remaining tie.
 			if (score > headToHead) {
@@ -409,7 +446,9 @@ public class BattleNext_TournamentEngine {
 
 	private int bracketWidth(int count) {
 		int width = 2;
-		while (width < count) width *= 2;
+		while (width < count) {
+			width *= 2;
+		}
 		return width;
 	}
 
@@ -420,14 +459,14 @@ public class BattleNext_TournamentEngine {
 		throw new IllegalArgumentException("Winner is not a participant in the match");
 	}
 
-	private void finish(BattleNext_TournamentModel tournament, String champion) {
+	private void finish(BattleNext_StartedTournament tournament, String champion) {
 		tournament.setChampionFleetId(champion);
 		tournament.setCompleted(true);
 		BattleNext_Logger.info(BattleNext_TournamentEngine.class, "tournament.completed",
 				BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build());
 	}
 
-	private void selectPendingMatch(BattleNext_TournamentModel tournament) {
+	private void selectPendingMatch(BattleNext_StartedTournament tournament) {
 		if (!tournament.isCompleted()) {
 			for (BattleNext_Match match : tournament.getMatches()) {
 				if (match.getStatus() == MatchStatus.PENDING) {

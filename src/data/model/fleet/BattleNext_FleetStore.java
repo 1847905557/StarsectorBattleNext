@@ -7,13 +7,12 @@ import data.model.fleet.io.BattleNext_FleetLegacyFolderLoader;
 import data.model.fleet.io.BattleNext_FleetLegacyLoader;
 import data.model.fleet.io.BattleNext_FleetSaver;
 import data.model.fleet.io.BattleNext_FleetStandardLoader;
-import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_Logger;
 import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_FleetModel> {
 
@@ -34,16 +33,6 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	@Override
 	protected List<BattleNext_BaseLoader<BattleNext_FleetModel>> sources() {
 		return List.of(legacyLoader, folderLoader, standardLoader);
-	}
-
-	@Override
-	protected void mergeLoaded(Map<String, BattleNext_FleetModel> loaded, BattleNext_FleetModel model) throws IOException {
-		BattleNext_FleetModel existing = loaded.get(model.getId());
-		if (existing != null) {
-			throw new IOException("Duplicate fleet ID " + model.getId() + ": "
-					+ existing.getSourcePath() + " and " + model.getSourcePath());
-		}
-		super.mergeLoaded(loaded, model);
 	}
 
 	@Override

@@ -16,7 +16,6 @@ import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
-import data.model.tournament.BattleNext_TournamentStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
@@ -24,9 +23,10 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
 import data.scripts.ui.editor.BattleNext_RuleEditor;
-import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -178,15 +178,15 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		assertEquals("small-insignia", labelFonts.get(components.get(1).getPosition()));
 		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(components.get(1).getPosition()));
 		if (kind.equals("variant")) {
-			assertTrue(((LabelAPI) components.get(2)).getText().contains("BattleNext_variant_base_deployment_points"));
-			assertEquals("BattleNext_variant_flux_capacitors: 0", ((LabelAPI) components.get(3)).getText());
-			assertEquals("BattleNext_variant_flux_vents: 0", ((LabelAPI) components.get(4)).getText());
+			assertTrue(((LabelAPI) components.get(2)).getText().contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_base_deployment_points")));
+			assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_capacitors") + ": 0", ((LabelAPI) components.get(3)).getText());
+			assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_vents") + ": 0", ((LabelAPI) components.get(4)).getText());
 			List<String> values = components.stream().filter(LabelAPI.class::isInstance)
 					.map(LabelAPI.class::cast).map(LabelAPI::getText).toList();
-			assertTrue(values.contains("BattleNext_variant_weapons: 1"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 1"));
 			assertTrue(values.contains("Weapon laser ×1"));
-			assertTrue(values.contains("BattleNext_variant_fighter_wings: 1"));
-			assertTrue(values.contains("BattleNext_variant_modules: 1"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ": 1"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 1"));
 			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
 		} else if (List.of("smod", "dmod").contains(kind)) {
@@ -200,8 +200,8 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			var titlePosition = components.get(0).getPosition();
 			var idPosition = components.get(1).getPosition();
 			assertEquals(5f, titlePosition.getY() - idPosition.getY() - idPosition.getHeight());
-			assertEquals("BattleNext_fleet_ships: 0 - BattleNext_fleet_fighter_wings: 0", ((LabelAPI) components.get(2)).getText());
-			assertEquals("BattleNext_fleet_base_dp: 0 - BattleNext_fleet_base_fp: 0", ((LabelAPI) components.get(3)).getText());
+			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 0", ((LabelAPI) components.get(2)).getText());
+			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0", ((LabelAPI) components.get(3)).getText());
 			assertEquals(8f, components.get(5).getPosition().getHeight());
 		} else if (kind.equals("restriction")) {
 			assertEquals(2, components.size());
@@ -215,7 +215,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		}
 		if (kind.equals("smod")) assertEquals("S-mod effect 50%.", ((LabelAPI) components.get(3)).getText());
 		if (kind.equals("dmod")) {
-			assertTrue(((LabelAPI) components.get(3)).getText().contains("BattleNext_refit_d_mod_"));
+			assertEquals(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_suitable"), ((LabelAPI) components.get(3)).getText());
 		}
 		picker.closeOverlays();
 		assertNull(getField(picker, "popup"));
@@ -241,11 +241,12 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 					return List.of(new BattleNext_FleetModel("fleet_id", "Fleet name", List.of(), List.of(), List.of()));
 				}
 			};
-			var editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), fleets, new BattleNext_RuleStore());
-			editor.open(null);
-			editor.setInputRouter(router);
-			attachEditor(editor, root);
-			return (BattleNext_OptionPicker) getField(editor, "fleetPicker");
+			BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, root, 190f, 30f, "Select fleet", 0f,
+					new BattleNext_FleetSourceProvider(fleets), BattleNext_OptionPicker.OptionSelectionMode.SINGLE, List::of, ids -> {});
+			TooltipMakerAPI host = root.createUIElement(190f, 30f, false);
+			picker.attach(host, root);
+			root.addUIElement(host).inTL(0f, 0f);
+			return picker;
 		} else if (kind.equals("restriction")) {
 			var editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 			editor.open(null);

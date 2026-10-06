@@ -2,7 +2,6 @@ package data.model.report;
 
 import data.scripts.report.BattleNext_MemberReport;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,7 @@ class BattleNext_BattleReportModelTest {
 	}
 
 	@Test
-	void repeatedParsingReplacesMembersAndLateFailureKeepsEveryField() throws Exception {
+	void repeatedParsingPublishesValidMembersAndPreservesMalformedRawItems() throws Exception {
 		var report = new BattleNext_BattleReportModel();
 		report.setId("original");
 		report.setName("Original");
@@ -65,10 +64,16 @@ class BattleNext_BattleReportModelTest {
 		String before = report.toJson().toString();
 		JSONObject invalid = new JSONObject(json.toString()).put("id", "replacement").put("name", "Replacement");
 		invalid.put("enemyMembers", new JSONArray().put(new JSONObject().put("name", "Broken")));
-		assertThrows(JSONException.class, () -> report.fromJson(invalid));
-		assertEquals(before, report.toJson().toString());
+		report.fromJson(invalid);
+		assertEquals("replacement", report.getId());
+		assertEquals("Replacement", report.getName());
+		assertEquals(1, report.getPlayerMembers().size());
+		assertTrue(report.getEnemyMembers().isEmpty());
+		assertTrue(report.getLoadErrors().get(0).contains("enemyMembers[0]"));
+		assertEquals(invalid.toString(), report.toJson().toString());
 		json.put("playerMembers", new JSONArray());
 		report.fromJson(json);
 		assertTrue(report.getPlayerMembers().isEmpty());
+		assertTrue(report.getLoadErrors().isEmpty());
 	}
 }

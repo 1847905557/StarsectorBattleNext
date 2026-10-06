@@ -1,6 +1,5 @@
 package data.scripts.battle;
 
-import data.model.report.BattleNext_BattleReportModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -11,12 +10,11 @@ public class BattleNext_Round {
 	private String player;
 	private String enemy;
 	private RoundStatus status = RoundStatus.DRAW;
-	private BattleNext_BattleReportModel report;
+	private String reportId = "";
 
 	public BattleNext_Round(String player, String enemy) {
 		this.player = player == null ? "" : player.trim();
 		this.enemy = enemy == null ? "" : enemy.trim();
-		this.report = new BattleNext_BattleReportModel();
 	}
 
 	public static BattleNext_Round fromJson(JSONObject json) throws JSONException {
@@ -26,12 +24,7 @@ public class BattleNext_Round {
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid round.status: " + json.getString("status"), exception);
 		}
-		JSONObject report = json.optJSONObject("report");
-		if (report != null) {
-			BattleNext_BattleReportModel reportModel = new BattleNext_BattleReportModel();
-			reportModel.fromJson(report);
-			round.report = reportModel;
-		}
+		round.reportId = json.getString("reportId");
 		return round;
 	}
 
@@ -40,7 +33,7 @@ public class BattleNext_Round {
 		json.put("player", player);
 		json.put("enemy", enemy);
 		json.put("status", status.name());
-		json.put("report", report.toJson());
+		json.put("reportId", reportId);
 		return json;
 	}
 
@@ -66,11 +59,11 @@ public class BattleNext_Round {
 		return "";
 	}
 
-	public BattleNext_BattleReportModel getReport() {
-		return report;
+	public String getReportId() {
+		return reportId;
 	}
 
-	public void setReport(BattleNext_BattleReportModel report) {
-		this.report = report == null ? new BattleNext_BattleReportModel() : report;
+	public void setReportId(String reportId) {
+		this.reportId = reportId;
 	}
 }

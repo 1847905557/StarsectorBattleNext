@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,8 +26,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 

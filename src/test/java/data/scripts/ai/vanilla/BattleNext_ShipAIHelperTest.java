@@ -9,6 +9,8 @@ import com.fs.starfarer.api.combat.WeaponAPI.WeaponSize;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_RetreatPositionEvaluator;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.util.vector.Vector2f;
@@ -32,6 +34,24 @@ class BattleNext_ShipAIHelperTest {
 		assertTrue(BattleNext_ShipAIHelper.getCarrierTarget(carrier) == maneuverTarget);
 		flags.unsetFlag(AIFlags.MANEUVER_TARGET);
 		assertTrue(BattleNext_ShipAIHelper.getCarrierTarget(carrier) == directTarget);
+	}
+
+	@Test
+	void personalityBraveryIsolatesMalformedRowsAndRejectsEveryConflictingIdentity() throws Exception {
+		SettingsAPI previous = Global.getSettings();
+		JSONArray rows = new JSONArray().put("malformed").put(new JSONObject().put("id", "broken").put("bravery", "invalid"))
+				.put(new JSONObject().put("id", "steady").put("bravery", 0.75));
+		ShipAPI ship = (ShipAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{ShipAPI.class},
+				(instance, method, args) -> "getCustomData".equals(method.getName()) ? Map.of() : null);
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> "getMergedSpreadsheetData".equals(method.getName()) ? rows : null));
+		try {
+			assertEquals(0.75f, BattleNext_ShipAIHelper.getBravery(ship));
+			rows.put(new JSONObject().put("id", "steady").put("bravery", 1.0));
+			assertEquals("Personality bravery missing: steady", assertThrows(IllegalStateException.class, () -> BattleNext_ShipAIHelper.getBravery(ship)).getMessage());
+		} finally {
+			Global.setSettings(previous);
+		}
 	}
 
 	@Test

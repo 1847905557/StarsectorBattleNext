@@ -6,11 +6,10 @@ import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import data.scripts.tools.BattleNext_CombatInput;
 import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_CombatInputFlowIntegrationTest extends BattleNext_TestGameFixture {
 

@@ -10,7 +10,10 @@ import data.scripts.ai.vanilla.BattleNext_ShipAIHelper;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import org.lwjgl.util.vector.Vector2f;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.collisions.CollisionAnalysisModule.

@@ -1,25 +1,25 @@
 package data.simulator;
 
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
+import data.missions.BattleNext_MissionBattleMap;
+import data.model.BattleNext_LoadSource;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberBuilder;
 import data.scripts.member.BattleNext_MemberModel;
-import data.scripts.fleet.BattleNext_VariantBuilder;
-import data.scripts.fleet.BattleNext_FleetBuilder;
-import data.scripts.fleet.BattleNext_AssembledFleet;
-import data.model.fleet.BattleNext_FleetModel;
-import data.model.BattleNext_LoadSource;
-import data.missions.BattleNext_MissionBattleMap;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
-import org.json.JSONObject;
-import org.json.JSONException;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_EnvironmentPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;

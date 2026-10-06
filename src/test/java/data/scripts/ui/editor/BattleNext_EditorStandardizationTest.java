@@ -5,33 +5,37 @@ import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import data.model.report.*;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
+import data.model.report.BattleNext_ReportTarget;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.scripts.tools.BattleNext_Settings;
-import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.battle.BattleNext_Round;
-import data.scripts.ui.BattleNext_UiInputRouter;
-import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_TournamentEngine;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
-import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture {
 
@@ -92,7 +96,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		String name = "名字 " + "N".repeat(300);
 		BattleNext_TournamentModel source = new BattleNext_TournamentModel("cup", name,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_FleetStore(), new BattleNext_RuleStore());
+		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_RuleStore());
 		editor.open(source);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		for (int iteration = 0; iteration < 3; iteration++) {
@@ -114,22 +118,16 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		if (kind.equals("tournament")) {
 			((BattleNext_TournamentStore) getField(editor, "store")).reload();
 			((BattleNext_RuleStore) getField(editor, "ruleStore")).reload();
-			BattleNext_FleetStore fleets = (BattleNext_FleetStore) getField(editor, "fleetStore");
-			fleets.reload();
-			for (String id : List.of("first", "second")) {
-				fleets.save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
-			}
 		}
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		if (editor instanceof BattleNext_TournamentEditor tournament) {
 			((TextFieldAPI) getField(editor, "idField")).setText("cup");
-			confirmTournamentFleets(tournament, List.of("first", "second"));
 		}
 		((TextFieldAPI) getField(editor, "nameField")).setText("Original name");
 		assertTrue(editor.save(), editor.getStatusText());
 		Map<Path, String> stored = storedFiles();
-		String expectedStatus = kind.equals("pinned") ? "BattleNext_variant_pin_name_required"
-				: kind.equals("report") ? "BattleNext_report_name_required" : "BattleNext_common_name_required";
+		String expectedStatus = kind.equals("pinned") ? BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")
+				: kind.equals("report") ? BattleNext_TestTextCatalog.text("Report", "BattleNext_report_name_required") : BattleNext_TestTextCatalog.text("Common", "BattleNext_common_name_required");
 		for (String blank : List.of("", " \u3000 ")) {
 			TextFieldAPI nameField = (TextFieldAPI) getField(editor, "nameField");
 			nameField.setText(blank);
@@ -313,7 +311,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		store.setFailLoad(true);
 		assertTrue(page.save());
 		assertFalse(page.hasUnsavedChanges());
-		assertTrue(page.getStatusText().startsWith("BattleNext_common_saved"));
+		assertTrue(page.getStatusText().startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved")));
 		store.setFailLoad(false);
 		store.reload();
 		assertEquals("Saved name", store.get(pin.getPinId()).getDisplayName());
@@ -321,7 +319,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 	}
 
 	@Test
-	void reportSourceIdentityAndPersistenceDistinguishStandaloneAndEmbeddedRecords() throws Exception {
+	void reportIdentityAndPersistenceUseIndependentRecords() throws Exception {
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		reports.reload();
@@ -331,27 +329,23 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		standalone.setName("Standalone");
 		reports.save(standalone);
 		BattleNext_BattleReportModel embedded = new BattleNext_BattleReportModel();
-		embedded.setId("same");
+		embedded.setId("round");
 		embedded.setName("Embedded");
 		BattleNext_TournamentModel cup = new BattleNext_TournamentModel("cup", "Cup",
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		cup.setFleetIds(List.of("first", "second"));
-		new BattleNext_TournamentEngine().start(cup);
-		cup.getNextPendingMatch().addRound(new BattleNext_Round("first", "second"));
-		cup.getNextPendingMatch().getRounds().get(0).setReport(embedded);
-		tournaments.save(cup);
-		BattleNext_ReportTarget first = new BattleNext_ReportTarget(standalone, "", null, "", -1);
-		BattleNext_ReportTarget second = new BattleNext_ReportTarget(embedded, "", cup, cup.getPendingMatchId(), 0);
+		BattleNext_StartedTournament started = new BattleNext_TournamentEngine().start(cup, List.of("first", "second"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
+		BattleNext_ReportTarget first = new BattleNext_ReportTarget(standalone);
+		reports.save(embedded);
+		BattleNext_ReportTarget second = new BattleNext_ReportTarget(embedded);
 		assertNotEquals(first.identity(), second.identity());
-		second.rename(reports, tournaments, "Changed embedded");
+		second.rename(reports, "Changed round");
+		first.rename(reports, "Changed standalone");
 		reports.reload();
-		tournaments.reload();
-		assertEquals("Standalone", reports.get("same").getName());
-		assertEquals("Changed embedded", tournaments.get("cup").getMatches().get(0).getRounds().get(0).getReport().getName());
-		second.delete(reports, tournaments);
-		tournaments.reload();
-		assertEquals("", tournaments.get("cup").getMatches().get(0).getRounds().get(0).getReport().getId());
-		assertNotNull(reports.get("same"));
+		assertEquals("Changed standalone", reports.get("same").getName());
+		assertEquals("Changed round", reports.get("round").getName());
+		second.delete(reports);
+		reports.reload();
+		assertNull(reports.get("round"));
 	}
 
 	@Test
@@ -421,7 +415,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				yield editor;
 			}
 			case "tournament" -> {
-				BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_FleetStore(), new BattleNext_RuleStore());
+				BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_RuleStore());
 				editor.open(null);
 				yield editor;
 			}
@@ -439,8 +433,8 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 				report.setId("report");
 				report.setName("Report");
-				BattleNext_ReportEditor editor = new BattleNext_ReportEditor(new BattleNext_BattleReportStore(), new BattleNext_TournamentStore());
-				editor.open(new BattleNext_ReportTarget(report, "", null, "", -1));
+				BattleNext_ReportEditor editor = new BattleNext_ReportEditor(new BattleNext_BattleReportStore());
+				editor.open(new BattleNext_ReportTarget(report));
 				yield editor;
 			}
 			default -> {

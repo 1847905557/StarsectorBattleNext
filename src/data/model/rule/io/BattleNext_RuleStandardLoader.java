@@ -3,8 +3,8 @@ package data.model.rule.io;
 import data.model.BattleNext_CatalogLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.rule.BattleNext_RuleModel;
-import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,13 +15,13 @@ public class BattleNext_RuleStandardLoader extends BattleNext_CatalogLoader<Batt
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return BattleNext_ModFileManager.listJson(RESOURCE_ROOT);
+		return paths(RESOURCE_ROOT, false).stream().filter(path -> path.endsWith(".json")).toList();
 	}
 
 	@Override
-	protected BattleNext_RuleModel parse(String path) throws IOException, JSONException {
+	protected BattleNext_RuleModel parse(JSONObject json) throws IOException, JSONException {
 		BattleNext_RuleModel model = new BattleNext_RuleModel();
-		model.fromJson(BattleNext_ModFileManager.readJson(BattleNext_RuleStandardLoader.class, path, MOD_ID));
+		model.fromJson(json);
 		return model;
 	}
 

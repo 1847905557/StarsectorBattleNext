@@ -11,10 +11,11 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
-import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_HullModSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.input.Keyboard;
@@ -56,7 +57,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 			assertEquals(right.getPosition().getX(), row.getX());
 			float top = right.getPosition().getY() + right.getPosition().getHeight() - row.getY() - row.getHeight();
 			assertEquals(picker == sMods ? 0f : 36f, top);
-			assertEquals(picker == sMods ? "BattleNext_refit_s_mods" : "BattleNext_refit_d_mods", getField(picker, "title"));
+			assertEquals(picker == sMods ? BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_s_mods") : BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mods"), getField(picker, "title"));
 			picker.close();
 		}
 	}

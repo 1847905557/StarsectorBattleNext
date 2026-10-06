@@ -1,25 +1,22 @@
 package data.scripts.ui.editor;
 
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.*;
 import data.missions.BattleNext_MissionBattleMap;
-import data.scripts.tools.BattleNext_Settings;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.scripts.tools.BattleNext_Settings;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import java.util.List;
-import java.lang.reflect.Proxy;
+
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.List;
 
 class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
@@ -28,6 +25,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
 		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
+		assertEquals("", ((LabelAPI) getField(editor, "statusLabel")).getText());
 		List<BattleNext_QuickBattleModel> entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");
 		entries.clear();
 		entries.add(BattleNext_QuickBattleModel.parseLine("# unfinished", false));
@@ -45,6 +43,12 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("first", ((TextFieldAPI) getField(rows.get(0), "playerField")).getText());
 		assertEquals("pending", ((TextFieldAPI) getField(rows.get(1), "mapField")).getText());
+		editor.buttonPressed("delete:2");
+		String deleted = BattleNext_TestTextCatalog.text("Common", "BattleNext_common_deleted");
+		assertEquals(deleted, editor.getStatusText());
+		assertEquals(deleted, ((LabelAPI) getField(editor, "statusLabel")).getText());
+		editor.refreshContent();
+		assertEquals(deleted, ((LabelAPI) getField(editor, "statusLabel")).getText());
 	}
 
 	@Test
@@ -103,7 +107,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		entries.add(new BattleNext_QuickBattleModel("first", "second", BattleNext_MissionBattleMap.RANDOM_MAP_ID, 1f));
 		editor.refreshContent();
 		Object row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
-		String category = cnText ? "Battle_CN" : "Battle";
+		String category = "Battle";
 		String rowError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map"), BattleNext_MissionBattleMap.LAST_MAP_ID);
 		String saveError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map_settings"), BattleNext_MissionBattleMap.LAST_MAP_ID);
 		for (String input : List.of(Integer.toString(BattleNext_MissionBattleMap.LAST_MAP_ID + 1), "pending")) {
@@ -114,6 +118,9 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 					.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(rowError::equals));
 			assertFalse(editor.save());
 			assertEquals(saveError, editor.getStatusText());
+			editor.refreshContent();
+			assertEquals(saveError, ((LabelAPI) getField(editor, "statusLabel")).getText());
+			row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
 		}
 		editor.close();
 	}

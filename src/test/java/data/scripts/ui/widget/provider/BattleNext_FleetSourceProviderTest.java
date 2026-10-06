@@ -1,31 +1,33 @@
 package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
-import data.model.tournament.BattleNext_TournamentStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import data.scripts.ui.widget.view.BattleNext_TournamentTemplate;
+import data.scripts.ui.widget.view.BattleNext_TournamentView;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 
@@ -72,15 +74,15 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		var title = components.get(0).getPosition();
 		var identifier = components.get(1).getPosition();
 		assertEquals(5f, title.getY() - identifier.getY() - identifier.getHeight());
-		assertEquals("BattleNext_fleet_ships: 0 - BattleNext_fleet_fighter_wings: 0", ((LabelAPI) components.get(2)).getText());
-		assertEquals("BattleNext_fleet_base_dp: 0 - BattleNext_fleet_base_fp: 0", ((LabelAPI) components.get(3)).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 0", ((LabelAPI) components.get(2)).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0", ((LabelAPI) components.get(3)).getText());
 		assertEquals(8f, components.get(5).getPosition().getHeight());
 		assertTrue(title.getHeight() > paragraphLineHeight);
 		assertTrue(tooltips.get(tooltip).getUsedHeight() > 50f);
 	}
 
 	@Test
-	void tournamentPickerUsesTheExtractedSourceAcrossSearchCancelConfirmAndRefresh() throws Exception {
+	void templateFleetRowsUseSharedPickerAndPreserveSlotsThroughCancelConfirmAndClear() throws Exception {
 
 		List<BattleNext_FleetModel> fleets = List.of(
 				new BattleNext_FleetModel("first_50%", "风风雨雨", List.of(), List.of(), List.of()),
@@ -88,54 +90,77 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		BattleNext_FleetStore store = store(fleets);
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(1000f, 900f, new BaseCustomUIPanelPlugin());
-		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(
-				new BattleNext_TournamentStore(), store, new BattleNext_RuleStore());
-		BattleNext_TournamentModel draft = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		draft.setFleetIds(List.of("first_50%"));
-		editor.open(draft);
-		editor.setInputRouter(router);
-		attachEditor(editor, root);
-		for (int cycle = 0; cycle < 3; cycle++) {
-			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "fleetPicker");
-			var source = getField(picker, "source");
-			assertInstanceOf(BattleNext_FleetSourceProvider.class, source);
-			assertSame(store, getField(source, "fleetStore"));
-			int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
-			CustomPanelAPI row = (CustomPanelAPI) getField(picker, "row");
-			plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		BattleNext_TournamentTemplate template = new BattleNext_TournamentTemplate(2);
+		template.select(0, "first_50%");
+		BattleNext_RuleStore rules = new BattleNext_RuleStore();
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(router, configuration, null,
+				BattleNext_TournamentDisplay.details(configuration, null, template.getFleetIds(), store, rules, "", List.of()), List.of(), action -> {});
+		display.enableTemplateEditing(root, new BattleNext_FleetSourceProvider(store), template::getFleetIds, (slot, id) -> {
+			template.select(slot, id);
+			display.update(configuration, null, BattleNext_TournamentDisplay.details(configuration, null,
+					template.getFleetIds(), store, rules, "", List.of()), List.of());
+		});
+		display.attach(root);
+		BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
+		BattleNext_TournamentView.ViewState before = chart.captureState();
+		for (String action : List.of("CANCEL", "CONFIRM", "CONFIRM")) {
+			List<?> nodes = (List<?>) getField(chart, "nodes");
+			BattleNext_TournamentView.Node node = (BattleNext_TournamentView.Node) nodes.get(0);
+			float[] point = chart.project(node.x + 120f, node.y + 33f);
+			chart.handleInput(List.of(click(point[0], point[1], true), click(point[0], point[1], false)));
+			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(display, "fleetPicker");
+			assertInstanceOf(BattleNext_FleetSourceProvider.class, getField(picker, "source"));
+			assertSame(root, getField(picker, "overlayHost"));
 			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			assertNotNull(popup);
+			assertTrue(children.get(root).contains(popup));
 			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 			search.setText("second");
 			plugins.get(popup).advance(0f);
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			assertEquals(1, tooltips.get(grid).getComponents().size());
-			var card = tooltips.get(grid).getComponents().get(0);
-			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(card).location());
-			assertFalse(tooltipBindings.get(card).recreateEveryFrame());
-			assertSame(tooltips.get(grid), tooltipBindings.get(card).owner());
-			assertTrue(imagePaths.isEmpty());
+			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
 			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(card).createTooltip(hover, false, null);
 			assertEquals("Raw fleet", ((LabelAPI) tooltips.get(hover).getComponents().get(0)).getText());
-			assertEquals("second", ((LabelAPI) tooltips.get(hover).getComponents().get(1)).getText());
-			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
-			selection.clear();
-			selection.put("second", 1);
-			plugins.get(popup).buttonPressed(buttonIds.get(cycle == 1 ? "CONFIRM" : "CANCEL"));
-			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
-					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
+			plugins.get(card).processInput(List.of(click(card.getPosition().getCenterX(), card.getPosition().getCenterY(), true)));
+			plugins.get(popup).buttonPressed(buttonIds.get(action));
 			assertTrue(router.isEmpty());
-			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
-			editor.refreshContent();
-			assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
-			assertEquals(cycle == 0 ? List.of("first_50%") : List.of("first_50%", "second"),
-					((BattleNext_TournamentModel) getField(editor, "draft")).getFleetIds());
+			assertFalse(router.getSession().hasInputState());
+			assertEquals(before, chart.captureState());
 		}
-		editor.close();
-		router.clear();
-		assertTrue(((List<?>) getField(getField(editor, "fleetPicker"), "ownedPanels")).isEmpty());
+		assertEquals(List.of("", ""), template.getFleetIds());
+		template.select(0, "missing");
+		display.update(configuration, null, BattleNext_TournamentDisplay.details(configuration, null,
+				template.getFleetIds(), store, rules, "", List.of()), List.of());
+		assertTrue(chart.errors().stream().anyMatch(error -> error.contains("missing")));
+		BattleNext_TournamentView.Node node = (BattleNext_TournamentView.Node) ((List<?>) getField(chart, "nodes")).get(0);
+		float[] point = chart.project(node.x + 120f, node.y + 33f);
+		chart.handleInput(List.of(click(point[0], point[1], true), click(point[0], point[1], false)));
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(display, "fleetPicker");
+		display.close();
+		assertTrue(((List<?>) getField(picker, "ownedPanels")).isEmpty());
+		assertTrue(router.isEmpty());
 		assertFalse(router.getSession().hasInputState());
+	}
+
+	private InputEventAPI click(float x, float y, boolean down) {
+		AtomicBoolean consumed = new AtomicBoolean();
+		return proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
+			case "isLMBDownEvent" -> down;
+			case "isLMBUpEvent" -> !down;
+			case "isMouseDownEvent" -> down;
+			case "isMouseEvent" -> true;
+			case "getX" -> (int) x;
+			case "getY" -> (int) y;
+			case "isConsumed" -> consumed.get();
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
+			default -> null;
+		});
 	}
 
 	private BattleNext_FleetStore store(List<BattleNext_FleetModel> fleets) {

@@ -22,7 +22,6 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 	private String author;
 	private String description;
 	private final Map<String, BattleNext_VariantBuilder> variants = new LinkedHashMap<>();
-	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_FleetModel() {
 		this("", "", "", List.of(), List.of(), List.of());
@@ -51,20 +50,21 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported fleet formatVersion: " + version);
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		JSONArray memberArray = json.optJSONArray("members");
+		beginParse();
 		if (memberArray != null) {
-			for (int index = 0; index < memberArray.length(); index++) {
-				JSONObject member = memberArray.optJSONObject(index);
-				if (member != null) {
-					members.add(BattleNext_MemberModel.fromJson(member));
-				}
-			}
+			members = readCollection("members", memberArray, BattleNext_MemberModel::fromJson);
 		}
 
 		setId(json.optString("id", ""));
 		setName(json.optString("name", ""));
-		setSkills(readStrings(json.optJSONArray("skills")));
-		setTags(readStrings(json.optJSONArray("tags")));
+		setSkills(readStringCollection("skills", json.optJSONArray("skills")));
+		setTags(readStringCollection("tags", json.optJSONArray("tags")));
 		setMembers(members);
+		for (BattleNext_MemberModel member : members) {
+			for (String error : member.getLoadErrors()) {
+				addLoadError("Member " + member.getName() + ": " + error);
+			}
+		}
 		author = json.optString("author", "");
 		description = json.optString("description", "");
 	}
@@ -75,13 +75,13 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
 		json.put("name", name);
-		json.put("skills", new JSONArray(skills));
-		json.put("tags", new JSONArray(tags));
+		json.put("skills", writeCollection("skills", new JSONArray(skills)));
+		json.put("tags", writeCollection("tags", new JSONArray(tags)));
 		JSONArray memberArray = new JSONArray();
 		for (BattleNext_MemberModel member : members) {
 			memberArray.put(member.toJson());
 		}
-		json.put("members", memberArray);
+		json.put("members", writeCollection("members", memberArray));
 		json.put("author", author);
 		json.put("description", description);
 		return json;
@@ -166,24 +166,6 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	public boolean hasLocalVariants() {
 		return !variants.isEmpty();
-	}
-
-	public void addLoadError(String error) {
-		if (error != null && !error.isEmpty()) loadErrors.add(error);
-	}
-
-	public List<String> getLoadErrors() {
-		return Collections.unmodifiableList(loadErrors);
-	}
-
-	private static List<String> readStrings(JSONArray values) {
-		List<String> result = new ArrayList<>();
-		if (values == null) return result;
-		for (int index = 0; index < values.length(); index++) {
-			String value = values.optString(index, "").trim();
-			if (!value.isEmpty()) result.add(value);
-		}
-		return result;
 	}
 
 	private static List<String> copyStrings(List<String> values) {

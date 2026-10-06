@@ -21,21 +21,27 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
+		beginLoad();
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_ModFileManager.list(LEGACY_FOLDER, false);
+		List<String> paths = paths(LEGACY_FOLDER, false);
 		for (String dataPath : paths) {
 			String fileName = dataPath.substring(dataPath.lastIndexOf('/') + 1);
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = LEGACY_FOLDER + "/player" + number + "_fleet.csv";
 			if (!paths.contains(fleetPath)) {
+				reject(dataPath, -1, "ab_player" + number, "", new IOException("Missing fleet members source: " + fleetPath));
 				BattleNext_Logger.warn(BattleNext_FleetLegacyLoader.class, "fleet.legacy.incomplete",
 				BattleNext_Logger.fields().put("metadata_path", dataPath).put("missing_members_path", fleetPath).put("number", number).build());
 				continue;
 			}
-			result.add(readFleet(number, dataPath, fleetPath));
+			try {
+				result.add(readFleet(number, dataPath, fleetPath));
+			} catch (IOException | JSONException | IllegalArgumentException exception) {
+				reject(dataPath, -1, "ab_player" + number, "", exception);
+			}
 		}
-		return result;
+		return finishLoad(result);
 	}
 
 	@Override
@@ -54,18 +60,29 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 				JSONArray dataRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, dataPath, MOD_ID);
 				JSONObject data = metadata(dataRows, dataPath);
 				JSONArray fleetRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, fleetPath, MOD_ID);
+				recordInput(dataPath, -1, "ab_player" + number, new JSONObject().put("metadata", dataRows).put("members", fleetRows).toString());
 				List<BattleNext_MemberModel> members = new ArrayList<>();
+				List<String> errors = new ArrayList<>();
 				for (int index = 0; index < fleetRows.length(); index++) {
+					try {
 					JSONObject row = fleetRows.getJSONObject(index);
 					if (isEmpty(row, "rowNumber", "variant", "personality", "skills", "name", "portrait", "orders", "tags")) continue;
 					members.add(new BattleNext_MemberModel(row.optString("variant").trim(), row.optString("name").trim(),
 							row.optString("personality").trim(), splitValues(row.optString("skills")),
 							row.optString("portrait").trim(), row.optString("orders").trim(), splitValues(row.optString("tags"))));
+					} catch (JSONException | IllegalArgumentException exception) {
+						String diagnostic = fleetPath + "[" + index + "] " + fleetRows.opt(index) + ": " + exception;
+						errors.add(diagnostic);
+						BattleNext_Logger.warn(getClass(), "fleet.member.item.rejected", BattleNext_Logger.fields().put("diagnostic", diagnostic).build(), exception);
+					}
 				}
 				BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, data.optString("name").trim(),
 						splitValues(data.optString("skills")), splitValues(data.optString("tags")), members);
 				result.setFolderName("legacy_" + number);
 				result.setAuthor(data.optString("author").trim());
+				for (String error : errors) {
+					result.addLoadError(error);
+				}
 				markSource(result, dataPath);
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load",
 					BattleNext_Logger.fields().put("fleet", result).put("metadata_path", dataPath).put("members_path", fleetPath).build());
@@ -82,7 +99,13 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 
 	private JSONObject metadata(JSONArray rows, String path) throws IOException, JSONException {
 		for (int index = 0; index < rows.length(); index++) {
-			JSONObject row = rows.getJSONObject(index);
+			JSONObject row;
+			try {
+				row = rows.getJSONObject(index);
+			} catch (JSONException exception) {
+				reject(path, index, "", rows.opt(index).toString(), exception);
+				continue;
+			}
 			if (isEmpty(row, "name", "author", "skills", "tags")) continue;
 			return row;
 		}

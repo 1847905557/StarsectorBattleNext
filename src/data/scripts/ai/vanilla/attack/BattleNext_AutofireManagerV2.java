@@ -11,7 +11,9 @@ import data.scripts.ai.vanilla.BattleNext_ThreatData;
 import data.scripts.ai.vanilla.BattleNext_ThreatEvalAI;
 import org.lwjgl.util.vector.Vector2f;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Port of engine class com.fs.starfarer.combat.ai.attack.AutofireManagerV2.

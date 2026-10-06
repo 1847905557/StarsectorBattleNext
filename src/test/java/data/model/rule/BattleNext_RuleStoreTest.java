@@ -26,20 +26,22 @@ class BattleNext_RuleStoreTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void invalidReloadKeepsPriorCatalogAndCanRecoverAfterFileRepair() throws Exception {
+	void invalidEntryPublishesItsIdentityAndRecoversAfterFileRepair() throws Exception {
 		var store = new BattleNext_RuleStore();
 		store.reload();
 		var original = new BattleNext_RuleModel("rule", "Original");
 		store.save(original);
 		var path = directory.resolve("tournament/_rules/rule.json");
 		Files.writeString(path, original.toJson().put("restrictions", "invalid").toString(), StandardCharsets.UTF_8);
-		assertThrows(IllegalStateException.class, store::reload);
-		assertSame(original, store.get("rule"));
-		assertFalse(store.isLoaded());
-		assertThrows(IllegalStateException.class, () -> store.save(original));
+		store.reload();
+		assertNull(store.get("rule"));
+		assertTrue(store.isLoaded());
+		assertEquals("rule", store.getErrors().get(0).id());
+		assertTrue(store.getErrors().get(0).raw().contains("invalid"));
 		Files.writeString(path, original.toJson().toString(), StandardCharsets.UTF_8);
 		store.reload();
 		assertTrue(store.isLoaded());
 		assertEquals("Original", store.get("rule").getName());
+		assertTrue(store.getErrors().isEmpty());
 	}
 }

@@ -1,6 +1,8 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -11,8 +13,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SpriteSpecObfIntegrationTest {
 

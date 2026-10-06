@@ -5,17 +5,17 @@ import com.fs.starfarer.api.SettingsAPI;
 import data.scripts.tools.BattleNext_Settings;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestTextCatalog.TextKey;
+import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.json.JSONObject;
 
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 class BattleNext_I18nSectionTest {
 
@@ -100,9 +100,9 @@ class BattleNext_I18nSectionTest {
 					(instance, method, arguments) -> method.getName().equals("getString")
 							? BattleNext_TestTextCatalog.text(arguments[0], arguments[1]) : null));
 			BattleNext_I18nSection fleet = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
-			assertEquals("Commander skills", fleet.get("commander_skills"));
-			assertEquals("Ships: 5", fleet.format("player_save_members", 5));
-			assertEquals("Saved fleet: Example\nSaved to: tournament/id/fleet_data.json",
+			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_commander_skills"), fleet.get("commander_skills"));
+			assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_members"), 5), fleet.format("player_save_members", 5));
+			assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_saved"), "Example", "tournament/id/fleet_data.json"),
 					fleet.format("player_save_saved", "Example", "tournament/id/fleet_data.json"));
 			assertSame(fleet, BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_"));
 		} finally {
@@ -116,7 +116,7 @@ class BattleNext_I18nSectionTest {
 		BattleNext_I18nSection label = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_commander_skills");
 		for (boolean enabled : List.of(true, false, true)) {
 			BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
-			String category = enabled ? "Fleet_CN" : "Fleet";
+			String category = "Fleet";
 			assertSame(fleet, BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_"));
 			assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_fleet_commander_skills"), fleet.get("commander_skills"));
 			assertEquals(fleet.get("commander_skills"), label.get());

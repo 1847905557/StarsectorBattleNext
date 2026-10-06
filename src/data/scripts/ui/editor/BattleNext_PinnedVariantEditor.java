@@ -1,14 +1,16 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader.CatalogEntry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
-import data.scripts.tools.BattleNext_Logger;
 
 public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 
@@ -101,7 +103,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		String next = nameField.getText().trim();
 		try {
 			store.rename(entry.pinId(), next);
-			entry = new CatalogEntry(entry.path(), next, entry.pinId(), entry.hullId(), store.get(entry.pinId()), "");
+			entry = new CatalogEntry(entry.path(), next, entry.pinId(), entry.hullId(), store.get(entry.pinId()), "", store.get(entry.pinId()).toJson().toString());
 			nameField.setText(next);
 			return true;
 		} catch (Exception exception) {

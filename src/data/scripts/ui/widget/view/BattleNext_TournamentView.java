@@ -12,33 +12,42 @@ import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_OptionPicker.Anchor;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.Color;
 import java.util.*;
+import java.util.function.Consumer;
 
 public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin {
 
 	public static final float CANVAS_WIDTH = 1200f;
 	public static final float CANVAS_HEIGHT = 400f;
 	protected static final float NODE_WIDTH = 220f;
-	protected static final float NODE_HEIGHT = 82f;
+	protected static final float NODE_HEIGHT = 66f;
+	private static final float NODE_TEXT_INSET = 6f;
+	private static final float NODE_TEXT_ROW_HEIGHT = 18f;
+	private static final float NODE_SCORE_GAP = 6f;
 	private static final float TOOLBAR_HEIGHT = 40f;
 	private static final float FIT_MARGIN = 24f;
 	private static final float ZOOM_STEP = 1.05f;
 	private static final float MAX_ZOOM = 2.5f;
 	private static final float BORDER_WIDTH = 2f;
+	private static final float CLICK_DISTANCE = 4f;
 	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	private static final Color TOOLTIP_TARGET_COLOR = new Color(0, 0, 0, 0);
 
 	protected BattleNext_TournamentModel tournament;
+	protected BattleNext_StartedTournament started;
+	protected List<String> fleetIds;
 	protected final List<Node> nodes = new ArrayList<>();
 	protected final List<Edge> edges = new ArrayList<>();
 	private Map<String, String> fleetNames;
-	private final List<LabelAPI> labels = new ArrayList<>();
+	private final List<NodeLabels> labels = new ArrayList<>();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
@@ -58,10 +67,18 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private float pointerX;
 	private float pointerY;
 	private boolean dragging;
+	private boolean editable;
+	private Consumer<SlotHit> onSlotSelected;
+	private SlotHit pressedSlot;
+	private float pressX;
+	private float pressY;
+	private float pressDistance;
 	private Node hovered;
 	private String layoutError = "";
+	private Set<String> reportIds = Set.of();
 
 	public record ViewState(float zoom, float panX, float panY) { }
+	public record SlotHit(String nodeId, float nodeX, float nodeY, int row, int slot) { }
 
 	public ViewState captureState() {
 		return new ViewState(zoom, panX, panY);
@@ -74,23 +91,25 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		clearHover();
 	}
 
-	protected BattleNext_TournamentView(BattleNext_TournamentModel tournament, Map<String, String> names) {
+	protected BattleNext_TournamentView(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started, List<String> fleetIds, Map<String, String> names) {
 		this.tournament = tournament;
+		this.started = started;
+		this.fleetIds = List.copyOf(fleetIds);
 		this.fleetNames = Map.copyOf(names);
 	}
 
-	public static BattleNext_TournamentView createView(BattleNext_TournamentModel tournament,
-			Map<String, String> names) {
+	public static BattleNext_TournamentView createView(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started,
+			List<String> fleetIds, Map<String, String> names) {
 		BattleNext_TournamentView view;
 
-		if (tournament.getBracketType() == null) {
-			view = new BattleNext_SingleEliminationView(tournament, names);
+		if (tournament == null || tournament.getBracketType() == null) {
+			view = new BattleNext_SingleEliminationView(tournament, started, fleetIds, names);
 		} else {
 			view = switch (tournament.getBracketType()) {
-				case SINGLE_ELIMINATION -> new BattleNext_SingleEliminationView(tournament, names);
-				case DOUBLE_ELIMINATION -> new BattleNext_DoubleEliminationView(tournament, names);
-				case ROUND_ROBIN -> new BattleNext_RoundRobinView(tournament, names);
-				case KING_OF_THE_HILL -> new BattleNext_KingOfTheHillView(tournament, names);
+				case SINGLE_ELIMINATION -> new BattleNext_SingleEliminationView(tournament, started, fleetIds, names);
+				case DOUBLE_ELIMINATION -> new BattleNext_DoubleEliminationView(tournament, started, fleetIds, names);
+				case ROUND_ROBIN -> new BattleNext_RoundRobinView(tournament, started, fleetIds, names);
+				case KING_OF_THE_HILL -> new BattleNext_KingOfTheHillView(tournament, started, fleetIds, names);
 			};
 		}
 		view.initializeLayout();
@@ -103,48 +122,51 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		nodes.clear();
 		edges.clear();
 		layoutError = "";
+		if (tournament == null) {
+			layoutError = tournamentStrings.get("missing_detail") + " " + started.getSourceTournamentId();
+			appendUnmappedMatches();
+			return;
+		}
 		try {
 			if (tournament.getBracketType() == null) {
 				throw new IllegalArgumentException("Tournament bracket type is missing: " + tournament.getId());
-			}
-			List<String> fleets = tournament.getFleetIds();
-
-			if (fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-					|| fleets.size() > BattleNext_TournamentModel.MAX_FLEET_COUNT
-					|| new HashSet<>(fleets).size() != fleets.size() || fleets.contains("")) {
-				throw new IllegalArgumentException("Invalid tournament participants: " + fleets);
 			}
 			buildLayout();
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_TournamentView.class, "tournament.chart.layout.degraded",
 				BattleNext_Logger.fields().put("tournament", tournament).build(), exception);
-			List<String> participants = tournament.getFleetIds();
-			String reason = tournament.getBracketType() == null ? tournamentStrings.get("chart_missing_bracket")
-					: participants.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
-						|| participants.size() > BattleNext_TournamentModel.MAX_FLEET_COUNT
-						|| new HashSet<>(participants).size() != participants.size() || participants.contains("")
-							? tournamentStrings.get("chart_invalid_participants") : exception.getMessage();
+			String reason = tournament.getBracketType() == null ? tournamentStrings.get("chart_missing_bracket") : exception.getMessage();
 			layoutError = tournament.getBracketType() + ": " + reason;
 		}
 		appendUnmappedMatches();
 	}
 
-	public void update(BattleNext_TournamentModel model, Map<String, String> names) {
+	public void update(BattleNext_TournamentModel model, BattleNext_StartedTournament started, List<String> fleetIds, Map<String, String> names) {
 		String hoveredId = hovered == null ? "" : hovered.id;
-		List<LabelAPI> previousLabels = List.copyOf(labels);
+		List<NodeLabels> previousLabels = List.copyOf(labels);
 		tournament = model;
+		this.started = started;
+		this.fleetIds = List.copyOf(fleetIds);
 		fleetNames = Map.copyOf(names);
 		initializeLayout();
 		labels.clear();
 		for (int index = 0; index < nodes.size(); index++) {
 			Node node = nodes.get(index);
-			LabelAPI label = index < previousLabels.size() ? previousLabels.get(index)
-					: labelHost.createLabel("", BattleNext_UiTheme.TEXT, node.width - 12f);
-			label.setText(nodeText(node, labelHost));
-			labels.add(label);
+			NodeLabels nodeLabels = index < previousLabels.size() ? previousLabels.get(index) : new NodeLabels(labelHost);
+			nodeLabels.update(node);
+			labels.add(nodeLabels);
 		}
 		hovered = hoveredId.isEmpty() ? null : findNode(hoveredId);
 		updateTooltipTarget();
+	}
+
+	public void setEditable(boolean editable, Consumer<SlotHit> onSlotSelected) {
+		this.editable = editable;
+		this.onSlotSelected = onSlotSelected;
+	}
+
+	public void setReportIds(Set<String> reportIds) {
+		this.reportIds = Set.copyOf(reportIds);
 	}
 
 	public CustomPanelAPI attach(CustomPanelAPI owner, TooltipMakerAPI scroller, PositionAPI viewport,
@@ -152,6 +174,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		this.viewport = viewport;
 		this.inputRouter = router;
+		labels.clear();
+		errorLabel = null;
 
 		float scale = Math.min(1f, availableWidth / CANVAS_WIDTH);
 		float width = CANVAS_WIDTH * scale;
@@ -163,7 +187,9 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		host.setBgAlpha(0f);
 
 		for (Node node : nodes) {
-			labels.add(host.createLabel(nodeText(node, host), BattleNext_UiTheme.TEXT, node.width - 12f));
+			NodeLabels nodeLabels = new NodeLabels(host);
+			nodeLabels.update(node);
+			labels.add(nodeLabels);
 		}
 
 		if (!layoutError.isEmpty()) {
@@ -199,6 +225,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		return panel;
 	}
 
+	protected BattleNext_Match findMatch(String id) {
+		return started == null ? null : started.findMatch(id);
+	}
+
 	protected abstract void buildLayout();
 
 	protected void buildWinners(int width, BattleNext_Match.MatchStage stage) {
@@ -231,7 +261,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	protected void addMatchNode(String id, BattleNext_Match.MatchStage stage, Participant player,
 			Participant enemy, float x, float y, float width, float height, boolean rowOrder) {
 
-		BattleNext_Match match = tournament.findMatch(id);
+		BattleNext_Match match = findMatch(id);
 
 		if (match != null && !rowOrder) {
 			Participant first = player;
@@ -242,11 +272,11 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 				second = player;
 			}
 
-			player = new Participant(match.getPlayer(), first.sourceId, first.loser, true);
-			enemy = new Participant(match.getEnemy(), second.sourceId, second.loser, true);
+			player = new Participant(match.getPlayer(), first.sourceId, first.loser, true, first.seedIndex);
+			enemy = new Participant(match.getEnemy(), second.sourceId, second.loser, true, second.seedIndex);
 			stage = match.getStage();
-		} else if (match == null && (player.known && player.fleetId.isEmpty()
-				|| enemy.known && enemy.fleetId.isEmpty())) {
+		} else if (match == null && (player.known && player.fleetId.isEmpty() && (started != null || player.seedIndex < 0)
+				|| enemy.known && enemy.fleetId.isEmpty() && (started != null || enemy.seedIndex < 0))) {
 			stage = BattleNext_Match.MatchStage.BYE;
 			if (player.known && player.fleetId.isEmpty()) {
 				Participant swap = player;
@@ -286,7 +316,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 	protected Participant source(String id, boolean loser) {
 		Node previous = findNode(id);
-		BattleNext_Match match = tournament.findMatch(id);
+		BattleNext_Match match = findMatch(id);
 
 		if (match != null && match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) {
 			return new Participant(loser ? match.getLoserFleetId() : match.getWinnerFleetId(), id, loser, true);
@@ -316,10 +346,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	protected Participant seededFleet(int seed) {
 		String fleetId = "";
 
-		if (seed <= tournament.getFleetIds().size()) {
-			fleetId = tournament.getFleetIds().get(seed - 1);
+		if (seed <= fleetIds.size()) {
+			fleetId = fleetIds.get(seed - 1);
 		}
-		return new Participant(fleetId, "", false, true);
+		return new Participant(fleetId, "", false, true, seed <= fleetIds.size() ? seed - 1 : -1);
 	}
 
 	private void appendUnmappedMatches() {
@@ -329,7 +359,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			y = Math.max(y, node.y + node.height + 20f);
 		}
 
-		for (BattleNext_Match match : tournament.getMatches()) {
+		for (BattleNext_Match match : (started == null ? List.<BattleNext_Match>of() : started.getMatches())) {
 			if (findNode(match.getId()) != null) continue;
 
 			Participant player = new Participant(match.getPlayer(), "", false, true);
@@ -431,11 +461,41 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		return new float[]{left, bottom, Math.max(0f, right - left), Math.max(0f, top - bottom)};
 	}
 
+	public SlotHit hitTestSlot(float screenX, float screenY) {
+		if (!editable || started != null) return null;
+		float[] bounds = visibleBounds();
+		if (screenX < bounds[0] || screenX > bounds[0] + bounds[2]
+				|| screenY < bounds[1] || screenY > bounds[1] + bounds[3]) return null;
+		Node node = hitTest(screenX, screenY);
+		if (node == null) return null;
+		float scale = panel.getPosition().getWidth() / CANVAS_WIDTH * zoom;
+		float[] point = project(node.x, node.y);
+		int row = (int) Math.floor(((point[1] - screenY) / scale - NODE_TEXT_INSET) / NODE_TEXT_ROW_HEIGHT);
+		if (row != 1 && row != 2) return null;
+		Participant participant = row == 1 ? node.player : node.enemy;
+		if (participant.seedIndex < 0) return null;
+		return new SlotHit(node.id, node.x, node.y, row, participant.seedIndex);
+	}
+
+	public Anchor slotAnchor(SlotHit hit) {
+		Node node = nodes.stream().filter(candidate -> candidate.id.equals(hit.nodeId())
+				&& candidate.x == hit.nodeX() && candidate.y == hit.nodeY()).findFirst().orElse(null);
+		if (node == null) return null;
+		float scale = panel.getPosition().getWidth() / CANVAS_WIDTH * zoom;
+		float[] point = project(node.x + NODE_TEXT_INSET, node.y + NODE_TEXT_INSET + hit.row() * NODE_TEXT_ROW_HEIGHT);
+		float[] bounds = visibleBounds();
+		float[] clipped = intersection(point[0], point[1] - NODE_TEXT_ROW_HEIGHT * scale,
+				(node.width - NODE_TEXT_INSET * 2f) * scale, NODE_TEXT_ROW_HEIGHT * scale,
+				bounds[0], bounds[1], bounds[2], bounds[3]);
+		return new Anchor(clipped[0], clipped[1], clipped[2], clipped[3]);
+	}
+
 	private float[] visibleBounds() {
 		PositionAPI position = panel.getPosition();
 
-		return intersection(position.getX(), position.getY(), position.getWidth(),
-				position.getHeight() - TOOLBAR_HEIGHT, viewport.getX(), viewport.getY(),
+		return intersection(position.getX() + BORDER_WIDTH, position.getY() + BORDER_WIDTH,
+				Math.max(0f, position.getWidth() - BORDER_WIDTH * 2f),
+				Math.max(0f, position.getHeight() - TOOLBAR_HEIGHT - BORDER_WIDTH), viewport.getX(), viewport.getY(),
 				viewport.getWidth(), viewport.getHeight());
 	}
 
@@ -453,6 +513,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
+			if (!inputRouter.isEmpty()) {
+				close();
+				return;
+			}
 
 			float x = event.getX();
 			float y = event.getY();
@@ -466,13 +530,28 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 				event.consume();
 			} else if (event.isLMBDownEvent() && inside) {
 				dragging = true;
+				pressX = x;
+				pressY = y;
+				pressDistance = 0f;
+				pressedSlot = hitTestSlot(x, y);
 				clearHover();
 				event.consume();
 			} else if (event.isMouseMoveEvent() && dragging) {
-				panBy((x - pointerX) / scale, (pointerY - y) / scale);
+				boolean beginPan = pressDistance <= CLICK_DISTANCE;
+				pressDistance = Math.max(pressDistance, (float) Math.hypot(x - pressX, y - pressY));
+				if (pressDistance > CLICK_DISTANCE) {
+					panBy((x - (beginPan ? pressX : pointerX)) / scale, ((beginPan ? pressY : pointerY) - y) / scale);
+				}
 				event.consume();
 			} else if (event.isLMBUpEvent() && dragging) {
 				dragging = false;
+				pressDistance = Math.max(pressDistance, (float) Math.hypot(x - pressX, y - pressY));
+				SlotHit selected = pressedSlot;
+				pressedSlot = null;
+				if (inside && pressDistance <= CLICK_DISTANCE && selected != null
+						&& selected.equals(hitTestSlot(x, y))) {
+					onSlotSelected.accept(selected);
+				}
 				event.consume();
 			}
 
@@ -530,6 +609,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 	public void close() {
 		dragging = false;
+		pressedSlot = null;
 		clearHover();
 	}
 
@@ -574,14 +654,6 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 				bounds[0], bounds[1], bounds[2], bounds[3]);
 		try {
 			BattleNext_GeometryRenderer.fillRect(position, BACKGROUND_COLOR, alphaMult);
-			float inset = BORDER_WIDTH * 0.5f;
-			float left = position.getX() + inset;
-			float bottom = position.getY() + inset;
-			float right = position.getX() + position.getWidth() - inset;
-			float top = position.getY() + position.getHeight() - inset;
-
-			BattleNext_GeometryRenderer.lineLoop(new float[]{left, bottom, right, bottom,
-					right, top, left, top}, BattleNext_UiTheme.ACCENT, alphaMult, BORDER_WIDTH);
 		} finally {
 			BattleNext_GeometryRenderer.popClip(clip);
 		}
@@ -600,6 +672,21 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		} finally {
 			BattleNext_GeometryRenderer.popClip(clip);
 		}
+		PositionAPI position = panel.getPosition();
+		bounds = intersection(position.getX(), position.getY(), position.getWidth(), position.getHeight(),
+				viewport.getX(), viewport.getY(), viewport.getWidth(), viewport.getHeight());
+		clip = BattleNext_GeometryRenderer.pushClip(bounds[0], bounds[1], bounds[2], bounds[3]);
+		try {
+			float inset = BORDER_WIDTH * 0.5f;
+			float left = position.getX() + inset;
+			float bottom = position.getY() + inset;
+			float right = position.getX() + position.getWidth() - inset;
+			float top = position.getY() + position.getHeight() - inset;
+			BattleNext_GeometryRenderer.lineLoop(new float[]{left, bottom, right, bottom,
+					right, top, left, top}, BattleNext_UiTheme.ACCENT, alphaMult, BORDER_WIDTH);
+		} finally {
+			BattleNext_GeometryRenderer.popClip(clip);
+		}
 	}
 
 	private void renderEdges(float alphaMult) {
@@ -613,7 +700,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			float[] end = project(to.x, to.y + to.height * 0.5f);
 			float bend = (start[0] + end[0]) * 0.5f;
 			Color color = edge.loser ? Misc.getNegativeHighlightColor() : BattleNext_UiTheme.MUTED;
-			if (to.id.equals(tournament.getPendingMatchId()) || from.id.equals(tournament.getPendingMatchId())) {
+			if (to.id.equals((started == null ? "" : started.getPendingMatchId())) || from.id.equals((started == null ? "" : started.getPendingMatchId()))) {
 				color = Misc.getHighlightColor();
 			} else if (from.match != null && from.match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) {
 				color = edge.loser ? Misc.getNegativeHighlightColor() : Misc.getPositiveHighlightColor();
@@ -644,14 +731,12 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					point[0] + width, point[1] - height, point[0], point[1] - height},
 					node == hovered ? BattleNext_UiTheme.ACCENT : color, alphaMult,
 					BORDER_WIDTH);
-			LabelAPI label = labels.get(index);
-			label.setColor(color);
-			label.getPosition().setLocation(6f, -node.height + 6f).setSize(node.width - 12f, node.height - 12f);
+
 			GL11.glPushMatrix();
 			try {
 				GL11.glTranslatef(point[0], point[1], 0f);
 				GL11.glScalef(scale, scale, 1f);
-				label.render(alphaMult);
+				labels.get(index).render(alphaMult);
 			} finally {
 				GL11.glPopMatrix();
 			}
@@ -666,15 +751,21 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private Color stateColor(Node node) {
 		if (!node.error.isEmpty()) return Misc.getNegativeHighlightColor();
 		if (node.stage == BattleNext_Match.MatchStage.BYE || node.id.isEmpty()) return BattleNext_UiTheme.MUTED;
-		if (node.id.equals(tournament.getPendingMatchId())) return Misc.getHighlightColor();
-		if (node.match != null && node.match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) {
-			if (node.stage == BattleNext_Match.MatchStage.ROUND_ROBIN
-					&& !node.player.fleetId.equals(node.match.getWinnerFleetId())) {
-				return Misc.getNegativeHighlightColor();
-			}
-			return Misc.getPositiveHighlightColor();
-		}
+		if (node.match != null && node.match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) return BattleNext_UiTheme.ACCENT;
+		if (started != null && node.id.equals(started.getPendingMatchId())) return Misc.getHighlightColor();
 		return node.match == null ? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT;
+	}
+
+	private Color participantColor(Node node, Participant participant) {
+		if (!participant.known || participant.fleetId.isEmpty()) return BattleNext_UiTheme.MUTED;
+		if (node.match == null || node.stage == BattleNext_Match.MatchStage.BYE
+				|| node.match.getStatus() != BattleNext_Match.MatchStatus.COMPLETE) return BattleNext_UiTheme.TEXT;
+		return node.match.getWinnerFleetId().equals(participant.fleetId) ? Misc.getPositiveHighlightColor() : Misc.getNegativeHighlightColor();
+	}
+
+	private String participantScore(Node node, Participant participant) {
+		if (node.match == null || node.stage == BattleNext_Match.MatchStage.BYE || participant.fleetId.isEmpty()) return "-";
+		return Integer.toString(participant.fleetId.equals(node.match.getPlayer()) ? node.match.getPlayerWins() : node.match.getEnemyWins());
 	}
 
 	private Node findNode(String id) {
@@ -685,27 +776,72 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	}
 
 	protected String participantText(Participant participant) {
+		if (started == null && participant.seedIndex >= 0 && participant.fleetId.isEmpty()) return tournamentStrings.get("select_fleet");
 		if (participant.known && participant.fleetId.isEmpty()) return tournamentStrings.get("stage_bye");
 		if (participant.known) return fleetNames.getOrDefault(participant.fleetId, participant.fleetId);
 
 		return tournamentStrings.format(participant.loser ? "chart_loser_of" : "chart_winner_of", participant.sourceId);
 	}
 
-	private String nodeText(Node node, TooltipMakerAPI host) {
-		if (node.id.isEmpty()) return host.shortenString(node.title, node.width - 12f);
+	private class NodeLabels {
+		private final TooltipMakerAPI host;
+		private final LabelAPI idLabel;
+		private final LabelAPI playerScoreLabel;
+		private final LabelAPI playerNameLabel;
+		private final LabelAPI enemyScoreLabel;
+		private final LabelAPI enemyNameLabel;
 
-		String player = host.shortenString(participantText(node.player), node.width - 12f);
-		String enemy = host.shortenString(participantText(node.enemy), node.width - 12f);
-		String score = tournamentStrings.get("chart_predicted");
-		if (node.match != null) {
-			score = scoreText(node);
-		} else if (node.stage == BattleNext_Match.MatchStage.BYE) {
-			score = tournamentStrings.get("stage_bye");
-		} else if (node.stage == BattleNext_Match.MatchStage.GRAND_FINAL_RESET) {
-			score = tournamentStrings.get(tournament.isCompleted() ? "chart_reset_unused" : "chart_reset_required_short");
+		private NodeLabels(TooltipMakerAPI host) {
+			this.host = host;
+			float textWidth = NODE_WIDTH - NODE_TEXT_INSET * 2f;
+			idLabel = host.createLabel("", BattleNext_UiTheme.TEXT, textWidth);
+			playerScoreLabel = host.createLabel("", BattleNext_UiTheme.TEXT, textWidth);
+			playerNameLabel = host.createLabel("", BattleNext_UiTheme.TEXT, textWidth);
+			enemyScoreLabel = host.createLabel("", BattleNext_UiTheme.TEXT, textWidth);
+			enemyNameLabel = host.createLabel("", BattleNext_UiTheme.TEXT, textWidth);
+			idLabel.setAlignment(Alignment.LMID);
+			playerScoreLabel.setAlignment(Alignment.RMID);
+			playerNameLabel.setAlignment(Alignment.LMID);
+			enemyScoreLabel.setAlignment(Alignment.RMID);
+			enemyNameLabel.setAlignment(Alignment.LMID);
 		}
-		return host.shortenString(node.id, node.width - 12f) + "\n" + player + "\n" + enemy + "\n"
-				+ host.shortenString(score, node.width - 12f);
+
+		private void update(Node node) {
+			float textWidth = node.width - NODE_TEXT_INSET * 2f;
+			idLabel.setText(host.shortenString(node.id.isEmpty() ? node.title : node.id, textWidth));
+			idLabel.setColor(stateColor(node));
+			idLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT)
+					.setSize(textWidth, NODE_TEXT_ROW_HEIGHT);
+			String playerScore = node.id.isEmpty() ? "" : participantScore(node, node.player);
+			String enemyScore = node.id.isEmpty() ? "" : participantScore(node, node.enemy);
+			playerScoreLabel.setText(playerScore);
+			enemyScoreLabel.setText(enemyScore);
+			float scoreWidth = Math.max(playerScoreLabel.computeTextWidth(playerScore), enemyScoreLabel.computeTextWidth(enemyScore));
+			float nameX = NODE_TEXT_INSET + scoreWidth + NODE_SCORE_GAP;
+			float nameWidth = textWidth - scoreWidth - NODE_SCORE_GAP;
+			playerNameLabel.setText(node.id.isEmpty() ? "" : host.shortenString(participantText(node.player), nameWidth));
+			enemyNameLabel.setText(node.id.isEmpty() ? "" : host.shortenString(participantText(node.enemy), nameWidth));
+			playerScoreLabel.setColor(participantColor(node, node.player));
+			playerNameLabel.setColor(participantColor(node, node.player));
+			enemyScoreLabel.setColor(participantColor(node, node.enemy));
+			enemyNameLabel.setColor(participantColor(node, node.enemy));
+			playerScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
+					.setSize(scoreWidth, NODE_TEXT_ROW_HEIGHT);
+			playerNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
+					.setSize(nameWidth, NODE_TEXT_ROW_HEIGHT);
+			enemyScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 3f)
+					.setSize(scoreWidth, NODE_TEXT_ROW_HEIGHT);
+			enemyNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 3f)
+					.setSize(nameWidth, NODE_TEXT_ROW_HEIGHT);
+		}
+
+		private void render(float alphaMult) {
+			idLabel.render(alphaMult);
+			playerScoreLabel.render(alphaMult);
+			playerNameLabel.render(alphaMult);
+			enemyScoreLabel.render(alphaMult);
+			enemyNameLabel.render(alphaMult);
+		}
 	}
 
 	public static String shorten(String value, int maxCharacters) {
@@ -718,15 +854,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 	public String scoreText(Node node) {
 		if (node.match == null) return tournamentStrings.get("chart_predicted");
-
-		int player = node.match.getPlayerWins();
-		int enemy = node.match.getEnemyWins();
-
-		if (!node.player.fleetId.equals(node.match.getPlayer())) {
-			player = node.match.getEnemyWins();
-			enemy = node.match.getPlayerWins();
-		}
-		return player + " - " + enemy;
+		return participantScore(node, node.player) + " - " + participantScore(node, node.enemy);
 	}
 
 	public String tooltipText(Node node) {
@@ -749,7 +877,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 						.append(winner.isEmpty() ? tournamentStrings.get("round_draw") : fleetNames.getOrDefault(winner, winner)
 								+ " [" + winner + "]")
 						.append(" / ").append(managementStrings.get("page_reports")).append(": ")
-						.append(strings.get(round.getReport().getId().isEmpty() ? "unavailable" : "available")).append('\n');
+						.append(strings.get(reportIds.contains(round.getReportId()) ? "available" : "unavailable"))
+						.append(" [").append(round.getReportId()).append("]\n");
 			}
 			if (!node.match.getDependencies().isEmpty()) {
 				result.append(tournamentStrings.get("chart_sources")).append(": ")
@@ -761,13 +890,16 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					.append(battleStrings.get("map_scale_label")).append(": 1\n");
 		}
 		for (Participant participant : List.of(node.player, node.enemy)) {
+			if (participant.seedIndex >= 0) {
+				result.append(tournamentStrings.format("seed_position", participant.seedIndex + 1)).append('\n');
+			}
 			if (participant.sourceId.isEmpty()) continue;
 
 			result.append(tournamentStrings.format(participant.loser ? "chart_loser_of" : "chart_winner_of",
 					participant.sourceId)).append('\n');
 		}
 		if (node.stage == BattleNext_Match.MatchStage.GRAND_FINAL_RESET && node.match == null) {
-			result.append(tournamentStrings.get(tournament.isCompleted() ? "chart_reset_unused" : "chart_reset_required")).append('\n');
+			result.append(tournamentStrings.get((started != null && started.isCompleted()) ? "chart_reset_unused" : "chart_reset_required")).append('\n');
 		}
 		if (!node.error.isEmpty()) {
 			result.append(tournamentStrings.get("chart_error")).append(": ").append(node.error);
@@ -795,12 +927,18 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		public final String sourceId;
 		public final boolean loser;
 		public final boolean known;
+		public final int seedIndex;
 
 		public Participant(String fleetId, String sourceId, boolean loser, boolean known) {
+			this(fleetId, sourceId, loser, known, -1);
+		}
+
+		public Participant(String fleetId, String sourceId, boolean loser, boolean known, int seedIndex) {
 			this.fleetId = fleetId;
 			this.sourceId = sourceId;
 			this.loser = loser;
 			this.known = known;
+			this.seedIndex = seedIndex;
 		}
 	}
 

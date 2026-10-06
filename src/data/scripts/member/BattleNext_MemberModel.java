@@ -1,5 +1,6 @@
 package data.scripts.member;
 
+import data.model.BattleNext_JsonModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,6 +20,8 @@ public class BattleNext_MemberModel {
 	private String portrait;
 	private String orders;
 	private List<String> tags;
+	private final List<String> loadErrors = new ArrayList<>();
+	private JSONObject incompleteJson;
 
 	public BattleNext_MemberModel() {
 		this("", "", "", List.of(), "", "", List.of());
@@ -35,17 +38,24 @@ public class BattleNext_MemberModel {
 		this.tags = copy(tags);
 	}
 
-	public static BattleNext_MemberModel fromJson(JSONObject json) {
+	public static BattleNext_MemberModel fromJson(JSONObject json) throws JSONException {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported member formatVersion: " + version);
-		List<String> skills = readStrings(json.optJSONArray("skills"));
-		List<String> tags = readStrings(json.optJSONArray("tags"));
-		return new BattleNext_MemberModel(json.optString("variant_id", ""), json.optString("name", ""),
+		List<String> errors = new ArrayList<>();
+		List<String> skills = BattleNext_JsonModel.parseStrings("skills", json.optJSONArray("skills"), errors);
+		List<String> tags = BattleNext_JsonModel.parseStrings("tags", json.optJSONArray("tags"), errors);
+		BattleNext_MemberModel member = new BattleNext_MemberModel(json.optString("variant_id", ""), json.optString("name", ""),
 				json.optString("personality", ""), skills, json.optString("portrait", ""),
 				json.optString("orders", ""), tags);
+		member.loadErrors.addAll(errors);
+		if (!errors.isEmpty()) {
+			member.incompleteJson = new JSONObject(json.toString());
+		}
+		return member;
 	}
 
 	public JSONObject toJson() throws JSONException {
+		if (incompleteJson != null) return new JSONObject(incompleteJson.toString());
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("variant_id", variantId);
@@ -56,6 +66,10 @@ public class BattleNext_MemberModel {
 		json.put("orders", orders);
 		json.put("tags", new JSONArray(tags));
 		return json;
+	}
+
+	public List<String> getLoadErrors() {
+		return List.copyOf(loadErrors);
 	}
 
 	public String getVariantId() {
@@ -112,21 +126,6 @@ public class BattleNext_MemberModel {
 
 	public void setTags(List<String> tags) {
 		this.tags = copy(tags);
-	}
-
-	private static List<String> readStrings(JSONArray values) {
-		if (values == null) {
-			return List.of();
-		}
-
-		List<String> result = new ArrayList<>();
-		for (int index = 0; index < values.length(); index++) {
-			String value = values.optString(index, "").trim();
-			if (!value.isEmpty()) {
-				result.add(value);
-			}
-		}
-		return result;
 	}
 
 	private static List<String> copy(List<String> values) {

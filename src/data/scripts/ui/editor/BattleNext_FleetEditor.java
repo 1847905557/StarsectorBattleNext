@@ -18,6 +18,7 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.provider.*;
+import org.json.JSONException;
 
 import java.util.*;
 
@@ -165,10 +166,17 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private BattleNext_FleetModel copy(BattleNext_FleetModel source, boolean clone) {
 		String copiedFolder = source.getFolderName();
 		if (clone && !copiedFolder.isEmpty()) copiedFolder += "_copy";
-		BattleNext_FleetModel result = new BattleNext_FleetModel(source.getId(), copiedFolder, source.getName(),
-				source.getSkills(), source.getTags(), source.getMembers());
-		result.setAuthor(source.getAuthor());
-		result.setDescription(source.getDescription());
+		BattleNext_FleetModel result = new BattleNext_FleetModel();
+		try {
+			result.fromJson(source.toJson());
+		} catch (JSONException exception) {
+			throw new IllegalStateException("Unable to copy fleet: " + source.getId(), exception);
+		}
+		result.setFolderName(copiedFolder);
+		for (String error : source.getLoadErrors()) {
+			if (result.getLoadErrors().contains(error)) continue;
+			result.addLoadError(error);
+		}
 		for (BattleNext_VariantBuilder variant : source.getVariants()) {
 			result.putVariant(variant);
 		}

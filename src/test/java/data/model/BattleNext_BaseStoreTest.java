@@ -9,7 +9,7 @@ import java.util.List;
 class BattleNext_BaseStoreTest {
 
 	@Test
-	void failedReloadPreservesThePreviouslyPublishedCatalog() throws Exception {
+	void unavailableSourcePublishesAnEmptyCatalogWithItsDiagnostic() throws Exception {
 		MemoryStore store = new MemoryStore();
 		Entry original = new Entry("alpha");
 		store.loaded = List.of(original);
@@ -17,12 +17,10 @@ class BattleNext_BaseStoreTest {
 		store.loaded = List.of(new Entry("replacement"));
 		store.failure = new IOException("second source failed");
 
-		assertThrows(IOException.class, store::reload);
-
-		assertSame(original, store.get("alpha"));
-		assertEquals(1, store.getAll().size());
-		assertFalse(store.isLoaded());
-		assertEquals("second source failed", store.getLoadError());
+		store.reload();
+		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.isLoaded());
+		assertTrue(store.getErrors().get(0).diagnostic().contains("second source failed"));
 	}
 
 	@Test
@@ -30,11 +28,11 @@ class BattleNext_BaseStoreTest {
 		MemoryStore store = new MemoryStore();
 		store.failure = new IOException();
 
-		assertThrows(IOException.class, store::reload);
-
-		assertFalse(store.isLoaded());
-		assertFalse(store.getLoadError().isBlank());
-		assertThrows(IllegalStateException.class, () -> store.save(new Entry("alpha")));
+		store.reload();
+		assertTrue(store.isLoaded());
+		assertFalse(store.getErrors().get(0).diagnostic().isBlank());
+		store.save(new Entry("alpha"));
+		assertEquals("alpha", store.get("alpha").getId());
 	}
 
 	private static class Entry extends BattleNext_BaseModel {

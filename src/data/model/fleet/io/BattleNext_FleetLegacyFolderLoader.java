@@ -2,7 +2,6 @@ package data.model.fleet.io;
 
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.tools.BattleNext_EntryId;
-import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -13,9 +12,10 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
+		beginLoad();
 
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_ModFileManager.list("tournament", true);
+		List<String> paths = paths("tournament", true);
 		for (String path : paths) {
 			String[] segments = path.split("/");
 			if (segments.length != 3) continue;
@@ -26,12 +26,19 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 			if (paths.contains(directory + "/fleet_data.json")) continue;
 			String number = segments[2].replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = directory + "/player" + number + "_fleet.csv";
-			if (!paths.contains(fleetPath)) continue;
-			BattleNext_FleetModel fleet = readFleet(number, path, fleetPath);
-			fleet.setFolderName(folder);
-			BattleNext_FleetVariantLoader.load(fleet, paths);
-			result.add(fleet);
+			if (!paths.contains(fleetPath)) {
+				reject(path, -1, "ab_player" + number, "", new IOException("Missing fleet members source: " + fleetPath));
+				continue;
+			}
+			try {
+				BattleNext_FleetModel fleet = readFleet(number, path, fleetPath);
+				fleet.setFolderName(folder);
+				BattleNext_FleetVariantLoader.load(fleet, paths);
+				result.add(fleet);
+			} catch (IOException | JSONException | IllegalArgumentException exception) {
+				reject(path, -1, "ab_player" + number, "", exception);
+			}
 		}
-		return result;
+		return finishLoad(result);
 	}
 }

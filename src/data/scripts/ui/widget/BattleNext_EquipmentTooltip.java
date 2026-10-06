@@ -1,8 +1,8 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.HullModEffect;
+import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
@@ -13,8 +13,8 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
-import java.util.ArrayList;
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 

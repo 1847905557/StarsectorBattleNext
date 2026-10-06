@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestSpriteCatalog;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,7 +51,7 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 				spritePaths.get((SpriteAPI) getField(plugin, "primarySprite")));
 		assertEquals(BattleNext_UiTheme.ACCENT, getField(plugin, "primaryTint"));
 		assertEquals(40f, top.getPosition().getHeight());
-		assertTrue(labels.contains(mode + " / BattleNext_variant_autofire_" + (autofire ? "enabled" : "disabled")));
+		assertTrue(labels.contains(mode + " / " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_autofire_" + (autofire ? "enabled" : "disabled"))));
 		spriteRenderColors.clear();
 		spriteRenderStates.clear();
 		plugins.get(top).render(0.5f);
@@ -118,7 +119,7 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 		details.setVariantJson(json);
 		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
 		assertNull(getField(plugins.get(header(details)), "primarySprite"));
-		assertTrue(labels.contains("CUSTOM / BattleNext_variant_autofire_enabled"));
+		assertTrue(labels.contains("CUSTOM / " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_autofire_enabled")));
 		details.close();
 	}
 

@@ -22,6 +22,7 @@ import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionSelectionMode;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestUiFixture;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
@@ -30,6 +31,7 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,14 +40,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_TestUiFixture {
 
@@ -141,15 +136,15 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 	void countsOnlyTheRootFittedEquipmentAndGroupsByIdentityIncludingBuiltIns() {
 
 		List<String> expected = List.of("Properties", SELECTION,
-				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
-				"BattleNext_variant_flux_capacitors: 14", "BattleNext_variant_flux_vents: 22",
-				"BattleNext_variant_weapons: 3", "Same weapon ×1", "Same weapon ×2",
-				"BattleNext_variant_fighter_wings: 3", "Same wing ×1", "Same wing ×2",
-				"BattleNext_variant_modules: 3", "Same module ×2", "Same module ×1",
-				"BattleNext_variant_hullmods: 5",
-				"Mod built_s [BattleNext_variant_built_in, BattleNext_variant_permanent, BattleNext_variant_s_mod, BattleNext_variant_built_in_s_mod]",
-				"Mod damaged [BattleNext_variant_suppressed, BattleNext_variant_d_mod]",
-				"Mod ordinary", "Mod permanent [BattleNext_variant_permanent]", "Mod picker_hidden");
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hull_size") + ": frigate - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_base_deployment_points") + ": 5.0",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_capacitors") + ": 14", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_vents") + ": 22",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3", "Same weapon ×1", "Same weapon ×2",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ": 3", "Same wing ×1", "Same wing ×2",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3", "Same module ×2", "Same module ×1",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods") + ": 5",
+				"Mod built_s [" + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_built_in") + ", " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_permanent") + ", " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_s_mod") + ", " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_built_in_s_mod") + "]",
+				"Mod damaged [" + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_suppressed") + ", " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_d_mod") + "]",
+				"Mod ordinary", "Mod permanent [" + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_permanent") + "]", "Mod picker_hidden");
 		assertEquals(expected, show(new BattleNext_VariantSourceProvider(), SELECTION));
 		assertTrue(appender.events.isEmpty());
 	}
@@ -177,9 +172,9 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		Variant empty = variant("empty", configuredHull("empty_hull", "Empty", List.of(), false));
 		registeredVariants.put("empty", empty.getApi());
 		assertEquals(List.of("Properties", "empty",
-				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
-				"BattleNext_variant_flux_capacitors: 0", "BattleNext_variant_flux_vents: 0",
-				"BattleNext_variant_weapons: 0 - BattleNext_variant_fighter_wings: 0 - BattleNext_variant_modules: 0 - BattleNext_variant_hullmods: 0"),
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hull_size") + ": frigate - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_base_deployment_points") + ": 5.0",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_capacitors") + ": 0", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_vents") + ": 0",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 0 - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ": 0 - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 0 - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods") + ": 0"),
 				show(new BattleNext_VariantSourceProvider(), "empty"));
 	}
 
@@ -206,10 +201,10 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		TooltipMakerAPI hover = tooltip(360f, 0f, false);
 		new BattleNext_VariantSourceProvider().createTooltip(hover, new OptionChoice(id, "Properties"));
 		List<String> expected = new ArrayList<>(List.of("Properties", id,
-				"BattleNext_variant_hull_size: frigate - BattleNext_variant_base_deployment_points: 5.0",
-				"BattleNext_variant_flux_capacitors: 0", "BattleNext_variant_flux_vents: 0"));
-		List<String> titles = List.of("BattleNext_variant_weapons", "BattleNext_variant_fighter_wings",
-				"BattleNext_variant_modules", "BattleNext_variant_hullmods");
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hull_size") + ": frigate - " + BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_base_deployment_points") + ": 5.0",
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_capacitors") + ": 0", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_flux_vents") + ": 0"));
+		List<String> titles = List.of(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons"), BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings"),
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules"), BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods"));
 		List<String> rows = List.of("Same weapon ×1", "Same wing ×1", "Module ×1", "Mod ordinary");
 		Set<String> headings = new HashSet<>();
 		List<String> empty = new ArrayList<>();
@@ -277,21 +272,21 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		failureMode = mode;
 		if (kind.equals("module")) root.getModules().put("a", null);
 		List<String> values = show(new BattleNext_VariantSourceProvider(), SELECTION);
-		String unavailable = "BattleNext_common_unavailable: ";
+		String unavailable = BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable") + ": ";
 		if (kind.equals("weapon")) {
-			assertTrue(values.contains("BattleNext_variant_weapons: 3"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3"));
 			assertTrue(values.contains(unavailable + "b ×2"));
 		}
 		if (kind.equals("wing")) {
-			assertTrue(values.contains("BattleNext_variant_fighter_wings: 3"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ": 3"));
 			assertTrue(values.contains(unavailable + "b ×2"));
 		}
 		if (kind.equals("hullmod")) {
-			assertTrue(values.contains("BattleNext_variant_hullmods: 6"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods") + ": 6"));
 			assertTrue(values.stream().anyMatch(value -> value.startsWith(unavailable + "built_s [")));
 		}
 		if (kind.equals("module")) {
-			assertTrue(values.contains("BattleNext_variant_modules: 3"));
+			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
 			assertTrue(values.contains(unavailable + "missing ×1"));
 		}
 		var entries = new ArrayList<JSONObject>();
@@ -360,8 +355,8 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertEquals(360f, attachedTooltips.get(tile).getTooltipWidth(null));
 			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(tile).createTooltip(hover, false, null);
-			assertTrue(labels.contains("BattleNext_variant_weapons: 3"));
-			assertTrue(labels.contains("BattleNext_variant_modules: 3"));
+			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3"));
+			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
 			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());

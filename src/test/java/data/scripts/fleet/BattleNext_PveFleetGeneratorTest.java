@@ -1,24 +1,23 @@
 package data.scripts.fleet;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.FleetTypes;
 import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.tools.BattleNext_Logger;
 import data.test.fixture.BattleNext_TestMissionFixture;
-import com.fs.starfarer.api.Global;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.ArrayList;
+import java.util.List;
 
 class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 
@@ -66,7 +65,7 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 		var logger = Global.getLogger(BattleNext_Logger.class);
 		logger.addAppender(appender);
 		try {
-			assertEquals(factionSpecs, new BattleNext_PveFleetGenerator().loadFactions());
+			assertEquals(factionSpecs.stream().filter(faction -> faction.isShowInIntelTab()).toList(), new BattleNext_PveFleetGenerator().loadFactions());
 			List<String> rejected = new ArrayList<>();
 			for (LoggingEvent event : events) {
 				JSONObject message = new JSONObject(event.getRenderedMessage());
@@ -75,7 +74,7 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 				assertEquals(BattleNext_PveFleetGenerator.FACTIONS_PATH, message.getJSONObject("fields").getString("path"));
 				rejected.add(message.getJSONObject("fields").getString("faction_id"));
 			}
-			assertEquals(List.of("missing", "", "HIDDEN"), rejected);
+			assertEquals(List.of("hidden", "hidden", "missing", "", "HIDDEN"), rejected);
 		} finally {
 			logger.removeAppender(appender);
 		}

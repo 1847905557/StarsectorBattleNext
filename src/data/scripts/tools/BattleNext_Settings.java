@@ -15,7 +15,7 @@ public class BattleNext_Settings {
 	private static final float DEFAULT_BATTLE_TIME_LIMIT = 500f;
 	private static final float DEFAULT_TIME_MULT = 1f;
 	private static final float DEFAULT_BOOST_TIME_MULT = 3f;
-	private static final int DEFAULT_REPORT_KEEP_COUNT = 50;
+	private static final int DEFAULT_REPORT_KEEP_COUNT = 80;
 
 	private static JSONObject values;
 

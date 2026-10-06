@@ -31,6 +31,7 @@ public class BattleNext_TestSourceIndex {
 		solver.add(new ClassLoaderTypeSolver(getClass().getClassLoader()));
 		JavaParser syntaxParser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
+				.setStoreTokens(false)
 				.setCharacterEncoding(StandardCharsets.UTF_8));
 		JavaParser runtimeParser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)

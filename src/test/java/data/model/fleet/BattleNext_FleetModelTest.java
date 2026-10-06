@@ -71,4 +71,21 @@ class BattleNext_FleetModelTest {
 		assertFalse(fleet.toJson().has("variants"));
 		assertFalse(fleet.toJson().has("loadErrors"));
 	}
+
+	@Test
+	void nestedMembersAndScalarCollectionsKeepValidItemsAndTheirOriginalMalformedInputs() throws Exception {
+		var fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), List.of());
+		var member = new BattleNext_MemberModel("wolf_CS", "Wolf", "", List.of(), "", "", List.of()).toJson();
+		member.put("skills", new JSONArray().put("valid").put(new JSONObject().put("invalid", true)).put("valid"));
+		var raw = fleet.toJson().put("skills", new JSONArray().put("command").put(new JSONObject()))
+				.put("members", new JSONArray().put(member).put("malformed member"));
+		fleet.fromJson(raw);
+		assertEquals(List.of("command"), fleet.getSkills());
+		assertEquals(1, fleet.getMembers().size());
+		assertEquals(List.of("valid", "valid"), fleet.getMembers().get(0).getSkills());
+		assertEquals(3, fleet.getLoadErrors().size());
+		assertEquals(raw.toString(), fleet.toJson().toString());
+		fleet.fromJson(new BattleNext_FleetModel("complete", "Complete", List.of(), List.of(), List.of()).toJson());
+		assertTrue(fleet.getLoadErrors().isEmpty());
+	}
 }

@@ -470,7 +470,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		@Override
 		public void render(float alphaMult) {
 			if (field == null) return;
-			if (field.session.isFocused(field) && field.showCursor
+			if (field.editable && field.session.isFocused(field) && field.showCursor
 					&& ((int) (field.blink * CURSOR_BLINK_CYCLES_PER_SECOND)
 							% CURSOR_BLINK_PHASE_COUNT == 0)) {
 				float x = field.panel.getPosition().getX() + field.pad

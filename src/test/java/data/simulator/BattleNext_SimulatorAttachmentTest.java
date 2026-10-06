@@ -1,40 +1,35 @@
 package data.simulator;
 
+import com.fs.starfarer.api.EveryFrameScript;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.campaign.SectorAPI;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.combat.EveryFrameCombatPlugin;
 import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
-import com.fs.starfarer.api.combat.EveryFrameCombatPlugin;
-import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.EveryFrameScript;
-import com.fs.starfarer.api.campaign.SectorAPI;
-import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import data.missions.BattleNext_lab.MissionDefinition;
 import data.missions.BattleNext_MissionRestrictedUnlock;
+import data.missions.BattleNext_lab.MissionDefinition;
+import data.scripts.BattleNextModPlugin;
+import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
+import data.scripts.campaign.BattleNext_LunaPinnedVariantRefitButton;
+import data.scripts.plugin.BattleNext_AllShipsStatusPlugin;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_FreeCameraPlugin;
-import data.scripts.plugin.BattleNext_AllShipsStatusPlugin;
 import data.scripts.plugin.BattleNext_RttPlugin;
-import data.scripts.BattleNextModPlugin;
-import data.scripts.campaign.BattleNext_LunaPinnedVariantRefitButton;
-import data.scripts.campaign.BattleNext_LunaFleetSaveRefitButton;
 import data.test.fixture.BattleNext_TestGameFixture;
 import lunalib.lunaRefit.LunaRefitManager;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashMap;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationTargetException;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 

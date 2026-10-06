@@ -99,13 +99,7 @@ public class BattleNext_TestCampaignFleetFixture extends BattleNext_TestVariantF
 				return Files.readString(directory.resolve((String) args[0]), StandardCharsets.UTF_8);
 			}
 			if ("getString".equals(method.getName())) {
-				BattleNext_TestTextCatalog.key(args[0], args[1]);
-				return switch ((String) args[1]) {
-					case "BattleNext_fleet_player_save_saved" -> "Saved %s at %s";
-					case "BattleNext_fleet_player_save_members" -> "Members: %d";
-					case "BattleNext_fleet_player_save_commander" -> "Commander: %s";
-					default -> args[1];
-				};
+				return BattleNext_TestTextCatalog.text(args[0], args[1]);
 			}
 			if ("createPerson".equals(method.getName())) {
 				PersonAPI person = person("Generated", "", "steady", false, false, false, Map.of());

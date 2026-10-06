@@ -29,8 +29,8 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
 import java.io.IOException;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -89,7 +89,7 @@ public class BattleNext_TestGameFixture {
 		});
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> switch (method) {
 			case "getModManager" -> mods;
-			case "getString" -> BattleNext_TestTextCatalog.key(args[0], args[1]);
+			case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
 			case "getSpriteName" -> BattleNext_TestSpriteCatalog.path(args[0], args[1]);
 			case "getColor" -> switch ((String) args[0]) {
 				case "standardTextColor" -> TEXT_COLOR;

@@ -1,18 +1,23 @@
 package data.scripts.battle;
 
-import data.model.fleet.BattleNext_FleetModel;
 import data.model.BattleNext_BaseStore;
+import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.tools.BattleNext_BattleSignals;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class BattleNext_BattleSourceProvider {
 
@@ -24,7 +29,8 @@ public class BattleNext_BattleSourceProvider {
 	private final BattleNext_RuleStore ruleStore;
 	private final List<String> warnings = new ArrayList<>();
 	private final List<String> ruleWarnings = new ArrayList<>();
-	private BattleNext_TournamentModel activeTournament;
+	private BattleNext_StartedTournament activeTournament;
+	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
 	private List<String> catalogErrors = List.of();
 
 	public BattleNext_BattleSourceProvider() {
@@ -48,6 +54,10 @@ public class BattleNext_BattleSourceProvider {
 		return reloadStores(List.of(fleetStore, tournamentStore, ruleStore));
 	}
 
+	public List<String> reloadTournamentDefinitions() {
+		return reloadStores(List.of(tournamentStore, ruleStore));
+	}
+
 	private List<String> reloadStores(List<BattleNext_BaseStore<?>> stores) {
 		List<String> errors = new ArrayList<>();
 		for (BattleNext_BaseStore<?> store : stores) {
@@ -58,6 +68,11 @@ public class BattleNext_BattleSourceProvider {
 				BattleNext_Logger.warn(BattleNext_BattleSourceProvider.class, "battle.catalog.load.failed",
 						BattleNext_Logger.fields().put("store", store.getClass()).build(), exception);
 			}
+		}
+		try {
+			startedStore.reload();
+		} catch (Exception exception) {
+			errors.add(startedStore.getLoadError());
 		}
 		validation.refresh();
 		catalogErrors = List.copyOf(errors);
@@ -84,9 +99,23 @@ public class BattleNext_BattleSourceProvider {
 		return validation.quickBattleErrors(entry.getPlayer(), entry.getEnemy(), Integer.toString(entry.getMap()), Float.toString(entry.getMapScale()));
 	}
 
-	public List<String> tournamentErrors(BattleNext_TournamentModel tournament) {
+	public List<String> tournamentErrors(BattleNext_TournamentModel tournament, List<String> fleetIds) {
 		if (!tournamentStore.isLoaded()) return List.of(tournamentStore.getLoadError());
-		return validation.tournamentErrors(tournament, ruleStore);
+		return validation.tournamentErrors(tournament, fleetIds, ruleStore);
+	}
+
+	public BattleNext_BattleValidation.Result checkTournament(String id, List<String> fleetIds) {
+		List<BattleNext_BattleValidation.Failure> failures = new ArrayList<>();
+		for (String error : reloadTournamentCatalog()) {
+			failures.add(new BattleNext_BattleValidation.Failure(BattleNext_BattleValidation.FailureKind.REFERENCE, id, error));
+		}
+		BattleNext_TournamentModel configuration = tournamentStore.get(id);
+		if (configuration == null) {
+			failures.add(new BattleNext_BattleValidation.Failure(BattleNext_BattleValidation.FailureKind.REFERENCE, id, "Missing tournament configuration: " + id));
+		} else {
+			failures.addAll(validation.tournamentResult(configuration, fleetIds, ruleStore).failures());
+		}
+		return new BattleNext_BattleValidation.Result(failures);
 	}
 
 	public List<BattleNext_Match> load() {
@@ -96,6 +125,7 @@ public class BattleNext_BattleSourceProvider {
 		try {
 			fleetStore.reload();
 			tournamentStore.reload();
+			startedStore.reload();
 		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_BattleSourceProvider.class, "battle.sources.load.failed",
 				BattleNext_Logger.fields().put("active_tournament", activeTournament).put("fleet_load_error", fleetStore.getLoadError()).put("tournament_load_error", tournamentStore.getLoadError()).build(), exception);
@@ -103,9 +133,12 @@ public class BattleNext_BattleSourceProvider {
 			return List.of();
 		}
 
-		String activeId = tournamentStore.getActiveId();
+		String activeId = startedStore.getActiveId();
+		warnings.addAll(fleetStore.getErrors().stream().map(error -> error.path() + " / " + error.id() + ": " + error.diagnostic()).toList());
+		warnings.addAll(tournamentStore.getErrors().stream().map(error -> error.path() + " / " + error.id() + ": " + error.diagnostic()).toList());
+		warnings.addAll(startedStore.getLoadErrors());
 		if (!activeId.isEmpty()) {
-			BattleNext_TournamentModel tournament = tournamentStore.get(activeId);
+			BattleNext_StartedTournament tournament = startedStore.get(activeId);
 			if (tournament == null) {
 				BattleNext_Logger.warn(BattleNext_BattleSourceProvider.class, "tournament.active.missing",
 				BattleNext_Logger.fields().put("active_id", activeId).build());
@@ -113,10 +146,24 @@ public class BattleNext_BattleSourceProvider {
 				return List.of();
 			}
 			activeTournament = tournament;
-			if (!tournament.isStarted() || tournament.isCompleted()) {
+			try {
+				if (BattleNext_ModFileManager.exists(BattleNext_StartedTournamentStore.pendingRoundPath(activeId))) {
+					warnings.add(BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_").format("pending_round_submission", activeId));
+					return List.of();
+				}
+			} catch (Exception exception) {
+				warnings.add("Unable to read pending tournament result: " + activeId + ": " + exception.getMessage());
 				return List.of();
 			}
-			if (!tournament.getRuleId().isEmpty()) {
+			if (tournament.isCompleted()) {
+				return List.of();
+			}
+			BattleNext_TournamentModel configuration = tournamentStore.get(tournament.getSourceTournamentId());
+			if (configuration == null) {
+				warnings.add("Missing tournament configuration: " + tournament.getSourceTournamentId());
+				return List.of();
+			}
+			if (!configuration.getRuleId().isEmpty()) {
 				try {
 					ruleStore.reload();
 				} catch (Exception exception) {
@@ -149,6 +196,11 @@ public class BattleNext_BattleSourceProvider {
 	}
 
 	private List<BattleNext_Match> loadQuickBattleMatches() {
+		for (var error : fleetStore.getErrors()) {
+			String diagnostic = error.path() + " / " + error.id() + ": " + error.diagnostic();
+			if (warnings.contains(diagnostic)) continue;
+			warnings.add(diagnostic);
+		}
 		try {
 			quickBattleStore.reload();
 		} catch (Exception exception) {
@@ -157,6 +209,7 @@ public class BattleNext_BattleSourceProvider {
 			warnings.add("Unable to load quick battle list: " + exception.getMessage());
 		}
 		List<BattleNext_Match> matches = new ArrayList<>();
+		warnings.addAll(quickBattleStore.getErrors().stream().map(error -> error.path() + ": " + error.diagnostic()).toList());
 		for (BattleNext_QuickBattleModel model : quickBattleStore.getAll()) {
 			if (!model.isEnabled() || model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				continue;
@@ -168,13 +221,6 @@ public class BattleNext_BattleSourceProvider {
 
 	public List<String> getWarnings() {
 		return Collections.unmodifiableList(warnings);
-	}
-
-	public boolean authorizeNextMatch(String tournamentId, String matchId) {
-		load();
-		if (!warnings.isEmpty() || ruleWarnings.isEmpty()) return false;
-		BattleNext_BattleSignals.authorizeMatch(tournamentId, matchId);
-		return true;
 	}
 
 	public List<String> getRuleWarnings() {
@@ -189,8 +235,12 @@ public class BattleNext_BattleSourceProvider {
 		return ruleStore;
 	}
 
-	public BattleNext_TournamentModel getActiveTournament() {
+	public BattleNext_StartedTournament getActiveTournament() {
 		return activeTournament;
+	}
+
+	public BattleNext_StartedTournamentStore getStartedStore() {
+		return startedStore;
 	}
 
 	public BattleNext_TournamentStore getTournamentStore() {
@@ -205,7 +255,7 @@ public class BattleNext_BattleSourceProvider {
 
 		validation.refresh();
 		List<BattleNext_Match> result = new ArrayList<>();
-		String ruleId = activeTournament == null ? "" : activeTournament.getRuleId();
+		String ruleId = activeTournament == null ? "" : tournamentStore.get(activeTournament.getSourceTournamentId()).getRuleId();
 		BattleNext_BattleValidation.Result ruleState = validation.ruleResult(ruleId, ruleStore);
 		warnings.addAll(ruleState.messages());
 		if (ruleState.isBlocking()) return result;
@@ -226,11 +276,12 @@ public class BattleNext_BattleSourceProvider {
 			for (BattleNext_BattleValidation.Failure failure : qualification.failures()) {
 				if (failure.kind() == BattleNext_BattleValidation.FailureKind.RULE) {
 					ruleWarnings.add(failure.message());
+					warnings.add(failure.message());
 				} else {
 					warnings.add(failure.message());
 				}
 			}
-			if (!qualification.isBlocking()) {
+			if (qualification.failures().isEmpty()) {
 				result.add(match);
 			}
 		}

@@ -9,10 +9,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLoader<BattleNext_PinnedVariantModel> {
 
@@ -21,7 +22,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 	private List<CatalogEntry> catalog = List.of();
 
 	public record CatalogEntry(String path, String name, String pinId, String hullId,
-			BattleNext_PinnedVariantModel model, String error) {
+			BattleNext_PinnedVariantModel model, String error, String raw) {
 
 	}
 
@@ -32,15 +33,26 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 	@Override
 	public List<BattleNext_PinnedVariantModel> load() throws IOException, JSONException {
 
+		beginLoad();
 		List<String> errors = new ArrayList<>();
 		List<BattleNext_PinnedVariantModel> result = new ArrayList<>();
-		Set<String> ids = new HashSet<>();
 		List<CatalogEntry> entries = new ArrayList<>();
-		for (String path : catalogPaths()) {
+		List<String> paths;
+		try {
+			paths = catalogPaths();
+		} catch (IOException | JSONException exception) {
+			reject(RESOURCE_FOLDER, -1, "", "", exception);
+			paths = List.of();
+			errors.add(RESOURCE_FOLDER + ": " + exception);
+		}
+		errors.addAll(getErrors().stream().map(error -> error.path() + ": " + error.diagnostic()).toList());
+		for (String path : paths) {
 			String name = path.substring(path.lastIndexOf('/') + 1);
 			String pinId = "";
 			String hullId = "";
+			String raw = "";
 			try {
+				raw = new String(BattleNext_ModFileManager.readBytes(path), StandardCharsets.UTF_8);
 				JSONObject json = BattleNext_ModFileManager.readJson(BattleNext_PinnedVariantStandardLoader.class, path, MOD_ID);
 				name = json.optString("displayName", name);
 				if (name.isBlank()) {
@@ -56,19 +68,33 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 				if (!path.equals(RESOURCE_FOLDER + "/" + model.getPinId() + ".json")) {
 					throw new IllegalArgumentException("Pin ID does not match file name");
 				}
-				if (!ids.add(model.getId())) throw new IllegalArgumentException("Duplicate pin ID: " + model.getId());
 				markSource(model, path);
 				model.toBuilder().build();
 				result.add(model);
-				entries.add(new CatalogEntry(path, name, pinId, hullId, model, ""));
+				recordInput(path, -1, pinId, raw);
+				entries.add(new CatalogEntry(path, name, pinId, hullId, model, "", raw));
 			} catch (IOException | JSONException | RuntimeException exception) {
 				BattleNext_Logger.warn(BattleNext_PinnedVariantStandardLoader.class, "variant.pin.load.degraded",
 				BattleNext_Logger.fields().put("path", path).put("pin_id", pinId).put("name", name).put("hull_id", hullId).build(), exception);
 				String error = exception.toString();
 				errors.add(path + ": " + error);
-				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error));
+				reject(path, -1, pinId, raw, exception);
+				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error, raw));
 			}
 		}
+		Map<String, Integer> counts = new HashMap<>();
+		for (CatalogEntry entry : entries) {
+			if (entry.pinId().isEmpty()) continue;
+			counts.merge(entry.pinId(), 1, Integer::sum);
+		}
+		for (int index = 0; index < entries.size(); index++) {
+			CatalogEntry entry = entries.get(index);
+			if (counts.getOrDefault(entry.pinId(), 0) < 2) continue;
+			String error = "Duplicate pin ID: " + entry.pinId();
+			entries.set(index, new CatalogEntry(entry.path(), entry.name(), entry.pinId(), entry.hullId(), null, error, entry.raw()));
+			errors.add(entry.path() + ": " + error);
+		}
+		result.removeIf(model -> counts.get(model.getId()) > 1);
 		catalog = List.copyOf(entries);
 		loadErrors.clear();
 		loadErrors.addAll(errors);
@@ -81,13 +107,13 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return BattleNext_ModFileManager.listJson(RESOURCE_FOLDER);
+		return paths(RESOURCE_FOLDER, false).stream().filter(path -> path.endsWith(".json")).toList();
 	}
 
 	@Override
-	protected BattleNext_PinnedVariantModel parse(String path) throws IOException, JSONException {
+	protected BattleNext_PinnedVariantModel parse(JSONObject json) throws IOException, JSONException {
 		BattleNext_PinnedVariantModel model = new BattleNext_PinnedVariantModel();
-		model.fromJson(BattleNext_ModFileManager.readJson(BattleNext_PinnedVariantStandardLoader.class, path, MOD_ID));
+		model.fromJson(json);
 		return model;
 	}
 

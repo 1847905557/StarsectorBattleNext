@@ -7,8 +7,10 @@ import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,21 +22,28 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
+		beginLoad();
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = BattleNext_ModFileManager.list(BASE_FOLDER, true);
+		List<String> paths = paths(BASE_FOLDER, true);
 		List<String> dataPaths = paths.stream().filter(BattleNext_FleetStandardLoader::isFleetDataPath)
 				.filter(path -> !BattleNext_EntryId.isReservedFolder(fleetFolder(path))).toList();
 		for (String path : dataPaths) {
+			String id = "";
+			String raw = "";
 			try {
-				result.add(read(path, paths));
-			} catch (IOException | JSONException exception) {
-				throw new IllegalStateException("Unable to load standard fleet: " + path + ": " + exception.getMessage(), exception);
+				raw = new String(BattleNext_ModFileManager.readBytes(path), StandardCharsets.UTF_8);
+				JSONObject json = BattleNext_ModFileManager.readJson(getClass(), path, MOD_ID);
+				id = json.optString("id", "");
+				result.add(read(path, paths, json));
+				recordInput(path, -1, id, raw);
+			} catch (IOException | JSONException | IllegalArgumentException exception) {
+				reject(path, -1, id, raw, exception);
 			}
 		}
-		return result;
+		return finishLoad(result);
 	}
 
-	private BattleNext_FleetModel read(String path, List<String> paths) throws IOException, JSONException {
+	private BattleNext_FleetModel read(String path, List<String> paths, JSONObject json) throws IOException, JSONException {
 
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetStandardLoader.class, "fleet.resource.load", input);
@@ -45,7 +54,8 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 				throw new IOException("Invalid fleet folder name: " + folderName);
 			}
 			BattleNext_FleetModel fleet = new BattleNext_FleetModel();
-			fleet.fromJson(BattleNext_ModFileManager.readJson(BattleNext_FleetStandardLoader.class, path, MOD_ID));
+			fleet.fromJson(json);
+			if (fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet ID is required");
 			fleet.setFolderName(folderName);
 			markSource(fleet, path);
 			BattleNext_FleetVariantLoader.load(fleet, paths);

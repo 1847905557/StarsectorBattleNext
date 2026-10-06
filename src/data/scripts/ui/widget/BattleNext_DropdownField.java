@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.*;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
 import org.lwjgl.input.Keyboard;
 
 import java.util.ArrayList;
@@ -62,7 +63,17 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 		float height = panel.getPosition().getHeight();
 		row = ownPanel(panel, panel.createCustomPanel(width, height, new DropdownButtonPlugin()));
 		button = BattleNext_PageLayout.fixedButton(row,
-				new UIRect(0f, 0f, width, height), "", DropdownAction.TOGGLE, CutStyle.ALL, false);
+				new UIRect(0f, 0f, width, height), "", DropdownAction.TOGGLE, CutStyle.ALL, BattleNext_UiTheme.TEXT, new BaseTooltipCreator() {
+			@Override
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				for (DropdownChoice choice : options) {
+					if (!choice.id.equals(value)) continue;
+					tooltip.addPara(choice.label, 0f);
+					BattleNext_PageLayout.addMutedIdLine(tooltip, choice.id, 5f);
+					return;
+				}
+			}
+		});
 		panel.addComponent(row).inTL(0f, 0f);
 		refreshLabel();
 	}
@@ -196,6 +207,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option,
 						width - POPUP_BUTTON_WIDTH_RESERVE);
 				item.setEnabled(option.enabled);
+				BattleNext_PageLayout.addMetadataTooltip(list, option.label, option.id);
 			}
 		}
 		popup.addUIElement(list).inTL(0f, 0f);

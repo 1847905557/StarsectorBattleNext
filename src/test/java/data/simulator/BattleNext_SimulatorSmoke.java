@@ -1,14 +1,16 @@
 package data.simulator;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.apache.log4j.Level;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.member.BattleNext_MemberModel;
-import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_TournamentEngine;
+import org.apache.log4j.Level;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -18,11 +20,7 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Arrays;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -40,9 +38,7 @@ public class BattleNext_SimulatorSmoke {
 		Files.createDirectories(logs);
 		Path root = Files.createTempDirectory("BattleNext-simulator-smoke-");
 		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(root);
-		Path runtime = storage.directory("runtime/session");
-		storage.snapshotCommon(core.getParent().resolve("saves"), runtime.resolve("saves"));
-		storage.configureGraphics(runtime.resolve("saves"));
+		Path runtime = storage.directory("_runtime/session");
 		String token = UUID.randomUUID().toString();
 		Path workerLog = logs.resolve("worker-" + token + ".log");
 		Process process = null;
@@ -154,8 +150,8 @@ public class BattleNext_SimulatorSmoke {
 			if (measurements == 0) {
 				BattleNext_SimulationRequest matchInput = matchRequest(core, BattleNext_SimulationConfig.defaults());
 				BattleNext_TournamentModel model = new BattleNext_TournamentModel("smoke_cup", "Smoke Cup",
-						BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 3);
-				model.setFleetIds(List.of("player", "enemy", "third"));
+						BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 7);
+				List<String> slots = List.of("", "player", "", "enemy", "third", "", "");
 				JSONObject fleets = new JSONObject().put("player", matchInput.source().getJSONObject("player"))
 						.put("enemy", matchInput.source().getJSONObject("enemy"));
 				JSONObject third = new JSONObject(matchInput.source().getJSONObject("enemy").toString());
@@ -163,29 +159,35 @@ public class BattleNext_SimulatorSmoke {
 				fleets.put("third", third);
 				BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromJson(new JSONObject().put("id", UUID.randomUUID().toString())
 						.put("kind", "TOURNAMENT").put("config", BattleNext_SimulationConfig.defaults().toJson())
-						.put("source", new JSONObject().put("tournament", model.toJson()).put("fleets", fleets)
-								.put("sourceType", BattleNext_LoadSource.CREATED.name()).put("sourcePath", "smoke/tournament.json")));
-				BattleNext_TournamentSnapshot snapshot = BattleNext_TournamentSnapshot.create(request);
+						.put("source", new JSONObject().put("sourceTournamentId", model.getId()).put("name", model.getName()).put("fleetIds", new JSONArray(slots))));
+				BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
+				BattleNext_StartedTournament started = new BattleNext_StartedTournament(request.id(), model.getId(), BattleNext_StartedTournament.ExecutionKind.SIMULATION, slots);
+				engine.initialize(model, started);
 				int rounds = 0;
-				while (!snapshot.getTournament().isCompleted()) {
-					BattleNext_SimulationRequest round = snapshot.prepareRound();
+				float simulated = 0f;
+				long elapsed = 0L;
+				while (!started.isCompleted()) {
+					BattleNext_Match match = started.getNextPendingMatch();
+					JSONObject roundSource = new JSONObject(matchInput.source().toString());
+					roundSource.put("player", fleets.getJSONObject(match.getPlayer())).put("enemy", fleets.getJSONObject(match.getEnemy()));
+					roundSource.put("match", match.toJson()).put("actualMap", BattleNext_MissionBattleMap.resolve(model.getMapId()));
+					BattleNext_SimulationRequest round = new BattleNext_SimulationRequest(UUID.randomUUID().toString(),
+							BattleNext_SimulationRequest.Kind.MATCH, roundSource.toString(), request.config());
 					channel.send("REQUEST", round.toJson());
 					BattleNext_SimulationResult result = BattleNext_SimulationResult.fromJson(await(channel, process, "RESULT",
 							System.nanoTime() + 180000000000L).getJSONObject("payload"));
 					if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) throw new IOException("Tournament smoke round failed: " + result.diagnostic());
-					snapshot.record(result);
-					BattleNext_TournamentSnapshot checkpoint = snapshot.copy();
-					if (checkpoint.getVersion() != snapshot.getVersion()) throw new IOException("Tournament smoke checkpoint version mismatch");
-					Files.writeString(logs.resolve("TOURNAMENT-" + snapshot.getId() + ".json"), snapshot.toJson().toString(), StandardCharsets.UTF_8);
-					System.out.println("Tournament round " + (++rounds) + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
-							+ "s, elapsed=" + result.executionNanos() / 1000000000d + "s");
+					String winner = result.report().getWinner().equals("player") ? match.getPlayer()
+							: result.report().getWinner().equals("enemy") ? match.getEnemy() : "";
+					engine.recordRound(model, started, match.getId(), winner, result.report().getId());
+					simulated += result.simulationSeconds();
+					elapsed += result.executionNanos();
+					Files.writeString(logs.resolve("TOURNAMENT-" + started.getId() + ".json"), started.toJson().toString(), StandardCharsets.UTF_8);
+					System.out.println("Tournament round " + (++rounds) + ": " + result.outcome());
 					awaitReady(channel, process, System.nanoTime() + 30000000000L);
 				}
-				snapshot.transition(BattleNext_SimulationTask.State.FINISHED, "");
-				Files.writeString(logs.resolve("TOURNAMENT-" + snapshot.getId() + ".json"), snapshot.toJson().toString(), StandardCharsets.UTF_8);
-				BattleNext_SimulationResult completed = BattleNext_SimulationResult.fromJson(snapshot.result().toJson());
-				System.out.println("Tournament completed: rounds=" + rounds + ", champion=" + snapshot.getTournament().getChampionFleetId()
-						+ ", simulated=" + completed.simulationSeconds() + "s, elapsed=" + completed.executionNanos() / 1000000000d + "s");
+				System.out.println("Tournament completed: rounds=" + rounds + ", champion=" + started.getChampionFleetId()
+						+ ", simulated=" + simulated + "s, elapsed=" + elapsed / 1000000000d + "s");
 			}
 		} finally {
 			if (channel != null) {
@@ -203,7 +205,7 @@ public class BattleNext_SimulatorSmoke {
 				}
 			}
 			storage.cleanup(runtime);
-			Files.delete(root.resolve("runtime"));
+			Files.delete(root.resolve("_runtime"));
 			Files.delete(root);
 			System.out.println("Smoke runtime cleaned; diagnostics: " + logs);
 		}

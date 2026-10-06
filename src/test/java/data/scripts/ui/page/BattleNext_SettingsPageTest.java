@@ -1,34 +1,30 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
-import data.simulator.BattleNext_SimulatorWidget;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.simulator.BattleNext_SimulatorWidget;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	private final AtomicReference<JSONObject> savedSettings = new AtomicReference<>();
@@ -57,8 +53,8 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 			page.attach(root);
 			ButtonAPI logging = (ButtonAPI) getField(getField(page, "editor"), "infoLogCheckbox");
 			assertFalse(logging.isChecked());
-			assertEquals("Enable full graphic effects", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("fullGraphicEffect")));
-			assertEquals("Enable info log", BattleNext_TestTextCatalog.text("Settings", buttonLabels.get("infoLog")));
+			assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_full_graphic_effect"), buttonLabels.get("fullGraphicEffect"));
+			assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_info_log"), buttonLabels.get("infoLog"));
 			assertEquals(33f, buttonPositions.get("cnText").getY() - buttonPositions.get("fullGraphicEffect").getY());
 			assertEquals(33f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
 			assertEquals(33f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
@@ -119,10 +115,23 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 				simulatorBounds.getY() + simulatorBounds.getHeight());
 		PositionAPI enable = buttonPositions.get("simulator_enable");
 		assertEquals(simulatorBounds.getCenterX(), enable.getCenterX(), 0.5f);
-		assertEquals(simulatorBounds.getCenterY(), enable.getCenterY(), 0.5f);
 		assertEquals(buttonPositions.get("settings_save").getY(), simulatorBounds.getY());
-		assertEquals(Misc.getNegativeHighlightColor(), buttonColors.get(enable));
+		assertEquals(Misc.getButtonTextColor(), buttonColors.get(enable));
 		CustomPanelAPI simulatorContent = (CustomPanelAPI) children.get(simulator.getPanel()).get(0);
+		List<LabelAPI> warnings = children.get(simulatorContent).stream().filter(TooltipMakerAPI.class::isInstance)
+				.flatMap(child -> tooltips.get(child).getComponents().stream()).filter(LabelAPI.class::isInstance)
+				.map(LabelAPI.class::cast).filter(label -> label.getText().equals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_warning"))
+						|| label.getText().equals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_warned"))).toList();
+		assertEquals(2, warnings.size());
+		PositionAPI description = warnings.get(0).getPosition();
+		PositionAPI emphasized = warnings.get(1).getPosition();
+		assertEquals(Misc.getTextColor(), labelColors.get(description));
+		assertEquals(Misc.getNegativeHighlightColor(), labelColors.get(emphasized));
+		assertEquals(simulatorBounds.getCenterX(), description.getCenterX(), 0.5f);
+		assertEquals(simulatorBounds.getCenterX(), emphasized.getCenterX(), 0.5f);
+		assertEquals(description.getY() - 12f, emphasized.getY() + emphasized.getHeight(), 0.5f);
+		assertEquals(emphasized.getY() - 12f, enable.getY() + enable.getHeight(), 0.5f);
+		assertEquals(simulatorBounds.getCenterY(), (description.getY() + description.getHeight() + enable.getY()) * 0.5f, 0.5f);
 		TooltipMakerAPI border = (TooltipMakerAPI) children.get(simulatorContent).get(0);
 		PositionAPI rectangle = tooltips.get(border).getComponents().get(0).getPosition();
 		assertEquals(simulatorBounds.getX(), rectangle.getX());
@@ -200,7 +209,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(input, ((BattleNext_TextField) getField(editor, "battleTimeLimitField")).captureEditState());
 		viewports = (Map<?, ?>) getField(editor, "viewports");
 		assertEquals(offset, ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller().getYOffset());
-		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Common_CN" : "Common", "BattleNext_common_saved"), page.getStatusText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), page.getStatusText());
 		assertFalse(page.hasUnsavedChanges());
 		page.attach(root);
 		assertEquals(!initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
@@ -261,7 +270,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	}
 
 	private void assertLanguageLabel(ButtonAPI checkbox, boolean enabled) {
-		String category = enabled ? "Settings_CN" : "Settings";
+		String category = "Settings";
 		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_cn_text"), checkbox.getText());
 		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_full_graphic_effect"), buttonLabels.get("fullGraphicEffect"));
 	}

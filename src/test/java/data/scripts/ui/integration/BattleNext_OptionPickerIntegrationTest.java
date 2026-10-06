@@ -2,16 +2,12 @@ package data.scripts.ui.integration;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,6 +18,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture {
 
@@ -102,7 +99,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		LabelAPI label = children.get(popup).stream().filter(child -> child instanceof TooltipMakerAPI)
 				.flatMap(child -> tooltips.get(child).getComponents().stream())
 				.filter(child -> child instanceof LabelAPI).map(child -> (LabelAPI) child)
-				.filter(child -> child.getText().equals("BattleNext_common_picker_search")).findFirst().orElseThrow();
+				.filter(child -> child.getText().equals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_picker_search"))).findFirst().orElseThrow();
 		PositionAPI field = ((BattleNext_TextField) getField(picker, "search")).getPosition();
 		assertEquals(16f, first.getX() - popup.getPosition().getX(), 0.001f);
 		assertEquals(first.getX(), label.getPosition().getX(), 0.001f);
@@ -234,5 +231,85 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 	private void press(BattleNext_OptionPicker picker, String panelField, String action) throws Exception {
 		CustomPanelAPI target = (CustomPanelAPI) getField(picker, panelField);
 		plugins.get(target).buttonPressed(buttonIds.get(action));
+	}
+
+	@Test
+	void bothModesCycleThroughProviderStackAndConfirmAfterReleasingThePopup() throws Exception {
+		for (BattleNext_OptionPicker.OptionSelectionMode mode : BattleNext_OptionPicker.OptionSelectionMode.values()) {
+			BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+			CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
+			List<String> draft = new ArrayList<>(List.of("first"));
+			BattleNext_OptionPicker.OptionChoiceSource source = new BattleNext_OptionPicker.OptionChoiceSource() {
+				@Override
+				public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
+					return List.of(new BattleNext_OptionPicker.OptionChoice("first", "First"), new BattleNext_OptionPicker.OptionChoice("second", "Second"));
+				}
+				@Override
+				public int getMaxStack(String id) {
+					return id.equals("second") ? 2 : 1;
+				}
+				@Override
+				public String getIconPath(String id) {
+					return "";
+				}
+				@Override
+				public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
+					tooltip.addTitle(option.getLabel());
+				}
+			};
+			BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, root, source, mode, () -> draft, ids -> {
+				assertTrue(router.isEmpty());
+				draft.clear();
+				draft.addAll(ids);
+			});
+			picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(10f, 600f, 100f, 18f));
+			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
+			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+			CustomPanelAPI first = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
+			CustomPanelAPI second = (CustomPanelAPI) tooltips.get(grid).getComponents().get(1);
+			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
+			clickTile(first);
+			assertTrue(selection.isEmpty());
+			clickTile(first);
+			for (int count : new int[]{1, 2, 0}) {
+				clickTile(second);
+				assertEquals(count, selection.getOrDefault("second", 0));
+				assertEquals(mode == BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, selection.containsKey("first"));
+			}
+			press(picker, "popup", "CONFIRM");
+			assertEquals(mode == BattleNext_OptionPicker.OptionSelectionMode.SINGLE ? List.of() : List.of("first"), draft);
+			picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(10f, 600f, 100f, 18f));
+			gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
+			grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+			second = (CustomPanelAPI) tooltips.get(grid).getComponents().get(1);
+			clickTile(second);
+			clickTile(second);
+			press(picker, "popup", "CONFIRM");
+			assertEquals(mode == BattleNext_OptionPicker.OptionSelectionMode.SINGLE
+					? List.of("second", "second") : List.of("first", "second", "second"), draft);
+			picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(10f, 600f, 100f, 18f));
+			selection = (Map<String, Integer>) getField(picker, "selection");
+			assertEquals(2, selection.get("second"));
+			picker.close();
+			assertFalse(router.getSession().hasInputState());
+			assertTrue(children.get(root).isEmpty());
+		}
+	}
+
+	private void clickTile(CustomPanelAPI tile) {
+		AtomicBoolean consumed = new AtomicBoolean();
+		InputEventAPI event = proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
+			case "isLMBDownEvent" -> true;
+			case "getX" -> (int) tile.getPosition().getCenterX();
+			case "getY" -> (int) tile.getPosition().getCenterY();
+			case "isConsumed" -> consumed.get();
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
+			default -> null;
+		});
+		plugins.get(tile).processInput(List.of(event));
+		assertTrue(consumed.get());
 	}
 }

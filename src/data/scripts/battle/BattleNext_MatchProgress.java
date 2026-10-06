@@ -2,6 +2,7 @@ package data.scripts.battle;
 
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.tournament.BattleNext_StartedTournament;
 
 public final class BattleNext_MatchProgress {
 
@@ -23,16 +24,16 @@ public final class BattleNext_MatchProgress {
 		return new BattleNext_MatchProgress(matchIndex, matchTotal, roundIndex, 2, -1);
 	}
 
-	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel tournament, BattleNext_Match match) {
-		return tournament(tournament, match, match.getRounds().size() + 1);
+	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, BattleNext_Match match) {
+		return tournament(configuration, tournament, match, match.getRounds().size() + 1);
 	}
 
-	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel tournament, BattleNext_Match match,
+	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, BattleNext_Match match,
 			int roundIndex) {
 		int index = tournament.getPlayableMatchIndex(match.getId());
 		if (index < 0) throw new IllegalArgumentException("Match is not a playable tournament match");
-		return new BattleNext_MatchProgress(index + 1, tournament.getPlayableMatchTotal(),
-				roundIndex, tournament.getBoCount(), tournament.getBoCount());
+		return new BattleNext_MatchProgress(index + 1, tournament.getPlayableMatchTotal(configuration),
+				roundIndex, configuration.getBoCount(), configuration.getBoCount());
 	}
 
 	public String format(BattleNext_I18nSection strings) {

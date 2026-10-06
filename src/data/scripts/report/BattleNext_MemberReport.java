@@ -1,12 +1,11 @@
 package data.scripts.report;
 
+import data.model.BattleNext_JsonModel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class BattleNext_MemberReport {
 
@@ -18,6 +17,8 @@ public class BattleNext_MemberReport {
 	private float finalHullFraction;
 	private float finalCr;
 	private String status;
+	private final List<String> loadErrors = new ArrayList<>();
+	private JSONObject incompleteJson;
 
 	public BattleNext_MemberReport(String variantId, String hullId, String name) {
 		this.variantId = normalize(variantId);
@@ -29,15 +30,19 @@ public class BattleNext_MemberReport {
 	public static BattleNext_MemberReport fromJson(JSONObject json) throws JSONException {
 		BattleNext_MemberReport report = new BattleNext_MemberReport(json.optString("variantId", ""),
 				json.optString("hullId", ""), json.optString("name", ""));
-		readSources(json.getJSONArray("dealtBySource"), report.dealtBySource);
-		readSources(json.getJSONArray("takenBySource"), report.takenBySource);
+		report.dealtBySource.addAll(readSources("dealtBySource", json.getJSONArray("dealtBySource"), report.loadErrors));
+		report.takenBySource.addAll(readSources("takenBySource", json.getJSONArray("takenBySource"), report.loadErrors));
 		report.finalHullFraction = (float)json.optDouble("finalHullFraction", 0d);
 		report.finalCr = (float)json.optDouble("finalCr", 0d);
 		report.status = normalizeStatus(json.optString("status", "alive"));
+		if (!report.loadErrors.isEmpty()) {
+			report.incompleteJson = new JSONObject(json.toString());
+		}
 		return report;
 	}
 
 	public JSONObject toJson() throws JSONException {
+		if (incompleteJson != null) return new JSONObject(incompleteJson.toString());
 		JSONObject json = new JSONObject();
 		json.put("variantId", variantId);
 		json.put("hullId", hullId);
@@ -48,6 +53,10 @@ public class BattleNext_MemberReport {
 		json.put("finalCr", finalCr);
 		json.put("status", status);
 		return json;
+	}
+
+	public List<String> getLoadErrors() {
+		return List.copyOf(loadErrors);
 	}
 
 	public String getVariantId() {
@@ -175,19 +184,26 @@ public class BattleNext_MemberReport {
 		return result;
 	}
 
-	private static void readSources(JSONArray array, List<BattleNext_DamageSourceReport> target) {
-		for (int index = 0; index < array.length(); index++) {
-			JSONObject source = array.optJSONObject(index);
-			if (source != null) target.add(BattleNext_DamageSourceReport.fromJson(source));
-		}
-	}
-
 	private static JSONArray writeSources(List<BattleNext_DamageSourceReport> sources) throws JSONException {
 		JSONArray array = new JSONArray();
 		for (BattleNext_DamageSourceReport source : sources) {
 			array.put(source.toJson());
 		}
 		return array;
+	}
+
+	private static List<BattleNext_DamageSourceReport> readSources(String key, JSONArray values, List<String> errors) {
+		Map<List<String>, Integer> counts = new HashMap<>();
+		for (int index = 0; index < values.length(); index++) {
+			JSONObject item = values.optJSONObject(index);
+			if (item == null) continue;
+			counts.merge(List.of(item.optString("kind", ""), item.optString("id", "")), 1, Integer::sum);
+		}
+		return BattleNext_JsonModel.parseCollection(key, values, json -> {
+			List<String> identity = List.of(json.getString("kind"), json.getString("id"));
+			if (counts.get(identity) > 1) throw new IllegalArgumentException("Duplicate damage source: " + identity);
+			return BattleNext_DamageSourceReport.fromJson(json);
+		}, errors);
 	}
 
 	private static String normalize(String value) {

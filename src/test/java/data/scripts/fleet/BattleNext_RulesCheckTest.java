@@ -14,13 +14,13 @@ import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_CsvLine;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,23 +114,22 @@ class BattleNext_RulesCheckTest {
 	}
 
 	@Test
-	void invalidRestrictionKeepsPublishedSpecsAndLoader() throws Exception {
+	void invalidRestrictionsPublishDiagnosticsAndRejectAllConflictingRows() throws Exception {
 		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "extensionA")
 				.put("type", "number").put("script", ExampleRestriction.class.getName()).put("desc", "A"));
 		registry.load(valid, name -> new ExampleRestriction());
 		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "extensionA")
 				.put("type", "list").put("script", String.class.getName()).put("desc", "Wrong"));
-		IllegalArgumentException mismatch = assertThrows(IllegalArgumentException.class,
-				() -> registry.load(wrongInterface, name -> "wrong"));
-		assertTrue(mismatch.getMessage().contains("extensionA"));
-		assertEquals("A", registry.get("extensionA").getDescription());
-		assertTrue(registry.create("extensionA") instanceof ExampleRestriction);
+		registry.load(wrongInterface, name -> "wrong");
+		assertTrue(registry.getAll().isEmpty());
+		assertEquals("extensionA", registry.getLoadErrors().get(0).id());
+		assertTrue(registry.getLoadErrors().get(0).diagnostic().contains("BattleNext_RestrictionScript"));
 		JSONArray duplicate = new JSONArray().put(valid.getJSONObject(0)).put(valid.getJSONObject(0));
-		IllegalArgumentException repeated = assertThrows(IllegalArgumentException.class,
-				() -> registry.load(duplicate, name -> new ExampleRestriction()));
-		assertTrue(repeated.getMessage().contains("row 2"));
-		assertEquals(1, registry.getAll().size());
+		registry.load(duplicate, name -> new ExampleRestriction());
+		assertTrue(registry.getAll().isEmpty());
+		assertEquals(List.of(0, 1), registry.getLoadErrors().stream().map(error -> error.position()).toList());
+		assertTrue(registry.getLoadErrors().stream().allMatch(error -> error.diagnostic().contains("Duplicate restriction ID: extensionA")));
 	}
 
 	@Test
@@ -177,7 +176,8 @@ class BattleNext_RulesCheckTest {
 		assertEquals(List.of("fleet extensionB 2.0", "fleet extensionA 1.0"), check.validateFleet(assembledFleet, rule));
 		rows.put(new JSONObject().put("id", "bad").put("type", "number")
 				.put("script", String.class.getName()).put("desc", "Bad"));
-		assertThrows(IllegalArgumentException.class, () -> registry.load(rows, name -> "wrong"));
+		registry.load(rows, name -> name.equals(String.class.getName()) ? "wrong" : new ExampleRestriction());
+		assertEquals("bad", registry.getLoadErrors().get(0).id());
 		assertEquals(2, registry.getAll().size());
 		assertNotNull(registry.get("extensionA"));
 		assertTrue(registry.create("extensionA") instanceof ExampleRestriction);

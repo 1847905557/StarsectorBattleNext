@@ -7,13 +7,12 @@ import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.test.fixture.BattleNext_TestUiFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_PersonalitySourceProviderTest extends BattleNext_TestUiFixture {
 

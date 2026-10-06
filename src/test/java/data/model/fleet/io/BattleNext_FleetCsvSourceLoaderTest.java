@@ -2,10 +2,10 @@ package data.model.fleet.io;
 
 import data.model.BattleNext_LoadSource;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture {
@@ -39,9 +39,10 @@ class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture 
 	void emptyMetadataReportsBothSourcePaths() throws Exception {
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		write("tournament/player1_data.csv", "name,author,skills,tags\n,,,,\n");
-		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetLegacyLoader().load());
-		assertTrue(failure.getMessage().contains("player1_data.csv"));
-		assertTrue(failure.getMessage().contains("player1_fleet.csv"));
+		var loader = new BattleNext_FleetLegacyLoader();
+		assertTrue(loader.load().isEmpty());
+		assertTrue(loader.getErrors().get(0).diagnostic().contains("player1_data.csv"));
+		assertTrue(loader.getErrors().get(0).diagnostic().contains("player1_fleet.csv"));
 	}
 
 	@Test

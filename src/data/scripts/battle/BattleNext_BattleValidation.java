@@ -19,7 +19,35 @@ public class BattleNext_BattleValidation {
 
 	public enum FailureKind { CONFIGURATION, REFERENCE, ASSEMBLY, RULE, EVALUATION }
 
-	public record Failure(FailureKind kind, String subject, String message) { }
+	public record Failure(FailureKind kind, String subject, String diagnostic, BattleNext_TournamentEngine.ConfigurationReason reason) {
+		public Failure(FailureKind kind, String subject, String diagnostic) {
+			this(kind, subject, diagnostic, null);
+		}
+
+		public String message() {
+			if (reason == null) return diagnostic;
+			BattleNext_I18nSection tournament = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+			return switch (reason) {
+				case MAP -> BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_").format("invalid_map", BattleNext_MissionBattleMap.LAST_MAP_ID);
+				case LIMITS -> tournament.get("invalid_configuration");
+				case DUPLICATE_FLEETS -> tournament.get("duplicate_fleets");
+				case MINIMUM_FLEETS -> tournament.format("minimum_fleets", BattleNext_TournamentModel.MIN_FLEET_COUNT);
+			};
+		}
+	}
+
+	public static class Rejection extends IllegalArgumentException {
+		private final Result result;
+
+		public Rejection(String id, Result result) {
+			super("Tournament qualification failed: " + id);
+			this.result = result;
+		}
+
+		public Result getResult() {
+			return result;
+		}
+	}
 
 	public record Result(List<Failure> failures) {
 		public Result {
@@ -58,9 +86,6 @@ public class BattleNext_BattleValidation {
 		BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
 		for (BattleNext_FleetModel fleet : fleets.getAll()) {
 			List<Failure> failures = new ArrayList<>();
-			for (String error : fleet.getLoadErrors()) {
-				failures.add(new Failure(FailureKind.ASSEMBLY, fleet.getId(), fleet.getId() + " " + error));
-			}
 			try {
 				BattleNext_AssembledFleet result = builder.build(fleet);
 				assembled.put(fleet.getId(), result);
@@ -101,6 +126,7 @@ public class BattleNext_BattleValidation {
 		if (!rules.isLoaded()) return new Result(List.of(new Failure(FailureKind.REFERENCE, id, rules.getLoadError())));
 		BattleNext_RuleModel rule = rules.get(id);
 		if (rule == null) return new Result(List.of(new Failure(FailureKind.REFERENCE, id, "Missing rule: " + id)));
+		if (!rule.getLoadErrors().isEmpty()) return new Result(rule.getLoadErrors().stream().map(error -> new Failure(FailureKind.REFERENCE, id, error)).toList());
 		Map<String, Result> results = ruleResults.computeIfAbsent(rule, ignored -> new LinkedHashMap<>());
 		return results.computeIfAbsent("", ignored -> new Result(rulesCheck.missingRestrictions(rule).stream()
 				.map(message -> new Failure(FailureKind.REFERENCE, id, message)).toList()));
@@ -159,23 +185,25 @@ public class BattleNext_BattleValidation {
 		return List.copyOf(new LinkedHashSet<>(errors));
 	}
 
-	public Result tournamentResult(BattleNext_TournamentModel tournament, BattleNext_RuleStore rules) {
+	public Result tournamentResult(BattleNext_TournamentModel tournament, List<String> fleetIds, BattleNext_RuleStore rules) {
 		List<Failure> failures = new ArrayList<>();
 		try {
 			new BattleNext_TournamentEngine().validateConfiguration(tournament);
+			new BattleNext_TournamentEngine().validateParticipants(tournament, fleetIds);
 		} catch (BattleNext_TournamentEngine.ConfigurationRejection exception) {
-			String message = exception.getReason() == BattleNext_TournamentEngine.ConfigurationReason.MAP
-					? battleStrings.format("invalid_map", BattleNext_MissionBattleMap.LAST_MAP_ID) : exception.getMessage();
-			failures.add(new Failure(FailureKind.CONFIGURATION, tournament.getId(), message));
+			BattleNext_Logger.warn(getClass(), "tournament.configuration.rejected", BattleNext_Logger.fields()
+					.put("tournament_id", tournament.getId()).put("fleet_ids", fleetIds).put("reason", exception.getReason()).build(), exception);
+			failures.add(new Failure(FailureKind.CONFIGURATION, tournament.getId(), exception.getMessage(), exception.getReason()));
 		}
 		failures.addAll(ruleResult(tournament.getRuleId(), rules).failures());
-		for (String id : tournament.getFleetIds()) {
+		for (String id : fleetIds) {
+			if (id.isEmpty()) continue;
 			failures.addAll(fleetRuleResult(id, tournament.getRuleId(), rules).failures());
 		}
 		return new Result(failures);
 	}
 
-	public List<String> tournamentErrors(BattleNext_TournamentModel tournament, BattleNext_RuleStore rules) {
-		return tournamentResult(tournament, rules).messages();
+	public List<String> tournamentErrors(BattleNext_TournamentModel tournament, List<String> fleetIds, BattleNext_RuleStore rules) {
+		return tournamentResult(tournament, fleetIds, rules).messages();
 	}
 }

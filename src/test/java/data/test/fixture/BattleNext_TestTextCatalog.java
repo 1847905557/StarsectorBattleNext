@@ -1,5 +1,6 @@
 package data.test.fixture;
 
+import data.scripts.tools.BattleNext_Settings;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,14 +23,12 @@ public class BattleNext_TestTextCatalog {
 
 	}
 
-	public static String key(Object category, Object id) {
-		TextKey key = new TextKey(category.toString(), id.toString());
-		assertTrue(ENTRIES.containsKey(key), "Missing text: " + key);
-		return key.id();
-	}
-
 	public static String text(Object category, Object id) {
-		TextKey key = new TextKey(category.toString(), id.toString());
+		String domain = category.toString();
+		if (domain.endsWith("_CN")) {
+			domain = domain.substring(0, domain.length() - 3);
+		}
+		TextKey key = new TextKey(BattleNext_Settings.isCnTextEnabled() ? domain + "_CN" : domain, id.toString());
 		assertTrue(ENTRIES.containsKey(key), "Missing text: " + key);
 		return ENTRIES.get(key);
 	}

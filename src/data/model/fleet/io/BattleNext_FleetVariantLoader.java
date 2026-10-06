@@ -29,6 +29,7 @@ public class BattleNext_FleetVariantLoader {
 			String prefix = source.substring(0, source.lastIndexOf('/') + 1);
 			Map<String, JSONObject> variants = new LinkedHashMap<>();
 			Map<String, String> sources = new LinkedHashMap<>();
+			Set<String> conflicts = new HashSet<>();
 			for (String path : paths) {
 				if (!path.startsWith(prefix) || !path.endsWith(".variant")) continue;
 				if (path.indexOf('/', prefix.length()) >= 0) continue;
@@ -38,21 +39,24 @@ public class BattleNext_FleetVariantLoader {
 							BattleNext_ModFileManager.readJson(BattleNext_FleetVariantLoader.class, path, "AI_Battles_Next"), fileId);
 					String previous = sources.put(variant.getId(), path);
 					if (previous != null) {
-						throw new IOException("Duplicate variant ID " + variant.getId() + ": " + previous + " and " + path);
+						conflicts.add(variant.getId());
+						fleet.addLoadError("Duplicate variant ID " + variant.getId() + ": " + previous + " and " + path);
 					}
 					variants.put(variant.getId(), variant.toJson().put("variantId", variant.getId()));
-				} catch (IOException | JSONException exception) {
-					throw new IOException("Unable to load variant " + path + ": " + exception.getMessage(), exception);
+				} catch (IOException | JSONException | IllegalArgumentException exception) {
+					fleet.addLoadError(path + ": " + exception);
+					BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.item.rejected", BattleNext_Logger.fields().put("path", path).build(), exception);
 				}
 			}
 			for (Map.Entry<String, JSONObject> entry : variants.entrySet()) {
+				if (conflicts.contains(entry.getKey())) continue;
 				try {
 					JSONObject json = new JSONObject(entry.getValue().toString());
-					resolve(json, variants, new LinkedHashSet<>());
+					resolve(json, variants, conflicts, new LinkedHashSet<>());
 					fleet.putVariant(BattleNext_VariantBuilder.fromJson(json, entry.getKey()));
-				} catch (IOException | JSONException exception) {
-					throw new IOException("Unable to resolve variant " + sources.get(entry.getKey())
-							+ ": " + exception.getMessage(), exception);
+				} catch (IOException | JSONException | IllegalArgumentException exception) {
+					fleet.addLoadError(sources.get(entry.getKey()) + ": " + exception);
+					BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.resolve.rejected", BattleNext_Logger.fields().put("path", sources.get(entry.getKey())).build(), exception);
 				}
 			}
 			if (fleet.hasLocalVariants()) {
@@ -66,38 +70,39 @@ public class BattleNext_FleetVariantLoader {
 			}
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
 					BattleNext_Logger.fields().put("fleet", fleet).build());
-		} catch (IOException | RuntimeException exception) {
+		} catch (RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_FleetVariantLoader.class, "fleet.variants.load", input, exception);
 			throw exception;
 		}
 	}
 
-	private static void resolve(JSONObject json, Map<String, JSONObject> variants, Set<String> visiting)
+	private static void resolve(JSONObject json, Map<String, JSONObject> variants, Set<String> conflicts, Set<String> visiting)
 			throws IOException, JSONException {
 		String id = json.getString("variantId");
 		if (!visiting.add(id)) throw new IOException("Cyclic module variant: " + String.join(" -> ", visiting) + " -> " + id);
 		Object modules = json.opt("modules");
 		if (modules instanceof JSONObject object) {
-			resolveModules(object, variants, visiting);
+			resolveModules(object, variants, conflicts, visiting);
 		} else if (modules instanceof JSONArray array) {
 			for (int index = 0; index < array.length(); index++) {
-				resolveModules(array.getJSONObject(index), variants, visiting);
+				resolveModules(array.getJSONObject(index), variants, conflicts, visiting);
 			}
 		}
 		visiting.remove(id);
 	}
 
-	private static void resolveModules(JSONObject modules, Map<String, JSONObject> variants, Set<String> visiting)
+	private static void resolveModules(JSONObject modules, Map<String, JSONObject> variants, Set<String> conflicts, Set<String> visiting)
 			throws IOException, JSONException {
 		if (modules.length() == 0) return;
 		for (String slot : JSONObject.getNames(modules)) {
 			Object module = modules.get(slot);
+			if (module instanceof String reference && conflicts.contains(reference)) throw new IOException("Conflicting module variant ID: " + reference);
 			if (module instanceof String reference && variants.containsKey(reference)) {
 				JSONObject local = new JSONObject(variants.get(reference).toString());
-				resolve(local, variants, visiting);
+				resolve(local, variants, conflicts, visiting);
 				modules.put(slot, local);
 			} else if (module instanceof JSONObject object) {
-				resolve(object, variants, visiting);
+				resolve(object, variants, conflicts, visiting);
 			}
 		}
 	}

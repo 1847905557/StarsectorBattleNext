@@ -4,18 +4,20 @@ import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.fleet.BattleNext_PveFleetGenerator;
 import data.scripts.plugin.BattleNext_RttPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tools.BattleNext_Settings;
-import data.scripts.fleet.BattleNext_PveFleetGenerator;
-import data.missions.BattleNext_MissionBattleMap;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestMissionFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONException;
@@ -26,12 +28,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.input.Keyboard;
 
-import java.nio.file.Files;
-import java.util.List;
-import java.util.Arrays;
-import java.util.stream.IntStream;
-import java.util.function.Function;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 
@@ -95,27 +98,28 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		for (MissionDefinitionPlugin definition : List.of(pvp, new MissionDefinition())) {
 			MissionState mission = new MissionState();
 			definition.defineMission(mission.getApi());
-			assertTrue(mission.getBriefing().contains("Map -1, map scale 1.5"));
+			assertTrue(mission.getBriefing().contains(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), -1, 1.5f)));
 			assertTrue(maps.stream().anyMatch(map -> Arrays.equals(map, mission.getMap())));
 		}
 		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
 		tournament.setId("random_cup");
 		tournament.setName("Random Cup");
-		tournament.setFleetIds(List.of("alpha", "beta"));
-		tournament.addMatch(new BattleNext_Match("pending", "alpha", "beta", -1, 1.5f));
-		tournament.setStarted(true);
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
+		started.addGeneratedMatch(new BattleNext_Match("pending", "alpha", "beta", -1, 1.5f));
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
 		tournaments.save(tournament);
-		tournaments.setActiveId(tournament.getId());
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.save(started);
+		instances.activate(started.getId());
 		for (int creation = 0; creation < 2; creation++) {
 			MissionState mission = new MissionState();
 			pvp.defineMission(mission.getApi());
 			assertTrue(maps.stream().anyMatch(map -> Arrays.equals(map, mission.getMap())));
-			assertTrue(mission.getBriefing().contains("Map -1, map scale 1.5"));
+			assertTrue(mission.getBriefing().contains(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), -1, 1.5f)));
 		}
 		tournaments.reload();
-		assertEquals(-1, tournaments.get(tournament.getId()).findMatch("pending").getMap());
+		assertEquals(-1, instances.get(started.getId()).findMatch("pending").getMap());
 	}
 
 	@Test
@@ -127,8 +131,8 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 			var mission = new MissionState();
 			new MissionDefinition().defineMission(mission.getApi());
 			assertEquals(variants.get(index), mission.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
-			assertEquals(List.of(index < 2 ? "Map 2, map scale 1.5" : "Map -1, map scale 2.0",
-					"Faction 1 / 2, Player " + (index + 1) + " / " + variants.size()), mission.getBriefing());
+			assertEquals(List.of(index < 2 ? String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 2, 1.5f) : String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), -1, 2.0f),
+					String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, index + 1, variants.size())), mission.getBriefing());
 			assertEquals("Standard", mission.getNames().get(FleetSide.PLAYER));
 			assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 					"mod_faction", 100, 45), mission.getNames().get(FleetSide.ENEMY));
@@ -148,12 +152,12 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		}
 		var wrapped = new MissionState();
 		new MissionDefinition().defineMission(wrapped.getApi());
-		assertEquals("Faction 1 / 2, Player 1 / 4", wrapped.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 4), wrapped.getBriefing().get(1));
 		keys.clear();
 		keys.add(Keyboard.KEY_A);
 		var previous = new MissionState();
 		new MissionDefinition().defineMission(previous.getApi());
-		assertEquals("Faction 1 / 2, Player 4 / 4", previous.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 4, 4), previous.getBriefing().get(1));
 		assertEquals(variants.size() + 2, generatedParameters.size());
 	}
 
@@ -167,7 +171,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		assertEquals("child_variant", selected.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals("hegemony", generatedParameters.get(0).factionId);
 		assertEquals(110f, generatedParameters.get(0).combatPts);
-		assertEquals(List.of("Map 0, map scale 1.0", "Faction 2 / 2, Player 2 / 2"), selected.getBriefing());
+		assertEquals(List.of(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 0, 1.0f), String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 2, 2, 2)), selected.getBriefing());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 				"hegemony", 110, 45), selected.getNames().get(FleetSide.ENEMY));
 		keys.addAll(List.of(Keyboard.KEY_A, Keyboard.KEY_LEFT, Keyboard.KEY_DOWN));
@@ -201,7 +205,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		var current = new MissionState();
 		new MissionDefinition().defineMission(current.getApi());
 		assertEquals("child_variant", current.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
-		assertEquals(List.of("Map 4, map scale 2.0", "Faction 1 / 1, Player 2 / 2"), current.getBriefing());
+		assertEquals(List.of(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 4, 2.0f), String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 1, 2, 2)), current.getBriefing());
 		assertEquals("mod_faction", generatedParameters.get(1).factionId);
 		assertArrayEquals(new float[]{-10000f, 10000f, -12000f, 12000f}, current.getMap());
 	}
@@ -212,7 +216,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		var mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		assertTrue(mission.getBriefing().get(0).contains("missing player/enemy fleet reference"));
-		assertEquals(List.of("Map 2, map scale 1.5", "Faction 1 / 2, Player 1 / 2"), mission.getBriefing().subList(1, 3));
+		assertEquals(List.of(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 2, 1.5f), String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 2)), mission.getBriefing().subList(1, 3));
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 				"mod_faction", 100, 45), mission.getNames().get(FleetSide.ENEMY));
 	}
@@ -225,20 +229,20 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		var hidden = new MissionState();
 		new MissionDefinition().defineMission(hidden.getApi());
 		assertEquals("hidden", generatedParameters.get(0).factionId);
-		assertEquals("Faction 1 / 3, Player 1 / 2", hidden.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 3, 1, 2), hidden.getBriefing().get(1));
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 				"hidden", 100, 45), hidden.getNames().get(FleetSide.ENEMY));
 		keys.add(Keyboard.KEY_RIGHT);
 		var next = new MissionState();
 		new MissionDefinition().defineMission(next.getApi());
 		assertEquals("mod_faction", generatedParameters.get(1).factionId);
-		assertEquals("Faction 2 / 3, Player 1 / 2", next.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 3, 1, 2), next.getBriefing().get(1));
 		keys.clear();
 		pveFactionRows.put(0, new JSONObject().put("id", "hegemony"));
 		var reloaded = new MissionState();
 		new MissionDefinition().defineMission(reloaded.getApi());
 		assertEquals("hegemony", generatedParameters.get(2).factionId);
-		assertEquals("Faction 2 / 2, Player 1 / 2", reloaded.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 2, 1, 2), reloaded.getBriefing().get(1));
 	}
 
 	@Test
@@ -249,12 +253,12 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		var mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		assertEquals("hidden", generatedParameters.get(0).factionId);
-		assertEquals("Faction 1 / 1, Player 1 / 2", mission.getBriefing().get(1));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 1, 1, 2), mission.getBriefing().get(1));
 	}
 
 	@ParameterizedTest
 	@ValueSource(strings = {"read", "parse", "row", "runtime"})
-	void factionCsvFailureBlocksMissionAndRecoversOnNextClick(String failure) throws Exception {
+	void factionSourceErrorsPublishUsableFactionsAndInternalErrorsBlockTheMission(String failure) throws Exception {
 
 		quickBattles("alpha,beta,0,1\n");
 		if (failure.equals("row")) {
@@ -268,17 +272,21 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		}
 		var blocked = new MissionState();
 		new MissionDefinition().defineMission(blocked.getApi());
-		assertEquals("Could not load the PvE faction list.", blocked.getBriefing().get(0));
-		assertTrue(blocked.getBriefing().get(1).contains(BattleNext_PveFleetGenerator.FACTIONS_PATH));
-		assertEquals(blocked.getBriefing().get(0), blocked.getNames().get(FleetSide.PLAYER));
-		assertEquals(blocked.getBriefing().get(0), blocked.getNames().get(FleetSide.ENEMY));
-		assertTrue(blocked.getPlugins().isEmpty());
-		assertTrue(generatedParameters.isEmpty());
+		if (failure.equals("runtime")) {
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_factions_load_failed"), blocked.getBriefing().get(0));
+			assertTrue(blocked.getBriefing().get(1).contains(BattleNext_PveFleetGenerator.FACTIONS_PATH));
+			assertTrue(blocked.getPlugins().isEmpty());
+			assertTrue(generatedParameters.isEmpty());
+		} else {
+			assertEquals("mod_faction", generatedParameters.get(0).factionId);
+			assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 2), blocked.getBriefing().get(1));
+			assertFalse(blocked.getPlugins().isEmpty());
+		}
 		pveFactionReadFailure = null;
 		pveFactionRows.put(0, new JSONObject().put("id", "hidden"));
 		var recovered = new MissionState();
 		new MissionDefinition().defineMission(recovered.getApi());
-		assertEquals("hidden", generatedParameters.get(0).factionId);
+		assertEquals("hidden", generatedParameters.get(generatedParameters.size() - 1).factionId);
 	}
 
 	@ParameterizedTest
@@ -299,7 +307,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		keys.addAll(List.of(Keyboard.KEY_RIGHT, Keyboard.KEY_UP, Keyboard.KEY_D));
 		var blocked = new MissionState();
 		new MissionDefinition().defineMission(blocked.getApi());
-		assertEquals("Could not generate the selected enemy fleet.", blocked.getNames().get(FleetSide.ENEMY));
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_generation_failed"), blocked.getNames().get(FleetSide.ENEMY));
 		assertTrue(blocked.getBriefing().get(1).startsWith("hegemony: "));
 		assertTrue(blocked.getPlugins().isEmpty());
 		assertTrue(blocked.getMembers().get(FleetSide.PLAYER).isEmpty());
@@ -317,13 +325,13 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		quickBattles("# alpha,beta,0,1\n");
 		var noRows = new MissionState();
 		new MissionDefinition().defineMission(noRows.getApi());
-		assertEquals("No valid battle is available.", noRows.getBriefing().get(0));
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_no_valid_battle"), noRows.getBriefing().get(0));
 		assertTrue(noRows.getPlugins().isEmpty());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,0,1\n");
 		factionSpecs.removeIf(faction -> faction.isShowInIntelTab());
 		var noFactions = new MissionState();
 		new MissionDefinition().defineMission(noFactions.getApi());
-		assertEquals("No PvE factions are available.", noFactions.getBriefing().get(0));
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_no_factions"), noFactions.getBriefing().get(0));
 		assertTrue(generatedParameters.isEmpty());
 		assertTrue(noFactions.getPlugins().isEmpty());
 	}
@@ -341,11 +349,12 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		var tournament = new BattleNext_TournamentModel();
 		tournament.setId("active");
 		tournament.setName("Active");
-		tournament.setFleetIds(List.of("alpha", "beta"));
-		tournament.addMatch(new BattleNext_Match("match", "alpha", "beta", 2, 1.5f));
-		tournament.setStarted(true);
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
+		started.addGeneratedMatch(new BattleNext_Match("match", "alpha", "beta", 2, 1.5f));
 		tournaments.save(tournament);
-		tournaments.setActiveId("active");
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.save(started);
+		instances.activate(started.getId());
 		var pvp = new MissionState();
 		MissionDefinitionPlugin pvpDefinition = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_pvp.MissionDefinition")
 				.getDeclaredConstructor().newInstance();
@@ -378,8 +387,8 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 	void pveReportUsesNativeMembersMarkerAndRetentionWithoutAdvancingTournament(int keepCount) throws Exception {
 
 		quickBattles("alpha,beta,0,1\n");
-		write("tournament/_tournaments/meta.json", "{\"formatVersion\":1,\"activeTournamentId\":\"missing\"}");
-		var meta = directory.resolve("tournament/_tournaments/meta.json");
+		write(BattleNext_StartedTournamentStore.PATH, "{\"formatVersion\":1,\"activeTournamentId\":\"missing\",\"instances\":[]}");
+		var meta = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		byte[] original = Files.readAllBytes(meta);
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount);
 		var mission = new MissionState();

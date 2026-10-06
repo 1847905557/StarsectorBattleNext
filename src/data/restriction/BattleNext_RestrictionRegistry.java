@@ -1,6 +1,7 @@
 package data.restriction;
 
 import com.fs.starfarer.api.Global;
+import data.model.BattleNext_BaseLoader.LoadError;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
@@ -24,6 +25,7 @@ public class BattleNext_RestrictionRegistry {
 
 	private Map<String, BattleNext_RestrictionSpec> entries = Map.of();
 	private Function<String, Object> scriptFactory;
+	private List<LoadError> loadErrors = List.of();
 
 	@LifecycleEntry
 	public static BattleNext_RestrictionRegistry getInstance() {
@@ -35,59 +37,60 @@ public class BattleNext_RestrictionRegistry {
 			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_RestrictionRegistry.class, "id", PATH);
 			INSTANCE.load(rows, name -> Global.getSettings().getInstanceOfScript(name));
 		} catch (IOException | JSONException exception) {
-			throw new IllegalArgumentException("Unable to read " + PATH, exception);
+			BattleNext_Logger.warn(BattleNext_RestrictionRegistry.class, "registry.source.unavailable", BattleNext_Logger.fields().put("path", PATH).build(), exception);
+			INSTANCE.load(new JSONArray(), name -> Global.getSettings().getInstanceOfScript(name));
+			INSTANCE.loadErrors = List.of(new LoadError(PATH, -1, "", "", exception.toString()));
 		}
 	}
 
-	public void load(JSONArray rows, Function<String, Object> scriptFactory) throws JSONException {
+	public void load(JSONArray rows, Function<String, Object> scriptFactory) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", PATH).put("rows", rows).build();
-		BattleNext_Logger.operationStarted(BattleNext_RestrictionRegistry.class, "registry.load", input);
-		try {
-			Map<String, BattleNext_RestrictionSpec> parsed = new LinkedHashMap<>();
-			List<String> errors = new ArrayList<>();
-			for (int index = 0; index < rows.length(); index++) {
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		for (int index = 0; index < rows.length(); index++) {
+			JSONObject row = rows.optJSONObject(index);
+			if (row == null) continue;
+			String id = row.optString("id", "").trim();
+			if (!id.isEmpty()) {
+				counts.merge(id, 1, Integer::sum);
+			}
+		}
+		Map<String, BattleNext_RestrictionSpec> parsed = new LinkedHashMap<>();
+		List<LoadError> errors = new ArrayList<>();
+		for (int index = 0; index < rows.length(); index++) {
+			String id = "";
+			try {
 				JSONObject row = rows.getJSONObject(index);
-				String id = row.optString("id", "").trim();
-				String type = row.optString("type", "").trim();
-				String script = row.optString("script", "").trim();
-				String description = row.optString("desc", "").trim();
-				if (id.isEmpty() || script.isEmpty() || description.isEmpty() || !TYPES.contains(type)) {
-					errors.add("row " + (index + 1) + ": invalid id,type,script,desc");
-					continue;
-				}
-				if (parsed.containsKey(id)) {
-					errors.add("row " + (index + 1) + ": duplicate restriction " + id);
-					continue;
-				}
+				id = row.getString("id").trim();
+				String type = row.getString("type").trim();
+				String script = row.getString("script").trim();
+				String description = row.getString("desc").trim();
+				if (id.isEmpty() || script.isEmpty() || description.isEmpty() || !TYPES.contains(type)) throw new IllegalArgumentException("Invalid id,type,script,desc");
+				if (counts.get(id) > 1) throw new IllegalArgumentException("Duplicate restriction ID: " + id);
 				try {
 					Object instance = scriptFactory.apply(script);
-					if (!(instance instanceof BattleNext_RestrictionScript)) {
-						errors.add(id + ": script does not implement BattleNext_RestrictionScript");
-						continue;
-					}
-					parsed.put(id, new BattleNext_RestrictionSpec(id, type, script, description));
+					if (!(instance instanceof BattleNext_RestrictionScript)) throw new IllegalArgumentException("Script does not implement BattleNext_RestrictionScript");
 				} catch (RuntimeException exception) {
-					errors.add(id + ": cannot instantiate " + script + ": " + exception.getMessage());
+					errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
+					continue;
 				}
+				parsed.put(id, new BattleNext_RestrictionSpec(id, type, script, description));
+			} catch (JSONException | IllegalArgumentException exception) {
+				errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
 			}
-			if (!errors.isEmpty()) {
-				BattleNext_Logger.warn(BattleNext_RestrictionRegistry.class, "registry.validation.rejected",
-					BattleNext_Logger.fields().put("path", PATH).put("rows", rows).put("reasons", errors).build());
-				throw new IllegalArgumentException("Invalid " + PATH + ": " + String.join("; ", errors));
-			}
-			entries = parsed;
-			this.scriptFactory = scriptFactory;
-			BattleNext_Logger.operationSucceeded(BattleNext_RestrictionRegistry.class, "registry.load",
-					BattleNext_Logger.fields().put("path", PATH).put("rows", rows).put("registered_ids", entries.keySet()).build());
-		} catch (JSONException | RuntimeException exception) {
-			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
-				BattleNext_Logger.warn(BattleNext_RestrictionRegistry.class, "registry.load.rejected", input, exception);
-			} else {
-				BattleNext_Logger.operationFailed(BattleNext_RestrictionRegistry.class, "registry.load", input, exception);
-			}
-			throw exception;
 		}
+		entries = parsed;
+		loadErrors = List.copyOf(errors);
+		this.scriptFactory = scriptFactory;
+		for (LoadError error : loadErrors) {
+			BattleNext_Logger.warn(BattleNext_RestrictionRegistry.class, "registry.item.rejected",
+					BattleNext_Logger.fields().put("path", PATH).put("position", error.position()).put("id", error.id()).put("raw", error.raw()).put("diagnostic", error.diagnostic()).build());
+		}
+		BattleNext_Logger.operationSucceeded(BattleNext_RestrictionRegistry.class, "registry.load",
+				BattleNext_Logger.fields().put("path", PATH).put("registered_ids", entries.keySet()).build());
+	}
+
+	public List<LoadError> getLoadErrors() {
+		return loadErrors;
 	}
 
 	public Object create(String id) {

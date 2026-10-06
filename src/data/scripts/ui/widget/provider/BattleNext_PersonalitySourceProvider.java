@@ -9,9 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceProvider {
 
@@ -29,7 +27,15 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 
 	static List<OptionChoice> toOptions(List<JSONObject> rows) {
 		List<OptionChoice> options = new ArrayList<>();
+		Map<String, Integer> counts = new HashMap<>();
 		for (JSONObject row : rows) {
+			counts.merge(row.optString("id", "").trim(), 1, Integer::sum);
+		}
+		for (JSONObject row : rows) {
+			if (counts.get(row.optString("id", "").trim()) > 1) {
+				BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.identity.conflict", BattleNext_Logger.fields().put("row", row).build());
+				continue;
+			}
 			OptionChoice option = toOption(row);
 			if (option != null) options.add(option);
 		}
@@ -63,11 +69,14 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 		try {
 			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_PersonalitySourceProvider.class, "id", PERSONALITIES_PATH);
 			for (int index = 0; index < rows.length(); index++) {
-				JSONObject row = rows.optJSONObject(index);
-				if (row != null) result.add(row);
+				try {
+					result.add(rows.getJSONObject(index));
+				} catch (JSONException exception) {
+					BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.row.rejected", BattleNext_Logger.fields().put("position", index).put("raw", rows.opt(index)).build(), exception);
+				}
 			}
-		} catch (IOException | RuntimeException | JSONException exception) {
-			throw new IllegalStateException("Unable to load personalities: " + PERSONALITIES_PATH, exception);
+		} catch (IOException | JSONException exception) {
+			BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.source.unavailable", BattleNext_Logger.fields().put("path", PERSONALITIES_PATH).build(), exception);
 		}
 		return result;
 	}

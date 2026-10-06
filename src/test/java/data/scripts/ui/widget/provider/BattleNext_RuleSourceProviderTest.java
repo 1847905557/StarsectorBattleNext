@@ -14,6 +14,7 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.test.fixture.BattleNext_TestPageFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -21,14 +22,13 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 
@@ -102,10 +102,10 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		source.createTooltip(tooltip, option);
 		List<UIComponentAPI> components = tooltips.get(tooltip).getComponents();
 		List<LabelAPI> text = components.stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).toList();
-		assertEquals(List.of(rule.getName(), rule.getId(), "BattleNext_rule_restrictions: 3",
-				"Fleet limit 50%", "limit  [number]", "BattleNext_rule_value_or_items: 25.5",
-				"Equipment list", "items  [list]", "BattleNext_rule_value_or_items: " + String.join(",", values),
-				"BattleNext_rule_missing_restriction", "missing  [number]", "BattleNext_rule_value_or_items: 9.0"),
+		assertEquals(List.of(rule.getName(), rule.getId(), BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_restrictions") + ": 3",
+				"Fleet limit 50%", "limit  [number]", BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_value_or_items") + ": 25.5",
+				"Equipment list", "items  [list]", BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_value_or_items") + ": " + String.join(",", values),
+				BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_missing_restriction"), "missing  [number]", BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_value_or_items") + ": 9.0"),
 				text.stream().map(LabelAPI::getText).toList());
 		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(text.get(1).getPosition()));
 		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(text.get(5).getPosition()));
@@ -127,7 +127,7 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		TooltipMakerAPI empty = tooltip(source.getTooltipWidth(), 0f, false);
 		source.createTooltip(empty, option);
 		assertTrue(tooltips.get(empty).getComponents().stream().filter(LabelAPI.class::isInstance)
-				.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch("BattleNext_rule_restrictions: 0"::equals));
+				.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch((BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_restrictions") + ": 0")::equals));
 		store.delete("empty");
 		List<LoggingEvent> events = new ArrayList<>();
 		AppenderSkeleton appender = new AppenderSkeleton() {
@@ -153,7 +153,7 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		try {
 			TooltipMakerAPI unavailable = tooltip(source.getTooltipWidth(), 0f, false);
 			source.createTooltip(unavailable, option);
-			assertEquals(List.of("Empty rule", "empty", "BattleNext_common_unavailable"),
+			assertEquals(List.of("Empty rule", "empty", BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable")),
 					tooltips.get(unavailable).getComponents().stream().filter(LabelAPI.class::isInstance)
 							.map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 			assertEquals(1, events.size());

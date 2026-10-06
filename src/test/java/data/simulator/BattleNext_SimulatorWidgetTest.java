@@ -1,46 +1,42 @@
 package data.simulator;
 
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.model.rule.BattleNext_RuleStore;
-import data.model.report.BattleNext_BattleReportModel;
-import data.missions.BattleNext_MissionBattleMap;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
-import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_BattleValidation;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.ui.page.BattleNext_SettingsPage;
-import data.scripts.ui.widget.BattleNext_BattleSourceField;
-import data.scripts.ui.widget.BattleNext_DropdownField;
-import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
-import data.scripts.ui.widget.BattleNext_TableWidget;
-import data.scripts.ui.widget.BattleNext_TextField;
-import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import data.scripts.ui.widget.*;
 import data.scripts.ui.widget.view.BattleNext_TournamentView;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,8 +44,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 
@@ -68,8 +62,8 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		widget.attach(root);
 		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(display, "tableWidget");
-		assertArrayEquals(new String[]{"BattleNext_battle_player_fleet_id_label", "BattleNext_battle_enemy_fleet_id_label",
-				"BattleNext_battle_map_label", "BattleNext_battle_map_scale_label", "BattleNext_common_status", "BattleNext_common_actions"},
+		assertArrayEquals(new String[]{BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_player_fleet_id_label"), BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_enemy_fleet_id_label"),
+				BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_label"), BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_scale_label"), BattleNext_TestTextCatalog.text("Common", "BattleNext_common_status"), BattleNext_TestTextCatalog.text("Common", "BattleNext_common_actions")},
 				(String[]) getField(table, "headers"));
 		var entries = sources.getQuickBattleStore().getAll();
 		assertEquals(List.of(FIRST_ID, FIRST_ID, FIRST_ID, "", FIRST_ID), entries.stream().map(entry -> entry.getPlayer()).toList());
@@ -79,7 +73,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		for (int index = 0; index < entries.size(); index++) {
 			String action = "simulator:quick:" + entries.get(index).getId();
 			assertEquals(List.of(true, true, false, false, true).get(index), buttons.get(action).get());
-			assertEquals("BattleNext_battle_simulate", buttonLabels.get(action));
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate"), buttonLabels.get(action));
 		}
 		assertEquals(before, storedFiles());
 		Map<List<String>, BattleNext_TextField> fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
@@ -89,8 +83,8 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			assertFalse(field.appendCharIfPossible('X', false));
 		}
 		assertEquals(FIRST_ID, fields.get(List.of(entries.get(0).getId(), "player")).getText());
-		assertTrue(sources.quickBattleErrors(entries.get(2)).contains("BattleNext_battle_invalid_enemy_fleet"));
-		assertEquals("BattleNext_battle_raw_row_status", ((LabelAPI) getField(display.getRows().get(3), "statusLabel")).getText());
+		assertTrue(sources.quickBattleErrors(entries.get(2)).contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_invalid_enemy_fleet")));
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_raw_row_status"), ((LabelAPI) getField(display.getRows().get(3), "statusLabel")).getText());
 		widget.close();
 		assertTrue(children.get(root).isEmpty());
 		assertFalse(router.getSession().hasInputState());
@@ -104,20 +98,20 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
 		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		for (String phase : List.of("new", "running", "completed")) {
-			BattleNext_TournamentModel tournament = tournament(phase, bracket);
-			if (!phase.equals("new")) {
-				engine.start(tournament);
-			}
+			BattleNext_TournamentModel configuration = tournament(phase, bracket);
+			tournaments.save(configuration);
+			if (phase.equals("new")) continue;
+			BattleNext_StartedTournament started = engine.start(configuration, List.of(FIRST_ID, "second"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
 			if (phase.equals("completed")) {
-				while (!tournament.isCompleted()) {
-					var match = engine.getNextMatch(tournament);
-					engine.recordRound(tournament, match.getId(), match.getPlayer(), new BattleNext_BattleReportModel());
+				while (!started.isCompleted()) {
+					var match = started.getNextPendingMatch();
+					engine.recordRound(configuration, started, match.getId(), match.getPlayer(), "");
 				}
 			}
-			tournaments.save(tournament);
+			instances.save(started);
 		}
-		tournaments.setActiveId("running");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
 		sources.reloadCatalogs();
@@ -128,25 +122,40 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		widget.attach(root);
 		for (String phase : List.of("new", "running", "completed")) {
 			select(widget, phase);
+			BattleNext_BattleSourceField instanceField = (BattleNext_BattleSourceField) getField(widget, "instanceField");
+			BattleNext_DropdownField instanceDropdown = (BattleNext_DropdownField) getField(instanceField, "dropdown");
+			List<?> choices = (List<?>) getField(instanceDropdown, "options");
+			assertEquals("", getField(choices.get(0), "id"));
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_tournament_base_template"), getField(choices.get(0), "label"));
 			BattleNext_TournamentDisplay display = (BattleNext_TournamentDisplay) getField(widget, "tournamentDisplay");
 			BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
 			BattleNext_TournamentModel model = sources.getTournamentStore().get(phase);
 			String json = model.toJson().toString();
 			assertTrue(chart.errors().isEmpty(), chart.errors().toString());
-			assertTrue(labels.contains("BattleNext_tournament_summary"));
-			assertTrue(labels.contains("BattleNext_tournament_participant_fleets"));
-			assertEquals("BattleNext_battle_simulate_tournament", buttonLabels.get("simulator:tournament:" + phase));
+			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary")));
+			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")));
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:" + phase));
 			assertTrue(buttons.get("simulator:tournament:" + phase).get());
+			assertTrue(buttons.get("simulator:check:" + phase).get());
+			assertEquals(buttonPositions.get("simulator:tournament:" + phase).getY(), buttonPositions.get("simulator:check:" + phase).getY());
+			assertEquals(buttonPositions.get("simulator:tournament:" + phase).getWidth(), buttonPositions.get("simulator:check:" + phase).getWidth());
+			assertEquals(buttonPositions.get("simulator:tournament:" + phase).getX() + buttonPositions.get("simulator:tournament:" + phase).getWidth() + 4f,
+					buttonPositions.get("simulator:check:" + phase).getX());
 			chart.zoomAt(60f, 60f, 3);
 			chart.panBy(12f, 7f);
 			BattleNext_TournamentDisplay.ViewState state = display.captureState();
+			plugins.get((CustomPanelAPI) getField(display, "viewport")).buttonPressed("simulator:check:" + phase);
+			assertSame(display, getField(widget, "tournamentDisplay"));
+			assertEquals(state, display.captureState());
+			assertNotNull(browser.getCheckResult());
 			assertEquals(json, model.toJson().toString());
 			select(widget, "");
+			assertNull(browser.getCheckResult());
 			select(widget, phase);
 			display = (BattleNext_TournamentDisplay) getField(widget, "tournamentDisplay");
 			assertEquals(state, display.captureState());
 		}
-		assertEquals("running", sources.getTournamentStore().getActiveId());
+		assertTrue(sources.getStartedStore().getActiveId().isEmpty());
 		assertEquals(before, storedFiles());
 		widget.close();
 		assertFalse(router.getSession().hasInputState());
@@ -197,7 +206,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		sources.reloadCatalogs();
 		widget.attach(root);
 		assertEquals("cup", browser.getSelectedId());
-		assertTrue(labels.stream().anyMatch(label -> label.contains("BattleNext_tournament_missing_detail")));
+		assertTrue(labels.stream().anyMatch(label -> label.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_missing_detail"))));
 		widget.close();
 		assertFalse(router.getSession().hasInputState());
 	}
@@ -210,7 +219,10 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		tournaments.reload();
 		tournaments.save(tournament("cup", TournamentBracketType.SINGLE_ELIMINATION));
 		tournaments.save(tournament("active", TournamentBracketType.SINGLE_ELIMINATION));
-		tournaments.setActiveId("active");
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournament active = new BattleNext_TournamentEngine().start(tournaments.get("active"), List.of(FIRST_ID, "second"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
+		instances.save(active);
+		instances.activate(active.getId());
 		AtomicReference<JSONObject> saved = new AtomicReference<>(new JSONObject().put("cnText", false));
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SettingsAPI.class.getClassLoader(),
@@ -252,6 +264,8 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		select(widget, "cup");
 		BattleNext_SimulatorBrowser browser = (BattleNext_SimulatorBrowser) getField(page, "simulatorBrowser");
 		assertEquals("cup", browser.getSelectedId());
+		browser.template(tournaments.get("cup")).select(0, FIRST_ID);
+		browser.template(tournaments.get("cup")).select(1, "second");
 		assertSame(field, getField(getField(page, "editor"), "defaultTimeMultField"));
 		assertEquals("pending", field.getText());
 		manager.buttonPressed("settings_save");
@@ -262,15 +276,17 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		manager.buttonPressed("settings_save");
 		assertTrue(saved.get().getBoolean("cnText"));
 		assertFalse(page.hasUnsavedChanges());
-		assertEquals("模拟赛事", buttonLabels.get("simulator:tournament:cup"));
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
 		manager.buttonPressed(fleets);
 		manager.buttonPressed(settings);
 		assertSame(page, getField(manager, "settingsPage"));
 		assertEquals("cup", browser.getSelectedId());
 		assertEquals("1.5", ((BattleNext_TextField) getField(getField(page, "editor"), "defaultTimeMultField")).getText());
-		assertEquals("模拟赛事", buttonLabels.get("simulator:tournament:cup"));
+		assertEquals(List.of(FIRST_ID, "second"), browser.template(tournaments.get("cup")).getFleetIds());
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
 		tournaments.reload();
-		assertEquals("active", tournaments.getActiveId());
+		instances.reload();
+		assertEquals(active.getId(), instances.getActiveId());
 		manager.buttonPressed("close");
 		manager.open();
 		manager.buttonPressed(settings);
@@ -302,9 +318,10 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		sources.reloadCatalogs();
 		widget.attach(root);
 		assertEquals("cup", browser.getSelectedId());
-		assertFalse(sources.getTournamentStore().isLoaded());
-		assertFalse(buttons.get("simulator:tournament:cup").get());
-		assertTrue(labels.stream().anyMatch(label -> label.contains(sources.getTournamentStore().getLoadError())));
+		assertTrue(sources.getTournamentStore().isLoaded());
+		assertNull(getField(widget, "tournamentDisplay"));
+		assertTrue(labels.stream().anyMatch(label -> label.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_missing_detail") + " cup")));
+		assertTrue(sources.getTournamentStore().getErrors().get(0).path().endsWith("cup.json"));
 		widget.close();
 		assertTrue(router.isEmpty());
 		assertFalse(router.getSession().hasInputState());
@@ -339,7 +356,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
 			sources.reloadCatalogs();
 			BattleNext_TournamentModel model = tournament("cup", TournamentBracketType.SINGLE_ELIMINATION);
-			assertTrue(sources.tournamentErrors(model).isEmpty());
+			assertTrue(sources.tournamentErrors(model, List.of(FIRST_ID, "second")).isEmpty());
 			for (String id : List.of("violates", "throws", "missing_script", "missing_rule")) {
 				model.setRuleId(id);
 				String reason = switch (id) {
@@ -348,23 +365,22 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 					case "missing_script" -> "Missing restriction script: unknown";
 					default -> "Missing rule: missing_rule";
 				};
-				assertTrue(sources.tournamentErrors(model).stream().anyMatch(error -> error.contains(reason)));
-				BattleNext_BattleValidation.Result result = sources.getValidation().tournamentResult(model, sources.getRuleStore());
+				assertTrue(sources.tournamentErrors(model, List.of(FIRST_ID, "second")).stream().anyMatch(error -> error.contains(reason)));
+				BattleNext_BattleValidation.Result result = sources.getValidation().tournamentResult(model, List.of(FIRST_ID, "second"), sources.getRuleStore());
 				BattleNext_BattleValidation.FailureKind kind = id.equals("violates") ? BattleNext_BattleValidation.FailureKind.RULE
 						: id.equals("throws") ? BattleNext_BattleValidation.FailureKind.EVALUATION : BattleNext_BattleValidation.FailureKind.REFERENCE;
 				assertTrue(result.failures().stream().allMatch(failure -> failure.kind() == kind));
 				assertEquals(!id.equals("violates"), result.isBlocking());
 			}
 			model.setRuleId("");
-			model.setFleetIds(List.of("broken", "missing"));
-			List<String> reasons = sources.tournamentErrors(model);
+			List<String> slots = List.of("broken", "missing");
+			List<String> reasons = sources.tournamentErrors(model, slots);
 			assertTrue(reasons.stream().anyMatch(error -> error.contains("unknown_variant")));
 			assertTrue(reasons.contains("Missing fleet: missing"));
-			model.setFleetIds(List.of(FIRST_ID, FIRST_ID));
-			assertTrue(sources.tournamentErrors(model).contains("Tournament fleets must be unique"));
-			model.setFleetIds(List.of(FIRST_ID, "second"));
+			slots = List.of(FIRST_ID, FIRST_ID);
+			assertTrue(sources.tournamentErrors(model, slots).contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets")));
 			model.setMapId(BattleNext_MissionBattleMap.LAST_MAP_ID + 1);
-			assertTrue(sources.tournamentErrors(model).contains("BattleNext_battle_invalid_map"));
+			assertTrue(sources.tournamentErrors(model, List.of(FIRST_ID, "second")).contains(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_invalid_map"), BattleNext_MissionBattleMap.LAST_MAP_ID)));
 		} finally {
 			Field entryField = registry.getClass().getDeclaredField("entries");
 			entryField.setAccessible(true);
@@ -386,7 +402,6 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 
 	private BattleNext_TournamentModel tournament(String id, TournamentBracketType bracket) {
 		BattleNext_TournamentModel model = new BattleNext_TournamentModel(id, "Cup " + id, bracket, 1, 2);
-		model.setFleetIds(List.of(FIRST_ID, "second"));
 		return model;
 	}
 
@@ -411,5 +426,22 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			}
 		}
 		return result;
+	}
+
+	@Test
+	void templateCapacityChangesPreservePositionsAndEachSourceOwnsItsSelection() {
+		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
+		BattleNext_TournamentModel first = new BattleNext_TournamentModel("first", "First", TournamentBracketType.SINGLE_ELIMINATION, 1, 4);
+		BattleNext_TournamentModel second = new BattleNext_TournamentModel("second", "Second", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		browser.template(first).select(1, "a");
+		browser.template(first).select(3, "b");
+		browser.template(second).select(0, "c");
+		first.setMaxFleet(6);
+		assertEquals(List.of("", "a", "", "b", "", ""), browser.template(first).getFleetIds());
+		first.setMaxFleet(2);
+		assertEquals(List.of("", "a"), browser.template(first).getFleetIds());
+		first.setMaxFleet(4);
+		assertEquals(List.of("", "a", "", ""), browser.template(first).getFleetIds());
+		assertEquals(List.of("c", ""), browser.template(second).getFleetIds());
 	}
 }

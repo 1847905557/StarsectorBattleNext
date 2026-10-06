@@ -15,6 +15,7 @@ import com.fs.starfarer.api.loading.WingRole;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_EscortTargetManeuverV3;
 import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -159,19 +160,35 @@ public class BattleNext_ShipAIHelper {
 	// spreadsheet is the same data source that initializes PersonalityImpl.
 	public static float getBravery(ShipAPI ship) {
 		String personality = getPersonality(ship);
+		String path = "data/characters/personalities.csv";
+		JSONArray rows;
 		try {
-			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_ShipAIHelper.class, "id",
-					"data/characters/personalities.csv");
-			for (int index = 0; index < rows.length(); index++) {
-				JSONObject row = rows.optJSONObject(index);
-				if (row != null && personality.equals(row.optString("id", "").trim())) {
-					return (float) row.getDouble("bravery");
-				}
-			}
+			rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_ShipAIHelper.class, "id", path);
 		} catch (IOException | JSONException exception) {
-			throw new IllegalStateException("Unable to load personality bravery", exception);
+			BattleNext_Logger.warn(BattleNext_ShipAIHelper.class, "personality.source.unavailable", BattleNext_Logger.fields().put("path", path).build(), exception);
+			rows = new JSONArray();
 		}
-		throw new IllegalStateException("Personality bravery missing: " + personality);
+		Map<String, Integer> counts = new HashMap<>();
+		for (int index = 0; index < rows.length(); index++) {
+			JSONObject row = rows.optJSONObject(index);
+			if (row == null) continue;
+			counts.merge(row.optString("id", "").trim(), 1, Integer::sum);
+		}
+		Map<String, Float> bravery = new HashMap<>();
+		for (int index = 0; index < rows.length(); index++) {
+			try {
+				JSONObject row = rows.getJSONObject(index);
+				String id = row.getString("id").trim();
+				if (counts.get(id) > 1) throw new IllegalArgumentException("Duplicate personality ID: " + id);
+				bravery.put(id, (float) row.getDouble("bravery"));
+			} catch (JSONException | IllegalArgumentException exception) {
+				BattleNext_Logger.warn(BattleNext_ShipAIHelper.class, "personality.bravery.item.rejected", BattleNext_Logger.fields()
+						.put("path", path).put("position", index).put("raw", rows.opt(index)).build(), exception);
+			}
+		}
+		Float value = bravery.get(personality);
+		if (value == null) throw new IllegalStateException("Personality bravery missing: " + personality);
+		return value;
 	}
 
 	// Port of ShipHullSpec.computeFleetStrengthValue(): every hull weapon slot

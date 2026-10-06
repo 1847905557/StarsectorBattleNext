@@ -1,5 +1,6 @@
 package data.simulator;
 
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.InputImplementation;
 
@@ -8,8 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SimulatorMouseTest {
 

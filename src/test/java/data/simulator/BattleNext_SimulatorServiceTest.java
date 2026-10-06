@@ -4,59 +4,56 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import data.model.report.BattleNext_BattleReportModel;
-import data.model.report.BattleNext_BattleReportStore;
-import data.scripts.tools.BattleNext_Settings;
-import data.test.fixture.BattleNext_TestMissionFixture;
-import data.scripts.battle.BattleNext_BattleSourceProvider;
-import data.scripts.ui.BattleNext_UiInputRouter;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.input.InputEventAPI;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
+import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.battle.BattleNext_BattleValidation;
+import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
+import data.scripts.tournament.BattleNext_TournamentEngine;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.page.BattleNext_BattleReportPage;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.view.BattleNext_TournamentView;
-import data.scripts.ui.page.BattleNext_TournamentPage;
-import data.scripts.ui.page.BattleNext_BattleReportPage;
-import data.scripts.ui.widget.BattleNext_TextField;
-import data.scripts.ui.widget.BattleNext_DropdownField;
-import data.model.report.BattleNext_ReportTarget;
-import data.model.tournament.BattleNext_TournamentModel;
-import org.json.JSONObject;
+import data.test.fixture.BattleNext_TestMissionFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
-import org.junit.jupiter.api.BeforeEach;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 
@@ -80,6 +77,10 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 	}
 
 	private void createOwnedService() throws Exception {
+		withServiceMetadata(() -> service = BattleNext_SimulatorService.getInstance());
+	}
+
+	private void withServiceMetadata(Runnable action) throws Exception {
 		SettingsAPI settings = Global.getSettings();
 		ModSpecAPI mod = proxy(ModSpecAPI.class, (method, args) -> method.equals("getPath") ? directory.toString() : null);
 		ModManagerAPI mods = proxy(ModManagerAPI.class, (method, args) -> switch (method) {
@@ -97,7 +98,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 			}
 		}));
 		try {
-			service = BattleNext_SimulatorService.getInstance();
+			action.run();
 		} finally {
 			Global.setSettings(settings);
 		}
@@ -133,6 +134,25 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
+	void tournamentSubmissionRereadsAssetsAndReturnsQualificationWithoutCreatingATask() throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		var sources = new BattleNext_BattleSourceProvider();
+		sources.reloadTournamentCatalog();
+		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		sources.getTournamentStore().save(configuration);
+		var request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
+		write("tournament/beta/fleet_data.json", "{broken");
+		var expected = sources.checkTournament("cup", List.of("alpha", "beta"));
+		var rejected = assertThrows(BattleNext_BattleValidation.Rejection.class, () -> service.submit(request));
+		assertEquals(expected, rejected.getResult());
+		assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
+		var instances = new BattleNext_StartedTournamentStore();
+		instances.reload();
+		assertTrue(instances.getAll().isEmpty());
+		assertNull(readField("supervisor"));
+	}
+
+	@Test
 	void quickBattleActionsSubmitIndependentFrozenFifoTasksAndOutliveTheWidget() throws Exception {
 
 		quickBattles("alpha,beta,-1,1.5\n# alpha,beta,2,2\nmissing,beta,0,1\n");
@@ -150,6 +170,8 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 			client.setSoTimeout(100);
 			socket.setSoTimeout(5000);
 			Path runtime = attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
 			widget.attach(root);
 			BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 			List<CustomPanelAPI> rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
@@ -182,7 +204,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 			TooltipMakerAPI details = root.createUIElement(480f, 0f, false);
 			attachedTooltips.get(status).createTooltip(details, false, null);
 			assertTrue(labels.stream().anyMatch(text -> text.contains(first.id())));
-			assertTrue(labels.stream().anyMatch(text -> text.contains("Configured map 2 / actual map 2 / map scale 2.00")));
+			assertTrue(labels.stream().anyMatch(text -> text.contains(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_map"), 2, 2, 2f))));
 			widget.close();
 			assertTrue(Files.exists(runtime));
 			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
@@ -228,256 +250,210 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
-	void tournamentStartupFailureKeepsItsSnapshotAndReuseAllowsManualContinuation() throws Exception {
+	void independentTournamentTasksShareSourceAndPersistSeparateTaskFiles() throws Exception {
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
-		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
-		tournament.setId("cup");
-		tournament.setFleetIds(List.of("alpha", "beta"));
-		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(tournament,
-				sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
-		BattleNext_SimulationTask task = service.submit(request);
-		assertSame(task, service.submit(request));
-		long deadline = System.nanoTime() + 15000000000L;
-		while (task.getState() != BattleNext_SimulationTask.State.PAUSED && System.nanoTime() < deadline) {
-			BattleNext_SimulatorService.advance();
-			Thread.sleep(20L);
-		}
-		BattleNext_SimulatorService.advance();
-		assertEquals(BattleNext_SimulationTask.State.PAUSED, task.getState());
-		assertTrue(task.getTournamentSnapshot().getDiagnostic().contains("cold start"));
-		assertNotNull(task.getTournamentSnapshot().getCurrentRound());
-		assertSame(task, BattleNext_SimulatorService.tournament("cup"));
-		assertEquals(0, BattleNext_SimulatorService.status().queued());
-	}
-
-	@Test
-	void applicationRecoveryKeepsFrozenRoundAndScoresAndWaitsForExplicitResume() throws Exception {
-		quickBattles("alpha,beta,-1,1\n");
-		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
-		sources.reloadCatalogs();
-		BattleNext_TournamentModel source = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
-		source.setFleetIds(List.of("alpha", "beta"));
-		BattleNext_TournamentSnapshot snapshot = BattleNext_TournamentSnapshot.create(BattleNext_SimulationRequest.fromTournament(
-				source, sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
-		BattleNext_SimulationRequest first = snapshot.prepareRound();
-		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
-		report.setId(first.id());
-		report.setName("First round");
-		report.setWinner("player");
-		snapshot.record(new BattleNext_SimulationResult(first.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
-				report.toJson().toString(), 10f, 100000000L, 600L, 1024L, ""));
-		BattleNext_SimulationRequest second = snapshot.prepareRound();
-		snapshot.transition(BattleNext_SimulationTask.State.RUNNING, "");
-		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
-		storage.writeSnapshot(snapshot);
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
+		sources.getTournamentStore().save(configuration);
+		BattleNext_SimulationTask first = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
+		BattleNext_SimulationTask second = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
+		assertNotEquals(first.getRequest().id(), second.getRequest().id());
+		first.pause();
+		second.pause();
 		service.close();
-		singleton.set(null, null);
-		createOwnedService();
-		BattleNext_SimulationTask recovered = BattleNext_SimulatorService.tournament("cup");
-		assertEquals(BattleNext_SimulationTask.State.PAUSED, recovered.getState());
-		assertEquals(second, recovered.getTournamentSnapshot().getCurrentRound());
-		assertEquals(1, recovered.getTournamentSnapshot().getTournament().getNextPendingMatch().getRounds().size());
-		assertEquals(0, BattleNext_SimulatorService.status().queued());
-		assertNull(readField("process"));
-		BattleNext_TournamentSnapshotStore snapshots = new BattleNext_TournamentSnapshotStore();
-		snapshots.reload();
-		assertEquals(BattleNext_SimulationTask.State.PAUSED, snapshots.get(snapshot.getId()).getState());
-		assertEquals(second, snapshots.get(snapshot.getId()).getCurrentRound());
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.reload();
+		assertEquals(2, instances.getForSource("cup", BattleNext_StartedTournament.ExecutionKind.SIMULATION).size());
+		assertEquals(first.getRequest().id(), first.getStartedTournament().getId());
+		assertTrue(Files.exists(directory.resolve("tournament/_simulations/" + first.getRequest().id() + ".json")));
+		assertTrue(Files.exists(directory.resolve("tournament/_simulations/" + second.getRequest().id() + ".json")));
 	}
 
 	@Test
-	void resourceReloadFinishesAndSavesTheCurrentRoundBeforeRestartingTheWorker() throws Exception {
+	void tournamentFifoPauseAndResumeKeepRoundIdentityMapAndUseCurrentAssets() throws Exception {
 		quickBattles("alpha,beta,-1,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
-		BattleNext_TournamentModel source = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
-		source.setFleetIds(List.of("alpha", "beta"));
-		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
-				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
-				Socket socket = listener.accept();
-				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
-			client.setSoTimeout(100);
-			socket.setSoTimeout(20);
-			OwnedProcess process = new OwnedProcess();
-			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), process);
-			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(source,
-					sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
-			BattleNext_SimulationRequest first = nextRequest(peer);
-			SettingsAPI settings = Global.getSettings();
-			ModSpecAPI mod = proxy(ModSpecAPI.class, (method, args) -> method.equals("getPath") ? directory.toString() : null);
-			ModManagerAPI mods = proxy(ModManagerAPI.class, (method, args) -> switch (method) {
-				case "getModSpec" -> mod;
-				case "getEnabledModsCopy" -> List.of();
-				default -> null;
-			});
-			Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
-					(instance, method, args) -> method.getName().equals("getModManager") ? mods : method.invoke(settings, args)));
-			try {
-				BattleNext_SimulatorService.resourcesReloaded();
-			} finally {
-				Global.setSettings(settings);
-			}
-			assertTrue(process.isAlive());
-			completeRound(peer, first, "player");
-			awaitTournamentState(task, BattleNext_SimulationTask.State.PAUSED);
-			assertFalse(process.isAlive());
-			assertEquals("SHUTDOWN", peer.receive().getString("type"));
-			BattleNext_TournamentSnapshot snapshot = task.getTournamentSnapshot();
-			assertEquals(first.id(), snapshot.getTournament().getNextPendingMatch().getRounds().get(0).getReport().getId());
-			assertNotEquals(first.id(), snapshot.getCurrentRound().id());
-			assertTrue(snapshot.getDiagnostic().contains("cold start"));
-			BattleNext_TournamentSnapshotStore store = new BattleNext_TournamentSnapshotStore();
-			store.reload();
-			assertEquals(snapshot.getCurrentRound(), store.get(snapshot.getId()).getCurrentRound());
-			assertEquals(1, store.get(snapshot.getId()).getTournament().getNextPendingMatch().getRounds().size());
-		}
-	}
-
-	@Test
-	void tournamentRunsConsecutiveRoundsPausesResumesAndUpdatesTheChartWhileKeepingPlayerStateAndSaveRetries() throws Exception {
-
-		quickBattles("alpha,beta,-1,1\n");
-		BattleNext_Settings.save(false, true, false, false, 123f, 1f, 3f, 0);
-		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
-		sources.reloadCatalogs();
-		BattleNext_TournamentModel source = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
-		source.setFleetIds(List.of("alpha", "beta"));
-		sources.getTournamentStore().save(source);
-		sources.getTournamentStore().setActiveId("cup");
-		byte[] playerState = Files.readAllBytes(directory.resolve("tournament/_tournaments/cup.json"));
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
+		sources.getTournamentStore().save(configuration);
 		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
 		browser.select("cup");
+		browser.template(configuration).select(0, "alpha");
+		browser.template(configuration).select(1, "beta");
+		CustomPanelAPI root = panel(1200f, 900f, new BaseCustomUIPanelPlugin());
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
-		CustomPanelAPI root = panel(1000f, 600f, new BaseCustomUIPanelPlugin());
 		BattleNext_SimulatorWidget widget = new BattleNext_SimulatorWidget(router, root, () -> true, browser, sources);
+		widget.attach(root);
 		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
 				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
 				Socket socket = listener.accept();
 				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
 			client.setSoTimeout(100);
-			socket.setSoTimeout(20);
+			socket.setSoTimeout(100);
 			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
-			widget.attach(root);
+			BattleNext_TournamentDisplay template = (BattleNext_TournamentDisplay) getField(widget, "tournamentDisplay");
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
+			plugins.get((CustomPanelAPI) getField(template, "viewport")).buttonPressed("simulator:tournament:cup");
+			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
+			assertEquals(List.of("alpha", "beta"), task.getRequest().tournamentFleetIds());
+			assertEquals(List.of("alpha", "beta"), task.getStartedTournament().getFleetIds());
 			BattleNext_TournamentDisplay display = (BattleNext_TournamentDisplay) getField(widget, "tournamentDisplay");
 			BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
-			chart.zoomAt(60f, 60f, 3);
-			chart.panBy(12f, 7f);
-			BattleNext_TournamentView.ViewState chartState = chart.captureState();
-			TooltipMakerAPI content = (TooltipMakerAPI) getField(display, "content");
-			content.getExternalScroller().setYOffset(20f);
-			float scroll = display.captureState().scroll();
-			CustomPanelAPI viewport = (CustomPanelAPI) getField(display, "viewport");
-			viewport.getPlugin().buttonPressed("simulator:tournament:cup");
-			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament("cup");
-			assertNotNull(task);
-			BattleNext_SimulationTask waiting = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("parent_variant"), List.of("child_variant"), BattleNext_SimulationConfig.defaults()));
+			chart.zoomAt(90f, 90f, 2);
+			chart.panBy(8f, 12f);
+			BattleNext_TournamentDisplay.ViewState browseState = display.captureState();
 			BattleNext_SimulationRequest first = nextRequest(peer);
-			widget.refreshStatus();
-			assertSame(chart, getField(display, "chart"));
-			assertEquals(chartState, chart.captureState());
-			assertEquals(scroll, display.captureState().scroll());
-			var progress = task.getTournamentSnapshot().getTournament();
-			assertTrue(progress.isStarted());
-			assertEquals(task.getRequest().id(), progress.getId());
-			float[] point = chart.project(60f, 100f);
-			chart.handleInput(List.of(proxy(InputEventAPI.class, (method, args) -> switch (method) {
-				case "isLMBDownEvent", "isMouseEvent" -> true;
-				case "getX" -> (int) point[0];
-				case "getY" -> (int) point[1];
-				default -> null;
-			})));
-			assertTrue((boolean) getField(chart, "dragging"));
-			BattleNext_DropdownField dropdown = (BattleNext_DropdownField) getField(getField(widget, "sourceField"), "dropdown");
-			plugins.get((CustomPanelAPI) getField(dropdown, "row")).buttonPressed(buttonIds.get("TOGGLE"));
-			assertTrue(dropdown.isOpen());
 			completeRound(peer, first, "player");
 			BattleNext_SimulationRequest second = nextRequest(peer);
 			widget.refreshStatus();
-			assertEquals(chartState, chart.captureState());
-			assertEquals(scroll, display.captureState().scroll());
-			assertTrue(dropdown.isOpen());
-			widget.closeOverlays();
-			assertTrue((boolean) getField(chart, "dragging"));
 			assertSame(display, getField(widget, "tournamentDisplay"));
-			assertNotEquals(first.id(), second.id());
-			assertEquals(1, task.getTournamentSnapshot().getTournament().getNextPendingMatch().getRounds().size());
-			assertEquals(1, BattleNext_SimulatorService.status().queued());
-			assertNull(waiting.getResult());
+			assertSame(chart, getField(display, "chart"));
+			assertEquals(browseState, display.captureState());
+			assertEquals(1, ((BattleNext_StartedTournament) getField(display, "started")).getMatches().get(0).getRounds().size());
+			assertEquals(1, task.getStartedTournament().getMatches().get(0).getRounds().size());
+			int map = second.source().getInt("actualMap");
 			task.pause();
-			JSONObject cancelled = peer.receive();
-			assertEquals("CANCEL", cancelled.getString("type"));
-			assertEquals(second.id(), cancelled.getJSONObject("payload").getString("id"));
+			assertEquals("CANCEL", peer.receive().getString("type"));
 			peer.send("RESULT", new BattleNext_SimulationResult(second.id(), BattleNext_SimulationResult.Outcome.CANCELLED,
 					"", 0f, 0L, 0L, 0L, "Paused").toJson());
 			peer.send("READY", new JSONObject());
-			BattleNext_SimulationRequest independent = nextRequest(peer);
-			assertEquals(waiting.getRequest(), independent);
-			assertEquals(BattleNext_SimulationTask.State.PAUSED, task.getState());
-			widget.refreshStatus();
-			assertEquals("Continue simulation", buttonLabels.get("simulator:resume:cup"));
+			awaitTournamentState(task, BattleNext_SimulationTask.State.PAUSED);
+			sources.getFleetStore().reload();
+			sources.getFleetStore().get("beta").setName("Changed before resume");
+			sources.getFleetStore().save(sources.getFleetStore().get("beta"));
 			task.resume();
-			assertEquals(1, BattleNext_SimulatorService.status().queued());
-			completeRound(peer, independent, "player");
 			BattleNext_SimulationRequest resumed = nextRequest(peer);
-			assertEquals(second, resumed);
-			Path snapshotPath = directory.resolve("tournament/_simulations/" + task.getRequest().id() + ".json");
-			Path savedPath = snapshotPath.resolveSibling("checkpoint.saved");
-			Files.move(snapshotPath, savedPath);
-			Files.createDirectory(snapshotPath);
-			try {
-				completeRound(peer, resumed, "enemy");
-				awaitTournamentState(task, BattleNext_SimulationTask.State.IMPORT_FAILED);
-			} finally {
-				Files.delete(snapshotPath);
-				Files.move(savedPath, snapshotPath);
+			assertEquals(second.id(), resumed.id());
+			assertEquals(map, resumed.source().getInt("actualMap"));
+			assertEquals("Changed before resume", resumed.source().getJSONObject("player").getJSONObject("definition").getString("name"));
+			completeRound(peer, resumed, "enemy");
+			awaitTournamentState(task, BattleNext_SimulationTask.State.FINISHED);
+			assertTrue(task.getStartedTournament().isCompleted());
+			assertFalse(task.getResult().startedTournamentJson().isEmpty());
+			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+			instances.reload();
+			assertEquals(2, instances.get(task.getRequest().id()).getMatches().get(0).getRounds().size());
+			assertTrue(instances.getActiveId().isEmpty());
+			widget.refreshStatus();
+			assertSame(chart, getField(display, "chart"));
+			assertTrue(((BattleNext_StartedTournament) getField(display, "started")).isCompleted());
+			BattleNext_BattleReportPage reports = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (label, action) -> action.run());
+			reports.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
+			reports.buttonPressed("report:report:" + first.id());
+			assertTrue(buttons.get("save").get());
+			assertTrue(buttons.get("delete").get());
+			reports.close();
+		}
+		widget.close();
+		assertFalse(router.getSession().hasInputState());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"report", "instance"})
+	void acquiredRoundPersistsBeforeScoreCommitAndRetryCountsItOnce(String failureStage) throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		sources.getTournamentStore().save(configuration);
+		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
+				Socket socket = listener.accept();
+				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
+			client.setSoTimeout(100);
+			socket.setSoTimeout(100);
+			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
+			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
+			BattleNext_SimulationRequest round = nextRequest(peer);
+			Path progress = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+			byte[] original = Files.readAllBytes(progress);
+			Path obstruction = failureStage.equals("report") ? directory.resolve("tournament/_reports/" + round.id() + ".json") : progress;
+			if (failureStage.equals("instance")) {
+				Files.delete(progress);
 			}
-			assertTrue(task.getTournamentSnapshot().getTournament().isCompleted());
-			assertEquals(2, task.getTournamentSnapshot().getTournament().getMatches().get(0).getRounds().size());
+			Files.createDirectories(obstruction);
+			completeRound(peer, round, "player");
+			awaitTournamentState(task, BattleNext_SimulationTask.State.IMPORT_FAILED);
+			assertEquals(round.id(), task.pendingRound().id());
+			JSONObject savedTask = new JSONObject(Files.readString(directory.resolve("tournament/_simulations/" + task.getRequest().id() + ".json")));
+			assertEquals(round.id(), savedTask.getJSONObject("pendingRound").getString("id"));
+			Files.delete(obstruction);
+			if (failureStage.equals("instance")) {
+				Files.write(progress, original);
+			}
 			task.retryImport();
 			awaitTournamentState(task, BattleNext_SimulationTask.State.FINISHED);
-			assertNotNull(task.getResult());
-			assertFalse(task.getResult().tournamentSnapshotJson().isEmpty());
-			widget.refreshStatus();
-			assertEquals("Simulate again", buttonLabels.get("simulator:tournament:cup"));
-			BattleNext_TournamentSnapshotStore snapshots = new BattleNext_TournamentSnapshotStore();
-			snapshots.reload();
-			assertEquals(2, snapshots.get(task.getRequest().id()).getTournament().getMatches().get(0).getRounds().size());
-			assertEquals(BattleNext_SimulationTask.State.FINISHED, snapshots.get(task.getRequest().id()).getState());
-			assertArrayEquals(playerState, Files.readAllBytes(directory.resolve("tournament/_tournaments/cup.json")));
-			sources.getTournamentStore().reload();
-			assertEquals("cup", sources.getTournamentStore().getActiveId());
-			assertEquals(List.of("cup"), sources.getTournamentStore().getAll().stream().map(value -> value.getId()).toList());
-			widget.close();
-			BattleNext_TournamentPage page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (label, action) -> action.run());
-			page.attach(root);
-			page.buttonPressed("simulation:select:" + task.getRequest().id());
-			assertFalse(buttons.get("save").get());
-			assertFalse(page.hasUnsavedChanges());
-			page.close();
-			BattleNext_BattleReportPage reports = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (label, action) -> action.run());
-			reports.attach(root);
-			String identity = "simulation:" + task.getRequest().id() + "/W1-1/0";
-			reports.buttonPressed("report:" + identity);
-			assertFalse(buttons.get("save").get());
-			assertFalse(buttons.get("delete").get());
-			assertNull(getField(getField(reports, "editor"), "nameField"));
-			BattleNext_ReportTarget target = (BattleNext_ReportTarget) getField(getField(reports, "editor"), "target");
-			assertTrue(target.isReadOnly());
-			assertThrows(IllegalStateException.class, () -> target.rename(new BattleNext_BattleReportStore(), sources.getTournamentStore(), "Changed"));
-			reports.close();
-			BattleNext_SimulatorService.deleteTournament(task.getRequest().id());
-			snapshots.reload();
-			assertTrue(snapshots.getAll().isEmpty());
-			assertNull(BattleNext_SimulatorService.tournament("cup"));
-		} catch (Exception | AssertionError exception) {
-			try {
-				widget.close();
-			} catch (Exception | AssertionError cleanupFailure) {
-				exception.addSuppressed(cleanupFailure);
-			}
-			throw exception;
+			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+			instances.reload();
+			assertEquals(1, instances.get(task.getRequest().id()).getMatches().get(0).getRounds().size());
+			assertEquals(round.id(), instances.get(task.getRequest().id()).getMatches().get(0).getRounds().get(0).getReportId());
+		}
+	}
+
+	@Test
+	void recoveredTaskReadsItsInstanceAndWaitsForManualContinuation() throws Exception {
+		quickBattles("alpha,beta,-1,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
+		sources.getTournamentStore().save(configuration);
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(request.id(), "cup", BattleNext_StartedTournament.ExecutionKind.SIMULATION, List.of("alpha", "beta"));
+		new BattleNext_TournamentEngine().initialize(configuration, started);
+		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, service);
+		task.publishStarted(started);
+		BattleNext_SimulationRequest round = request.forMatch(configuration, started, started.getNextPendingMatch(), sources.getFleetStore(), 2);
+		task.prepareRound(round);
+		((BattleNext_SimulatorStorage) readField("storage")).writeTask(task);
+		new BattleNext_StartedTournamentStore().save(started);
+		service.close();
+		singleton.set(null, null);
+		createOwnedService();
+		BattleNext_SimulationTask recovered = BattleNext_SimulatorService.tournament(request.id());
+		assertEquals(BattleNext_SimulationTask.State.PAUSED, recovered.getState());
+		assertEquals(round.id(), recovered.getCurrentRound().id());
+		assertEquals(2, recovered.getCurrentRound().source().getInt("actualMap"));
+		assertEquals(started.toJson().toString(), recovered.getStartedTournament().toJson().toString());
+		assertNull(readField("process"));
+		assertNull(readField("supervisor"));
+	}
+
+	@Test
+	void resourceReloadCommitsTheRoundBeforeRestartingAtTheNextRoundBoundary() throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
+		sources.getTournamentStore().save(configuration);
+		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
+				Socket socket = listener.accept();
+				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
+			client.setSoTimeout(100);
+			socket.setSoTimeout(100);
+			OwnedProcess process = new OwnedProcess();
+			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), process);
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
+			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
+			BattleNext_SimulationRequest round = nextRequest(peer);
+			withServiceMetadata(BattleNext_SimulatorService::resourcesReloaded);
+			completeRound(peer, round, "player");
+			awaitTournamentState(task, BattleNext_SimulationTask.State.PAUSED);
+			assertFalse(process.isAlive());
+			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+			instances.reload();
+			assertEquals(round.id(), instances.get(task.getRequest().id()).getMatches().get(0).getRounds().get(0).getReportId());
+			assertNotEquals(round.id(), task.getCurrentRound().id());
 		}
 	}
 
@@ -488,6 +464,90 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 			Thread.sleep(10L);
 		}
 		assertEquals(state, task.getState());
+	}
+
+	@Test
+	void deletingRunningTournamentRejectsLateResultsAndKeepsPreviouslySavedReports() throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
+		sources.getTournamentStore().save(configuration);
+		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
+				Socket socket = listener.accept();
+				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
+			client.setSoTimeout(100);
+			socket.setSoTimeout(100);
+			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
+			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(configuration,
+					List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
+			BattleNext_SimulationRequest first = nextRequest(peer);
+			completeRound(peer, first, "player");
+			BattleNext_SimulationRequest second = nextRequest(peer);
+			BattleNext_SimulatorService.deleteTournament(task.getRequest().id());
+			assertEquals("CANCEL", peer.receive().getString("type"));
+			assertTrue(task.isDeletionRequested());
+			assertThrows(IllegalStateException.class, task::resume);
+			completeRound(peer, second, "enemy");
+			long deadline = System.nanoTime() + 5000000000L;
+			while (BattleNext_SimulatorService.tournament(task.getRequest().id()) != null && System.nanoTime() < deadline) {
+				BattleNext_SimulatorService.advance();
+				Thread.sleep(10L);
+			}
+			assertNull(BattleNext_SimulatorService.tournament(task.getRequest().id()));
+			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+			instances.reload();
+			assertNull(instances.get(task.getRequest().id()));
+			BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
+			reports.reload();
+			assertNotNull(reports.get(first.id()));
+			assertNull(reports.get(second.id()));
+			assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + task.getRequest().id() + ".json")));
+		}
+	}
+
+	@Test
+	void failedDeletionPersistsIntentAndRecoveryCompletesOwnedCleanup() throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		sources.getTournamentStore().save(configuration);
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(request.id(), "cup", BattleNext_StartedTournament.ExecutionKind.SIMULATION, List.of("alpha", "beta"));
+		new BattleNext_TournamentEngine().initialize(configuration, started);
+		new BattleNext_StartedTournamentStore().save(started);
+		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, service);
+		task.publishStarted(started);
+		task.requestDeletion();
+		((BattleNext_SimulatorStorage) readField("storage")).writeTask(task);
+		Path obstruction = directory.resolve("tournament/_simulations/_pending/" + request.id() + ".json");
+		Files.createDirectories(obstruction);
+		Files.writeString(obstruction.resolve("owned"), "Keep");
+		service.close();
+		singleton.set(null, null);
+		createOwnedService();
+		BattleNext_SimulatorService.advance();
+		task = BattleNext_SimulatorService.tournament(request.id());
+		assertNotNull(task);
+		assertTrue(task.isDeletionRequested());
+		assertTrue(task.getImportError().contains("DirectoryNotEmptyException"));
+		assertTrue(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
+		assertEquals("Keep", Files.readString(obstruction.resolve("owned")));
+		Files.delete(obstruction.resolve("owned"));
+		service.close();
+		singleton.set(null, null);
+		createOwnedService();
+		BattleNext_SimulatorService.advance();
+		assertNull(BattleNext_SimulatorService.tournament(request.id()));
+		assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
+		assertFalse(Files.exists(obstruction));
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.reload();
+		assertNull(instances.get(request.id()));
 	}
 
 	private BattleNext_SimulationRequest nextRequest(BattleNext_SimulatorProtocol peer) throws Exception {
@@ -503,6 +563,46 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 			}
 		}
 		throw new AssertionError("Expected a simulation request after committed progress");
+	}
+
+	@Test
+	void recoveryIsolatesMalformedTasksAndPendingFilesAndImportsEveryCompleteResult() throws Exception {
+		BattleNext_SimulationTask valid = completedTask("Recovered result");
+		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
+		storage.writeTask(valid);
+		Path root = directory.resolve("tournament/_simulations");
+		Files.writeString(root.resolve("000-broken.json"), "{ invalid task", StandardCharsets.UTF_8);
+		Files.writeString(root.resolve("_pending/000-broken.json"), "{ invalid pending", StandardCharsets.UTF_8);
+		BattleNext_SimulationTask invalidState = new BattleNext_SimulationTask(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()), service);
+		Files.writeString(root.resolve(invalidState.getRequest().id() + ".json"), invalidState.toJson().put("state", "UNKNOWN").toString(), StandardCharsets.UTF_8);
+		service.close();
+		singleton.set(null, null);
+		createOwnedService();
+		BattleNext_SimulatorService.advance();
+		var reports = new BattleNext_BattleReportStore();
+		reports.reload();
+		assertEquals("Recovered result", reports.get(valid.getRequest().id()).getName());
+		storage = (BattleNext_SimulatorStorage) readField("storage");
+		assertEquals(3, storage.getLoadErrors().size());
+		assertTrue(storage.getLoadErrors().get(root.resolve("000-broken.json")).contains("invalid task"));
+		assertTrue(storage.getLoadErrors().get(root.resolve("_pending/000-broken.json")).contains("invalid pending"));
+		assertTrue(storage.getLoadErrors().get(root.resolve(invalidState.getRequest().id() + ".json")).contains("UNKNOWN"));
+		assertTrue(Files.exists(root.resolve("000-broken.json")));
+	}
+
+	@Test
+	void taskIdentityConflictsRejectBothFilesAndRecoverAfterTheConflictingSourceIsRemoved() throws Exception {
+		var task = new BattleNext_SimulationTask(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()), service);
+		var storage = (BattleNext_SimulatorStorage) readField("storage");
+		storage.writeTask(task);
+		var conflict = directory.resolve("tournament/_simulations/conflict.json");
+		Files.writeString(conflict, task.toJson().toString(), StandardCharsets.UTF_8);
+		assertTrue(storage.readTasks().isEmpty());
+		assertEquals(2, storage.getLoadErrors().size());
+		assertTrue(storage.getLoadErrors().values().stream().anyMatch(error -> error.contains("Duplicate simulator task ID")));
+		Files.delete(conflict);
+		assertEquals(task.getRequest().id(), storage.readTasks().get(0).getJSONObject("request").getString("id"));
+		assertTrue(storage.getLoadErrors().isEmpty());
 	}
 
 	private void completeRound(BattleNext_SimulatorProtocol peer, BattleNext_SimulationRequest request, String winner) throws Exception {
@@ -647,7 +747,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 
 	private Path attachWorker(BattleNext_SimulatorProtocol channel, Process process) throws Exception {
 		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
-		Path runtime = storage.directory("runtime/owned-session");
+		Path runtime = storage.directory("_runtime/owned-session");
 		writeField("runtime", runtime);
 		writeField("channel", channel);
 		writeField("process", process);

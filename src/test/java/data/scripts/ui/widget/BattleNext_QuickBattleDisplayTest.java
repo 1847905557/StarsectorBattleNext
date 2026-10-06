@@ -6,12 +6,11 @@ import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
 import data.test.fixture.BattleNext_TestPageFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_QuickBattleDisplayTest extends BattleNext_TestPageFixture {
 

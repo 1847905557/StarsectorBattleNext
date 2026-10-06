@@ -6,34 +6,34 @@ import com.fs.starfarer.api.ui.*;
 import data.model.BattleNext_BaseStore;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.model.rule.BattleNext_RuleModel;
-import data.model.rule.BattleNext_RuleStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
+import data.model.rule.BattleNext_RuleModel;
+import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.ui.editor.BattleNext_EditorView;
+import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.simulator.BattleNext_SimulatorWidget;
-import data.scripts.ui.page.*;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
@@ -277,23 +277,6 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertTrue(children.get(secondRoot).isEmpty());
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"selector", "settings"})
-	void dedicatedPagesUseTheSharedMountLifecycle(String kind) throws Exception {
-		BattleNext_PageView page = "selector".equals(kind)
-				? new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin())
-				: new BattleNext_SettingsPage(action -> {});
-		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
-		page.attach(root);
-		assertEquals(1, children.get(root).size());
-		page.refreshContent();
-		assertEquals(1, children.get(root).size());
-		page.attach(root);
-		assertEquals(1, children.get(root).size());
-		page.close();
-		assertTrue(children.get(root).isEmpty());
-	}
-
 	@Test
 	void selectorKeepsRawDraftAndDirtyStateAcrossRefresh() throws Exception {
 		BattleNext_BattleSelectorPage page = new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin());
@@ -384,7 +367,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		}
 		assertTrue(buttons.get("save").get());
 		List<String> dependencies = switch (kind) {
-			case "tournament" -> List.of("tournamentStore", "fleetStore", "ruleStore");
+			case "tournament" -> List.of("tournamentStore", "ruleStore");
 			case "report" -> List.of("reportStore");
 			default -> List.of("store");
 		};
@@ -410,16 +393,16 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		var tournament = new BattleNext_TournamentModel();
 		tournament.setId("cup");
 		tournament.setName("Cup");
-		tournament.setStarted(true);
 		store.save(tournament);
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.save(new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta")));
 		page.attach(root);
 		page.buttonPressed("tournament:select:cup");
 		assertFalse(buttons.get("save").get());
 		assertFalse(page.hasUnsavedChanges());
 		page.refreshContent();
 		assertFalse(buttons.get("save").get());
-		assertNotNull(getField(page, "tournamentDisplay"));
-		assertTrue(labels.contains("BattleNext_tournament_summary"));
+		assertTrue(((BattleNext_TournamentEditor) getField(page, "editor")).isReadOnly());
 	}
 
 	@Test

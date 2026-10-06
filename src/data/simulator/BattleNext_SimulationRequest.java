@@ -5,18 +5,20 @@ import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.scripts.battle.BattleNext_BattleValidation;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.tournament.BattleNext_StartedTournament;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.nio.charset.StandardCharsets;
 
 public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJson, BattleNext_SimulationConfig config) {
 
@@ -58,21 +60,14 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 		}
 	}
 
-	public static BattleNext_SimulationRequest fromTournament(BattleNext_TournamentModel tournament, BattleNext_FleetStore fleets,
+	public static BattleNext_SimulationRequest fromTournament(BattleNext_TournamentModel tournament, List<String> fleetIds, BattleNext_FleetStore fleets,
 			BattleNext_RuleStore rules, BattleNext_SimulationConfig config) {
 
 		if (!fleets.isLoaded() || !rules.isLoaded()) throw new IllegalStateException(!fleets.isLoaded() ? fleets.getLoadError() : rules.getLoadError());
 		try {
-			JSONObject participants = new JSONObject();
-			for (String id : tournament.getFleetIds()) {
-				participants.put(id, snapshot(id, fleets));
-			}
-			JSONObject source = new JSONObject().put("tournament", tournament.toJson()).put("fleets", participants)
-					.put("sourceType", tournament.getSourceType().name()).put("sourcePath", tournament.getSourcePath());
-			if (!tournament.getRuleId().isEmpty()) {
-				if (rules.get(tournament.getRuleId()) == null) throw new IllegalArgumentException("Missing simulation tournament rule: " + tournament.getRuleId());
-				source.put("rule", rules.get(tournament.getRuleId()).toJson());
-			}
+			BattleNext_BattleValidation.Result result = new BattleNext_BattleValidation(fleets).tournamentResult(tournament, fleetIds, rules);
+			if (!result.failures().isEmpty()) throw new BattleNext_BattleValidation.Rejection(tournament.getId(), result);
+			JSONObject source = new JSONObject().put("sourceTournamentId", tournament.getId()).put("name", tournament.getName()).put("fleetIds", new JSONArray(fleetIds));
 			return create(Kind.TOURNAMENT, source, config);
 		} catch (JSONException exception) {
 			throw new IllegalArgumentException("Unable to construct tournament simulation request: " + tournament.getId(), exception);
@@ -83,16 +78,24 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 		return new BattleNext_SimulationRequest(UUID.randomUUID().toString(), kind, source.toString(), config);
 	}
 
-	public BattleNext_SimulationRequest forMatch(BattleNext_Match match) {
+	public List<String> tournamentFleetIds() throws JSONException {
+		JSONArray values = source().getJSONArray("fleetIds");
+		List<String> fleetIds = new ArrayList<>();
+		for (int index = 0; index < values.length(); index++) {
+			fleetIds.add(values.getString(index));
+		}
+		return List.copyOf(fleetIds);
+	}
+
+	public BattleNext_SimulationRequest forMatch(BattleNext_TournamentModel configuration, BattleNext_StartedTournament started,
+			BattleNext_Match match, BattleNext_FleetStore fleets, int actualMap) {
 		if (kind != Kind.TOURNAMENT) throw new IllegalStateException("A tournament request is required to prepare a round");
 		try {
-			JSONObject source = source();
-			String identity = id + "/" + match.getId() + "/" + match.getRounds().size();
-			JSONObject round = new JSONObject().put("match", match.toJson()).put("actualMap", BattleNext_MissionBattleMap.resolve(match.getMap()))
-					.put("player", source.getJSONObject("fleets").getJSONObject(match.getPlayer()))
-					.put("enemy", source.getJSONObject("fleets").getJSONObject(match.getEnemy()))
-					.put("sourceType", source.getString("sourceType")).put("sourcePath", source.getString("sourcePath"))
-					.put("tournamentId", id).put("tournamentName", source.getJSONObject("tournament").getString("name"))
+			String identity = started.getId() + "/" + match.getId() + "/" + match.getRounds().size();
+			JSONObject round = new JSONObject().put("match", match.toJson()).put("actualMap", actualMap)
+					.put("player", snapshot(match.getPlayer(), fleets)).put("enemy", snapshot(match.getEnemy(), fleets))
+					.put("sourceType", configuration.getSourceType().name()).put("sourcePath", configuration.getSourcePath())
+					.put("tournamentId", started.getId()).put("tournamentName", started.getName(configuration))
 					.put("roundNumber", match.getRounds().size() + 1);
 			return new BattleNext_SimulationRequest(UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)).toString(),
 					Kind.MATCH, round.toString(), config);
@@ -150,7 +153,7 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 	public String label() {
 		try {
 			if (kind == Kind.VARIANTS) return String.join(",", player()) + " vs " + String.join(",", enemy());
-			if (kind == Kind.TOURNAMENT) return source().getJSONObject("tournament").getString("name");
+			if (kind == Kind.TOURNAMENT) return source().getString("name");
 			return source().getJSONObject("player").getJSONObject("definition").getString("name") + " vs "
 					+ source().getJSONObject("enemy").getJSONObject("definition").getString("name");
 		} catch (JSONException exception) {

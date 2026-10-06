@@ -25,6 +25,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		SINGLE, MULTIPLE
 	}
 
+	public record Anchor(float x, float y, float width, float height) { }
+
 	public static class OptionChoice {
 
 		private final String id;
@@ -115,6 +117,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private final float topGap;
 	private final TooltipMakerAPI[] viewports;
 	private boolean enabled = true;
+	private Supplier<Anchor> externalAnchor;
 	private final Map<String, Integer> selection = new LinkedHashMap<>();
 
 	@Override
@@ -161,6 +164,19 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		if (!enabled) clearOverlays();
 	}
 
+	public BattleNext_OptionPicker(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
+			OptionChoiceSource source, OptionSelectionMode mode, Supplier<List<String>> initialSelection,
+			Consumer<List<String>> onConfirmed) {
+		this(inputRouter, overlayHost, 0f, 0f, "", 0f, source, mode, initialSelection, onConfirmed);
+	}
+
+	public void openAt(CustomPanelAPI panelOwner, Supplier<Anchor> anchor) {
+		close();
+		this.panelOwner = panelOwner;
+		externalAnchor = anchor;
+		open();
+	}
+
 	@Override
 	protected void clearOverlays() {
 		if (search != null) search.close();
@@ -182,6 +198,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		clearOverlays();
 		row = null;
 		toggle = null;
+		externalAnchor = null;
 	}
 
 	@Override
@@ -229,16 +246,16 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		float hostWidth = overlayHost.getPosition().getWidth();
 		float hostHeight = overlayHost.getPosition().getHeight();
 		float width = Math.min(POPUP_MAX_WIDTH, hostWidth - POPUP_INSET * 2f);
-		PositionAPI anchor = toggle.getPosition();
+		Anchor anchor = anchor();
 		float rowTop = overlayHost.getPosition().getY() + hostHeight
-				- anchor.getY() - anchor.getHeight();
-		float belowY = rowTop + anchor.getHeight() + POPUP_ROW_GAP;
+				- anchor.y() - anchor.height();
+		float belowY = rowTop + anchor.height() + POPUP_ROW_GAP;
 		float belowSpace = hostHeight - belowY - POPUP_INSET;
 		float aboveSpace = rowTop - POPUP_INSET - POPUP_ROW_GAP;
 		boolean above = belowSpace < POPUP_MAX_HEIGHT && aboveSpace > belowSpace;
 		float height = Math.min(POPUP_MAX_HEIGHT, above ? aboveSpace : belowSpace);
 		float y = above ? rowTop - height - POPUP_ROW_GAP : belowY;
-		float x = Math.max(POPUP_INSET, Math.min(anchor.getX() - overlayHost.getPosition().getX(),
+		float x = Math.max(POPUP_INSET, Math.min(anchor.x() - overlayHost.getPosition().getX(),
 				hostWidth - width - POPUP_INSET));
 
 		popup = ownPanel(overlayHost, panelOwner.createCustomPanel(width, height, new OptionPickerPopupPlugin()));
@@ -412,12 +429,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		if (mode == OptionSelectionMode.SINGLE) {
 			List<String> selected = new ArrayList<>();
 			if (!selection.isEmpty()) {
-				selected.add(selection.keySet().iterator().next());
+				selected.addAll(expandList(selection));
 			} else if (!previous.isEmpty() && !known.contains(previous.keySet().iterator().next())) {
 				selected.add(previous.keySet().iterator().next());
 			}
-			if (onConfirmed != null) onConfirmed.accept(selected);
 			clearOverlays();
+			if (onConfirmed != null) onConfirmed.accept(selected);
 			return;
 		}
 		Map<String, Integer> result = new LinkedHashMap<>();
@@ -433,24 +450,20 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				result.put(option.id, selection.get(option.id));
 			}
 		}
-		if (onConfirmed != null) onConfirmed.accept(expandList(result));
+		List<String> selected = expandList(result);
 		clearOverlays();
+		if (onConfirmed != null) onConfirmed.accept(selected);
 	}
 
 	private Map<String, Integer> parse(List<String> values) {
 
 		Map<String, Integer> counts = new LinkedHashMap<>();
 		if (values == null) return counts;
-		if (mode == OptionSelectionMode.SINGLE) {
-			if (!values.isEmpty() && values.get(0) != null && !values.get(0).isBlank()) {
-				counts.put(values.get(0).trim(), 1);
-			}
-			return counts;
-		}
 		for (String value : values) {
 			if (value == null) continue;
 			String id = value.trim();
 			if (id.isEmpty()) continue;
+			if (mode == OptionSelectionMode.SINGLE && !counts.isEmpty() && !counts.containsKey(id)) continue;
 			counts.put(id, Math.min(counts.getOrDefault(id, 0) + 1, maxStack(id)));
 		}
 		return counts;
@@ -482,6 +495,10 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	}
 
 	private boolean isRowVisible() {
+		if (externalAnchor != null) {
+			Anchor anchor = externalAnchor.get();
+			return anchor != null && anchor.width() > 0f && anchor.height() > 0f;
+		}
 		if (row == null) return false;
 		PositionAPI rowPosition = row.getPosition();
 		for (TooltipMakerAPI host : viewports) {
@@ -493,6 +510,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 					|| viewport.getY() + viewport.getHeight() <= rowPosition.getY()) return false;
 		}
 		return true;
+	}
+
+	private Anchor anchor() {
+		if (externalAnchor != null) return externalAnchor.get();
+		PositionAPI position = toggle.getPosition();
+		return new Anchor(position.getX(), position.getY(), position.getWidth(), position.getHeight());
 	}
 
 	private class OptionPickerPanelPlugin extends BaseCustomUIPanelPlugin {
@@ -542,15 +565,15 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			}
 			float hostWidth = overlayHost.getPosition().getWidth();
 			float hostHeight = overlayHost.getPosition().getHeight();
-			PositionAPI anchor = toggle.getPosition();
+			Anchor anchor = anchor();
 			float rowTop = overlayHost.getPosition().getY() + hostHeight
-					- anchor.getY() - anchor.getHeight();
-			float belowY = rowTop + anchor.getHeight() + POPUP_ROW_GAP;
+					- anchor.y() - anchor.height();
+			float belowY = rowTop + anchor.height() + POPUP_ROW_GAP;
 			float popupHeight = popup.getPosition().getHeight();
 			boolean above = hostHeight - belowY - POPUP_INSET < popupHeight
 					&& rowTop - POPUP_INSET - POPUP_ROW_GAP > hostHeight - belowY - POPUP_INSET;
 			float y = above ? rowTop - popupHeight - POPUP_ROW_GAP : belowY;
-			float x = Math.max(POPUP_INSET, Math.min(anchor.getX() - overlayHost.getPosition().getX(),
+			float x = Math.max(POPUP_INSET, Math.min(anchor.x() - overlayHost.getPosition().getX(),
 					hostWidth - popup.getPosition().getWidth() - POPUP_INSET));
 			popup.getPosition().inTL(x,
 					Math.max(POPUP_INSET, Math.min(y, hostHeight - popupHeight - POPUP_INSET)));
@@ -630,11 +653,13 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			for (InputEventAPI event : events) {
 				if (event.isConsumed()) continue;
 				if (!event.isLMBDownEvent() || !position.containsEvent(event)) continue;
-				if (mode == OptionSelectionMode.SINGLE) selection.clear();
 				int max = maxStack(option.id);
 				int next = selection.getOrDefault(option.id, 0) + 1;
 				if (next > max) {
 					next = 0;
+				}
+				if (mode == OptionSelectionMode.SINGLE) {
+					selection.clear();
 				}
 				if (next == 0) selection.remove(option.id);
 				else selection.put(option.id, next);

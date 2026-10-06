@@ -82,6 +82,10 @@ public class BattleNext_ExpandablePanel {
 		if (header.secondarySlot()) plugin.secondarySprite = loadSprite(header.secondarySprite());
 		boolean rightSummary = !header.rightFirstLine().isEmpty() || !header.rightSecondLine().isEmpty();
 		HeaderLayout layout = headerLayout(width, plugin.secondarySprite != null, rightSummary);
+		plugin.primarySlot = header.primarySprite() != null;
+		if (!plugin.primarySlot) {
+			layout = new HeaderLayout(HEADER_SIDE_INSET, layout.textWidth() + ICON_SIZE + 8f, layout.metricsX(), layout.metricsWidth());
+		}
 		TooltipMakerAPI names = top.createUIElement(layout.textWidth(), HEADER_HEIGHT, false);
 		LabelAPI firstLine = names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)), 3f);
 		firstLine.getPosition().inTL(0f, 3f);
@@ -141,6 +145,7 @@ public class BattleNext_ExpandablePanel {
 		private PositionAPI position;
 		private boolean hovered;
 		private SpriteAPI primarySprite;
+		private boolean primarySlot;
 		private SpriteAPI secondarySprite;
 		private Color primaryTint;
 
@@ -172,14 +177,14 @@ public class BattleNext_ExpandablePanel {
 			if (position == null) return;
 			float centerY = position.getY() + HEADER_HEIGHT * 0.5f;
 			float primaryCenterX = position.getX() + HEADER_SIDE_INSET + ICON_SIZE * 0.5f;
-			if (primarySprite == null) {
+			if (primarySlot && primarySprite == null) {
 				BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(),
 						primaryCenterX - MISSING_ICON_SIZE * 0.5f,
 						centerY - MISSING_ICON_SIZE * 0.5f, MISSING_ICON_SIZE, alphaMult);
-			} else if (primaryTint != null) {
+			} else if (primarySlot && primaryTint != null) {
 				BattleNext_PageLayout.renderTintedFittedSprite(primarySprite,
 						primaryCenterX, centerY, ICON_SIZE, ICON_SIZE, primaryTint, alphaMult);
-			} else {
+			} else if (primarySlot) {
 				BattleNext_PageLayout.renderFittedSprite(primarySprite,
 						primaryCenterX, centerY, ICON_SIZE, ICON_SIZE, alphaMult);
 			}

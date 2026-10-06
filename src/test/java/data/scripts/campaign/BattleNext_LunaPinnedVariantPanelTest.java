@@ -12,6 +12,7 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -205,7 +206,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
 		name(display).setText(blank);
 		display.buttonPressed("pin_save");
-		assertTrue(labels.contains("BattleNext_variant_pin_name_required"));
+		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
 		assertEquals(blank, name(display).getText());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		name(display).setText("Named snapshot");
@@ -282,7 +283,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		display.buttonPressed("pin_save");
 		assertEquals("Keep this name", name(display).getText());
 		assertTrue(buttons.get("pin_save").get());
-		assertTrue(labels.stream().anyMatch(value -> value.contains("Not a directory")));
+		assertTrue(labels.stream().anyMatch(value -> value.contains("_pinnedVariants")));
 		assertTrue(store.getAll().isEmpty());
 		Files.delete(directory.resolve("tournament/_pinnedVariants"));
 		display.buttonPressed("pin_save");

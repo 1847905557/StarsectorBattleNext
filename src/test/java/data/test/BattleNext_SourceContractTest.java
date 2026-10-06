@@ -6,24 +6,15 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.SimpleName;
-import com.github.javaparser.ast.stmt.DoStmt;
-import com.github.javaparser.ast.stmt.ForEachStmt;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
-import com.github.javaparser.ast.stmt.Statement;
-import com.github.javaparser.ast.stmt.ThrowStmt;
-import com.github.javaparser.ast.stmt.WhileStmt;
+import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.test.fixture.BattleNext_TestI18nSource;
 import data.test.fixture.BattleNext_TestSourceIndex;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestTextCatalog.TextKey;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,16 +23,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Pattern;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SourceContractTest {
 
@@ -219,6 +202,31 @@ class BattleNext_SourceContractTest {
 	}
 
 	@Test
+	void testTextLookupsKeepLanguageSelectionInsideTheCatalog() throws Exception {
+		List<String> failures = new ArrayList<>();
+		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			if (!entry.getKey().startsWith(Path.of("src/test/java"))) continue;
+			if (entry.getKey().getFileName().toString().equals("BattleNext_TestTextCatalog.java")) continue;
+			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
+				if (!call.getScope().map(Object::toString).orElse("").equals("BattleNext_TestTextCatalog")) continue;
+				if (!call.getNameAsString().equals("text")) continue;
+				if (call.getArguments().size() != 2 || !call.getArgument(0).findAll(ConditionalExpr.class).isEmpty()) {
+					failures.add(entry.getKey() + ": " + call);
+				}
+			}
+			for (ConditionalExpr conditional : entry.getValue().findAll(ConditionalExpr.class)) {
+				if (!conditional.getThenExpr().isStringLiteralExpr() || !conditional.getElseExpr().isStringLiteralExpr()) continue;
+				String first = conditional.getThenExpr().asStringLiteralExpr().asString();
+				String second = conditional.getElseExpr().asStringLiteralExpr().asString();
+				if (first.equals(second + "_CN") || second.equals(first + "_CN")) {
+					failures.add(entry.getKey() + ": " + conditional);
+				}
+			}
+		}
+		assertEquals(List.of(), failures);
+	}
+
+	@Test
 	void everyRuntimeReadResolvesAndEveryCatalogEntryHasARuntimeConsumer() {
 		Set<TextKey> consumed = new LinkedHashSet<>();
 		for (BattleNext_TestI18nSource.Read read : reads) {
@@ -247,7 +255,7 @@ class BattleNext_SourceContractTest {
 		for (BattleNext_TestI18nSource.Read read : reads) {
 			if (read.arguments().isEmpty()) continue;
 			for (String category : List.of(read.key().category(), read.key().category() + "_CN")) {
-				String pattern = BattleNext_TestTextCatalog.text(category, read.key().id());
+				String pattern = BattleNext_TestTextCatalog.entries().get(new TextKey(category, read.key().id()));
 				List<String> conversions = Pattern.compile("%(?:\\d+\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?([a-zA-Z%])")
 						.matcher(pattern).results().map(match -> match.group(1))
 						.filter(conversion -> !conversion.equals("%") && !conversion.equals("n")).toList();

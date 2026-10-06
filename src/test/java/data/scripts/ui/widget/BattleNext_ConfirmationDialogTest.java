@@ -2,9 +2,10 @@ package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
-import com.fs.starfarer.api.ui.LabelAPI;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
@@ -89,8 +90,8 @@ class BattleNext_ConfirmationDialogTest extends BattleNext_TestPageFixture {
 		assertTrue(children.get(popup).stream().flatMap(child -> tooltips.get(child).getComponents().stream())
 				.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast)
 				.anyMatch(label -> label.getText().equals("Confirm enabling this window's area")));
-		assertEquals("BattleNext_common_confirm", buttonLabels.get("action_confirm"));
-		assertEquals("BattleNext_common_cancel", buttonLabels.get("action_cancel"));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_confirm"), buttonLabels.get("action_confirm"));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_cancel"), buttonLabels.get("action_cancel"));
 		AtomicBoolean outside = new AtomicBoolean();
 		assertTrue(router.handleGlobalInput(List.of(event("outside", outside))));
 		assertTrue(outside.get());

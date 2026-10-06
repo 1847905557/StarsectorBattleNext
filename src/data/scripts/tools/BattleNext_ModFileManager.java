@@ -11,6 +11,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.CopyOption;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -84,6 +87,27 @@ public class BattleNext_ModFileManager {
 		writeText(relativePath, text, true);
 	}
 
+	public static void writeTextAtomic(String relativePath, String text) throws IOException {
+		ReflectiveModFileOperations bridge = createBridge(relativePath);
+		Object target = resolveTarget(bridge, relativePath, true);
+		Path path = Path.of(targetPath(target));
+		String staging = relativePath + ".pending";
+		writeText(staging, text);
+		try {
+			Class<?> files = Class.forName("java.nio.file.Files", false, null);
+			MethodHandle move = MethodHandles.publicLookup().findStatic(files, "move",
+					MethodType.methodType(Path.class, Path.class, Path.class, CopyOption[].class));
+			move.invoke(path.resolveSibling(path.getFileName() + ".pending"), path,
+					new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
+		} catch (IOException exception) {
+			throw exception;
+		} catch (Throwable exception) {
+			throw new IOException("Unable to atomically write resource: " + relativePath, exception);
+		} finally {
+			delete(staging);
+		}
+	}
+
 	public static void writeText(String relativePath, String text, boolean overwrite) throws IOException {
 		if (text == null) {
 			BattleNext_Logger.warn(BattleNext_ModFileManager.class, "file.write.validation.rejected",
@@ -118,7 +142,9 @@ public class BattleNext_ModFileManager {
 					try {
 						bridge.close.invoke(output);
 					} catch (Throwable exception) {
-						if (failure == null) failure = exception;
+						if (failure == null) {
+							failure = exception;
+						}
 						else failure.addSuppressed(exception);
 					}
 				}
@@ -154,7 +180,9 @@ public class BattleNext_ModFileManager {
 				byte[] buffer = new byte[8192];
 				int count;
 				while ((count = (int) bridge.read.invoke(input, buffer)) >= 0) {
-					if (count > 0) bridge.byteArrayWrite.invoke(output, buffer, 0, count);
+					if (count > 0) {
+						bridge.byteArrayWrite.invoke(output, buffer, 0, count);
+					}
 				}
 				result = (byte[]) bridge.toByteArray.invoke(output);
 			} catch (Throwable exception) {
@@ -164,7 +192,9 @@ public class BattleNext_ModFileManager {
 					try {
 						bridge.closeInput.invoke(input);
 					} catch (Throwable exception) {
-						if (failure == null) failure = exception;
+						if (failure == null) {
+							failure = exception;
+						}
 						else failure.addSuppressed(exception);
 					}
 				}

@@ -1,16 +1,13 @@
 package data.scripts.plugin;
 
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatUIAPI;
-import com.fs.starfarer.api.combat.MutableStat;
-import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ViewportAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.input.InputEventAPI;
-import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tools.BattleNext_KeyTuning;
+import data.scripts.tools.BattleNext_Settings;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,10 +20,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.IntPredicate;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.function.IntPredicate;
 
 class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 

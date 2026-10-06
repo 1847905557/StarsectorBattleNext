@@ -1,15 +1,15 @@
 package data.scripts.campaign;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_VariantBuilder;
-import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.member.BattleNext_MemberModel;
+import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import data.test.fixture.BattleNext_TestCampaignFleetFixture;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;

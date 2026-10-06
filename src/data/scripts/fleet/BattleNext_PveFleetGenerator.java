@@ -15,14 +15,12 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.lwjgl.util.vector.Vector2f;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class BattleNext_PveFleetGenerator {
 
@@ -30,16 +28,34 @@ public class BattleNext_PveFleetGenerator {
 
 	public List<FactionSpecAPI> loadFactions() throws IOException, JSONException {
 
-		JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_PveFleetGenerator.class, "id", FACTIONS_PATH);
+		JSONArray rows;
+		try {
+			rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_PveFleetGenerator.class, "id", FACTIONS_PATH);
+		} catch (IOException | JSONException exception) {
+			BattleNext_Logger.warn(BattleNext_PveFleetGenerator.class, "pve.factions.source.unavailable", BattleNext_Logger.fields().put("path", FACTIONS_PATH).build(), exception);
+			rows = new JSONArray();
+		}
 		List<FactionSpecAPI> specs = Global.getSettings().getAllFactionSpecs();
 		Set<String> known = specs.stream().map(FactionSpecAPI::getId).collect(Collectors.toSet());
 		Set<String> allowed = new LinkedHashSet<>();
+		Map<String, Integer> counts = new HashMap<>();
 		for (int index = 0; index < rows.length(); index++) {
-			String id = rows.getJSONObject(index).getString("id").trim();
-			if (!known.contains(id)) {
+			JSONObject row = rows.optJSONObject(index);
+			if (row == null) continue;
+			counts.merge(row.optString("id", "").trim(), 1, Integer::sum);
+		}
+		for (int index = 0; index < rows.length(); index++) {
+			String id;
+			try {
+				id = rows.getJSONObject(index).getString("id").trim();
+			} catch (JSONException exception) {
+				BattleNext_Logger.warn(BattleNext_PveFleetGenerator.class, "pve.faction.row.rejected", BattleNext_Logger.fields().put("path", FACTIONS_PATH).put("position", index).put("raw", rows.opt(index)).build(), exception);
+				continue;
+			}
+			if (!known.contains(id) || counts.get(id) > 1) {
 				BattleNext_Logger.warn(BattleNext_PveFleetGenerator.class, "pve.faction.override.rejected",
 						BattleNext_Logger.fields().put("path", FACTIONS_PATH).put("row", index + 1).put("faction_id", id)
-								.put("criterion", "Faction must exist in the loaded faction catalog").build());
+								.put("raw", rows.opt(index)).put("criterion", "Faction must exist and its override ID must be unique").build());
 				continue;
 			}
 			allowed.add(id);

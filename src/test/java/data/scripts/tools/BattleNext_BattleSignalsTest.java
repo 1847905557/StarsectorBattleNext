@@ -8,28 +8,14 @@ import org.junit.jupiter.api.Test;
 class BattleNext_BattleSignalsTest {
 
 	@AfterEach
-	void clearAuthorization() {
-		BattleNext_BattleSignals.clearAuthorization();
+	void consumeNotification() {
 		BattleNext_BattleSignals.consumePendingResult();
 	}
 
 	@Test
-	void tournamentAuthorizationBelongsToOneExactMatchAndIsConsumedOnce() {
-		BattleNext_BattleSignals.authorizeMatch("tournament-a", "W1-1");
-
-		assertFalse(BattleNext_BattleSignals.consumeAuthorization("tournament-a", "W1-2"));
-		assertFalse(BattleNext_BattleSignals.consumeAuthorization("tournament-b", "W1-1"));
-		assertTrue(BattleNext_BattleSignals.consumeAuthorization("tournament-a", "W1-1"));
-		assertFalse(BattleNext_BattleSignals.consumeAuthorization("tournament-a", "W1-1"));
-	}
-
-	@Test
-	void completedBattleSignalsOnePendingResultAndRevokesTheMatchAuthorization() {
-		BattleNext_BattleSignals.authorizeMatch("tournament-a", "W1-1");
+	void completedBattlePublishesOneConsumablePendingResult() {
 		BattleNext_BattleSignals.markPendingResult();
-
 		assertTrue(BattleNext_BattleSignals.consumePendingResult());
 		assertFalse(BattleNext_BattleSignals.consumePendingResult());
-		assertFalse(BattleNext_BattleSignals.consumeAuthorization("tournament-a", "W1-1"));
 	}
 }

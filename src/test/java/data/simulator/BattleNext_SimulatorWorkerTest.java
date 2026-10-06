@@ -3,30 +3,25 @@ package data.simulator;
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import data.test.fixture.BattleNext_TestGameFixture;
 import data.scripts.BattleNextModPlugin;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import data.test.fixture.BattleNext_TestGameFixture;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.Map;
-import java.util.LinkedHashMap;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 
 class BattleNext_SimulatorWorkerTest extends BattleNext_TestGameFixture {
 

@@ -2,8 +2,8 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import data.scripts.ui.widget.BattleNext_DropdownField;
 import data.scripts.ui.widget.BattleNext_BattleSourceField;
+import data.scripts.ui.widget.BattleNext_DropdownField;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;

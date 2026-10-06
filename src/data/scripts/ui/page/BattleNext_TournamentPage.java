@@ -3,19 +3,18 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
-import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
-import data.scripts.ui.widget.BattleNext_TournamentDisplay;
-import data.simulator.BattleNext_TournamentSnapshotStore;
 import data.simulator.BattleNext_SimulatorService;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -30,14 +29,10 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 	private final BattleNext_TournamentStore tournamentStore = provider.getTournamentStore();
-	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
 	private final BattleNext_RuleStore ruleStore = provider.getRuleStore();
-	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
-	private final BattleNext_TournamentSnapshotStore snapshotStore = new BattleNext_TournamentSnapshotStore();
-	private BattleNext_TournamentDisplay tournamentDisplay;
+	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, ruleStore);
 
 	private String selectedId = "";
-	private String selectedSnapshotId = "";
 	private boolean draftOpen;
 
 	public BattleNext_TournamentPage(Runnable backAction, Consumer<Runnable> navigation,
@@ -45,6 +40,24 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 		this.backAction = backAction;
 		this.navigation = navigation;
 		this.deletion = deletion;
+		editor.setInstanceDeletion(this::deleteInstance);
+		editor.setInvalidInstanceDeletion(entry -> deletion.accept(entry.id(), () -> {
+			try {
+				BattleNext_SimulatorService.deleteInvalidTournament(entry);
+				editor.refreshInstances();
+				refreshContent();
+			} catch (Exception exception) {
+				setStatus(exception.toString());
+			}
+		}));
+		editor.setRoundRetry(id -> {
+			try {
+				BattleNext_BattleResultRecorder.retryTournamentRound(id);
+				editor.refreshInstances();
+			} catch (Exception exception) {
+				setStatus(exception.toString());
+			}
+		});
 	}
 
 	@Override
@@ -55,14 +68,9 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected void loadPageState() {
 		selectedId = "";
-		selectedSnapshotId = "";
 		draftOpen = false;
-		status = String.join(" | ", provider.reloadTournamentCatalog());
-		try {
-			snapshotStore.reload();
-		} catch (Exception exception) {
-			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
-		}
+		status = String.join(" | ", provider.reloadTournamentDefinitions());
+
 	}
 
 	@Override
@@ -92,7 +100,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean isListEmpty() {
-		return tournamentStore.getAll().isEmpty() && snapshotStore.getAll().isEmpty();
+		return tournamentStore.getAll().isEmpty();
 	}
 
 	@Override
@@ -102,41 +110,16 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
+		addCatalogDiagnostics(listContent, tournamentStore.getErrors());
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			addListItem(listContent, tournament.getName(), "tournament:select:" + tournament.getId());
 		}
-		for (var snapshot : snapshotStore.getAll()) {
-			addListItem(listContent, snapshot.getTournament().getName(), "simulation:select:" + snapshot.getId());
-		}
+
 	}
 
 	@Override
 	protected void buildDetail(CustomPanelAPI contentPanel) {
-
-		if (!selectedSnapshotId.isEmpty()) {
-			var snapshot = snapshotStore.get(selectedSnapshotId);
-			var model = snapshot.getTournament();
-			var details = new BattleNext_TournamentDisplay.Details(snapshot.getFleetNames(), snapshot.getRequest().source().has("rule"),
-					model.getNextPendingMatch(), snapshot.getDiagnostic(), List.of());
-			tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, model, details, List.of(), this::buttonPressed);
-			tournamentDisplay.attach(contentPanel);
-			return;
-		}
-		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
-		if (tournament == null || !tournament.isStarted()) {
-			attachEditor(contentPanel);
-			return;
-		}
-		BattleNext_Match next = tournament.getNextPendingMatch();
-		List<String> warnings = new ArrayList<>();
-		if (selectedId.equals(tournamentStore.getActiveId()) && next != null) {
-			provider.load();
-			warnings.addAll(provider.getWarnings());
-			warnings.addAll(provider.getRuleWarnings());
-		}
-		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, fleetStore, ruleStore, status, warnings);
-		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, List.of(), this::buttonPressed);
-		tournamentDisplay.attach(contentPanel);
+		attachEditor(contentPanel);
 	}
 
 	@Override
@@ -146,22 +129,22 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean hasSelection() {
-		return !selectedId.isEmpty() || !selectedSnapshotId.isEmpty();
+		return !selectedId.isEmpty();
 	}
 
 	@Override
 	protected boolean isDetailEditable() {
-		return selectedSnapshotId.isEmpty() && !editor.isReadOnly();
+		return !editor.isReadOnly();
 	}
 
 	@Override
 	protected boolean isSaveDataLoaded() {
-		return tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded();
+		return tournamentStore.isLoaded() && ruleStore.isLoaded();
 	}
 
 	@Override
 	protected boolean canDelete() {
-		return !selectedSnapshotId.isEmpty() ? snapshotStore.isLoaded() : tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId);
+		return !editor.isReadOnly() && tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId);
 	}
 
 	@Override
@@ -181,35 +164,12 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void clearPageResources() {
-		if (tournamentDisplay != null) {
-			tournamentDisplay.close();
-			tournamentDisplay = null;
-		}
+
 	}
 
 	@Override
 	protected void handlePageAction(Object buttonId) {
-		if (buttonId instanceof String action && action.startsWith("simulation:select:")) {
-			navigation.accept(() -> {
-				selectedSnapshotId = action.substring("simulation:select:".length());
-				selectedId = "";
-				draftOpen = true;
-				refreshContent();
-			});
-		} else if ("delete".equals(buttonId) && !selectedSnapshotId.isEmpty()) {
-			String id = selectedSnapshotId;
-			deletion.accept(snapshotStore.get(id).getTournament().getName(), () -> {
-				try {
-					BattleNext_SimulatorService.deleteTournament(id);
-					snapshotStore.reload();
-					selectedSnapshotId = "";
-					draftOpen = false;
-					refreshContent();
-				} catch (Exception exception) {
-					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
-				}
-			});
-		} else if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
+		if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
 			String id = ((String) buttonId).substring("tournament:select:".length());
 			navigation.accept(() -> {
 				if (!editor.open(tournamentStore.get(id))) {
@@ -217,7 +177,6 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 					return;
 				}
 				selectedId = id;
-				selectedSnapshotId = "";
 				draftOpen = true;
 				refreshContent();
 			});
@@ -228,7 +187,6 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 					return;
 				}
 				selectedId = "";
-				selectedSnapshotId = "";
 				draftOpen = true;
 				refreshContent();
 			});
@@ -249,7 +207,9 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 				}
 			});
 		} else if ("back".equals(buttonId)) {
-			if (draftOpen) navigation.accept(() -> { selectedId = ""; selectedSnapshotId = ""; draftOpen = false; refreshContent(); });
+			if (draftOpen) {
+				navigation.accept(() -> { selectedId = ""; draftOpen = false; refreshContent(); });
+			}
 			else backAction.run();
 		} else if (draftOpen) {
 			editor.buttonPressed(buttonId);
@@ -258,7 +218,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean isPageDirty() {
-		return selectedSnapshotId.isEmpty() && draftOpen && editor.hasUnsavedChanges();
+		return draftOpen && editor.hasUnsavedChanges();
 	}
 
 	@Override
@@ -283,17 +243,40 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (tournamentDisplay != null) {
-			tournamentDisplay.handleGlobalInput(events);
-			return false;
-		}
 		return draftOpen && editor.handleGlobalInput(events);
 	}
 
 	@Override
 	public void advance(float amount) {
-		if (draftOpen && selectedSnapshotId.isEmpty()) {
-			editor.refreshDraftValidation();
+		if (!draftOpen) return;
+		editor.advanceInstances();
+		updatePageControls();
+	}
+
+	private void deleteInstance(String id) {
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		try {
+			instances.reload();
+			BattleNext_StartedTournament instance = instances.get(id);
+			if (instance == null) {
+				instance = BattleNext_SimulatorService.tournament(id).getStartedTournament();
+			}
+			deletion.accept(instance.getName(tournamentStore.get(selectedId)), () -> {
+				try {
+					BattleNext_SimulatorService.deleteTournament(id);
+					instances.reload();
+					if (!instances.hasInstances(selectedId)) {
+						editor.open(tournamentStore.get(selectedId));
+					}
+					editor.refreshInstances();
+					refreshContent();
+				} catch (Exception exception) {
+					setStatus(exception.toString());
+				}
+			});
+		} catch (Exception exception) {
+			setStatus(exception.toString());
 		}
 	}
+
 }

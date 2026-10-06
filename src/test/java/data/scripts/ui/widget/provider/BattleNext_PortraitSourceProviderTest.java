@@ -6,14 +6,14 @@ import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.LabelAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestUiFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_PortraitSourceProviderTest extends BattleNext_TestUiFixture {
 
@@ -49,7 +49,7 @@ class BattleNext_PortraitSourceProviderTest extends BattleNext_TestUiFixture {
 				tooltips.get(factionTooltip).getComponents().stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 		var customTooltip = tooltip(provider.getTooltipWidth(), 0f, false);
 		provider.createTooltip(customTooltip, new OptionChoice("graphics/portraits/custom.png", "custom"));
-		assertEquals(List.of("custom", "graphics/portraits/custom.png", "BattleNext_member_custom_portrait"),
+		assertEquals(List.of("custom", "graphics/portraits/custom.png", BattleNext_TestTextCatalog.text("Member", "BattleNext_member_custom_portrait")),
 				tooltips.get(customTooltip).getComponents().stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 	}
 }

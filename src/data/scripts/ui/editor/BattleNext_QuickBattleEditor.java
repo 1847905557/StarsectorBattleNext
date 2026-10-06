@@ -1,24 +1,30 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.model.quickbattle.BattleNext_QuickBattleStore;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.battle.BattleNext_BattleValidation;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.battle.BattleNext_BattleValidation;
-import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
-import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Row;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Row;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
@@ -43,7 +49,6 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	private BattleNext_QuickBattleDisplay.ViewState viewState;
 	private LabelAPI statusLabel;
 	private TooltipMakerAPI statusContent;
-	private String loadError = "";
 	private boolean loaded;
 
 	public BattleNext_QuickBattleEditor(Runnable backAction, CustomUIPanelPlugin inputOwner) {
@@ -90,7 +95,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		statusContent = panel.createUIElement(statusWidth - STATUS_CONTENT_WIDTH_RESERVE,
 				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		statusLabel = statusContent.addPara(statusContent.shortenString(
-				loadError.isEmpty() ? strings.get("ready") : loadError, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
+				statusText, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
 				0f);
 		statusLabel.getPosition().inTL(0f, STATUS_TOP_INSET);
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
@@ -109,7 +114,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	private void load() {
 		List<String> errors = provider.reloadQuickBattleCatalog();
-		loadError = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
+		statusText = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		entries.clear();
 		entries.addAll(store.getAll());
 		loaded = true;
@@ -144,6 +149,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		BattleNext_QuickBattleModel removed = entries.remove(index);
 		rowKeys.remove(removed);
 		refreshContent();
+		setStatus(strings.get("deleted"));
 	}
 
 	private void deleteRemovedEntries() throws IOException, JSONException {

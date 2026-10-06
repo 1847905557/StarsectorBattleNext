@@ -3,7 +3,8 @@ package data.model.fleet.io;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONObject;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -31,7 +32,8 @@ class BattleNext_FleetStandardLoaderTest extends BattleNext_TestFleetIoFixture {
 	void malformedVariantReportsItsExactPath() throws Exception {
 		standard("broken", "broken", "parent_variant");
 		write("tournament/broken/broken.variant", "not json");
-		var failure = assertThrows(IllegalStateException.class, () -> new BattleNext_FleetStandardLoader().load());
-		assertTrue(failure.getMessage().contains("tournament/broken/broken.variant"));
+		var fleet = new BattleNext_FleetStandardLoader().load().get(0);
+		assertEquals("broken", fleet.getId());
+		assertTrue(fleet.getLoadErrors().get(0).contains("tournament/broken/broken.variant"));
 	}
 }

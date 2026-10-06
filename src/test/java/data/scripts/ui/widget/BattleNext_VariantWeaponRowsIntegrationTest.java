@@ -1,10 +1,5 @@
 package data.scripts.ui.widget;
 
-import data.scripts.ui.widget.BattleNext_ReportDetails;
-import data.scripts.ui.BattleNext_UiInputRouter;
-import data.model.report.BattleNext_ReportTarget;
-import data.model.report.BattleNext_BattleReportModel;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -14,10 +9,14 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_ReportTarget;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -143,7 +142,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	void reportAndVariantSelectTheSameWorkingWeaponImage(String id) throws Exception {
 		var details = details(1000, List.of(id));
 		var variantRow = (CustomPanelAPI) tooltips.get(children.get(groupBody(details)).get(0)).getComponents().get(0);
-		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
 		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
 		var list = body.createUIElement(600f, 100f, false);
 		var method = report.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
@@ -171,7 +170,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 		var body = groupBody(details);
 		assertEquals(count == 0 ? 31f : 16f + count * 40f + (count - 1) * 4f,
 				body.getPosition().getHeight());
-		if (count == 0) assertTrue(labels.contains("BattleNext_variant_none"));
+		if (count == 0) assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_none")));
 		details.close();
 	}
 

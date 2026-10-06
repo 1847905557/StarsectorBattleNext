@@ -1,10 +1,5 @@
 package data.scripts.ui.widget;
 
-import data.scripts.ui.widget.BattleNext_ReportDetails;
-import data.scripts.ui.BattleNext_UiInputRouter;
-import data.model.report.BattleNext_ReportTarget;
-import data.model.report.BattleNext_BattleReportModel;
-
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -16,12 +11,16 @@ import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_ReportTarget;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.report.BattleNext_DamageSourceReport;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -182,7 +181,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	void reportEquipmentSourcesUseTheSameDescriptionsAndRawIdentifiers(String kind) throws Exception {
 
 		String id = kind.equals("ship") ? "child" : kind.equals("weapon") ? "laser" : "wing";
-		var page = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel(), "", null, "", -1), () -> {});
+		var page = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
 		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
 		var list = body.createUIElement(600f, 100f, false);
 		var method = page.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
@@ -221,7 +220,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		if (kind.equals("smod")) {
 			assertEquals(List.of("S-mod effect 60%.", "Second effect paragraph"), content.subList(3, 5));
 		}
-		if (kind.equals("dmod")) assertTrue(content.get(3).contains("d_mod_"));
+		if (kind.equals("dmod")) assertEquals(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_suitable"), content.get(3));
 		assertTrue(hullSizes.stream().allMatch(size -> size == ShipAPI.HullSize.FRIGATE));
 	}
 
@@ -235,19 +234,19 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		assertEquals(360f, source.getTooltipWidth());
 		List<String> values = textValues(hover);
 		assertEquals(List.of("Choice", id), values.subList(0, 2));
-		assertTrue(values.contains("BattleNext_variant_weapons: 1"));
+		assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 1"));
 		assertTrue(values.contains("Ion Pulser ×1"));
-		assertTrue(values.contains("BattleNext_variant_fighter_wings: 1"));
+		assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ": 1"));
 		assertTrue(values.contains("Broadsword Wing ×1"));
-		assertTrue(values.contains("BattleNext_variant_modules: 1"));
+		assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 1"));
 		assertTrue(values.contains("Child ×1"));
 		assertEquals(List.of(), descriptionReads);
 		var components = tooltips.get(hover).getComponents();
 		for (int index = 0; index < values.size(); index++) {
 			var position = components.get(index).getPosition();
 			String text = values.get(index);
-			boolean heading = Set.of("BattleNext_variant_weapons:", "BattleNext_variant_fighter_wings:",
-					"BattleNext_variant_modules:", "BattleNext_variant_hullmods:").stream().anyMatch(text::startsWith);
+			boolean heading = Set.of(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ":", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ":",
+					BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ":", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods") + ":").stream().anyMatch(text::startsWith);
 			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default",
 					labelFonts.get(position));
 			assertEquals(index == 0 || heading ? BattleNext_UiTheme.ACCENT : index == 1

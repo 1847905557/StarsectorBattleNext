@@ -7,22 +7,19 @@ import com.fs.starfarer.api.characters.LevelBasedEffect;
 import com.fs.starfarer.api.characters.LevelBasedEffect.ScopeDescription;
 import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.SkillEffectType;
-import com.fs.starfarer.api.impl.campaign.skills.BaseSkillEffectDescription;
-import com.fs.starfarer.api.impl.campaign.skills.CrewTraining;
-import com.fs.starfarer.api.impl.campaign.skills.EnergyWeaponMastery;
-import com.fs.starfarer.api.impl.campaign.skills.Helmsmanship;
-import com.fs.starfarer.api.impl.campaign.skills.FieldModulation;
+import com.fs.starfarer.api.impl.campaign.skills.*;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.tools.BattleNext_Logger;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.test.fixture.BattleNext_TestSkillFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
@@ -30,10 +27,10 @@ import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.awt.Color;
 import java.lang.reflect.Field;
@@ -61,7 +58,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			assertEquals(Misc.getHighlightColor(), labelColors.get(label.getPosition()));
 			assertNotEquals(BattleNext_UiTheme.TEXT, labelColors.get(label.getPosition()));
 		}
-		for (String heading : List.of("Level 1", "Elite")) {
+		for (String heading : List.of(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "1"), "Elite")) {
 			LabelAPI label = labels.stream().filter(value -> value.getText().equals(heading)).findFirst().orElseThrow();
 			assertEquals(heading.equals("Elite") ? Misc.getStoryOptionColor() : BattleNext_UiTheme.ACCENT,
 					labelColors.get(label.getPosition()));
@@ -72,11 +69,11 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 	}
 
 	@ParameterizedTest
-	@CsvSource(value = {"<null>,1,Level 1", "'',2,Level 2", "Normal,1,Normal", "Mastery,2,Mastery",
-			"Elite,1,Elite", "Elite,2,Elite"}, nullValues = "<null>")
-	void onlyEliteGroupNameUsesGreenRegardlessOfLevel(String group, float level, String heading) {
+	@CsvSource(value = {"<null>,1", "'',2", "Normal,1", "Mastery,2", "Elite,1", "Elite,2"}, nullValues = "<null>")
+	void onlyEliteGroupNameUsesGreenRegardlessOfLevel(String group, float level) {
 		effects.add(effect(SkillEffectType.SHIP, level, group, false, new Helmsmanship.Level1()));
 		List<LabelAPI> labels = textLabels(renderSkill(provider("officer")));
+		String heading = group == null || group.isEmpty() ? String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), Integer.toString((int) level)) : group;
 		assertEquals(heading, labels.get(5).getText());
 		Color expected = "Elite".equals(group) ? Misc.getStoryOptionColor() : BattleNext_UiTheme.ACCENT;
 		assertEquals(expected, labelColors.get(labels.get(5).getPosition()));
@@ -155,7 +152,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		var source = provider(kind);
 		TooltipMakerAPI content = renderSkill(source);
 		List<String> values = textValues(content);
-		assertEquals(List.of("Preview Skill", SKILL_ID, "First paragraph 50%.", author, "Ship - Fleet", "Level 1",
+		assertEquals(List.of("Preview Skill", SKILL_ID, "First paragraph 50%.", author, "Ship - Fleet", String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "1"),
 				scripts.get(0).getEffectDescription(1f), scripts.get(1).getEffectDescription(1f), "Elite",
 				scripts.get(2).getEffectDescription(2f), scripts.get(3).getEffectDescription(2f)), values);
 		assertEquals(2, source.getMaxStack(SKILL_ID));
@@ -186,7 +183,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		effects.add(effect(SkillEffectType.SHIP, 3f, "", true, textEffect("Third", levels)));
 		TooltipMakerAPI content = renderSkill(provider("commander"));
 		assertEquals(List.of(0f, 1f, 1f, 1f, 1f, 3f), levels);
-		assertEquals(List.of("Zero", "Fixed zero 20%", "Scaled zero 30%", "Level 1", "First", "Second", "Other", "Other", "Level 3", "Third"),
+		assertEquals(List.of("Zero", "Fixed zero 20%", "Scaled zero 30%", String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "1"), "First", "Second", "Other", "Other", String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "3"), "Third"),
 				textValues(content).subList(5, textValues(content).size()));
 	}
 

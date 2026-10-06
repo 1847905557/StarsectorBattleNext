@@ -12,6 +12,7 @@ import data.scripts.BattleNextModPlugin;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.test.fixture.BattleNext_TestCampaignFleetFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import lunalib.lunaRefit.BaseRefitButton;
 import lunalib.lunaRefit.LunaRefitManager;
 import org.junit.jupiter.api.AfterEach;
@@ -57,7 +58,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 		assertEquals(List.of(button), scripts);
 		assertTrue(button.runWhilePaused());
 		assertFalse(button.isDone());
-		assertEquals("BattleNext_fleet_player_save_action", button.getButtonName(selected, activeVariant.getApi()));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_action"), button.getButtonName(selected, activeVariant.getApi()));
 		assertEquals("graphics/icons/missions/analyze_entity.png", button.getIconName(selected, activeVariant.getApi()));
 		BaseRefitButton pinned = LunaRefitManager.getFirstButtonOfClass(BattleNext_LunaPinnedVariantRefitButton.class);
 		assertTrue(button.getOrder(selected, activeVariant.getApi()) > pinned.getOrder(selected, activeVariant.getApi()));
@@ -73,9 +74,9 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 		assertFalse(button.isClickable(selected, null, null));
 		assertFalse(button.isClickable(member("Foreign", otherVariant.getApi(), officer, false), activeVariant.getApi(), null));
 		button.addTooltip(tooltip(300f, 0f, false), null, activeVariant.getApi(), null);
-		assertTrue(labels.contains("BattleNext_fleet_player_save_return_to_parent"));
+		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_return_to_parent")));
 		button.addTooltip(tooltip(300f, 0f, false), selected, activeVariant.getApi(), null);
-		assertTrue(labels.contains("BattleNext_fleet_player_save_description"));
+		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_description")));
 	}
 
 	@Test

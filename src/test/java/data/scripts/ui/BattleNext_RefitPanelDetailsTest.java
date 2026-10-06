@@ -7,17 +7,14 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.codehaus.janino.SimpleCompiler;
 import org.json.JSONArray;
@@ -71,7 +68,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			assertEquals(right.getPosition().getX(), button.getX());
 			assertEquals(key.equals("sModPicker") ? 0f : 36f,
 					right.getPosition().getY() + 560f - button.getY() - 30f);
-			assertEquals(key.equals("sModPicker") ? "BattleNext_refit_s_mods" : "BattleNext_refit_d_mods",
+			assertEquals(key.equals("sModPicker") ? BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_s_mods") : BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mods"),
 					getField(picker, "title"));
 		}
 		assertEquals(width - 8f - 160f, buttonPositions.get("close").getX());
@@ -91,7 +88,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(6f, pinName.getY() - pin.getY() - pin.getHeight());
 		TooltipMakerAPI nameHost = (TooltipMakerAPI) getField(plugin, "pinNameHost");
 		LabelAPI caption = (LabelAPI) tooltips.get(nameHost).getComponents().get(0);
-		assertEquals("BattleNext_variant_pin_name", caption.getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name"), caption.getText());
 		assertEquals("small-insignia", labelFonts.get(caption.getPosition()));
 		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(caption.getPosition()));
 		assertEquals(pinName.getX(), caption.getPosition().getX());
@@ -99,7 +96,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(pinName.getY() + pinName.getHeight(), caption.getPosition().getY());
 		assertEquals(caption.getPosition().getHeight() + pinName.getHeight(), nameHost.getHeightSoFar());
 		assertTrue(children.get(right).contains(nameHost));
-		assertEquals("BattleNext_variant_pin_add_action", buttonLabels.get("pin_add"));
+		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_add_action"), buttonLabels.get("pin_add"));
 		assertFalse(buttons.get("pin_add").get());
 		plugin.close();
 	}
@@ -131,7 +128,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(original, BattleNext_VariantBuilder.fromVariant(current.api).toJson().toString());
 		assertSame(draft, getField(plugin, "draft"));
 		assertFalse(buttons.get("pin_add").get());
-		assertTrue(status(plugin).startsWith("BattleNext_variant_pin_saved"));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_saved"), pin.getDisplayName()), status(plugin));
 		plugin.buttonPressed("pin_add");
 		assertEquals(1, store.getAll().size());
 		BattleNext_VariantSourceProvider source = new BattleNext_VariantSourceProvider();
@@ -177,7 +174,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
 		name.setText(blank);
 		plugin.buttonPressed("pin_add");
-		assertEquals("BattleNext_variant_pin_name_required", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required"), status(plugin));
 		assertEquals(blank, name.getText());
 		assertTrue(buttons.get("pin_add").get());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
@@ -189,7 +186,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals("Retry this draft", name.getText());
 		assertSame(draft, getField(plugin, "draft"));
 		assertTrue(buttons.get("pin_add").get());
-		assertTrue(status(plugin).startsWith("BattleNext_common_save_failed"));
+		assertTrue(status(plugin).startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed")));
 		store.getWriter().setFail(false);
 		plugin.buttonPressed("pin_add");
 		assertEquals(1, store.getAll().size());
@@ -240,7 +237,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertNotSame(previousHost, reopenedHost);
 		assertTrue(children.get(right).contains(reopenedHost));
 		LabelAPI caption = (LabelAPI) tooltips.get(reopenedHost).getComponents().get(0);
-		assertEquals("BattleNext_variant_pin_name", caption.getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name"), caption.getText());
 		assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertTrue(buttons.get("pin_add").get());
 		plugin.close();
@@ -260,7 +257,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("identity", "plugins", "modules", "groups", "wings"), lists(plugin).keySet());
 		assertEquals(5, children.get(details(plugin).getPanel()).size());
 		for (String text : List.of("Hullmod ordinary", "Hullmod sm", "Hullmod built", "Hullmod d",
-				"BattleNext_variant_s_mod", "BattleNext_variant_d_mod", "Child", "Wing wing")) {
+				BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_s_mod"), BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_d_mod"), "Child", "Wing wing")) {
 			assertTrue(labels.contains(text), text);
 		}
 		assertEquals("LINKED", snapshot.getJSONArray("weaponGroups").getJSONObject(0).getString("mode"));
@@ -452,7 +449,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(children.get(left).isEmpty());
 		assertNull(getField(details(plugin), "variantJson"));
 		assertTrue(((List<?>) getField(details(plugin), "ownedPanels")).isEmpty());
-		assertTrue(status(plugin).startsWith("BattleNext_common_save_failed:"));
+		assertTrue(status(plugin).startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed") + ":"));
 		plugin.open(member(current), new Refit(member(current), current.api));
 		assertEquals(5, children.get(left).size());
 		plugin.close();
@@ -467,13 +464,13 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(children.get(left).isEmpty());
 		assertNull(getField(plugin, "draft"));
 		assertNull(getField(details(plugin), "variantJson"));
-		assertEquals("BattleNext_common_save_failed: InvocationTargetException", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed") + ": InvocationTargetException", status(plugin));
 		plugin.open(member(current), new Refit(member(current), current.api));
 		setField(plugin, "refitScreen", new FailingRefit());
 		plugin.discardCurrentPage();
 		assertTrue(children.get(left).isEmpty());
 		assertNull(details(plugin).getPanel());
-		assertEquals("BattleNext_common_save_failed: InvocationTargetException", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed") + ": InvocationTargetException", status(plugin));
 		plugin.close();
 	}
 
@@ -496,7 +493,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(Set.of("sm", "built", "mod_0_with_a_long_name"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertEquals(Set.of(0), getField(details(plugin), "expanded"));
 		assertEquals(80f, lists(plugin).get("groups").getExternalScroller().getYOffset());
-		assertEquals("BattleNext_common_saved", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertJsonEquals(BattleNext_VariantBuilder.fromVariant((ShipVariantAPI) getField(plugin, "draft")).toJson(),
 				getField(details(plugin), "variantJson"));
@@ -520,7 +517,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failBuild = true, new AtomicBoolean()));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals("BattleNext_common_saved", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertNull(details(plugin).getPanel());
@@ -540,7 +537,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failRead.set(true), failRead));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals("BattleNext_common_saved", status(plugin));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), status(plugin));
 		assertEquals("", plugin.getSaveError());
 		assertEquals(Set.of("ordinary", "sm", "built"), getField(plugin, "savedSMods"));
 		assertNull(details(plugin).getPanel());

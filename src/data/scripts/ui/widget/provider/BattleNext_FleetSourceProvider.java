@@ -1,27 +1,20 @@
 package data.scripts.ui.widget.provider;
 
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
-import data.scripts.ui.widget.BattleNext_EquipmentTooltip.FleetMemberLine;
-import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip.FleetMemberLine;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.Set;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.TreeMap;
+import java.util.*;
 
 public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvider {
 

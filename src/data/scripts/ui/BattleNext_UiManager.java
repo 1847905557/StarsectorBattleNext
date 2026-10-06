@@ -8,6 +8,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_StatusBar;
@@ -129,8 +130,12 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		activeView().buttonPressed(buttonId);
-		if (cnText != BattleNext_Settings.isCnTextEnabled()) refreshShellText();
-		if (currentPage == BattleManagementPage.TOURNAMENTS || "tournament:start".equals(buttonId)) refreshState();
+		if (cnText != BattleNext_Settings.isCnTextEnabled()) {
+			refreshShellText();
+		}
+		if (currentPage == BattleManagementPage.TOURNAMENTS || "tournament:create".equals(buttonId) || "tournament:active".equals(buttonId)) {
+			refreshState();
+		}
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -242,7 +247,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	private BattleNext_PageView viewFor(BattleManagementPage page) {
 		if (page == BattleManagementPage.BATTLE_SELECTOR) {
-			if (battleSelectorPage == null) battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this);
+			if (battleSelectorPage == null) {
+				battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this);
+			}
 			return battleSelectorPage;
 		}
 		if (page == BattleManagementPage.FLEETS) {
@@ -314,6 +321,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			attachedView = null;
 		}
 		settingsPage = null;
+		battleSelectorPage = null;
 		closeAction.run();
 	}
 
@@ -324,14 +332,18 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private void requestSource(String id) {
 
 		battleSelectorPage.closeOverlays();
-		if (id.equals(activeTournamentId)) return;
+
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
-				if (applySource(id)) showPage();
+				if (applySource(id)) {
+					showPage();
+				}
 			});
 			return;
 		}
-		if (applySource(id)) showPage();
+		if (applySource(id)) {
+			showPage();
+		}
 	}
 
 	private void confirmNavigation(Runnable action) {
@@ -361,7 +373,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			if (!id.isEmpty() && tournamentStore.get(id) == null) {
 				throw new IllegalArgumentException("Selected tournament is missing: " + id);
 			}
-			tournamentStore.activate(id);
+			if (id.isEmpty()) {
+				new BattleNext_StartedTournamentStore().activate("");
+			}
+			battleSelectorPage.selectSource(id);
 			refreshState();
 			return true;
 		} catch (Exception exception) {
@@ -375,7 +390,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		String error = "";
 		try {
 			tournamentStore.reload();
-			activeTournamentId = tournamentStore.getActiveId();
+			BattleNext_StartedTournamentStore started = new BattleNext_StartedTournamentStore();
+			started.reload();
+			activeTournamentId = started.getActiveId();
 		} catch (Exception exception) {
 			error = strings.get("load_failed") + ": " + exception.getMessage();
 		}
@@ -386,7 +403,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	public boolean saveCurrentPage() {
 		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		boolean saved = activeView().save();
-		if (saved && cnText != BattleNext_Settings.isCnTextEnabled()) refreshShellText();
+		if (saved && cnText != BattleNext_Settings.isCnTextEnabled()) {
+			refreshShellText();
+		}
 		return saved;
 	}
 

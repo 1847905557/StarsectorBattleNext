@@ -12,6 +12,7 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.BattleNextModPlugin;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import lunalib.lunaRefit.LunaRefitManager;
 import static org.junit.jupiter.api.Assertions.*;
@@ -81,8 +82,8 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 		refit.setMember(null);
 		context = BattleNext_CampaignRefitContext.from(core, host);
 		assertNull(context.member());
-		assertEquals("BattleNext_variant_pin_return_to_parent", BattleNext_LunaPinnedVariantRefitButton.contextError(null, context.variant()));
-		assertEquals("BattleNext_refit_no_ship_selected", BattleNext_LunaPinnedVariantRefitButton.contextError(null, null));
+		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_return_to_parent"), BattleNext_LunaPinnedVariantRefitButton.contextError(null, context.variant()));
+		assertEquals(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_no_ship_selected"), BattleNext_LunaPinnedVariantRefitButton.contextError(null, null));
 		assertThrows(IllegalStateException.class,
 				() -> BattleNext_CampaignRefitContext.from(new Core(new Tab(List.of())), host));
 	}

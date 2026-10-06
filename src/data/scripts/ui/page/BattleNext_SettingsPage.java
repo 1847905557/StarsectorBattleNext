@@ -1,20 +1,21 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.ui.CutStyle;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_SettingsEditor;
-import data.simulator.BattleNext_SimulatorWidget;
 import data.simulator.BattleNext_SimulatorBrowser;
-import data.scripts.battle.BattleNext_BattleSourceProvider;
-import com.fs.starfarer.api.input.InputEventAPI;
+import data.simulator.BattleNext_SimulatorWidget;
 
-import java.util.function.Consumer;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class BattleNext_SettingsPage extends BattleNext_PageView {
 

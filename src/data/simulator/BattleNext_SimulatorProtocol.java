@@ -3,12 +3,12 @@ package data.simulator;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.IOException;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class BattleNext_SimulatorProtocol implements AutoCloseable {
 

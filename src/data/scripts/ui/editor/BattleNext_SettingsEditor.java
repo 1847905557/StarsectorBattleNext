@@ -1,11 +1,13 @@
 package data.scripts.ui.editor;
 
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Settings;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.BattleNext_UiTheme;
 
 public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 

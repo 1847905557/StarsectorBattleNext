@@ -377,6 +377,11 @@ public class BattleNext_PageLayout {
 
 	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
 			CutStyle style, Color textColor) {
+		return fixedButton(panel, rect, title, id, style, textColor, null);
+	}
+
+	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
+			CutStyle style, Color textColor, TooltipMakerAPI.TooltipCreator tooltip) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH,
 				rect.getWidth() - BUTTON_EXTRA_DRAW_WIDTH), rect.getHeight(), false);
 		maker.setButtonFontOrbitron20();
@@ -386,6 +391,9 @@ public class BattleNext_PageLayout {
 				BattleNext_UiTheme.PANEL, Alignment.MID, style, rect.getWidth(), rect.getHeight(), 0f);
 		button.getPosition().inTL(0f, 0f);
 		applyButtonSounds(button);
+		if (tooltip != null) {
+			maker.addTooltipTo(tooltip, button, TooltipLocation.RIGHT, true);
+		}
 		maker.setHeightSoFar(rect.getHeight());
 		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
 		return button;

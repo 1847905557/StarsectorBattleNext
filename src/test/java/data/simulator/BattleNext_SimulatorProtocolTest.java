@@ -1,6 +1,8 @@
 package data.simulator;
 
 import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -10,8 +12,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SimulatorProtocolTest {
 

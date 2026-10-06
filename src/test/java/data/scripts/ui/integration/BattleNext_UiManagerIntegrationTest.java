@@ -1,43 +1,40 @@
 package data.scripts.ui.integration;
 
-import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
-import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.scripts.tools.BattleNext_Settings;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiManager;
-import data.scripts.tools.BattleNext_Settings;
-import data.scripts.ui.widget.BattleNext_StatusBar;
-import data.scripts.ui.page.*;
-import data.simulator.BattleNext_SimulatorWidget;
-import data.simulator.BattleNext_SimulatorService;
+import data.scripts.ui.page.BattleNext_PageView;
+import data.scripts.ui.page.BattleNext_PinnedVariantPage;
+import data.scripts.ui.page.BattleNext_SettingsPage;
+import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
-import data.test.fixture.BattleNext_TestVariantFixture;
+import data.scripts.ui.widget.BattleNext_StatusBar;
+import data.simulator.BattleNext_SimulatorService;
+import data.simulator.BattleNext_SimulatorWidget;
 import data.test.fixture.BattleNext_TestTextCatalog;
+import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationTargetException;
-import java.io.IOException;
 
 class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture {
 	private final AtomicReference<JSONObject> savedSettings = new AtomicReference<>();
@@ -163,7 +160,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
 		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
 		assertFalse(page.hasUnsavedChanges());
-		String category = !initial ? "Management_CN" : "Management";
+		String category = "Management";
 		ButtonAPI[] buttons = (ButtonAPI[]) getField(manager, "tabButtons");
 		for (int index = 0; index < tabs.length; index++) {
 			String key = "BattleNext_management_" + getField(tabs[index], "titleKey");
@@ -176,7 +173,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(headingX, headingLabel.getPosition().getX());
 		assertEquals(headingWidth, headingLabel.getPosition().getWidth());
 		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_management_heading"), headingLabel.getText());
-		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Common_CN" : "Common", "BattleNext_common_close"),
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_close"),
 				((ButtonAPI) getField(manager, "closeButton")).getText());
 		if (!route.equals("confirm")) {
 			assertSame(page, getField(manager, "attachedView"));
@@ -189,9 +186,9 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
 		assertEquals(initial, savedSettings.get().getBoolean("cnText"));
 		assertSame(headingLabel, getField(manager, "headingLabel"));
-		assertEquals(BattleNext_TestTextCatalog.text(initial ? "Management_CN" : "Management", "BattleNext_management_heading"),
+		assertEquals(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_heading"),
 				headingLabel.getText());
-		assertEquals(BattleNext_TestTextCatalog.text(initial ? "Common_CN" : "Common", "BattleNext_common_close"),
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_close"),
 				((ButtonAPI) getField(manager, "closeButton")).getText());
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(manager, "inputRouter");
 		assertTrue(router.isEmpty());
@@ -219,7 +216,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(initial, savedSettings.get().getBoolean("cnText"));
 		assertTrue(page.hasUnsavedChanges());
 		assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).isEmpty());
-		assertEquals(BattleNext_TestTextCatalog.text(initial ? "Common_CN" : "Common", "BattleNext_common_close"),
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_close"),
 				((ButtonAPI) getField(manager, "closeButton")).getText());
 		manager.buttonPressed("confirm_cancel");
 		assertTrue(page.hasUnsavedChanges());
@@ -244,7 +241,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		Object settings = tab("SETTINGS");
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
-		String category = initial ? "Settings_CN" : "Settings";
+		String category = "Settings";
 		ButtonAPI enable = simulatorButtons(page).get(0);
 		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_simulator_enable"), enable.getText());
 		assertSimulatorHeading(page, initial);
@@ -308,7 +305,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		assertNotSame(page, reopened);
 		assertEquals(1, simulatorButtons(reopened).size());
-		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Settings_CN" : "Settings", "BattleNext_settings_simulator_enable"),
+		assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_enable"),
 				simulatorButtons(reopened).get(0).getText());
 		assertSame(service, instance.get(null));
 		manager.buttonPressed("close");
@@ -328,7 +325,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	private void assertSimulatorHeading(BattleNext_SettingsPage page, boolean cnText) throws Exception {
 		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
 		CustomPanelAPI content = (CustomPanelAPI) children.get(widget.getPanel()).get(0);
-		String title = BattleNext_TestTextCatalog.text(cnText ? "Settings_CN" : "Settings", "BattleNext_settings_simulator_heading");
+		String title = BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_heading");
 		LabelAPI heading = children.get(content).stream().filter(TooltipMakerAPI.class::isInstance)
 				.flatMap(child -> tooltips.get(child).getComponents().stream()).filter(LabelAPI.class::isInstance)
 				.map(LabelAPI.class::cast).filter(label -> title.equals(label.getText())).findFirst().orElseThrow();

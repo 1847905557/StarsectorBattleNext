@@ -4,6 +4,9 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.state.AppDriver;
+import org.boxutil.config.BoxConfigs;
+import org.dark.shaders.util.GraphicsLibSettings;
+import org.dark.shaders.util.ShaderLib;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector2f;
@@ -11,6 +14,8 @@ import org.lwjgl.util.vector.Vector2f;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
+import java.util.List;
 
 public class BattleNext_SimulatorNative {
 
@@ -62,6 +67,28 @@ public class BattleNext_SimulatorNative {
 
 	public MissionDefinitionAPI createMission() throws Throwable {
 		return (MissionDefinitionAPI) missionConstructor.invoke();
+	}
+
+	public void configureGraphics() throws ReflectiveOperationException {
+		for (String name : List.of("shadersAllowed", "buffersAllowed")) {
+			Field field = ShaderLib.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.setBoolean(null, false);
+		}
+		Field luna = GraphicsLibSettings.class.getDeclaredField("useLunaLib");
+		luna.setAccessible(true);
+		luna.setBoolean(null, false);
+		for (String name : List.of("enableLights", "enableBloom", "enableNormal", "autoGenNormals", "loadMaterial",
+				"loadSurface", "enableDistortion", "enablePostProcess", "preloadAllMaps")) {
+			Field field = GraphicsLibSettings.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.setBoolean(null, false);
+		}
+		for (String name : List.of("BUtil_EnableShader", "BUtil_EnableCL", "BUtil_EnableDistortion", "BUtil_EnableDebug")) {
+			Field field = BoxConfigs.class.getDeclaredField(name);
+			field.setAccessible(true);
+			field.setBoolean(null, false);
+		}
 	}
 
 	public void submitMission(MissionDefinitionAPI mission) throws Throwable {

@@ -1,8 +1,9 @@
 package data.scripts.ui.editor;
 
-import com.fs.starfarer.api.ui.*;
-import data.model.fleet.BattleNext_FleetModel;
-import data.model.fleet.BattleNext_FleetStore;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.model.report.BattleNext_BattleReportStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -10,42 +11,34 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.CheckBoxGroup;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.battle.BattleNext_BattleValidation;
-import data.scripts.tournament.BattleNext_TournamentEngine;
-import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_EntryId;
+import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_ModFileManager;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
+import data.scripts.tournament.BattleNext_StartedTournamentStore.CatalogEntry;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
-import data.scripts.ui.widget.BattleNext_TableWidget;
-import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
+import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.provider.BattleNext_RuleSourceProvider;
-import org.json.JSONArray;
+import data.simulator.BattleNext_SimulationTask;
+import data.simulator.BattleNext_SimulatorService;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
-	private static final float[] COLUMN_SHARES = {0.3f, 0.34f, 0.16f, 0.2f};
-	private static final int FLEET_COLUMN = 0;
-	private static final int AUTHOR_COLUMN = 1;
-	private static final int VALID_COLUMN = 2;
-	private static final int ACTIONS_COLUMN = 3;
-
-	private static final float VALIDATION_REASON_GAP = 5f;
-
 	private final BattleNext_TournamentStore store;
-	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_RuleStore ruleStore;
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
-	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
-	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private TooltipMakerAPI metadataContent;
-	private TooltipMakerAPI rowsContent;
 	private BattleNext_TournamentModel baseline;
+	private boolean locked;
 	private BattleNext_TournamentModel draft;
 	private TextFieldAPI idField;
 	private TextFieldAPI nameField;
@@ -53,35 +46,35 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	private TextFieldAPI maxFleetsField;
 	private TextFieldAPI ruleField;
 	private TextFieldAPI mapField;
-	private BattleNext_OptionPicker fleetPicker;
-	private BattleNext_TableWidget tableWidget;
-	private final BattleNext_FleetSourceProvider fleetSource;
 	private final BattleNext_RuleSourceProvider ruleSource;
 	private CheckBoxGroup bracketGroup;
-	private final BattleNext_BattleValidation validation;
-	private final Map<String, List<String>> validationReasons = new LinkedHashMap<>();
-	private String validationSnapshot = "";
+	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
+	private final BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
+	private final Set<String> expandedInstances = new HashSet<>();
+	private Consumer<String> deleteInstance;
+	private Consumer<CatalogEntry> deleteInvalidInstance;
+	private Consumer<String> retryRound;
+	private final Map<String, Long> instanceVersions = new LinkedHashMap<>();
 
-	public BattleNext_TournamentEditor(BattleNext_TournamentStore store, BattleNext_FleetStore fleetStore,
-			BattleNext_RuleStore ruleStore) {
+	public BattleNext_TournamentEditor(BattleNext_TournamentStore store, BattleNext_RuleStore ruleStore) {
 		this.store = store;
-		this.fleetStore = fleetStore;
 		this.ruleStore = ruleStore;
-		validation = new BattleNext_BattleValidation(fleetStore);
-		fleetSource = new BattleNext_FleetSourceProvider(fleetStore);
 		ruleSource = new BattleNext_RuleSourceProvider(ruleStore);
 	}
 
 	public boolean open(BattleNext_TournamentModel source) {
 		try {
 			beginSession();
-			validation.refresh();
+			expandedInstances.clear();
 			BattleNext_TournamentModel next = new BattleNext_TournamentModel();
-			if (source != null) next.fromJson(source.toJson());
+			if (source != null) {
+				next.fromJson(source.toJson());
+			}
 			baseline = source;
+			statusText = "";
+			locked = store.isLocked(source == null ? "" : source.getId());
 			draft = next;
 			idField = null;
-			statusText = "";
 			return true;
 		} catch (Exception exception) {
 			statusText = strings.get("load_failed") + ": " + exception.getMessage();
@@ -91,26 +84,154 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void buildEditorContent() {
-		validationSnapshot = "";
-		createColumns("metadata", "fleets", (metadataContent, columnWidth) -> {
+		createColumns("metadata", "instances", (metadataContent, columnWidth) -> {
 			this.metadataContent = metadataContent;
 			addDetails(metadataContent, columnWidth);
-		}, (rowsContent, columnWidth) -> {
-			this.rowsContent = rowsContent;
-			addFleets(rowsContent, columnWidth);
-		});
+		}, this::addInstances);
+	}
+
+	public void setInstanceDeletion(Consumer<String> deleteInstance) {
+		this.deleteInstance = deleteInstance;
+	}
+
+	public void setInvalidInstanceDeletion(Consumer<CatalogEntry> deletion) {
+		deleteInvalidInstance = deletion;
+	}
+
+	public void setRoundRetry(Consumer<String> retryRound) {
+		this.retryRound = retryRound;
+	}
+
+	public void refreshInstances() {
+		try {
+			boolean wasLocked = locked;
+			locked = store.isLocked(baseline == null ? "" : baseline.getId());
+			if (wasLocked != locked) {
+				deserialize();
+			} else {
+				refreshStructure();
+			}
+		} catch (Exception exception) {
+			statusText = exception.toString();
+		}
+	}
+
+	public void advanceInstances() {
+		for (var entry : instanceVersions.entrySet()) {
+			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(entry.getKey());
+			long version = task == null ? -1L : task.getVersion();
+			if (version == entry.getValue()) continue;
+			refreshInstances();
+			return;
+		}
+	}
+
+	private void addInstances(TooltipMakerAPI rowsContent, float columnWidth) {
+		instanceVersions.clear();
+		rowsContent.addTitle(battleStrings.get("tournament_instance"));
+		try {
+			startedStore.reload();
+		} catch (Exception exception) {
+			rowsContent.addPara(exception.toString(), 5f);
+			return;
+		}
+		try {
+			reports.reload();
+		} catch (Exception exception) {
+			rowsContent.addPara(exception.toString(), 5f);
+		}
+		if (startedStore.getCatalog().isEmpty()) {
+			for (String error : startedStore.getLoadErrors()) {
+				rowsContent.addPara(error, 5f);
+			}
+		}
+		List<BattleNext_StartedTournament> instances = new ArrayList<>(startedStore.getAll().stream()
+				.filter(instance -> baseline != null && instance.getSourceTournamentId().equals(baseline.getId()))
+				.toList());
+		if (baseline != null) {
+			for (BattleNext_SimulationTask task : BattleNext_SimulatorService.pendingDeletions(baseline.getId())) {
+				if (instances.stream().anyMatch(instance -> instance.getId().equals(task.getRequest().id()))) continue;
+				instances.add(task.getStartedTournament());
+			}
+		}
+		instances.sort(Comparator.comparingLong(BattleNext_StartedTournament::getStartedAt).reversed());
+		for (CatalogEntry entry : startedStore.getCatalog()) {
+			if (baseline == null || !entry.sourceTournamentId().equals(baseline.getId()) || entry.error().isEmpty()) continue;
+			String key = "error:" + entry.index();
+			String identity = entry.id().isEmpty() ? BattleNext_StartedTournamentStore.PATH + " / " + entry.index() : entry.id();
+			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(null, false, "", identity, "",
+					strings.get("load_failed"), "", null);
+			BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expandedInstances.contains(key), 0f, header,
+					() -> buttonPressed("instance:toggle:" + key), this::buttonPressed, body -> {
+				float areaWidth = columnWidth - 16f;
+				TooltipMakerAPI details = body.createUIElement(areaWidth, 0f, false);
+				details.setTextWidthOverride(areaWidth);
+				details.addPara(BattleNext_StartedTournamentStore.PATH + " / " + entry.index(), 0f);
+				details.addPara(entry.error(), 5f);
+				details.addPara(entry.raw(), 5f);
+				createButton(details, areaWidth, tournamentStrings.get("delete_instance"), "instance:delete_error:" + entry.index());
+				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + 16f);
+				body.addUIElement(details).inTL(8f, 8f);
+			});
+		}
+		for (BattleNext_StartedTournament instance : instances) {
+			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(instance.getId());
+			instanceVersions.put(instance.getId(), task == null ? -1L : task.getVersion());
+			String phase = task == null ? tournamentStrings.get(instance.isCompleted() ? "status_completed" : "status_in_progress")
+					: battleStrings.get("simulator_" + task.getState().name().toLowerCase(Locale.ROOT));
+			if (task != null && task.isDeletionRequested()) {
+				phase = tournamentStrings.get("instance_deleting");
+			}
+			String kind = tournamentStrings.get(instance.getExecutionKind() == BattleNext_StartedTournament.ExecutionKind.MANUAL ? "instance_manual" : "instance_simulation");
+			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(null, false, "",
+					instance.getName(draft), kind, phase,
+					tournamentStrings.format("chart_finished_matches", BattleNext_TournamentDisplay.completedMatches(instance), instance.getPlayableMatchTotal(draft)), null);
+			BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expandedInstances.contains(instance.getId()), 0f, header,
+					() -> buttonPressed("instance:toggle:" + instance.getId()), this::buttonPressed, body -> {
+				float areaWidth = columnWidth - 16f;
+				TooltipMakerAPI details = body.createUIElement(areaWidth, 0f, false);
+				details.addPara(instance.getId(), 0f);
+				details.addPara(String.join(", ", instance.getFleetIds().stream().filter(id -> !id.isEmpty()).toList()), 5f);
+				var next = instance.getNextPendingMatch();
+				if (next != null) {
+					details.addPara(battleStrings.get("next_match") + ": " + next.getId() + " / " + next.getPlayer() + " vs " + next.getEnemy(), 5f);
+				}
+				if (instance.isCompleted()) {
+					details.addPara(strings.get("winner") + ": " + instance.getChampionFleetId(), 5f);
+				}
+				List<String> reportIds = instance.getMatches().stream().flatMap(match -> match.getRounds().stream()).map(round -> round.getReportId()).filter(id -> !id.isEmpty()).toList();
+				details.addPara(reports.isLoaded() ? tournamentStrings.format("instance_reports", reportIds.stream().filter(id -> reports.get(id) != null).count(), reportIds.size())
+						: reports.getLoadError(), 5f);
+				if (task != null && !task.getImportError().isEmpty()) {
+					details.addPara(task.getImportError(), 5f);
+				}
+				if (task != null) {
+					var metrics = task.getMetrics();
+					details.addPara(tournamentStrings.format("instance_metrics", metrics.simulationSeconds(), metrics.executionNanos() / 1000000000d,
+							metrics.steps(), metrics.peakHeapBytes() / 1048576d), 5f);
+				}
+				try {
+					if (BattleNext_ModFileManager.exists(BattleNext_StartedTournamentStore.pendingRoundPath(instance.getId()))) {
+						createButton(details, areaWidth, tournamentStrings.get("retry_round_report"), "instance:retry_round:" + instance.getId());
+					}
+				} catch (Exception exception) {
+					details.addPara(exception.toString(), 5f);
+				}
+				createButton(details, areaWidth, tournamentStrings.get(task != null && task.isDeletionRequested() ? "retry_delete_instance" : "delete_instance"), "instance:delete:" + instance.getId());
+				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + 16f);
+				body.addUIElement(details).inTL(8f, 8f);
+			});
+		}
 	}
 
 	@Override
 	protected void afterRefresh() {
 		bracketGroup.updateCheck();
-		refreshDraftValidation();
-		bindViewport("rows", tableWidget.getContent());
 		restoreState();
 	}
 
 	public boolean isReadOnly() {
-		return draft != null && draft.isStarted();
+		return locked;
 	}
 
 	private void addDetails(TooltipMakerAPI metadataContent, float columnWidth) {
@@ -142,80 +263,6 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		mapField = createTextField("map", panel, metadataContent, fieldArea, battleStrings.get("map_number_label"), Integer.toString(draft.getMapId()), !isReadOnly(), metadataContent);
 	}
 
-	private void addFleets(TooltipMakerAPI rowsContent, float columnWidth) {
-		String[] headers = {tournamentStrings.get("fleet"), fleetStrings.get("author"),
-				tournamentStrings.get("valid"), strings.get("actions")};
-		tableWidget = createTable("rows", rowsContent, columnWidth, tournamentStrings.get("participant_fleets"), headers, COLUMN_SHARES,
-				0, this::addFleetRow, (rowWidth, content) -> {
-			if (isReadOnly()) return;
-			fleetPicker = createPicker(panel, content, rowWidth, tournamentStrings.get("add_fleet"),
-					fleetSource, BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
-					List::of, this::addFleets, content, rowsContent);
-		});
-	}
-
-	private void addFleets(List<String> ids) {
-		if (ids.isEmpty()) return;
-		List<String> fleets = new ArrayList<>(draft.getFleetIds());
-		for (String id : ids) {
-			if (!fleets.contains(id)) fleets.add(id);
-		}
-		draft.setFleetIds(fleets);
-		refreshDraftValidation();
-	}
-
-	private void addFleetRow(int index, float rowWidth, UIRect[] cells, TooltipMakerAPI rowsContent) {
-
-		String id = draft.getFleetIds().get(index);
-		BattleNext_FleetModel fleet = fleetStore.get(id);
-		String name = fleet == null ? id : fleet.getName();
-		String author = fleet == null || fleet.getAuthor().isEmpty() ? "—" : fleet.getAuthor();
-		List<String> reasons = validationReasons.get(id);
-		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
-		new UIRect(0f, 0f, rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBorder(rowPanel,
-				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
-		createTextCell(rowPanel, cells[FLEET_COLUMN], name, false, new BaseTooltipCreator() {
-			@Override
-			public float getTooltipWidth(Object ignored) {
-				return fleetSource.getTooltipWidth();
-			}
-
-			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				fleetSource.createTooltip(tooltip, new BattleNext_OptionPicker.OptionChoice(id, name));
-			}
-		}, TooltipMakerAPI.TooltipLocation.RIGHT, false);
-		createTextCell(rowPanel, cells[AUTHOR_COLUMN], author, false, new BaseTooltipCreator() {
-			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				tooltip.addPara(author, 0f);
-			}
-		}, TooltipMakerAPI.TooltipLocation.RIGHT, false);
-		createCellCheckbox(id, rowPanel, cells[VALID_COLUMN], "fleet:valid:" + index,
-				reasons.isEmpty(), false, new BaseTooltipCreator() {
-			@Override
-			public float getTooltipWidth(Object ignored) {
-				return 360f;
-			}
-
-			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-				BattleNext_UiTheme.configure(tooltip);
-				tooltip.addTitle(name);
-				BattleNext_PageLayout.addMutedIdLine(tooltip, id, 5f);
-				if (reasons.isEmpty()) tooltip.addPara(ruleStrings.get("validation_clear"), VALIDATION_REASON_GAP);
-				for (String reason : reasons) {
-					tooltip.addPara(reason, VALIDATION_REASON_GAP);
-				}
-			}
-		});
-		createActions(rowPanel, cells[ACTIONS_COLUMN],
-				new EditorAction("^", "fleet:up:" + index, !isReadOnly() && index > 0),
-				new EditorAction("V", "fleet:down:" + index, !isReadOnly() && index + 1 < draft.getFleetIds().size()),
-				new EditorAction("X", "fleet:remove:" + index, !isReadOnly()));
-		rowsContent.addCustom(rowPanel, 0f);
-	}
-
 
 	private String bracketLabel(TournamentBracketType type) {
 		return tournamentStrings.get("bracket_" + type.name().toLowerCase(Locale.ROOT));
@@ -224,56 +271,33 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
 	@Override
 	public void buttonPressed(Object buttonId) {
-		if (isReadOnly() || !(buttonId instanceof String action)) return;
-		if (action.startsWith("bracket:")) {
-			bracketGroup.updateCheck();
+		if (!(buttonId instanceof String action)) return;
+		if (!inputRouter.isEmpty()) return;
+		if (action.startsWith("instance:toggle:")) {
+			String id = action.substring("instance:toggle:".length());
+			if (!expandedInstances.add(id)) {
+				expandedInstances.remove(id);
+			}
+			refreshStructure();
 			return;
 		}
-		if (!action.startsWith("fleet:up:") && !action.startsWith("fleet:down:")
-				&& !action.startsWith("fleet:remove:")) return;
-		List<String> fleets = new ArrayList<>(draft.getFleetIds());
-		int index = Integer.parseInt(action.substring(action.lastIndexOf(':') + 1));
-		if (action.startsWith("fleet:remove:")) {
-			fleets.remove(index);
-		} else {
-			int target = action.startsWith("fleet:up:") ? index - 1 : index + 1;
-			if (index < 0 || target < 0 || index >= fleets.size() || target >= fleets.size()) return;
-			Collections.swap(fleets, index, target);
+		if (action.startsWith("instance:delete:")) {
+			deleteInstance.accept(action.substring("instance:delete:".length()));
+			return;
 		}
-		draft.setFleetIds(fleets);
-		refreshDraftValidation();
-	}
-
-	public void refreshDraftValidation() {
-
-		if (tableWidget == null) return;
-		String ruleInput = isReadOnly() ? draft.getRuleId() : ruleField.getText();
-		String snapshot = fleetStore.getRevision() + ":" + ruleStore.getRevision() + ":"
-				+ ruleInput.length() + ":" + ruleInput + new JSONArray(draft.getFleetIds());
-		if (snapshot.equals(validationSnapshot)) return;
-		validationSnapshot = snapshot;
-		validationReasons.clear();
-		String ruleId = ruleInput.trim();
-		for (String fleetId : draft.getFleetIds()) {
-			List<String> reasons = new ArrayList<>();
-			for (BattleNext_BattleValidation.Failure failure : validation.fleetRuleResult(fleetId, ruleId, ruleStore).failures()) {
-				reasons.add(failure.kind() == BattleNext_BattleValidation.FailureKind.EVALUATION
-						? tournamentStrings.get("validation_failed") + ": " + failure.message() : failure.message());
-			}
-			if (fleetStore.get(fleetId) == null) {
-				reasons.add(tournamentStrings.get("invalid_participant_fleet") + ": " + fleetId);
-			}
-			validationReasons.put(fleetId, List.copyOf(reasons));
-			if (!reasons.isEmpty()) {
-				BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.fleet.validation.rejected",
-						BattleNext_Logger.fields().put("tournament_id", getDraftId()).put("fleet_id", fleetId)
-								.put("rule_id", ruleId).put("reasons", reasons).build());
-			}
+		if (action.startsWith("instance:delete_error:")) {
+			int index = Integer.parseInt(action.substring("instance:delete_error:".length()));
+			deleteInvalidInstance.accept(startedStore.getCatalog().get(index));
+			return;
 		}
-		if (fleetPicker != null) release(fleetPicker);
-		tableWidget.setRowCount(draft.getFleetIds().size());
-		tableWidget.refresh();
-		bindViewport("rows", tableWidget.getContent());
+		if (action.startsWith("instance:retry_round:")) {
+			retryRound.accept(action.substring("instance:retry_round:".length()));
+			return;
+		}
+		if (isReadOnly()) return;
+		if (action.startsWith("bracket:")) {
+			bracketGroup.updateCheck();
+		}
 	}
 
 	@Override
@@ -284,7 +308,6 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 				maxFleetsField, ruleField, mapField}) {
 			value.append(field.getText().length()).append(':').append(field.getText());
 		}
-		value.append(new JSONArray(draft.getFleetIds()));
 		value.append(bracketGroup.getCheckedValue());
 		return value.toString();
 	}
@@ -297,11 +320,11 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	protected boolean submitDraft() {
 		if (isReadOnly()) return true;
 		if (!validateName(nameField.getText(), strings.get("name_required"))) return false;
-		if (!BattleNext_EntryId.isValidPathSegment(getDraftId())) {
+		if (!BattleNext_EntryId.isValidPathSegment(getDraftId()) || BattleNext_StartedTournamentStore.FILE_NAME_WITHOUT_FORMAT.equalsIgnoreCase(getDraftId())) {
 			statusText = tournamentStrings.get("invalid_id");
 			return false;
 		}
-		if (!store.isLoaded() || !fleetStore.isLoaded() || !ruleStore.isLoaded()) {
+		if (!store.isLoaded() || !ruleStore.isLoaded()) {
 			statusText = strings.get("load_failed");
 			return false;
 		}
@@ -318,10 +341,8 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			statusText = tournamentStrings.get("invalid_configuration");
 			return false;
 		}
-		List<String> fleets = draft.getFleetIds();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel(getDraftId(), nameField.getText(),
 				(TournamentBracketType) bracketGroup.getCheckedValue(), boCount, maxFleet);
-		configuration.setFleetIds(fleets);
 		configuration.setMapId(map);
 		try {
 			new BattleNext_TournamentEngine().validateConfiguration(configuration);
@@ -331,19 +352,10 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 					BattleNext_Logger.fields().put("configuration", configuration).put("input_state", serializeState()).build(), exception);
 			return false;
 		}
-		for (String fleet : fleets) {
-			if (fleetStore.get(fleet) == null) {
-				BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.participant.rejected",
-				BattleNext_Logger.fields().put("tournament", draft).put("fleet_id", fleet).put("input_state", serializeState()).build());
-				statusText = tournamentStrings.get("invalid_participant_fleet") + ": " + fleet;
-				return false;
-			}
-		}
 		captureTextFields();
 		draft.setBoCount(boCount);
 		draft.setMaxFleet(maxFleet);
 		draft.setMapId(map);
-		draft.setFleetIds(fleets);
 		try {
 			BattleNext_TournamentModel nextBaseline = new BattleNext_TournamentModel();
 			nextBaseline.fromJson(draft.toJson());
@@ -361,7 +373,9 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void captureDraftInputs() {
-		if (idField != null && !isReadOnly()) captureTextFields();
+		if (idField != null && !isReadOnly()) {
+			captureTextFields();
+		}
 	}
 
 	private void captureTextFields() {
@@ -375,7 +389,9 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	protected void restoreDraft() {
 		try {
 			draft = new BattleNext_TournamentModel();
-			if (baseline != null) draft.fromJson(baseline.toJson());
+			if (baseline != null) {
+				draft.fromJson(baseline.toJson());
+			}
 			idField = null;
 		} catch (Exception exception) {
 			throw new IllegalStateException(exception);

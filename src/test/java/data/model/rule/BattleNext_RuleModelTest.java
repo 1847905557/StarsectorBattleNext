@@ -29,18 +29,21 @@ class BattleNext_RuleModelTest {
 	}
 
 	@Test
-	void malformedOrDuplicateRestrictionParsingKeepsTheWholePublishedModel() throws Exception {
+	void malformedAndConflictingRestrictionsRetainRawItemsAndValidSiblings() throws Exception {
 		var rule = new BattleNext_RuleModel("original", "Original");
 		var restriction = new BattleNext_RuleRestriction("testLimit", "number");
 		rule.setRestrictions(List.of(restriction));
-		String before = rule.toJson().toString();
 		JSONObject invalid = rule.toJson().put("id", "replacement").put("name", "Replacement")
 				.put("restrictions", new JSONArray().put(restriction.toJson()).put(restriction.toJson()));
-		assertThrows(IllegalArgumentException.class, () -> rule.fromJson(invalid));
-		assertEquals(before, rule.toJson().toString());
-		invalid.put("restrictions", new JSONArray().put(new JSONObject().put("id", "broken")));
-		assertThrows(IllegalArgumentException.class, () -> rule.fromJson(invalid));
-		assertEquals(before, rule.toJson().toString());
+		rule.fromJson(invalid);
+		assertTrue(rule.getRestrictions().isEmpty());
+		assertEquals(2, rule.getLoadErrors().size());
+		assertEquals(invalid.toString(), rule.toJson().toString());
+		invalid.put("restrictions", new JSONArray().put(restriction.toJson()).put(new JSONObject().put("id", "broken")));
+		rule.fromJson(invalid);
+		assertEquals(List.of("testLimit"), rule.getRestrictions().stream().map(BattleNext_RuleRestriction::getId).toList());
+		assertEquals(1, rule.getLoadErrors().size());
+		String before = rule.toJson().toString();
 		invalid.remove("formatVersion");
 		assertThrows(JSONException.class, () -> rule.fromJson(invalid));
 		assertEquals(before, rule.toJson().toString());

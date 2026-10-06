@@ -3,20 +3,12 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.combat.BaseHullMod;
-import com.fs.starfarer.api.combat.ShieldAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.PositionAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.tools.BattleNext_Logger;
@@ -29,6 +21,7 @@ import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionSelectionMode;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
@@ -36,6 +29,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,15 +40,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVariantFixture {
 
@@ -139,10 +126,10 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		assertTrue(text.stream().anyMatch(value -> value.contains("First: CAPITAL_SHIP 20%.")));
 		mods.get("damage").notPhase = true;
 		assertFalse(BattleNext_HullModSourceProvider.isSuitableFor(current.get(), mods.get("damage").api));
-		assertTrue(textValues(render(provider("dmod"), "damage")).contains("BattleNext_refit_d_mod_unsuitable"));
+		assertTrue(textValues(render(provider("dmod"), "damage")).contains(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_unsuitable")));
 		current.set(context(HullSize.FRIGATE, false, List.of()));
 		assertTrue(BattleNext_HullModSourceProvider.isSuitableFor(current.get(), mods.get("damage").api));
-		assertTrue(textValues(render(provider("all"), "damage")).contains("BattleNext_refit_d_mod_suitable"));
+		assertTrue(textValues(render(provider("all"), "damage")).contains(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_suitable")));
 	}
 
 	@Test
@@ -261,7 +248,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	@Test
 	void builtInWithoutExtraEffectsUsesTheExistingExplanation() {
 		mods.get("built").sModText = "";
-		assertTrue(textValues(render(provider("all"), "built")).contains("BattleNext_refit_s_mod_no_effect"));
+		assertTrue(textValues(render(provider("all"), "built")).contains(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_s_mod_no_effect")));
 	}
 
 	@ParameterizedTest
@@ -307,7 +294,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		assertTrue(fields.isNull("ship"));
 		assertFalse(fields.getBoolean("is_for_mod_spec"));
 		assertEquals(360f, fields.getDouble("width"));
-		LabelAPI diagnostic = textLabels(tooltip).stream().filter(label -> label.getText().startsWith("BattleNext_common_load_failed"))
+		LabelAPI diagnostic = textLabels(tooltip).stream().filter(label -> label.getText().startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")))
 				.findFirst().orElseThrow();
 		assertEquals("default", labelFonts.get(diagnostic.getPosition()));
 		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(diagnostic.getPosition()));

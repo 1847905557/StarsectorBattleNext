@@ -79,7 +79,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 				} catch (RuntimeException exception) {
 					BattleNext_Logger.operationFailed(BattleNext_PortraitSourceProvider.class, "texture.load",
 							BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build(), exception);
-					throw exception;
+					continue;
 				}
 				BattleNext_Logger.operationSucceeded(BattleNext_PortraitSourceProvider.class, "texture.load",
 						BattleNext_Logger.fields().put("path", path).build());

@@ -17,11 +17,10 @@ public class BattleNext_DamageSourceReport {
 		this.id = id;
 	}
 
-	public static BattleNext_DamageSourceReport fromJson(JSONObject json) {
+	public static BattleNext_DamageSourceReport fromJson(JSONObject json) throws JSONException {
 		BattleNext_DamageSourceReport result = new BattleNext_DamageSourceReport(
-				json.optString("kind", "unknown"), json.optString("id", "unknown"));
-		result.add(json.optDouble("hull", 0d), json.optDouble("armor", 0d),
-				json.optDouble("shields", 0d), json.optDouble("emp", 0d));
+				json.getString("kind"), json.getString("id"));
+		result.add(json.getDouble("hull"), json.getDouble("armor"), json.getDouble("shields"), json.getDouble("emp"));
 		return result;
 	}
 

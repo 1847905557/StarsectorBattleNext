@@ -10,11 +10,11 @@ import data.scripts.ai.vanilla.maneuvers.BattleNext_ManeuverAPI;
 import data.scripts.ai.vanilla.movement.BattleNext_EngineAI;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
 import data.test.fixture.BattleNext_TestGameFixture;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -1,22 +1,15 @@
 package data.model.tournament;
 
 import data.model.BattleNext_JsonModel;
-import data.model.BattleNext_LoadSource;
-import data.scripts.battle.BattleNext_Match;
-import org.json.JSONArray;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
 	public enum TournamentBracketType { SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN, KING_OF_THE_HILL }
 
 	public static final int FORMAT_VERSION = 1;
-	public static final int META_FORMAT_VERSION = 1;
 	public static final int MIN_FLEET_COUNT = 2;
 	public static final int MAX_FLEET_COUNT = 32;
 
@@ -25,14 +18,8 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 	private TournamentBracketType bracketType;
 	private int boCount;
 	private int maxFleet;
-	private final List<String> fleetIds = new ArrayList<>();
-	private final List<BattleNext_Match> matches = new ArrayList<>();
 	private String ruleId = "";
 	private int mapId = -1;
-	private boolean started;
-	private boolean completed;
-	private String championFleetId = "";
-	private String pendingMatchId = "";
 
 	public BattleNext_TournamentModel() {
 		this("", "", TournamentBracketType.SINGLE_ELIMINATION, 1, MIN_FLEET_COUNT);
@@ -52,6 +39,7 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported tournament formatVersion: " + version);
 		String parsedId = json.optString("id", "");
+		if (BattleNext_StartedTournamentStore.FILE_NAME_WITHOUT_FORMAT.equalsIgnoreCase(parsedId)) throw new IllegalArgumentException("Reserved tournament ID: " + parsedId);
 		String parsedName = json.optString("name", "");
 		TournamentBracketType parsedBracket;
 		try {
@@ -66,28 +54,6 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		}
 		String parsedRule = json.optString("ruleId", "");
 		int parsedMap = json.optInt("mapId", -1);
-		boolean parsedStarted = json.optBoolean("started", false);
-		boolean parsedCompleted = json.optBoolean("completed", false);
-		String parsedChampion = json.optString("championFleetId", "");
-		String parsedPending = json.optString("pendingMatchId", "");
-		List<String> parsedFleets = new ArrayList<>();
-		JSONArray teamValues = json.getJSONArray("fleetIds");
-		for (int index = 0; index < teamValues.length(); index++) {
-			parsedFleets.add(teamValues.getString(index));
-		}
-		if (parsedFleets.size() > parsedMaxFleet) throw new IllegalArgumentException("fleetIds exceeds maxFleet");
-		List<BattleNext_Match> parsedMatches = new ArrayList<>();
-		JSONArray matchValues = json.optJSONArray("matches");
-		if (matchValues != null) {
-			for (int index = 0; index < matchValues.length(); index++) {
-				if (matchValues.optJSONObject(index) != null) {
-					BattleNext_Match match = BattleNext_Match.fromJson(matchValues.optJSONObject(index));
-					match.setSourceType(getSourceType());
-					match.setSourcePath(getSourcePath());
-					parsedMatches.add(match);
-				}
-			}
-		}
 
 		setId(parsedId);
 		setName(parsedName);
@@ -96,14 +62,6 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		maxFleet = parsedMaxFleet;
 		ruleId = parsedRule;
 		mapId = parsedMap;
-		started = parsedStarted;
-		completed = parsedCompleted;
-		championFleetId = parsedChampion;
-		pendingMatchId = parsedPending;
-		fleetIds.clear();
-		fleetIds.addAll(parsedFleets);
-		matches.clear();
-		matches.addAll(parsedMatches);
 	}
 
 	@Override
@@ -115,18 +73,8 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		json.put("bracketType", bracketType.name());
 		json.put("boCount", boCount);
 		json.put("maxFleet", maxFleet);
-		json.put("fleetIds", new JSONArray(fleetIds));
-		JSONArray matchArray = new JSONArray();
-		for (BattleNext_Match match : matches) {
-			matchArray.put(match.toJson());
-		}
-		json.put("matches", matchArray);
 		json.put("ruleId", ruleId);
 		json.put("mapId", mapId);
-		json.put("started", started);
-		json.put("completed", completed);
-		json.put("championFleetId", championFleetId);
-		json.put("pendingMatchId", pendingMatchId);
 		return json;
 	}
 
@@ -191,148 +139,4 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		this.mapId = mapId;
 	}
 
-	public boolean isStarted() {
-		return started;
-	}
-
-	public void setStarted(boolean started) {
-		this.started = started;
-	}
-
-	public boolean isCompleted() {
-		return completed;
-	}
-
-	public void setCompleted(boolean completed) {
-		this.completed = completed;
-	}
-
-	public String getChampionFleetId() {
-		return championFleetId;
-	}
-
-	public void setChampionFleetId(String championFleetId) {
-		this.championFleetId = championFleetId == null ? "" : championFleetId.trim();
-	}
-
-	public String getPendingMatchId() {
-		return pendingMatchId;
-	}
-
-	public void setPendingMatchId(String pendingMatchId) {
-		this.pendingMatchId = pendingMatchId == null ? "" : pendingMatchId.trim();
-	}
-
-	@Override
-	public void setSourceType(BattleNext_LoadSource sourceType) {
-		super.setSourceType(sourceType);
-		for (BattleNext_Match match : matches) {
-			match.setSourceType(sourceType);
-		}
-	}
-
-	@Override
-	public void setSourcePath(String sourcePath) {
-		super.setSourcePath(sourcePath);
-		for (BattleNext_Match match : matches) {
-			match.setSourcePath(sourcePath);
-		}
-	}
-
-	public List<String> getFleetIds() {
-		return Collections.unmodifiableList(fleetIds);
-	}
-
-	public void setFleetIds(List<String> values) {
-		if (started) throw new IllegalStateException("Started tournament teams are locked");
-		List<String> parsed = new ArrayList<>();
-		for (String value : values) {
-			parsed.add(value == null ? "" : value.trim());
-		}
-		fleetIds.clear();
-		fleetIds.addAll(parsed);
-	}
-
-	public List<BattleNext_Match> getMatches() {
-		return Collections.unmodifiableList(matches);
-	}
-
-	public int getPlayableMatchCount() {
-		int count = 0;
-		for (BattleNext_Match match : matches) {
-			if (!match.getEnemy().isEmpty()) count++;
-		}
-		return count;
-	}
-
-	public int getPlayableMatchTotal() {
-		int fleetCount = fleetIds.size();
-		if (bracketType == TournamentBracketType.ROUND_ROBIN) return fleetCount * (fleetCount - 1) / 2;
-		if (bracketType == TournamentBracketType.DOUBLE_ELIMINATION) {
-			return 2 * fleetCount - 2 + (findMatch("GF_RESET") == null ? 0 : 1);
-		}
-		return Math.max(0, fleetCount - 1);
-	}
-
-	public int getPlayableMatchIndex(String matchId) {
-		int index = 0;
-		for (BattleNext_Match match : matches) {
-			if (match.getEnemy().isEmpty()) continue;
-			if (match.getId().equals(matchId)) return index;
-			index++;
-		}
-		return -1;
-	}
-
-	public void addFleetId(String fleetId) {
-		if (!started && fleetIds.size() < MAX_FLEET_COUNT) {
-			fleetIds.add(fleetId == null ? "" : fleetId.trim());
-		}
-	}
-
-	public void addMatch(BattleNext_Match match) {
-		if (match != null && !started) {
-			match.setSourceType(getSourceType());
-			match.setSourcePath(getSourcePath());
-			matches.add(match);
-		}
-	}
-
-	public void addGeneratedMatch(BattleNext_Match match) {
-		if (match != null) {
-			match.setSourceType(getSourceType());
-			match.setSourcePath(getSourcePath());
-			matches.add(match);
-		}
-	}
-
-	public BattleNext_Match findMatch(String matchId) {
-		for (BattleNext_Match match : matches) {
-			if (match.getId().equals(matchId)) {
-				return match;
-			}
-		}
-		return null;
-	}
-
-	public BattleNext_Match getNextPendingMatch() {
-		if (!started || completed) return null;
-		BattleNext_Match pending = findMatch(pendingMatchId);
-		if (pending != null && pending.getStatus() == BattleNext_Match.MatchStatus.PENDING) return pending;
-		for (BattleNext_Match match : matches) {
-			if (match.getStatus() == BattleNext_Match.MatchStatus.PENDING && !match.getEnemy().isEmpty()) return match;
-		}
-		return null;
-	}
-
-	public void clearMatches() {
-		if (!started) {
-			matches.clear();
-		}
-	}
-
-	public void clearGeneratedMatches() {
-		matches.clear();
-		pendingMatchId = "";
-	}
 }

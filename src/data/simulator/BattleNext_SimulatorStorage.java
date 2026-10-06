@@ -5,27 +5,19 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.CopyOption;
-import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
-import java.nio.file.StandardCopyOption;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class BattleNext_SimulatorStorage {
 
-	private static final List<String> GRAPHICS_OPTIONS = List.of("enableLights", "enableBloom", "enableNormal", "autoGenNormals",
-			"loadMaterial", "loadSurface", "enableDistortion", "enablePostProcess", "preloadAllMaps");
 	private final Path root;
 	private final FileAccess files;
+	private final Map<Path, String> loadErrors = new LinkedHashMap<>();
 
 	public BattleNext_SimulatorStorage(Path root) throws IOException {
 		this.root = root.toAbsolutePath().normalize();
@@ -47,74 +39,8 @@ public class BattleNext_SimulatorStorage {
 		return result;
 	}
 
-	public void snapshotCommon(Path sourceSaves, Path workerSaves) throws IOException {
-
-		Path source = sourceSaves.resolve("common");
-		if (!(boolean) invoke(files.isDirectory, source)) return;
-		for (Path path : listFiles(source, true)) {
-			if (path.toAbsolutePath().normalize().startsWith(root) || path.startsWith(source.resolve("AI_Battles_Next/simulator"))) continue;
-			Path target = workerSaves.resolve("common").resolve(source.relativize(path));
-			invoke(files.createDirectories, target.getParent());
-			BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("source", path.toString()).put("target", target.toString()).build();
-			BattleNext_Logger.operationStarted(getClass(), "simulator.settings.snapshot", fields);
-			try {
-				byte[] bytes = (byte[]) invoke(files.readAllBytes, path);
-				invoke(files.write, target, bytes);
-				BattleNext_Logger.operationSucceeded(getClass(), "simulator.settings.snapshot",
-						BattleNext_Logger.fields().put("source", path.toString()).put("target", target.toString()).put("bytes", bytes).build());
-			} catch (IOException exception) {
-				BattleNext_Logger.operationFailed(getClass(), "simulator.settings.snapshot", fields, exception);
-				throw exception;
-			}
-		}
-	}
-
-	public void configureGraphics(Path workerSaves) throws IOException, JSONException {
-		configureOptions(workerSaves.resolve("common/LunaSettings/shaderLib.json.data"), GRAPHICS_OPTIONS, Map.of());
-		configureOptions(workerSaves.resolve("common/BUtil_Configs.json.data"),
-				List.of("BUtil_EnableShader", "BUtil_EnableDistortion", "BUtil_EnableDebug", "BUtil_EnableCL"),
-				Map.of("BUtil_InstanceClamp", 8192, "BUtil_CurveNode", 32, "BUtil_CurveInterpolation", 32, "BUtil_Language", "_en_us"));
-		configureOptions(workerSaves.resolve("common/shaderpacks/BUtil_NotSelectedShaderPacks.json.data"),
-				List.of("BUtil_EnableBloom", "BUtil_EnableAA", "BUtil_DepthAA"), Map.of());
-	}
-
-	private void configureOptions(Path target, List<String> options, Map<String, Object> defaults) throws IOException, JSONException {
-
-		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("path", target.toString()).put("options", options).build();
-		BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.configure", fields);
-		try {
-			JSONObject settings;
-			if ((boolean) invoke(files.isRegularFile, target)) {
-				BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.read", fields);
-				settings = new JSONObject(new String((byte[]) invoke(files.readAllBytes, target), StandardCharsets.UTF_8));
-				BattleNext_Logger.operationSucceeded(getClass(), "simulator.graphics.read",
-						BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
-			} else {
-				settings = new JSONObject();
-				BattleNext_Logger.info(getClass(), "simulator.graphics.defaults",
-						BattleNext_Logger.fields().put("path", target.toString()).put("source", "LunaLib missing-field defaults").build());
-			}
-			for (var entry : defaults.entrySet()) {
-				if (settings.has(entry.getKey())) continue;
-				settings.put(entry.getKey(), entry.getValue());
-			}
-			for (String option : options) {
-				settings.put(option, false);
-			}
-			invoke(files.createDirectories, target.getParent());
-			BattleNext_Logger.operationStarted(getClass(), "simulator.graphics.write",
-					BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
-			invoke(files.write, target, settings.toString().getBytes(StandardCharsets.UTF_8));
-			BattleNext_Logger.operationSucceeded(getClass(), "simulator.graphics.configure",
-					BattleNext_Logger.fields().put("path", target.toString()).put("settings", settings).build());
-		} catch (IOException | JSONException | RuntimeException exception) {
-			BattleNext_Logger.operationFailed(getClass(), "simulator.graphics.configure", fields, exception);
-			throw exception;
-		}
-	}
-
 	public void write(BattleNext_SimulationRequest request, BattleNext_SimulationResult result) throws IOException, JSONException {
-		Path target = directory("pending").resolve(result.id() + ".json");
+		Path target = directory("_pending").resolve(result.id() + ".json");
 		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("path", target.toString()).put("result", result.toJson()).build();
 		BattleNext_Logger.operationStarted(getClass(), "simulator.result.write", fields);
 		try {
@@ -130,30 +56,68 @@ public class BattleNext_SimulatorStorage {
 	}
 
 	public List<Path> pending() throws IOException {
-		return listFiles(directory("pending"), false).stream().filter(path -> path.getFileName().toString().endsWith(".json")).toList();
+		return catalogFiles("_pending");
 	}
 
-	public void writeSnapshot(BattleNext_TournamentSnapshot snapshot) throws IOException, JSONException {
-		Path target = directory("tournaments").resolve(snapshot.getId() + ".json");
-		Path staging = target.resolveSibling(target.getFileName() + ".pending");
-		invoke(files.write, staging, snapshot.toJson().toString().getBytes(StandardCharsets.UTF_8));
-		invoke(files.move, staging, target, new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
-		BattleNext_Logger.info(getClass(), "simulator.tournament.checkpoint", BattleNext_Logger.fields().put("id", snapshot.getId()).put("version", snapshot.getVersion()).build());
-	}
-
-	public List<BattleNext_TournamentSnapshot> tournamentSnapshots() throws IOException, JSONException {
-		List<BattleNext_TournamentSnapshot> snapshots = new ArrayList<>();
-		for (Path path : listFiles(directory("tournaments"), false)) {
-			if (!path.toString().endsWith(".json")) continue;
-			BattleNext_TournamentSnapshot snapshot = new BattleNext_TournamentSnapshot();
-			snapshot.fromJson(new JSONObject(new String((byte[]) invoke(files.readAllBytes, path), StandardCharsets.UTF_8)));
-			snapshots.add(snapshot);
+	private List<Path> catalogFiles(String name) {
+		try {
+			return listFiles(directory(name), false).stream().filter(path -> path.getFileName().toString().endsWith(".json")).toList();
+		} catch (IOException exception) {
+			loadErrors.put(root.resolve(name), exception.toString());
+			BattleNext_Logger.warn(getClass(), "simulator.source.unavailable", BattleNext_Logger.fields().put("path", root.resolve(name).toString()).build(), exception);
+			return List.of();
 		}
-		return snapshots;
 	}
 
-	public void deleteSnapshot(String id) throws IOException {
-		invoke(files.deleteIfExists, root.resolve("tournaments").resolve(id + ".json"));
+	public void writeTask(BattleNext_SimulationTask task) throws IOException, JSONException {
+		synchronized (task) {
+			Path target = root.resolve(task.getRequest().id() + ".json");
+			Path staging = target.resolveSibling(target.getFileName() + ".pending");
+			invoke(files.createDirectories, root);
+			invoke(files.write, staging, task.toJson().toString().getBytes(StandardCharsets.UTF_8));
+			invoke(files.move, staging, target, new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
+		}
+	}
+
+	public List<JSONObject> readTasks() throws IOException, JSONException {
+		loadErrors.clear();
+		List<JSONObject> tasks = new ArrayList<>();
+		Map<Path, JSONObject> candidates = new LinkedHashMap<>();
+		Map<String, Integer> counts = new HashMap<>();
+		for (Path path : catalogFiles("")) {
+			String raw = "";
+			try {
+				raw = new String((byte[]) invoke(files.readAllBytes, path), StandardCharsets.UTF_8);
+				JSONObject json = new JSONObject(raw);
+				String id = json.getJSONObject("request").getString("id");
+				counts.merge(id, 1, Integer::sum);
+				if (!path.getFileName().toString().equals(id + ".json")) throw new IOException("Simulator task file identity mismatch: " + path);
+				candidates.put(path, json);
+			} catch (IOException | JSONException | IllegalArgumentException exception) {
+				loadErrors.put(path, raw + ": " + exception);
+				BattleNext_Logger.warn(getClass(), "simulator.task.file.rejected", BattleNext_Logger.fields().put("path", path.toString()).put("raw", raw).build(), exception);
+			}
+		}
+		for (JSONObject json : candidates.values()) {
+			String id = json.getJSONObject("request").getString("id");
+			if (counts.get(id) > 1) {
+				rejectTask(json, new IllegalArgumentException("Duplicate simulator task ID: " + id));
+				continue;
+			}
+			tasks.add(json);
+		}
+		return tasks;
+	}
+
+	public void rejectTask(JSONObject json, Exception exception) throws JSONException {
+		String id = json.getJSONObject("request").getString("id");
+		Path path = root.resolve(id + ".json");
+		loadErrors.put(path, json + ": " + exception);
+		BattleNext_Logger.warn(getClass(), "simulator.task.item.rejected", BattleNext_Logger.fields().put("path", path.toString()).put("raw", json).build(), exception);
+	}
+
+	public Map<Path, String> getLoadErrors() {
+		return Map.copyOf(loadErrors);
 	}
 
 	public record Stored(BattleNext_SimulationRequest request, BattleNext_SimulationResult result) { }
@@ -161,29 +125,38 @@ public class BattleNext_SimulatorStorage {
 	public Stored read(Path path) throws IOException, JSONException {
 		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("path", path.toString()).build();
 		BattleNext_Logger.operationStarted(getClass(), "simulator.result.read", fields);
+		String raw = "";
 		try {
-			JSONObject json = new JSONObject(new String((byte[]) invoke(files.readAllBytes, path), StandardCharsets.UTF_8));
+			raw = new String((byte[]) invoke(files.readAllBytes, path), StandardCharsets.UTF_8);
+			JSONObject json = new JSONObject(raw);
 			BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromJson(json.getJSONObject("request"));
 			BattleNext_SimulationResult result = BattleNext_SimulationResult.fromJson(json.getJSONObject("result"));
 			if (!request.id().equals(result.id()) || !path.getFileName().toString().equals(result.id() + ".json")) throw new IOException("Simulator journal identity mismatch: " + path);
 			BattleNext_Logger.operationSucceeded(getClass(), "simulator.result.read", BattleNext_Logger.fields()
 					.put("path", path.toString()).put("result", result.toJson()).build());
 			return new Stored(request, result);
-		} catch (IOException | JSONException exception) {
+		} catch (IOException | JSONException | IllegalArgumentException exception) {
+			loadErrors.put(path, raw + ": " + exception);
 			BattleNext_Logger.operationFailed(getClass(), "simulator.result.read", fields, exception);
 			throw exception;
 		}
 	}
 
 	public void acknowledge(String id) throws IOException {
-		Path target = root.resolve("pending").resolve(id + ".json");
+		Path target = root.resolve("_pending").resolve(id + ".json");
 		invoke(files.deleteIfExists, target);
 		BattleNext_Logger.info(getClass(), "simulator.result.acknowledged", BattleNext_Logger.fields().put("path", target.toString()).build());
 	}
 
+	public void deleteTask(String id) throws IOException {
+		invoke(files.deleteIfExists, root.resolve("_pending").resolve(id + ".json"));
+		invoke(files.deleteIfExists, root.resolve(id + ".json.pending"));
+		invoke(files.deleteIfExists, root.resolve(id + ".json"));
+	}
+
 	public void cleanup(Path directory) throws IOException {
 		Path target = directory.toAbsolutePath().normalize();
-		if (!target.startsWith(root.resolve("runtime")) || target.equals(root)) throw new IOException("Simulator cleanup target is outside the owned runtime: " + target);
+		if (!target.startsWith(root.resolve("_runtime")) || target.equals(root)) throw new IOException("Simulator cleanup target is outside the owned runtime: " + target);
 		for (Path path : listPaths(target, true).stream().sorted(Comparator.reverseOrder()).toList()) {
 			invoke(files.delete, path);
 		}

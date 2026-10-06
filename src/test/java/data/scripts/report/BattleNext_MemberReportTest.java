@@ -1,7 +1,11 @@
 package data.scripts.report;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class BattleNext_MemberReportTest {
 
@@ -24,6 +28,21 @@ class BattleNext_MemberReportTest {
 		assertEquals(member.getDamageDealt(), loaded.getDamageDealt());
 		assertEquals(2, loaded.getDealtBySource().size());
 		assertEquals("lightmg", loaded.getDealtBySource().get(0).getId());
+	}
+
+	@Test
+	void malformedAndConflictingDamageSourcesRetainRawStatisticsAndPublishHealthySources() throws Exception {
+		var member = new BattleNext_MemberReport("wolf_CS", "wolf", "Wolf");
+		member.addDamageDealt("weapon", "laser", 1, 2, 3, 4);
+		JSONObject laser = member.toJson().getJSONArray("dealtBySource").getJSONObject(0);
+		JSONObject healthy = new BattleNext_DamageSourceReport("weapon", "healthy").toJson();
+		JSONObject raw = member.toJson().put("dealtBySource", new JSONArray().put(laser).put("malformed").put(laser).put(healthy));
+		var loaded = BattleNext_MemberReport.fromJson(raw);
+		assertEquals(List.of("healthy"), loaded.getDealtBySource().stream().map(BattleNext_DamageSourceReport::getId).toList());
+		assertEquals(3, loaded.getLoadErrors().size());
+		assertEquals(raw.toString(), loaded.toJson().toString());
+		loaded.toJson().getJSONArray("dealtBySource").put("external mutation");
+		assertEquals(raw.toString(), loaded.toJson().toString());
 	}
 
 }

@@ -2,12 +2,16 @@ package data.scripts.battle;
 
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import data.scripts.tools.BattleNext_Settings;
+import data.test.fixture.BattleNext_TestTextCatalog;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture {
 
@@ -46,16 +50,19 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		tournament.setId("active");
 		tournament.setName("Active");
 		tournaments.save(tournament);
-		tournaments.setActiveId("active");
+		BattleNext_StartedTournament started = new BattleNext_TournamentEngine().start(tournament, List.of("alpha", "beta"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		instances.save(started);
+		instances.activate(started.getId());
 		var provider = new BattleNext_BattleSourceProvider();
-		assertTrue(provider.load().isEmpty());
-		assertEquals("active", provider.getActiveTournament().getId());
+		assertEquals(1, provider.load().size());
+		assertEquals(started.getId(), provider.getActiveTournament().getId());
 		assertEquals("alpha", provider.loadQuickBattles().get(0).getPlayer());
 		assertNull(provider.getActiveTournament());
 		assertTrue(provider.getRuleWarnings().isEmpty());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nbeta,alpha,4,2\n");
 		assertEquals("beta", provider.loadQuickBattles().get(0).getPlayer());
-		assertEquals("active", tournaments.getActiveId());
+		assertEquals(started.getId(), instances.getActiveId());
 	}
 
 	@Test
@@ -71,5 +78,31 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		standard("duplicate", "beta", "child_variant");
 		assertEquals(1, provider.loadQuickBattles().size());
 		assertTrue(provider.getWarnings().isEmpty());
+	}
+
+	@Test
+	void completeTournamentCheckRereadsReferencesAndCreationRejectsTheSameOrderedFailures() throws Exception {
+		standard("alpha", "alpha", "parent_variant");
+		standard("broken", "broken", "unknown_variant");
+		var provider = new BattleNext_BattleSourceProvider();
+		provider.reloadTournamentCatalog();
+		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 4);
+		provider.getTournamentStore().save(configuration);
+		List<String> slots = List.of("alpha", "alpha", "broken", "missing");
+		var checked = provider.checkTournament("cup", slots);
+		assertEquals(List.of(BattleNext_BattleValidation.FailureKind.CONFIGURATION, BattleNext_BattleValidation.FailureKind.ASSEMBLY,
+				BattleNext_BattleValidation.FailureKind.REFERENCE), checked.failures().stream().map(BattleNext_BattleValidation.Failure::kind).toList());
+		var store = new BattleNext_StartedTournamentStore();
+		var rejection = assertThrows(BattleNext_BattleValidation.Rejection.class, () -> new BattleNext_TournamentEngine().create(configuration,
+				slots, BattleNext_StartedTournament.ExecutionKind.MANUAL, store, provider.getFleetStore(), provider.getRuleStore()));
+		assertEquals(checked, rejection.getResult());
+		assertEquals("Tournament qualification failed: cup", rejection.getMessage());
+		store.reload();
+		assertTrue(store.getAll().isEmpty());
+		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50);
+		assertEquals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"), checked.messages().get(0));
+		standard("beta", "beta", "child_variant");
+		assertTrue(provider.checkTournament("cup", List.of("alpha", "", "beta", "")).failures().isEmpty());
+		assertFalse(provider.checkTournament("cup", List.of("alpha", "", "", "")).failures().isEmpty());
 	}
 }

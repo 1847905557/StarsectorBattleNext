@@ -105,6 +105,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
+		addCatalogDiagnostics(listContent, store.getErrors());
 		for (BattleNext_RuleModel rule : store.getAll()) {
 			addListItem(listContent, rule.getName(), "rules:select:" + rule.getId());
 		}

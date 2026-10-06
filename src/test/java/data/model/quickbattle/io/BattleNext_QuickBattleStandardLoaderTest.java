@@ -4,7 +4,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import data.test.fixture.BattleNext_TestGameFixture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,11 +32,13 @@ class BattleNext_QuickBattleStandardLoaderTest extends BattleNext_TestGameFixtur
 	}
 
 	@Test
-	void requiredStandardFileReadFailurePropagates() {
+	void unavailableStandardSourcePublishesEmptyRowsAndDiagnostic() throws Exception {
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> {
 			throw new IOException("missing standard CSV");
 		}));
-		IOException failure = assertThrows(IOException.class, () -> new BattleNext_QuickBattleStandardLoader().load());
-		assertEquals("missing standard CSV", failure.getMessage());
+		var loader = new BattleNext_QuickBattleStandardLoader();
+		assertTrue(loader.load().isEmpty());
+		assertEquals("tournament/quick_battle.csv", loader.getErrors().get(0).path());
+		assertTrue(loader.getErrors().get(0).diagnostic().contains("missing standard CSV"));
 	}
 }

@@ -1,11 +1,7 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.ui.LabelAPI;
-import com.fs.starfarer.api.ui.Alignment;
-import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.*;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestUiFixture;

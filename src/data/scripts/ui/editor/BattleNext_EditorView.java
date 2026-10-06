@@ -2,16 +2,19 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
+import data.model.BattleNext_BaseStore.EditRejection;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.*;
-import data.scripts.tools.BattleNext_Logger;
-import data.model.BattleNext_BaseStore.EditRejection;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;

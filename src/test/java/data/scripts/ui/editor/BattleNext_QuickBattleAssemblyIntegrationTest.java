@@ -5,6 +5,7 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,8 +28,8 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
-		assertEquals("BattleNext_common_available", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
-		assertEquals("BattleNext_common_unavailable", ((LabelAPI) getField(rows.get(1), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_available"), ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable"), ((LabelAPI) getField(rows.get(1), "statusLabel")).getText());
 		var provider = new BattleNext_BattleSourceProvider();
 		var matches = provider.load();
 		assertEquals(1, matches.size());
@@ -45,10 +46,10 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 		assertEquals(people, createdPeople.size());
 		((TextFieldAPI) getField(rows.get(0), "playerField")).setText("ab_player2");
 		editor.refreshRowStatuses();
-		assertEquals("BattleNext_common_unavailable", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable"), ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		((TextFieldAPI) getField(rows.get(0), "playerField")).setText("ab_player1");
 		editor.refreshRowStatuses();
-		assertEquals("BattleNext_common_available", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_available"), ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 	}
 
 	@Test
@@ -61,12 +62,12 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
-		assertEquals("BattleNext_common_unavailable", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable"), ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		variant("repair", "parent_local", "parent", 0, new JSONObject().put("module", "child_local"));
 		variant("repair", "child_local", "child", 8, null);
 		editor.deserialize();
 		rows = (List<?>) getField(getField(editor, "display"), "rows");
-		assertEquals("BattleNext_common_available", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_available"), ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		var provider = new BattleNext_BattleSourceProvider();
 		assertEquals(1, provider.load().size());
 		assertTrue(provider.getWarnings().isEmpty());

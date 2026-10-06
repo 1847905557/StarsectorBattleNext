@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -9,9 +10,8 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Consumer;
-import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import java.util.function.Function;
 
 public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 

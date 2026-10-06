@@ -9,13 +9,13 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.lwjgl.input.Keyboard;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import org.lwjgl.input.Keyboard;
 
 class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 

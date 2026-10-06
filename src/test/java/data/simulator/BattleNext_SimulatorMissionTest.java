@@ -4,25 +4,23 @@ import com.fs.starfarer.api.mission.FleetSide;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.model.rule.BattleNext_RuleModel;
-import data.model.rule.BattleNext_RuleRestriction;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_EnvironmentPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.test.fixture.BattleNext_TestMissionFixture;
-import org.junit.jupiter.api.Test;
 import org.json.JSONObject;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 
@@ -150,38 +148,24 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
-	void tournamentRequestFreezesRulesParticipantsAndMatchStateForTransport() throws Exception {
+	void tournamentRequestReferencesItsConfigurationAndCarriesTheExecutionConfig() throws Exception {
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_FleetStore fleets = new BattleNext_FleetStore();
 		fleets.reload();
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();
 		rules.reload();
-		BattleNext_RuleModel rule = new BattleNext_RuleModel("rule", "Rule");
-		BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction("limit", "number");
-		restriction.setValue(42);
-		rule.setRestrictions(List.of(restriction));
-		rules.save(rule);
-		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
-		tournament.setId("cup");
-		tournament.setName("Cup");
-		tournament.setFleetIds(List.of("alpha", "beta"));
-		tournament.setRuleId("rule");
-		tournament.addMatch(new BattleNext_Match("round", "alpha", "beta", -1, 1f));
-		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(tournament, fleets, rules, BattleNext_SimulationConfig.defaults());
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
+				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 4);
+		List<String> slots = new ArrayList<>(List.of("", "alpha", "beta", ""));
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, slots, fleets, rules, BattleNext_SimulationConfig.defaults());
+		slots.clear();
 		assertEquals(BattleNext_SimulationRequest.Kind.TOURNAMENT, request.kind());
+		assertEquals("cup", request.source().getString("sourceTournamentId"));
+		assertEquals(List.of("", "alpha", "beta", ""), request.tournamentFleetIds());
+		assertThrows(UnsupportedOperationException.class, () -> request.tournamentFleetIds().clear());
 		assertEquals(request, BattleNext_SimulationRequest.fromJson(request.toJson()));
-		assertJsonEquals(new JSONObject(tournament.toJson().toString()), request.source().getJSONObject("tournament"));
-		assertJsonEquals(new JSONObject(rule.toJson().toString()), request.source().getJSONObject("rule"));
-		tournament.clearMatches();
-		rule.setName("Changed");
-		fleets.get("alpha").setMembers(List.of());
-		assertEquals(1, request.source().getJSONObject("tournament").getJSONArray("matches").length());
-		assertEquals("Rule", request.source().getJSONObject("rule").getString("name"));
-		assertEquals(2, request.source().getJSONObject("fleets").length());
-		assertEquals(1, request.source().getJSONObject("fleets").getJSONObject("alpha").getJSONObject("variants").length());
-		UnsupportedOperationException failure = assertThrows(UnsupportedOperationException.class,
-				() -> BattleNext_SimulatorMission.define(new MissionState().getApi(), request));
-		assertEquals("Tournament simulation is not supported", failure.getMessage());
+		configuration.setName("Changed");
+		assertEquals("Cup", request.label());
 	}
 
 	@Test

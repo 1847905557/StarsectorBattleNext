@@ -32,11 +32,14 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 		String parsedId = json.getString("id").trim();
 		String parsedName = json.getString("name").trim();
 		JSONArray values = json.getJSONArray("restrictions");
-		List<BattleNext_RuleRestriction> parsed = new ArrayList<>();
-		for (int index = 0; index < values.length(); index++) {
-			parsed.add(BattleNext_RuleRestriction.fromJson(values.getJSONObject(index)));
-		}
+		beginParse();
+		List<BattleNext_RuleRestriction> parsed = readIdentifiedCollection("restrictions", values, BattleNext_RuleRestriction::fromJson);
 		setRestrictions(parsed);
+		for (BattleNext_RuleRestriction restriction : parsed) {
+			for (String error : restriction.getLoadErrors()) {
+				addLoadError("Restriction " + restriction.getId() + ": " + error);
+			}
+		}
 		id = parsedId;
 		name = parsedName;
 	}
@@ -48,7 +51,7 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 		for (BattleNext_RuleRestriction restriction : restrictions) {
 			values.put(restriction.toJson());
 		}
-		return json.put("restrictions", values);
+		return json.put("restrictions", writeCollection("restrictions", values));
 	}
 
 	@Override

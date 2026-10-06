@@ -1,13 +1,13 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.ui.ButtonAPI;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.*;
+import data.model.BattleNext_BaseLoader.LoadError;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
-import data.scripts.tools.BattleNext_Logger;
+
+import java.util.List;
 
 public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 
@@ -159,6 +159,26 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			TooltipMakerAPI.TooltipCreator tooltip) {
 		float areaWidth = BattleNext_PageLayout.managementContentRect(listRect).getWidth();
 		BattleNext_PageLayout.listButton(listContent, name, action, areaWidth, tooltip);
+	}
+
+	protected final void addCatalogDiagnostics(TooltipMakerAPI content, List<LoadError> errors) {
+		for (LoadError error : errors) {
+			String title = strings.get("load_failed") + ": " + error.path() + " / " + error.id();
+			content.addPara(content.shortenString(title, BattleNext_PageLayout.managementContentRect(listRect).getWidth()), listErrorGap());
+			content.addTooltipToPrevious(new BaseTooltipCreator() {
+				@Override
+				public float getTooltipWidth(Object ignored) {
+					return 480f;
+				}
+
+				@Override
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+					tooltip.addPara(title + " / " + error.position(), 0f);
+					tooltip.addPara(error.diagnostic(), 5f);
+					tooltip.addPara(error.raw(), 5f);
+				}
+			}, TooltipMakerAPI.TooltipLocation.RIGHT);
+		}
 	}
 
 	protected abstract boolean isListLoaded();

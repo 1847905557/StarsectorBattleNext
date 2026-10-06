@@ -1,15 +1,13 @@
 package data.model.rule;
 
+import data.model.BattleNext_JsonModel;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionSpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class BattleNext_RuleRestriction {
 
@@ -19,6 +17,7 @@ public class BattleNext_RuleRestriction {
 	private double value;
 	private List<String> items = new ArrayList<>();
 	private JSONObject unregisteredJson;
+	private final List<String> loadErrors = new ArrayList<>();
 
 	public BattleNext_RuleRestriction(String id, String type) {
 		if (id == null || id.isBlank() || id.contains(".")) throw new IllegalArgumentException("Invalid restriction ID: " + id);
@@ -43,13 +42,22 @@ public class BattleNext_RuleRestriction {
 			restriction.setValue(json.getDouble("value"));
 		} else {
 			JSONArray values = json.getJSONArray("items");
-			List<String> parsed = new ArrayList<>();
-			for (int index = 0; index < values.length(); index++) {
-				parsed.add(values.getString(index));
+			List<String> parsed = BattleNext_JsonModel.parseStrings("items", values, restriction.loadErrors);
+			Map<String, Integer> counts = new HashMap<>();
+			for (String item : parsed) {
+				counts.merge(item.trim(), 1, Integer::sum);
 			}
-			restriction.setItems(parsed);
+			for (int index = 0; index < values.length(); index++) {
+				if (!(values.opt(index) instanceof String item)) continue;
+				String value = item.trim();
+				if (value.isEmpty() || counts.get(value) > 1) {
+					restriction.loadErrors.add("items[" + index + "] " + item + ": Invalid or conflicting restriction item: " + id);
+					continue;
+				}
+				restriction.items.add(value);
+			}
 		}
-		if (entry == null) restriction.unregisteredJson = new JSONObject(json.toString());
+		if (entry == null || !restriction.loadErrors.isEmpty()) restriction.unregisteredJson = new JSONObject(json.toString());
 		return restriction;
 	}
 
@@ -63,6 +71,10 @@ public class BattleNext_RuleRestriction {
 
 	public String getId() {
 		return id;
+	}
+
+	public List<String> getLoadErrors() {
+		return List.copyOf(loadErrors);
 	}
 
 	public String getType() {

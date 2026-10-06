@@ -1,74 +1,30 @@
 package data.model.tournament;
 
-import data.model.tournament.io.BattleNext_TournamentSaver;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestGameFixture;
-import org.json.JSONException;
-import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 
 class BattleNext_TournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
-	void activeSelectionSurvivesReloadAndDeletingItClearsPersistedMetadata() throws Exception {
-
-		var store = new BattleNext_TournamentStore();
-		assertThrows(IllegalStateException.class, () -> store.setActiveId(""));
+	void configurationStorageKeepsDirectoryIdentityAndReservesTheInstanceFileName() throws Exception {
+		BattleNext_TournamentStore store = new BattleNext_TournamentStore();
 		store.reload();
-		var first = new BattleNext_TournamentModel("first", "First", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		var second = new BattleNext_TournamentModel("second", "Second", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		BattleNext_TournamentModel first = new BattleNext_TournamentModel("first", "First", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 		store.save(first);
-		store.save(second);
-		assertThrows(IllegalArgumentException.class, () -> store.setActiveId("missing"));
-		store.setActiveId("first");
 		store.reload();
-		assertEquals("first", store.getActiveId());
-		assertTrue(store.isManaged("first"));
-		store.delete("second");
-		assertEquals("first", store.getActiveId());
+		assertEquals(List.of("first"), store.getAll().stream().map(BattleNext_TournamentModel::getId).toList());
+		for (String id : List.of("started_tournament", "STARTED_TOURNAMENT")) {
+			assertThrows(IllegalArgumentException.class, () -> store.save(new BattleNext_TournamentModel(id, "Reserved",
+					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2)));
+		}
+		assertFalse(Files.exists(directory.resolve(BattleNext_StartedTournamentStore.PATH)));
 		store.delete("first");
-		assertEquals("", store.getActiveId());
-		assertEquals("", new JSONObject(Files.readString(directory.resolve("tournament/_tournaments/meta.json"), StandardCharsets.UTF_8)).getString("activeTournamentId"));
 		store.reload();
 		assertTrue(store.getAll().isEmpty());
-		assertEquals("", store.getActiveId());
-	}
-
-	@Test
-	void malformedActiveStateKeepsBothPriorCatalogAndSelection() throws Exception {
-		var store = new BattleNext_TournamentStore();
-		store.reload();
-		var original = new BattleNext_TournamentModel("original", "Original", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		store.save(original);
-		store.setActiveId("original");
-		var meta = directory.resolve("tournament/_tournaments/meta.json");
-		Files.writeString(meta, "broken", StandardCharsets.UTF_8);
-		assertThrows(JSONException.class, store::reload);
-		assertSame(original, store.get("original"));
-		assertEquals("original", store.getActiveId());
-		assertFalse(store.isLoaded());
-		new BattleNext_TournamentSaver().saveActiveId("");
-		store.reload();
-		assertTrue(store.isLoaded());
-		assertEquals("", store.getActiveId());
-	}
-
-	@Test
-	void failedActiveWriteKeepsThePreviouslyPublishedSelection() throws Exception {
-		var store = new BattleNext_TournamentStore();
-		store.reload();
-		var original = new BattleNext_TournamentModel("original", "Original", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		store.save(original);
-		store.setActiveId("original");
-		var meta = directory.resolve("tournament/_tournaments/meta.json");
-		Files.delete(meta);
-		Files.createDirectory(meta);
-		assertThrows(IOException.class, () -> store.setActiveId(""));
-		assertEquals("original", store.getActiveId());
-		assertSame(original, store.get("original"));
 	}
 }

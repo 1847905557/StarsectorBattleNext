@@ -16,8 +16,8 @@ import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
-import data.test.fixture.BattleNext_TestVariantFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
+import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
@@ -37,9 +36,8 @@ import java.util.Map;
 class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 	@ParameterizedTest
-	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
-	void hullmodTypeLabelsUseNativeColorsAcrossLanguagesAndRefresh(
-			boolean cnText, boolean colorblind) throws Exception {
+	@ValueSource(booleans = {false, true})
+	void hullmodTypeLabelsUseNativeColorsAcrossLanguagesAndRefresh(boolean colorblind) throws Exception {
 
 		Variant selected = source();
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(selected.getApi()).toJson();
@@ -51,10 +49,10 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		configureHullmodLabelAssets(selected.getApi().getHullSpec(), colorblind);
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		details.setVariantJson(json);
-		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
 		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
 		Map<String, String> types = Map.of("built", "built_in", "smod", "s_mod", "built_smod", "s_mod", "dmod", "d_mod");
-		for (boolean language : List.of(cnText, !cnText, cnText)) {
+		for (boolean language : List.of(false, true, false)) {
 			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
 			details.refreshContent();
 			List<UIComponentAPI> cards = tooltips.get(lists(details).get("plugins")).getComponents().stream()
@@ -71,7 +69,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 					continue;
 				}
 				LabelAPI label = (LabelAPI) text.get(1);
-				assertEquals(BattleNext_TestTextCatalog.text(language ? "Variant_CN" : "Variant", "BattleNext_variant_" + types.get(id)),
+				assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_" + types.get(id)),
 						label.getText());
 				Color expected = id.equals("dmod") ? Misc.getNegativeHighlightColor()
 						: id.equals("built") ? Misc.getGrayColor() : Misc.getStoryOptionColor();
@@ -191,7 +189,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		details.setVariantJson(json);
 		details.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.contains("Parent"));
-		assertEquals(4, labels.stream().filter("BattleNext_variant_none"::equals).count());
+		assertEquals(4, labels.stream().filter(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_none")::equals).count());
 		for (String key : List.of("plugins", "modules", "groups", "wings")) {
 			TooltipState state = tooltips.get(lists(details).get(key));
 			assertEquals(state.getUsedHeight(), state.getMountedHeight());

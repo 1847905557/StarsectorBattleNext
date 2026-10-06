@@ -2,14 +2,16 @@ package data.scripts.ui.widget.view;
 
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
+import data.scripts.tournament.BattleNext_StartedTournament;
 
+import java.util.List;
 import java.util.Map;
 
 public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView {
 
-	public BattleNext_DoubleEliminationView(BattleNext_TournamentModel tournament,
-			Map<String, String> fleetNames) {
-		super(tournament, fleetNames);
+	public BattleNext_DoubleEliminationView(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started,
+			List<String> fleetIds, Map<String, String> fleetNames) {
+		super(tournament, started, fleetIds, fleetNames);
 	}
 
 	@Override
@@ -17,7 +19,7 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 
 		int width = 2;
 
-		while (width < tournament.getFleetIds().size()) {
+		while (width < fleetIds.size()) {
 			width *= 2;
 		}
 		int levels = Integer.numberOfTrailingZeros(width);

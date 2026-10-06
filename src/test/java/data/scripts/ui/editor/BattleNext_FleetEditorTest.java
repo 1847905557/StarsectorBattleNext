@@ -2,7 +2,9 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
+import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
@@ -12,8 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.member.BattleNext_MemberModel;
 
 import java.util.List;
 import java.util.Map;

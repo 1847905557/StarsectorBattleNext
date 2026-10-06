@@ -2,13 +2,14 @@ package data.simulator;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.test.fixture.BattleNext_TestGameFixture;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -17,8 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 

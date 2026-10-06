@@ -1,5 +1,6 @@
 package data.scripts.battle;
 
+import data.model.BattleNext_JsonModel;
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import org.json.JSONArray;
@@ -26,6 +27,8 @@ public class BattleNext_Match {
 	private final List<String> dependencies = new ArrayList<>();
 	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.CREATED;
 	private String sourcePath = "";
+	private final List<String> loadErrors = new ArrayList<>();
+	private JSONObject incompleteJson;
 
 	public BattleNext_Match(String id, String player, String enemy, int map, float mapScale) {
 		this.id = id == null ? "" : id.trim();
@@ -47,11 +50,7 @@ public class BattleNext_Match {
 		if (!Float.isFinite(match.mapScale) || match.mapScale <= 0f) throw new IllegalArgumentException("Invalid match mapScale");
 		JSONArray values = json.optJSONArray("rounds");
 		if (values != null) {
-			for (int index = 0; index < values.length(); index++) {
-				if (values.optJSONObject(index) != null) {
-					match.rounds.add(BattleNext_Round.fromJson(values.optJSONObject(index)));
-				}
-			}
+			match.rounds.addAll(BattleNext_JsonModel.parseCollection("rounds", values, BattleNext_Round::fromJson, match.loadErrors));
 		}
 		try {
 			match.status = MatchStatus.valueOf(json.getString("status"));
@@ -66,13 +65,22 @@ public class BattleNext_Match {
 		JSONArray sources = json.optJSONArray("dependencies");
 		if (sources != null) {
 			for (int index = 0; index < sources.length(); index++) {
-				match.dependencies.add(sources.getString(index));
+				try {
+					if (!(sources.get(index) instanceof String value)) throw new JSONException("Expected a match ID string");
+					match.dependencies.add(value);
+				} catch (JSONException exception) {
+					match.loadErrors.add("dependencies[" + index + "] " + sources.opt(index) + ": " + exception);
+				}
 			}
+		}
+		if (!match.loadErrors.isEmpty()) {
+			match.incompleteJson = new JSONObject(json.toString());
 		}
 		return match;
 	}
 
 	public JSONObject toJson() throws JSONException {
+		if (incompleteJson != null) return new JSONObject(incompleteJson.toString());
 		JSONObject json = new JSONObject();
 		json.put("id", id);
 		json.put("player", player);
@@ -88,6 +96,10 @@ public class BattleNext_Match {
 		json.put("stage", stage.name());
 		json.put("dependencies", new JSONArray(dependencies));
 		return json;
+	}
+
+	public List<String> getLoadErrors() {
+		return List.copyOf(loadErrors);
 	}
 
 	public void addRound(BattleNext_Round round) {

@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
@@ -32,7 +28,8 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 		assertNotSame(registry.create("custom"), registry.create("custom"));
 		rows.put(new JSONObject().put("id", "broken").put("type", "unknown")
 				.put("script", "Example").put("desc", "Broken"));
-		assertThrows(IllegalArgumentException.class, () -> registry.load(rows, BattleNext_OrderRegistryTest::instantiate));
+		registry.load(rows, BattleNext_OrderRegistryTest::instantiate);
+		assertEquals("broken", registry.getLoadErrors().get(0).id());
 		assertEquals(1, registry.getAll().size());
 		assertNotNull(registry.create("custom"));
 	}
@@ -82,23 +79,22 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 	}
 
 	@Test
-	void invalidRegistrationKeepsPublishedSpecsAndLoader() throws Exception {
+	void invalidRegistrationPublishesDiagnosticsAndRejectsAllConflictingRows() throws Exception {
 		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
 		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "assault")
 				.put("type", "starter").put("script", "data.order.starter.AssaultStarter").put("desc", "Assault"));
 		registry.load(valid, BattleNext_OrderRegistryTest::instantiate);
 		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "assault")
 				.put("type", "filter").put("script", "data.order.starter.AssaultStarter").put("desc", "Wrong"));
-		IllegalArgumentException mismatch = assertThrows(IllegalArgumentException.class,
-				() -> registry.load(wrongInterface, BattleNext_OrderRegistryTest::instantiate));
-		assertTrue(mismatch.getMessage().contains("assault"));
-		assertEquals("Assault", registry.get("assault").getDescription());
-		assertNotNull(registry.create("assault"));
+		registry.load(wrongInterface, BattleNext_OrderRegistryTest::instantiate);
+		assertTrue(registry.getAll().isEmpty());
+		assertEquals("assault", registry.getLoadErrors().get(0).id());
+		assertTrue(registry.getLoadErrors().get(0).diagnostic().contains("BattleNext_OrderFilter"));
 		JSONArray duplicate = new JSONArray().put(valid.getJSONObject(0)).put(valid.getJSONObject(0));
-		IllegalArgumentException repeated = assertThrows(IllegalArgumentException.class,
-				() -> registry.load(duplicate, BattleNext_OrderRegistryTest::instantiate));
-		assertTrue(repeated.getMessage().contains("row 2"));
-		assertEquals(1, registry.getAll().size());
+		registry.load(duplicate, BattleNext_OrderRegistryTest::instantiate);
+		assertTrue(registry.getAll().isEmpty());
+		assertEquals(List.of(0, 1), registry.getLoadErrors().stream().map(error -> error.position()).toList());
+		assertTrue(registry.getLoadErrors().stream().allMatch(error -> error.diagnostic().contains("Duplicate order ID: assault")));
 	}
 
 	@Test
@@ -112,10 +108,10 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 		assertEquals(1, creations.get());
 		assertNotSame(registry.create("assault"), registry.create("assault"));
 		assertEquals(3, creations.get());
-		assertThrows(IllegalArgumentException.class, () -> registry.load(
-				new JSONArray().put(row("broken", "filter", "assaultScript")), name -> new AssaultStarter()));
+		registry.load(new JSONArray().put(row("assault", "starter", "assaultScript")).put(row("broken", "filter", "assaultScript")), name -> new AssaultStarter());
 		assertNotNull(registry.create("assault"));
-		assertEquals(4, creations.get());
+		assertEquals("broken", registry.getLoadErrors().get(0).id());
+		assertEquals(3, creations.get());
 	}
 
 	@Test

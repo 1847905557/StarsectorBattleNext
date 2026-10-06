@@ -1,8 +1,8 @@
 package data.model.quickbattle.io;
 
-import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel.QuickBattleRowType;
+import data.model.quickbattle.BattleNext_QuickBattleStore;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;

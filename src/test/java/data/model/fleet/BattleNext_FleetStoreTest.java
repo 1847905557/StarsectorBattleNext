@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
@@ -41,29 +43,34 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	@Test
-	void legacyAndStandardConflictNamesBothSourcesAndKeepsThePreviousCatalog() throws Exception {
+	void conflictingSourcesPublishDiagnosticsForEveryIdentityAndKeepOtherFleets() throws Exception {
 
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		standard("standard", "ab_player1", "parent_variant");
-		IOException failure = assertThrows(IOException.class, store::reload);
-		assertTrue(failure.getMessage().contains("ab_player1"));
-		assertTrue(failure.getMessage().contains("tournament/player1_data.csv"));
-		assertTrue(failure.getMessage().contains("tournament/standard/fleet_data.json"));
-		assertFalse(store.isLoaded());
+		standard("healthy", "healthy", "parent_variant");
+		store.reload();
+		assertTrue(store.isLoaded());
 		assertEquals(1, store.getAll().size());
-		assertEquals(failure.getMessage(), store.getLoadError());
+		assertNotNull(store.get("healthy"));
+		assertNull(store.get("ab_player1"));
+		assertEquals(2, store.getErrors().size());
+		assertEquals(Set.of("tournament/player1_data.csv", "tournament/standard/fleet_data.json"),
+				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
 	}
 
 	@Test
 	void rootAndFolderConflictUsesTheSameLegacyIdentity() throws Exception {
 		csvFleet("", "01", "1,parent_variant,,,,,,\n");
 		csvFleet("package", "01", "1,parent_variant,,,,,,\n");
-		IOException failure = assertThrows(IOException.class, new BattleNext_FleetStore()::reload);
-		assertTrue(failure.getMessage().contains("ab_player01"));
-		assertTrue(failure.getMessage().contains("tournament/player01_data.csv"));
-		assertTrue(failure.getMessage().contains("tournament/package/player01_data.csv"));
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		assertTrue(store.getAll().isEmpty());
+		assertEquals(2, store.getErrors().size());
+		assertTrue(store.getErrors().stream().allMatch(error -> error.id().equals("ab_player01")));
+		assertEquals(Set.of("tournament/player01_data.csv", "tournament/package/player01_data.csv"),
+				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
 	}
 
 	@Test
@@ -81,14 +88,17 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	void distinctPackagesAndStandardDirectoriesReportDuplicateIds() throws Exception {
 		csvFleet("alpha", "1", "1,parent_variant,,,,,,\n");
 		csvFleet("beta", "1", "1,parent_variant,,,,,,\n");
-		IOException legacyFailure = assertThrows(IOException.class, new BattleNext_FleetStore()::reload);
-		assertTrue(legacyFailure.getMessage().contains("tournament/alpha/player1_data.csv"));
-		assertTrue(legacyFailure.getMessage().contains("tournament/beta/player1_data.csv"));
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		assertTrue(store.getAll().isEmpty());
+		assertEquals(Set.of("tournament/alpha/player1_data.csv", "tournament/beta/player1_data.csv"),
+				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
 		standard("alpha", "same", "parent_variant");
 		standard("beta", "same", "parent_variant");
-		IOException standardFailure = assertThrows(IOException.class, new BattleNext_FleetStore()::reload);
-		assertTrue(standardFailure.getMessage().contains("tournament/alpha/fleet_data.json"));
-		assertTrue(standardFailure.getMessage().contains("tournament/beta/fleet_data.json"));
+		store.reload();
+		assertTrue(store.getAll().isEmpty());
+		assertEquals(Set.of("tournament/alpha/fleet_data.json", "tournament/beta/fleet_data.json"),
+				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
 	}
 
 	@Test

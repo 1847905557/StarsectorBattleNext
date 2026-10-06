@@ -49,9 +49,10 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 		report.setName("Valid");
 		store.save(report);
 		Files.writeString(directory.resolve("tournament/_reports/broken.json"), "broken", StandardCharsets.UTF_8);
-		assertThrows(IllegalStateException.class, store::reload);
-		assertSame(report, store.get("valid"));
-		assertFalse(store.isLoaded());
+		store.reload();
+		assertEquals("Valid", store.get("valid").getName());
+		assertTrue(store.isLoaded());
+		assertEquals("tournament/_reports/broken.json", store.getErrors().get(0).path());
 		Files.writeString(directory.resolve("tournament/_reports/broken.json"), report.toJson().put("id", "fixed").toString(), StandardCharsets.UTF_8);
 		store.reload();
 		var original = store.get("valid");

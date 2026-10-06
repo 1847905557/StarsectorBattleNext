@@ -1,28 +1,25 @@
 package data.scripts.tools;
 
 import com.fs.starfarer.api.Global;
+import data.model.report.BattleNext_BattleReportModel;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONObject;
-import data.model.report.BattleNext_BattleReportModel;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedHashMap;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 class BattleNext_LoggerTest {
 	private Field settingsValues;

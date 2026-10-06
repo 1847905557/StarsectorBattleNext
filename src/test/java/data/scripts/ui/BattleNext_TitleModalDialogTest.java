@@ -4,8 +4,8 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -11,6 +11,7 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -65,11 +66,8 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 	}
 
 	@ParameterizedTest
-	@CsvSource({
-			"modules,320", "wings,320", "modules,640", "wings,640",
-			"modules,1400", "wings,1400"
-	})
-	void bothGridsUseEqualSquareSizesAndKeepTheirLastRowLeftAligned(String section, int width) throws Exception {
+	@ValueSource(ints = {320, 640, 1400})
+	void bothGridsUseEqualSquareSizesAndKeepTheirLastRowLeftAligned(int width) throws Exception {
 
 		JSONObject modules = new JSONObject();
 		JSONArray wings = new JSONArray();
@@ -81,6 +79,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		}
 		snapshot.put("modules", modules).put("wings", wings);
 		BattleNext_VariantDetails details = mount(width);
+		for (String section : List.of("modules", "wings")) {
 		TooltipState grid = tooltips.get(lists(details).get(section));
 		assertEquipmentSpacing(grid);
 		List<CustomPanelAPI> rows = rows(grid);
@@ -115,6 +114,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		assertEquals(7, item);
 		float expectedHeight = rows.size() * (size + 4f) + 8f;
 		assertEquals(expectedHeight, grid.getMountedHeight(), 0.001f);
+		}
 		CustomPanelAPI parent = details.getPanel();
 		details.close();
 		assertTrue(children.get(parent).isEmpty());
@@ -223,9 +223,10 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		assertEquals(card.getPosition().getWidth(), card.getPosition().getHeight());
 		assertNull(getField(plugins.get(card), "sprite"));
 		List<String> info = hover(card);
-		assertTrue(info.stream().anyMatch(value -> value.contains("module_error")
-				|| value.contains("unavailable") || value.contains("preview_error")));
-		if (failure.equals("empty_slot")) assertEquals("BattleNext_variant_empty_slot", info.get(0));
+		assertTrue(info.stream().anyMatch(value -> value.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_module_error"))
+				|| value.contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_unavailable"))
+				|| value.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_preview_error"))));
+		if (failure.equals("empty_slot")) assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_empty_slot"), info.get(0));
 		spriteCenters.clear();
 		plugins.get(card).render(1f);
 		float imageHeight = card.getPosition().getHeight() - 44f;
@@ -275,7 +276,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 	void emptySectionsKeepTheirNonePrompt() throws Exception {
 		snapshot.put("modules", new JSONObject()).put("wings", new JSONArray());
 		BattleNext_VariantDetails details = mount(1000);
-		assertEquals(2, labels.stream().filter("BattleNext_variant_none"::equals).count());
+		assertEquals(2, labels.stream().filter(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_none")::equals).count());
 		assertTrue(cards(details, "modules").isEmpty());
 		assertTrue(cards(details, "wings").isEmpty());
 		details.close();
@@ -316,12 +317,18 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 				int center = Math.round(92f * scale);
 				int edge = Math.round(32f * scale);
 				assertEquals(List.of(255, 0, 255), pixel(pixels, center, center));
+				float borderAlpha = BattleNext_UiTheme.PANEL.getAlpha() / 255f;
+				List<Integer> expectedBorder = List.of(
+						Math.round(BattleNext_UiTheme.PANEL.getRed() * borderAlpha + 255f * (1f - borderAlpha)),
+						Math.round(BattleNext_UiTheme.PANEL.getGreen() * borderAlpha),
+						Math.round(BattleNext_UiTheme.PANEL.getBlue() * borderAlpha + 255f * (1f - borderAlpha)));
 				int borderPixels = 0;
 				for (int horizontal = edge - 4; horizontal <= edge + 4; horizontal++) {
 					List<Integer> color = pixel(pixels, horizontal, center);
 					if (!color.equals(List.of(255, 0, 255))) {
-						assertEquals(List.of(BattleNext_UiTheme.PANEL.getRed(), BattleNext_UiTheme.PANEL.getGreen(),
-								BattleNext_UiTheme.PANEL.getBlue()), color);
+						for (int channel = 0; channel < 3; channel++) {
+							assertEquals(expectedBorder.get(channel).intValue(), color.get(channel).intValue(), 1);
+						}
 						borderPixels++;
 					}
 				}

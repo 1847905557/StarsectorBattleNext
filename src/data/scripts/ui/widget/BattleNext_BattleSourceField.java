@@ -2,11 +2,14 @@ package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
+import data.scripts.tournament.BattleNext_StartedTournament;
+import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 	private final BattleNext_DropdownField.DropdownSelectionListener listener;
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private BattleNext_DropdownField dropdown;
+	private LabelAPI label;
 
 	public BattleNext_BattleSourceField(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			BattleNext_DropdownField.DropdownSelectionListener listener) {
@@ -46,7 +50,8 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 		UIRect labelRect = new UIRect(groupX, 0f, labelWidth, areaHeight);
 		TooltipMakerAPI label = labelRect.beginTooltip(contentPanel, false);
 		label.setParaOrbitronLarge();
-		label.addPara(battleStrings.get("source_label"), 0f).getPosition().inTL(0f, LABEL_TOP_INSET);
+		this.label = label.addPara(battleStrings.get("source_label"), 0f);
+		this.label.getPosition().inTL(0f, LABEL_TOP_INSET);
 		label.setHeightSoFar(areaHeight);
 		labelRect.addTooltip();
 		CustomPanelAPI buttonPanel = new UIRect(groupX + labelWidth + CONTROL_GAP, 0f,
@@ -60,6 +65,19 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("quick_battle")));
 		for (BattleNext_TournamentModel tournament : store.getAll()) {
 			options.add(new BattleNext_DropdownField.DropdownChoice(tournament.getId(), tournament.getName()));
+		}
+		dropdown.setOptions(options);
+		dropdown.setValue(selectedId);
+		dropdown.setEnabled(store.isLoaded());
+	}
+
+	public void configureInstances(String sourceId, BattleNext_TournamentModel configuration, BattleNext_StartedTournamentStore store,
+			BattleNext_StartedTournament.ExecutionKind kind, String selectedId) {
+		label.setText(battleStrings.get("tournament_instance"));
+		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
+		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("tournament_base_template")));
+		for (BattleNext_StartedTournament started : store.getForSource(sourceId, kind)) {
+			options.add(new BattleNext_DropdownField.DropdownChoice(started.getId(), started.getName(configuration)));
 		}
 		dropdown.setOptions(options);
 		dropdown.setValue(selectedId);

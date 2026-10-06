@@ -1,23 +1,21 @@
 package data.scripts.ui.page;
 
-import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.BattleNext_ReportTarget;
+import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_ReportEditor;
-import data.model.tournament.BattleNext_TournamentModel;
-import data.model.tournament.BattleNext_TournamentStore;
-import data.scripts.battle.BattleNext_Match;
-import data.scripts.battle.BattleNext_MatchProgress;
-import data.scripts.battle.BattleNext_Round;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.json.JSONException;
-import data.simulator.BattleNext_TournamentSnapshotStore;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -27,16 +25,12 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
-	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_TournamentSnapshotStore snapshotStore = new BattleNext_TournamentSnapshotStore();
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
-	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
-	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private final List<BattleNext_ReportTarget> entries = new ArrayList<>();
 	private String selectedId = "";
-	private final BattleNext_ReportEditor editor = new BattleNext_ReportEditor(reportStore, tournamentStore);
+	private final BattleNext_ReportEditor editor = new BattleNext_ReportEditor(reportStore);
 	private boolean detailOpen;
 
 	public BattleNext_BattleReportPage(Runnable backAction, Consumer<Runnable> navigation,
@@ -55,11 +49,6 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 			reportStore.reload();
 		} catch (IOException | JSONException | RuntimeException exception) {
 			status = exception.getMessage();
-		}
-		try {
-			tournamentStore.reload();
-		} catch (Exception exception) {
-			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
 		}
 		load();
 	}
@@ -101,6 +90,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
+		addCatalogDiagnostics(listContent, reportStore.getErrors());
 		for (BattleNext_ReportTarget entry : entries) {
 			addListItem(listContent, listLabel(entry), "report:" + entry.identity());
 		}
@@ -128,17 +118,17 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean isSaveDataLoaded() {
-		return entry(selectedId).tournament() == null ? reportStore.isLoaded() : tournamentStore.isLoaded();
+		return reportStore.isLoaded();
 	}
 
 	@Override
 	protected boolean canDelete() {
-		return !entry(selectedId).isReadOnly() && (entry(selectedId).tournament() == null ? reportStore.isLoaded() : tournamentStore.isLoaded());
+		return reportStore.isLoaded();
 	}
 
 	@Override
 	protected boolean isDetailEditable() {
-		return !entry(selectedId).isReadOnly();
+		return true;
 	}
 
 	@Override
@@ -154,7 +144,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		} else if ("save".equals(buttonId)) {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
-				&& entry(selectedId) != null && !entry(selectedId).isReadOnly()) {
+				&& entry(selectedId) != null) {
 			BattleNext_ReportTarget selected = entry(selectedId);
 			Runnable action = () -> deletion.accept(listLabel(selected), () -> {
 				try {
@@ -168,7 +158,9 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 				}
 			});
-			if (hasUnsavedChanges()) navigation.accept(action);
+			if (hasUnsavedChanges()) {
+				navigation.accept(action);
+			}
 			else action.run();
 		} else if ("back".equals(buttonId)) {
 			if (detailOpen) navigation.accept(() -> {
@@ -194,47 +186,10 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	private void load() {
 		entries.clear();
-		try {
-			snapshotStore.reload();
-		} catch (Exception exception) {
-			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
-		}
 		for (BattleNext_BattleReportModel report : reportStore.getAll()) {
-			entries.add(new BattleNext_ReportTarget(report, "", null, "", -1));
-		}
-		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
-			for (BattleNext_Match match : tournament.getMatches()) {
-				for (int index = 0; index < match.getRounds().size(); index++) {
-					BattleNext_Round round = match.getRounds().get(index);
-					if (!round.getReport().getId().isEmpty()) {
-						entries.add(new BattleNext_ReportTarget(round.getReport(),
-								context(tournament, match.getId(), index + 1), tournament, match.getId(), index));
-					}
-				}
-			}
+			entries.add(new BattleNext_ReportTarget(report));
 		}
 		entries.sort(Comparator.comparingLong((BattleNext_ReportTarget entry) -> entry.report().getCreatedAt()).reversed());
-		for (var snapshot : snapshotStore.getAll()) {
-			BattleNext_TournamentModel tournament = snapshot.getTournament();
-			for (BattleNext_Match match : tournament.getMatches()) {
-				for (int index = 0; index < match.getRounds().size(); index++) {
-					var report = match.getRounds().get(index).getReport();
-					if (report.getId().isEmpty()) continue;
-					entries.add(new BattleNext_ReportTarget(report, context(tournament, match.getId(), index + 1),
-							null, match.getId(), index, snapshot));
-				}
-			}
-		}
-		entries.sort(Comparator.comparingLong((BattleNext_ReportTarget entry) -> entry.report().getCreatedAt()).reversed());
-	}
-
-	private String context(BattleNext_TournamentModel tournament, String matchId, int roundNumber) {
-		BattleNext_Match match = tournament.findMatch(matchId);
-		if (match == null || match.getEnemy().isEmpty()) {
-			return tournamentStrings.get("context_label") + " " + tournament.getId() + " / " + matchId;
-		}
-		return tournamentStrings.get("context_label") + " " + tournament.getId() + " / "
-				+ BattleNext_MatchProgress.tournament(tournament, match, roundNumber).format(battleStrings);
 	}
 
 	private String listLabel(BattleNext_ReportTarget entry) {
@@ -256,6 +211,6 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	}
 
 	private void deleteReport(BattleNext_ReportTarget entry) throws IOException, JSONException {
-		entry.delete(reportStore, tournamentStore);
+		entry.delete(reportStore);
 	}
 }
