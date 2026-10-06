@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 
 public class BattleNext_SimulatorProtocol implements AutoCloseable {
 
-	private static final int VERSION = 1;
+	private static final int VERSION = 2;
 	private static final int MAX_BYTES = 32 * 1024 * 1024;
 	private final Socket socket;
 	private final InputStream input;

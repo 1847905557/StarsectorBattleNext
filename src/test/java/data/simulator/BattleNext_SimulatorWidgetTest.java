@@ -80,7 +80,6 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			String action = "simulator:quick:" + entries.get(index).getId();
 			assertEquals(List.of(true, true, false, false, true).get(index), buttons.get(action).get());
 			assertEquals("BattleNext_battle_simulate", buttonLabels.get(action));
-			root.getPlugin().buttonPressed(action);
 		}
 		assertEquals(before, storedFiles());
 		Map<List<String>, BattleNext_TextField> fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
@@ -238,9 +237,19 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		BattleNext_TextField field = (BattleNext_TextField) getField(getField(page, "editor"), "defaultTimeMultField");
 		field.setText("pending");
+		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		manager.advance(0f);
+		assertNull(getField(widget, "statusContent"));
+		assertNull(getField(widget, "statusLabel"));
+		manager.buttonPressed("simulator_enable");
+		assertNull(getField(widget, "statusLabel"));
+		manager.buttonPressed("action_cancel");
+		manager.advance(0f);
+		assertNull(getField(widget, "statusLabel"));
 		manager.buttonPressed("simulator_enable");
 		manager.buttonPressed("action_confirm");
-		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		manager.advance(0f);
+		assertNotNull(getField(widget, "statusLabel"));
 		select(widget, "cup");
 		BattleNext_SimulatorBrowser browser = (BattleNext_SimulatorBrowser) getField(page, "simulatorBrowser");
 		assertEquals("cup", browser.getSelectedId());
@@ -269,6 +278,8 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		assertNotSame(page, reopened);
 		assertEquals("", ((BattleNext_SimulatorBrowser) getField(reopened, "simulatorBrowser")).getSelectedId());
+		manager.advance(0f);
+		assertNull(getField(getField(reopened, "simulatorWidget"), "statusLabel"));
 		manager.buttonPressed("close");
 		assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).getSession().hasInputState());
 	}

@@ -36,7 +36,10 @@ public class BattleNext_Match {
 	}
 
 	public static BattleNext_Match fromQuickBattle(BattleNext_QuickBattleModel model) {
-		return new BattleNext_Match(model.getId(), model.getPlayer(), model.getEnemy(), model.getMap(), model.getMapScale());
+		BattleNext_Match match = new BattleNext_Match(model.getId(), model.getPlayer(), model.getEnemy(), model.getMap(), model.getMapScale());
+		match.setSourceType(model.getSourceType());
+		match.setSourcePath(model.getSourcePath());
+		return match;
 	}
 
 	public static BattleNext_Match fromJson(JSONObject json) throws JSONException {

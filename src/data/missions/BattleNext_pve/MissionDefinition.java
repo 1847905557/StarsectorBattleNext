@@ -8,7 +8,6 @@ import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.missions.BattleNext_MissionBattleMap;
 import data.missions.BattleNext_MissionRestrictedUnlock;
-import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
@@ -16,7 +15,6 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.fleet.BattleNext_PveFleetGenerator;
-import data.scripts.member.BattleNext_PersonSkills;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.*;
 import data.scripts.tools.BattleNext_KeyTuning;
@@ -90,14 +88,14 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		}
 
 		int actualPoints = assembledEnemyFleet.getMembers().stream().mapToInt(FleetMemberAPI::getFleetPointCost).sum();
-		int map = BattleNext_MissionBattleMap.resolve(source.getMap(), quickBattleMatchIndex);
+		int map = BattleNext_MissionBattleMap.resolve(source.getMap());
 		BattleNext_Match match = new BattleNext_Match(source.getId(), playerId, assembledEnemyFleet.getDefinition().getId(),
 				map, source.getMapScale());
 		String reportMarker = strings.format("pve_report_marker", quickBattleMatchIndex + 1, sourceSide.name(),
 				faction.getId(), expectedFp, actualPoints);
 
-		configureFleet(api, FleetSide.PLAYER, assembledPlayerFleet, assembledPlayerFleet.getDefinition().getName());
-		configureFleet(api, FleetSide.ENEMY, assembledEnemyFleet,
+		fleetBuilder.addToMission(api, FleetSide.PLAYER, assembledPlayerFleet, assembledPlayerFleet.getDefinition().getName());
+		fleetBuilder.addToMission(api, FleetSide.ENEMY, assembledEnemyFleet,
 				strings.format("pve_enemy_tagline", faction.getDisplayName(), expectedFp, actualPoints));
 		api.addBriefingItem(strings.format("map_summary", source.getMap(), source.getMapScale()));
 		api.addBriefingItem(strings.format("pve_selection_summary", factionIndex + 1, factions.size(),
@@ -144,13 +142,4 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_MissionBattleMap.apply(api, 0, 1f);
 	}
 
-	private void configureFleet(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet assembledFleet, String tagline) {
-		BattleNext_FleetModel definition = assembledFleet.getDefinition();
-		api.initFleet(side, "", FleetGoal.ATTACK, definition.getTags().contains("default_ai"), 1);
-		api.setFleetTagline(side, tagline);
-		for (FleetMemberAPI member : assembledFleet.getMembers()) {
-			api.addFleetMember(side, member);
-		}
-		BattleNext_PersonSkills.apply(api.getDefaultCommander(side), definition.getSkills());
-	}
 }

@@ -18,10 +18,10 @@ class BattleNext_BattleReportModelTest {
 		report.setWinner(" player ");
 		report.setCreatedAt(5000000000L);
 		report.setDurationMillis(30000L);
-		var player = new BattleNext_MemberReport("wolf", "Player");
+		var player = new BattleNext_MemberReport("local_wolf", "wolf", "Player");
 		player.addDamageDealt("weapon", "laser", 1, 2, 3, 4);
 		player.setFinalState(0.5f, 0.7f, "alive");
-		var enemy = new BattleNext_MemberReport("lasher", "Enemy");
+		var enemy = new BattleNext_MemberReport("local_lasher", "lasher", "Enemy");
 		enemy.addDamageTaken("weapon", "laser", 1, 2, 3, 4);
 		enemy.setFinalState(0, 0.1f, "destroyed");
 		report.addPlayerMember(player);
@@ -29,6 +29,8 @@ class BattleNext_BattleReportModelTest {
 		var loaded = new BattleNext_BattleReportModel();
 		loaded.fromJson(report.toJson());
 		assertEquals(report.toJson().toString(), loaded.toJson().toString());
+		assertEquals("wolf", loaded.getPlayerMembers().get(0).getHullId());
+		assertEquals("lasher", loaded.getEnemyMembers().get(0).getHullId());
 		assertEquals(6d, loaded.getPlayerMembers().get(0).getDamageDealt());
 		assertEquals(4d, loaded.getEnemyMembers().get(0).getEmpDamageTaken());
 		assertEquals(5000000000L, loaded.getCreatedAt());
@@ -56,7 +58,7 @@ class BattleNext_BattleReportModelTest {
 		var report = new BattleNext_BattleReportModel();
 		report.setId("original");
 		report.setName("Original");
-		report.addPlayerMember(new BattleNext_MemberReport("wolf", "First"));
+		report.addPlayerMember(new BattleNext_MemberReport("wolf_CS", "wolf", "First"));
 		JSONObject json = report.toJson();
 		report.fromJson(json);
 		assertEquals(1, report.getPlayerMembers().size());

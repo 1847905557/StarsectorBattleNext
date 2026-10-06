@@ -18,8 +18,12 @@ public record BattleNext_SimulationConfig(Strategy strategy, float mapWidth, flo
 		if (stepsPerFrame < 1) throw new IllegalArgumentException("Steps per frame must be positive");
 	}
 
-	public static BattleNext_SimulationConfig lab() {
+	public static BattleNext_SimulationConfig defaults() {
 		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false);
+	}
+
+	public static BattleNext_SimulationConfig quickBattle(float assaultAfterSeconds) {
+		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, assaultAfterSeconds, 3600f, 120f, 32, true, false);
 	}
 
 	public JSONObject toJson() throws JSONException {

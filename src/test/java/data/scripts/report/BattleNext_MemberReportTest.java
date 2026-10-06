@@ -7,7 +7,7 @@ class BattleNext_MemberReportTest {
 
 	@Test
 	void sourceBucketsAccumulateFourComponentsAndTotalsExcludeEmp() throws Exception {
-		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", "Wolf");
+		BattleNext_MemberReport member = new BattleNext_MemberReport("local_wolf_CS", "wolf", "Wolf");
 		member.addDamageDealt("weapon", "lightmg", 10d, 20d, 30d, 40d);
 		member.addDamageDealt("weapon", "lightmg", 5d, 6d, 7d, 8d);
 		member.addDamageDealt("fighter_wing", "talon_wing", 3d, 4d, 5d, 6d);
@@ -19,6 +19,8 @@ class BattleNext_MemberReportTest {
 		assertEquals(54d, member.getEmpDamageDealt());
 		assertEquals(6d, member.getDamageTaken());
 		BattleNext_MemberReport loaded = BattleNext_MemberReport.fromJson(member.toJson());
+		assertEquals("local_wolf_CS", loaded.getVariantId());
+		assertEquals("wolf", loaded.getHullId());
 		assertEquals(member.getDamageDealt(), loaded.getDamageDealt());
 		assertEquals(2, loaded.getDealtBySource().size());
 		assertEquals("lightmg", loaded.getDealtBySource().get(0).getId());

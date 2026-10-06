@@ -16,6 +16,7 @@ import com.fs.starfarer.api.util.Misc;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.report.BattleNext_MemberReport;
 import data.model.report.BattleNext_BattleReportModel;
+import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.BattleNext_ReportTarget;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.tools.BattleNext_Settings;
@@ -34,12 +35,67 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 
 	private boolean mixedLabelHeights;
+
+	@Test
+	void persistedLocalVariantReportsResolveHullNamesAndThumbnailsInBothDamageSections() throws Exception {
+
+		hull("wolf", "Wolf", List.of());
+		hull("lasher", "Lasher", List.of());
+		List<String> requestedSprites = new ArrayList<>();
+		SettingsAPI settings = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+			if (method.getName().equals("getVariant")) throw new AssertionError("Report thumbnails must resolve the recorded hull identity");
+			if (method.getName().equals("getSprite") && args.length == 1) {
+				requestedSprites.add((String) args[0]);
+			}
+			try {
+				return method.invoke(settings, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
+		report.setId("local_report");
+		report.setName("Local fleet report");
+		BattleNext_MemberReport player = new BattleNext_MemberReport("local_wolf_CS", "wolf", "Named Wolf");
+		BattleNext_MemberReport enemy = new BattleNext_MemberReport("pinned:custom_lasher", "lasher", "Named Lasher");
+		player.addDamageDealt("weapon", "gun", 200d, 0d, 0d, 0d);
+		enemy.addDamageTaken("weapon", "gun", 200d, 0d, 0d, 0d);
+		report.addPlayerMember(player);
+		report.addEnemyMember(enemy);
+		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
+		store.reload();
+		store.save(report);
+		store.reload();
+		BattleNext_ReportDetails details = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(),
+				new BattleNext_ReportTarget(store.get("local_report"), "", null, "", -1), () -> {});
+		try {
+			details.attach(panel(1400f, 500f, new BaseCustomUIPanelPlugin()));
+			List<CustomPanelAPI> rows = reportRows(details);
+			List<String> names = List.of("Wolf", "Lasher", "Lasher", "Wolf");
+			assertEquals(names.size(), rows.size());
+			for (int index = 0; index < rows.size(); index++) {
+				CustomPanelAPI top = (CustomPanelAPI) children.get(rows.get(index)).get(0);
+				List<UIComponentAPI> labels = tooltips.get(children.get(top).get(0)).getComponents();
+				assertEquals(names.get(index), ((LabelAPI) labels.get(1)).getText());
+				assertNotNull(getField(top.getPlugin(), "primarySprite"));
+				top.getPlugin().render(1f);
+			}
+			assertEquals(List.of("graphics/wolf.png", "graphics/lasher.png", "graphics/lasher.png", "graphics/wolf.png"), requestedSprites);
+			assertEquals(rows.size(), spriteCenters.size());
+		} finally {
+			details.close();
+			Global.setSettings(settings);
+		}
+	}
 
 	@ParameterizedTest
 	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
@@ -88,7 +144,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 
 	private BattleNext_MemberReport reportMember(String name, double dealt, double taken,
 			float hull, float cr, String status) {
-		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", name);
+		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", "wolf", name);
 		member.addDamageDealt("ship", "wolf", dealt, 0d, 0d, 20d);
 		member.addDamageTaken("ship", "wolf", taken, 0d, 0d, 10d);
 		member.setFinalState(hull, cr, status);

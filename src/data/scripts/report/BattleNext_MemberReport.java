@@ -11,6 +11,7 @@ import java.util.List;
 public class BattleNext_MemberReport {
 
 	private String variantId;
+	private String hullId;
 	private String name;
 	private final List<BattleNext_DamageSourceReport> dealtBySource = new ArrayList<>();
 	private final List<BattleNext_DamageSourceReport> takenBySource = new ArrayList<>();
@@ -18,15 +19,16 @@ public class BattleNext_MemberReport {
 	private float finalCr;
 	private String status;
 
-	public BattleNext_MemberReport(String variantId, String name) {
+	public BattleNext_MemberReport(String variantId, String hullId, String name) {
 		this.variantId = normalize(variantId);
+		this.hullId = normalize(hullId);
 		this.name = normalize(name);
 		status = "alive";
 	}
 
 	public static BattleNext_MemberReport fromJson(JSONObject json) throws JSONException {
 		BattleNext_MemberReport report = new BattleNext_MemberReport(json.optString("variantId", ""),
-				json.optString("name", ""));
+				json.optString("hullId", ""), json.optString("name", ""));
 		readSources(json.getJSONArray("dealtBySource"), report.dealtBySource);
 		readSources(json.getJSONArray("takenBySource"), report.takenBySource);
 		report.finalHullFraction = (float)json.optDouble("finalHullFraction", 0d);
@@ -38,6 +40,7 @@ public class BattleNext_MemberReport {
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject();
 		json.put("variantId", variantId);
+		json.put("hullId", hullId);
 		json.put("name", name);
 		json.put("dealtBySource", writeSources(dealtBySource));
 		json.put("takenBySource", writeSources(takenBySource));
@@ -49,6 +52,10 @@ public class BattleNext_MemberReport {
 
 	public String getVariantId() {
 		return variantId;
+	}
+
+	public String getHullId() {
+		return hullId;
 	}
 
 	public String getName() {

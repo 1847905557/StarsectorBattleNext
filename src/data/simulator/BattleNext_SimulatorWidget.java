@@ -3,9 +3,16 @@ package data.simulator;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.tools.BattleNext_Settings;
+import data.scripts.tools.BattleNext_Logger;
+import org.json.JSONException;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -20,6 +27,8 @@ import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.function.BooleanSupplier;
 import java.util.List;
+import java.util.Locale;
+import data.simulator.BattleNext_SimulatorService.Status;
 
 public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 
@@ -38,6 +47,10 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 	private CustomPanelAPI contentPanel;
 	private CustomPanelAPI bodyPanel;
 	private UIRect bodyRect;
+	private TooltipMakerAPI statusContent;
+	private LabelAPI statusLabel;
+	private Status displayedStatus;
+	private String displayedError;
 
 	public BattleNext_SimulatorWidget(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			BooleanSupplier unlocked, BattleNext_SimulatorBrowser browser, BattleNext_BattleSourceProvider sources) {
@@ -60,6 +73,27 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.HEADER_HEIGHT),
 				contentPanel, settingsStrings.get("simulator_heading"), Misc.getNegativeHighlightColor());
 		if (unlocked.getAsBoolean()) {
+			UIRect footer = new UIRect(BattleNext_PageLayout.PAGE_CONTENT_INSET,
+					areaHeight - BattleNext_PageLayout.PAGE_CONTENT_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
+					areaWidth - BattleNext_PageLayout.PAGE_CONTENT_INSET * 2f, BattleNext_PageLayout.FOOTER_HEIGHT);
+			statusContent = contentPanel.createUIElement(footer.getWidth(), footer.getHeight(), false);
+			BattleNext_UiTheme.configure(statusContent);
+			statusLabel = statusContent.addPara("", 0f);
+			statusLabel.getPosition().inTL(0f, 5f);
+			statusContent.addTooltipToPrevious(new BaseTooltipCreator() {
+				@Override
+				public float getTooltipWidth(Object ignored) {
+					return 480f;
+				}
+
+				@Override
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+					showStatusDetails(tooltip);
+				}
+			}, TooltipMakerAPI.TooltipLocation.ABOVE);
+			statusContent.setHeightSoFar(footer.getHeight());
+			contentPanel.addUIElement(statusContent).inTL(footer.getX(), footer.getY());
+			refreshStatus();
 			UIRect area = new UIRect(0f, BattleNext_PageLayout.HEADER_HEIGHT, areaWidth,
 					areaHeight - BattleNext_PageLayout.HEADER_HEIGHT).shrink(BattleNext_PageLayout.PAGE_CONTENT_INSET);
 			CustomPanelAPI sourcePanel = new UIRect(area.getX(), area.getY(), area.getWidth(), BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT)
@@ -76,7 +110,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 				contentPanel.addUIElement(error).inTL(area.getX(), top);
 				top += error.getHeightSoFar() + 8f;
 			}
-			bodyRect = new UIRect(area.getX(), top, area.getWidth(), Math.max(0f, area.getY() + area.getHeight() - top));
+			bodyRect = new UIRect(area.getX(), top, area.getWidth(), Math.max(0f, footer.getY() - BattleNext_PageLayout.FOOTER_MARGIN - top));
 			buildBody();
 			return;
 		}
@@ -101,7 +135,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 					List.of(Column.PLAYER, Column.ENEMY, Column.MAP, Column.SCALE, Column.STATUS, Column.ACTIONS),
 					List.of(0.3f, 0.3f, 0.05f, 0.1f, 0.15f, 0.1f), false,
 					row -> new BattleNext_QuickBattleDisplay.Action(battleStrings.get("simulate"), "simulator:quick:" + row.getModel().getId(),
-							sources.quickBattleErrors(row.getModel()).isEmpty()));
+							sources.quickBattleErrors(row.getModel()).isEmpty()), this::submitQuickBattle);
 			quickBattleDisplay = new BattleNext_QuickBattleDisplay(inputRouter, sources.getQuickBattleStore().getAll(), presentation,
 					entry -> entry.getId(), row -> sources.quickBattleErrors(row.getModel()));
 			quickBattleDisplay.attach(bodyPanel);
@@ -129,6 +163,82 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		tournamentDisplay.attach(bodyPanel);
 		if (browser.getTournamentState() != null) {
 			tournamentDisplay.restoreState(browser.getTournamentState());
+		}
+	}
+
+	private void submitQuickBattle(Object action) {
+
+		if (!(action instanceof String id) || !id.startsWith("simulator:quick:")) return;
+		String entryId = id.substring("simulator:quick:".length());
+		BattleNext_QuickBattleModel entry = sources.getQuickBattleStore().get(entryId);
+		try {
+			List<String> errors = sources.quickBattleErrors(entry);
+			if (!errors.isEmpty()) {
+				browser.setStatusError(String.join("; ", errors));
+				BattleNext_Logger.warn(BattleNext_SimulatorWidget.class, "simulator.submission.rejected",
+						BattleNext_Logger.fields().put("entry_id", entryId).put("entry", entry).put("errors", errors).build());
+				refreshStatus();
+				return;
+			}
+			BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromMatch(BattleNext_Match.fromQuickBattle(entry),
+					sources.getFleetStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit()));
+			BattleNext_SimulatorService.getInstance().submit(request);
+			browser.setStatusError("");
+		} catch (RuntimeException exception) {
+			browser.setStatusError(exception.getClass().getSimpleName() + ": " + exception.getMessage());
+			BattleNext_Logger.warn(BattleNext_SimulatorWidget.class, "simulator.submission.rejected",
+					BattleNext_Logger.fields().put("entry_id", entryId).put("entry", entry).build(), exception);
+		}
+		refreshStatus();
+	}
+
+	public void refreshStatus() {
+		if (!unlocked.getAsBoolean()) return;
+		Status current = BattleNext_SimulatorService.status();
+		String error = browser.getStatusError();
+		if (current.equals(displayedStatus) && error.equals(displayedError)) return;
+		displayedStatus = current;
+		displayedError = error;
+		String label = current.current() == null ? "—" : current.current().label();
+		String summary = battleStrings.format("simulator_status", battleStrings.get("simulator_" + current.phase().name().toLowerCase(Locale.ROOT)), label, current.queued());
+		statusLabel.setText(statusContent.shortenString(error.isEmpty() ? summary : error, statusContent.getWidthSoFar()));
+	}
+
+	private void showStatusDetails(TooltipMakerAPI tooltip) {
+
+		BattleNext_UiTheme.configure(tooltip);
+		Status status = BattleNext_SimulatorService.status();
+		tooltip.addTitle(settingsStrings.get("simulator_heading"));
+		tooltip.addPara(battleStrings.format("simulator_status", battleStrings.get("simulator_" + status.phase().name().toLowerCase(Locale.ROOT)),
+				status.current() == null ? "—" : status.current().label(), status.queued()), 5f);
+		if (!browser.getStatusError().isEmpty()) {
+			tooltip.addPara(browser.getStatusError(), 5f);
+		}
+		for (BattleNext_SimulationRequest request : new BattleNext_SimulationRequest[]{status.current(), status.recentRequest()}) {
+			if (request == null) continue;
+			tooltip.addPara(request.id() + " - " + request.label(), 5f);
+			if (request.kind() == BattleNext_SimulationRequest.Kind.MATCH) {
+				try {
+					tooltip.addPara(battleStrings.format("simulator_map", request.source().getJSONObject("match").getInt("map"),
+							request.source().getInt("actualMap"), request.source().getJSONObject("match").getDouble("mapScale")), 5f);
+				} catch (JSONException exception) {
+					throw new IllegalStateException("Invalid simulation map snapshot: " + request.id(), exception);
+				}
+			}
+		}
+		if (status.result() != null) {
+			try {
+				BattleNext_SimulationResult result = status.result();
+				String details = result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED
+						? battleStrings.format("simulator_result", result.report().getWinner(), result.simulationSeconds(),
+								result.executionNanos() / 1000000000d, result.report().getName()) : result.diagnostic();
+				tooltip.addPara(result.outcome().name() + ": " + details, 5f);
+				if (!status.importError().isEmpty()) {
+					tooltip.addPara(status.importError(), 5f);
+				}
+			} catch (JSONException exception) {
+				throw new IllegalStateException("Invalid simulator result", exception);
+			}
 		}
 	}
 
@@ -165,6 +275,10 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		}
 		contentPanel = null;
 		bodyRect = null;
+		statusContent = null;
+		statusLabel = null;
+		displayedStatus = null;
+		displayedError = null;
 	}
 
 	@Override

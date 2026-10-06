@@ -65,7 +65,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		BattleNext_QuickBattleDisplay.Presentation presentation = new BattleNext_QuickBattleDisplay.Presentation(
 				List.of(Column.NUMBER, Column.PLAYER, Column.ENEMY, Column.MAP, Column.SCALE, Column.STATUS, Column.ENABLED, Column.ACTIONS),
 				List.of(0.025f, 0.29f, 0.29f, 0.05f, 0.08f, 0.095f, 0.07f, 0.1f), true,
-				row -> new BattleNext_QuickBattleDisplay.Action(strings.get("delete"), "delete:" + row.getIndex(), true));
+				row -> new BattleNext_QuickBattleDisplay.Action(strings.get("delete"), "delete:" + row.getIndex(), true), inputOwner::buttonPressed);
 		display = own(new BattleNext_QuickBattleDisplay(inputRouter, entries, presentation,
 				entry -> rowKeys.computeIfAbsent(entry, ignored -> new Object()), this::validationErrors));
 		display.attach(tablePanel);

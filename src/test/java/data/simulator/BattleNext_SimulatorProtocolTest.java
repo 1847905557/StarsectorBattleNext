@@ -35,7 +35,7 @@ class BattleNext_SimulatorProtocolTest {
 				Socket socket = listener.accept();
 				BattleNext_SimulatorProtocol receiver = new BattleNext_SimulatorProtocol(socket, "session")) {
 			socket.setSoTimeout(20);
-			byte[] payload = new JSONObject().put("version", 1).put("token", "session").put("type", "READY")
+			byte[] payload = new JSONObject().put("version", 2).put("token", "session").put("type", "READY")
 					.put("payload", new JSONObject().put("name", "中文 50%")).toString().getBytes(StandardCharsets.UTF_8);
 			byte[] header = ByteBuffer.allocate(4).putInt(payload.length).array();
 			client.getOutputStream().write(header, 0, 2);

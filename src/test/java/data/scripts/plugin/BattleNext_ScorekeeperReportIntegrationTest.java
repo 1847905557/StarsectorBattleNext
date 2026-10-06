@@ -248,8 +248,12 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	}
 
 	private FleetMemberAPI member(String id) {
-		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (name, args) ->
-				"getHullVariantId".equals(name) ? "wolf_CS" : null);
+		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (name, args) -> name.equals("getHullId") ? "wolf_hull" : null);
+		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (name, args) -> switch (name) {
+			case "getHullVariantId" -> "wolf_CS";
+			case "getHullSpec" -> hull;
+			default -> null;
+		});
 		return proxy(FleetMemberAPI.class, (name, args) -> switch (name) {
 			case "getId" -> id;
 			case "getVariant" -> variant;

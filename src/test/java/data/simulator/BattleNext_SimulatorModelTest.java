@@ -29,7 +29,7 @@ class BattleNext_SimulatorModelTest {
 	@Test
 	void requestRetainsDuplicatesAndCopiesCallerLists() throws Exception {
 		List<String> ids = new ArrayList<>(List.of("wolf_CS", "wolf_CS"));
-		BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(), ids, ids, BattleNext_SimulationConfig.lab());
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(ids, ids, BattleNext_SimulationConfig.defaults());
 		ids.clear();
 		assertEquals(List.of("wolf_CS", "wolf_CS"), request.player());
 		assertEquals(request, BattleNext_SimulationRequest.fromJson(request.toJson()));
@@ -44,7 +44,7 @@ class BattleNext_SimulatorModelTest {
 		}
 		assertThrows(IllegalArgumentException.class, () -> new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
 				Float.NaN, 9000f, 500f, 3600f, 120f, 32, true, false));
-		assertThrows(IllegalArgumentException.class, () -> new BattleNext_SimulationRequest(UUID.randomUUID().toString(), List.of(), List.of("wolf_CS"), BattleNext_SimulationConfig.lab()));
+		assertThrows(IllegalArgumentException.class, () -> BattleNext_SimulationRequest.fromVariants(List.of(), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 	}
 
 	@Test
@@ -54,7 +54,7 @@ class BattleNext_SimulatorModelTest {
 		logger.setLevel(Level.OFF);
 		try {
 			BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(directory);
-			BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(), List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.lab());
+			BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
 			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 			report.setId(request.id());
 			report.setName("中文 50% report");

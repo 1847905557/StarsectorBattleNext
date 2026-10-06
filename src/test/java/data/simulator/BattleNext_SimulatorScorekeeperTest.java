@@ -3,6 +3,7 @@ package data.simulator;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
@@ -26,7 +27,12 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 	void rootShipsAndStationsShareWinnerAndFullCleanup(boolean station) {
 
 		AtomicBoolean enemyAlive = new AtomicBoolean(true);
-		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (method, args) -> method.equals("getHullVariantId") ? "root_variant" : null);
+		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, args) -> method.equals("getHullId") ? "root_hull" : null);
+		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (method, args) -> switch (method) {
+			case "getHullVariantId" -> "root_variant";
+			case "getHullSpec" -> hull;
+			default -> null;
+		});
 		RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (method, args) -> method.equals("getCR") ? 0.7f : null);
 		FleetMemberAPI playerMember = proxy(FleetMemberAPI.class, (method, args) -> switch (method) {
 			case "getVariant" -> variant;
@@ -79,6 +85,8 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 		assertEquals("player", scorekeeper.getFrozenReport().getWinner());
 		assertEquals(10000L, scorekeeper.getFrozenReport().getDurationMillis());
 		assertEquals(1, scorekeeper.getFrozenReport().getEnemyMembers().size());
+		assertEquals("root_hull", scorekeeper.getFrozenReport().getPlayerMembers().get(0).getHullId());
+		assertEquals("root_hull", scorekeeper.getFrozenReport().getEnemyMembers().get(0).getHullId());
 		scorekeeper.cleanup();
 		assertTrue(customData.isEmpty());
 		assertEquals(List.of("addListener", "removeListener", "removePlugin"), lifecycle);

@@ -23,7 +23,7 @@ class BattleNext_QuickBattleDisplayTest extends BattleNext_TestPageFixture {
 				Column.SCALE, Column.STATUS, Column.ACTIONS));
 		List<Float> shares = new ArrayList<>(List.of(1f, 1f, 1f, 1f, 1f, 3f));
 		BattleNext_QuickBattleDisplay.Presentation presentation = new BattleNext_QuickBattleDisplay.Presentation(columns, shares, false,
-				row -> new BattleNext_QuickBattleDisplay.Action("Simulate", "simulate:" + row.getIndex(), row.getRawField() == null));
+				row -> new BattleNext_QuickBattleDisplay.Action("Simulate", "simulate:" + row.getIndex(), row.getRawField() == null), ignored -> {});
 		columns.clear();
 		shares.set(5, 1f);
 		BattleNext_QuickBattleModel normal = new BattleNext_QuickBattleModel("first", "second", -1, 1f);

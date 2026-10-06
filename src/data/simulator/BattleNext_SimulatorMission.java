@@ -9,6 +9,14 @@ import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.scripts.member.BattleNext_MemberBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.BattleNext_LoadSource;
+import data.missions.BattleNext_MissionBattleMap;
+import data.scripts.order.BattleNext_FleetOrderBehavior;
+import org.json.JSONObject;
+import org.json.JSONException;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_EnvironmentPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
@@ -21,7 +29,50 @@ public class BattleNext_SimulatorMission {
 	private BattleNext_SimulatorMission() {
 	}
 
-	public static BattleNext_ScorekeeperPlugin define(MissionDefinitionAPI api, List<String> player,
+	public static BattleNext_ScorekeeperPlugin define(MissionDefinitionAPI api, BattleNext_SimulationRequest request) {
+
+		if (request.kind() == BattleNext_SimulationRequest.Kind.VARIANTS) return define(api, request.player(), request.enemy(), request.config());
+		if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) throw new UnsupportedOperationException("Tournament simulation is not supported");
+		try {
+			JSONObject source = request.source();
+			BattleNext_AssembledFleet player = assemble(source.getJSONObject("player"));
+			BattleNext_AssembledFleet enemy = assemble(source.getJSONObject("enemy"));
+			BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
+			builder.addToMission(api, FleetSide.PLAYER, player, player.getDefinition().getName());
+			builder.addToMission(api, FleetSide.ENEMY, enemy, enemy.getDefinition().getName());
+			BattleNext_MissionBattleMap.apply(api, source.getInt("actualMap"), (float) source.getJSONObject("match").getDouble("mapScale"));
+			api.addPlugin(new BattleNext_DeploymentPlugin());
+			api.addPlugin(new BattleNext_EnvironmentPlugin(request.config().assaultAfterSeconds()));
+			BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(player, enemy);
+			api.addPlugin(scorekeeper);
+			api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTags()),
+					BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTags()), player, enemy));
+			return scorekeeper;
+		} catch (JSONException exception) {
+			throw new IllegalArgumentException("Invalid match simulation snapshot: " + request.id(), exception);
+		}
+	}
+
+	private static BattleNext_AssembledFleet assemble(JSONObject snapshot) throws JSONException {
+
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel();
+		fleet.fromJson(snapshot.getJSONObject("definition"));
+		fleet.setFolderName(snapshot.getString("folderName"));
+		fleet.setSourceType(BattleNext_LoadSource.valueOf(snapshot.getString("sourceType")));
+		fleet.setSourcePath(snapshot.getString("sourcePath"));
+		JSONObject variants = snapshot.getJSONObject("variants");
+		for (int index = 0; index < fleet.getMembers().size(); index++) {
+			String id = fleet.getMembers().get(index).getVariantId();
+			JSONObject variant = variants.getJSONObject(Integer.toString(index));
+			variant.put("variantId", id);
+			fleet.putVariant(BattleNext_VariantBuilder.fromJson(variant, id));
+		}
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
+		if (!assembled.isComplete() || assembled.getMembers().isEmpty()) throw new IllegalArgumentException("Incomplete simulation fleet: " + fleet.getId() + ": " + assembled.getMemberErrors());
+		return assembled;
+	}
+
+	private static BattleNext_ScorekeeperPlugin define(MissionDefinitionAPI api, List<String> player,
 			List<String> enemy, BattleNext_SimulationConfig config) {
 		List<FleetMemberAPI> players = buildSide(api, FleetSide.PLAYER, player, config.playerAdmiral());
 		List<FleetMemberAPI> enemies = buildSide(api, FleetSide.ENEMY, enemy, config.enemyAdmiral());

@@ -138,4 +138,11 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
 		return simulatorWidget != null && simulatorWidget.handleGlobalInput(events);
 	}
+
+	@Override
+	public void advance(float amount) {
+		if (simulatorWidget != null) {
+			simulatorWidget.refreshStatus();
+		}
+	}
 }

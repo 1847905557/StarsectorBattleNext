@@ -110,7 +110,7 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void labRegistersItsFleetsMapAndMountedSimulator() throws Exception {
+	void labRegistersItsVisibleFleetsMapAndCombatPlugins() throws Exception {
 
 		SettingsAPI settings = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
@@ -156,8 +156,7 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 		expected.add("map");
 		assertEquals(expected, calls);
 		assertEquals(List.of(BattleNext_DeploymentPlugin.class, BattleNext_FreeCameraPlugin.class, BattleNext_AllShipsStatusPlugin.class,
-				BattleNext_RttPlugin.class, BattleNext_SimulatorPlugin.class), plugins.stream().map(Object::getClass).toList());
-		assertNull(((BattleNext_SimulatorPlugin) plugins.get(plugins.size() - 1)).getTask());
+				BattleNext_RttPlugin.class), plugins.stream().map(Object::getClass).toList());
 	}
 
 }

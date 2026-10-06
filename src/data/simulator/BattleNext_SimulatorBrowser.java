@@ -12,6 +12,15 @@ public class BattleNext_SimulatorBrowser {
 	private final Map<String, BattleNext_TournamentDisplay.ViewState> tournamentStates = new LinkedHashMap<>();
 	private String selectedId = "";
 	private BattleNext_QuickBattleDisplay.ViewState quickBattleState;
+	private String statusError = "";
+
+	public String getStatusError() {
+		return statusError;
+	}
+
+	public void setStatusError(String error) {
+		statusError = error;
+	}
 
 	public String getSelectedId() {
 		return selectedId;

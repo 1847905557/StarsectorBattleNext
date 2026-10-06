@@ -25,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 
 public class BattleNext_SimulatorService implements AutoCloseable {
 
+	public enum Phase { NOT_STARTED, IDLE, STOPPED, QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED }
+
 	private static BattleNext_SimulatorService instance;
 	private final LinkedBlockingQueue<BattleNext_SimulationTask> queue = new LinkedBlockingQueue<>();
 	private final ConcurrentLinkedQueue<BattleNext_SimulationTask> imports = new ConcurrentLinkedQueue<>();
@@ -35,6 +37,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private volatile boolean closed;
 	private volatile boolean reload;
 	private volatile BattleNext_SimulationTask active;
+	private volatile BattleNext_SimulationTask latest;
 	private volatile BattleNext_SimulatorProtocol channel;
 	private volatile Process process;
 	private volatile long cancellationStarted;
@@ -55,6 +58,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				if (stored.result().outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) continue;
 				BattleNext_SimulationTask task = new BattleNext_SimulationTask(stored.request(), this);
 				task.receive(stored.result());
+				latest = task;
 				imports.add(task);
 			} catch (Exception exception) {
 				BattleNext_Logger.error(getClass(), "simulator.result.recovery.failed", BattleNext_Logger.fields().put("path", path.toString()).build(), exception);
@@ -75,9 +79,9 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		return instance;
 	}
 
-	public BattleNext_SimulationTask submit(List<String> player, List<String> enemy, BattleNext_SimulationConfig config) {
+	public BattleNext_SimulationTask submit(BattleNext_SimulationRequest request) {
 		if (closed) throw new IllegalStateException("Simulator service is closed");
-		BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(), player, enemy, config);
+		if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) throw new UnsupportedOperationException("Tournament simulation is not supported");
 		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, this);
 		queue.add(task);
 		if (supervisor == null) {
@@ -86,8 +90,26 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			supervisor.start();
 		}
 		BattleNext_Logger.info(getClass(), "simulator.task.queued", BattleNext_Logger.fields().put("id", request.id())
-				.put("player", player).put("enemy", enemy).put("config", config).put("queue_size", queue.size()).build());
+				.put("request", request.toJson()).put("queue_size", queue.size()).build());
 		return task;
+	}
+
+	public record Status(Phase phase, BattleNext_SimulationRequest current, int queued,
+			BattleNext_SimulationRequest recentRequest, BattleNext_SimulationResult result, String importError, boolean retained) { }
+
+	public static Status status() {
+		BattleNext_SimulatorService service = instance;
+		if (service == null) return new Status(Phase.NOT_STARTED, null, 0, null, null, "", false);
+		BattleNext_SimulationTask current = service.active;
+		if (current == null) {
+			current = service.queue.peek();
+		}
+		BattleNext_SimulationTask recent = service.latest;
+		Phase phase = service.closed ? Phase.STOPPED : current != null ? Phase.valueOf(current.getState().name())
+				: recent == null ? Phase.IDLE : Phase.valueOf(recent.getState().name());
+		return new Status(phase, current == null ? null : current.getRequest(), service.queue.size(),
+				recent == null ? null : recent.getRequest(), recent == null ? null : recent.getResult(),
+				recent == null ? "" : recent.getImportError(), recent != null && recent.isRetained());
 	}
 
 	public static void advance() {
@@ -285,6 +307,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	private void acceptResult(BattleNext_SimulationTask task, BattleNext_SimulationResult result) {
 		task.receive(result);
+		latest = task;
 		try {
 			storage.write(task.getRequest(), result);
 		} catch (Exception exception) {

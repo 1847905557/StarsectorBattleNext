@@ -430,7 +430,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId("report-1");
 		report.setName("Original report");
-		report.addPlayerMember(new BattleNext_MemberReport("parent_variant", "Parent"));
+		report.addPlayerMember(new BattleNext_MemberReport("parent_variant", "parent", "Parent"));
 		store.save(report);
 		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));

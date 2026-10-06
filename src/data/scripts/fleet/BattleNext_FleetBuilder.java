@@ -4,6 +4,9 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.FleetGoal;
+import com.fs.starfarer.api.mission.FleetSide;
+import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.member.BattleNext_MemberBuilder;
 import data.scripts.member.BattleNext_PersonSkills;
@@ -50,6 +53,15 @@ public class BattleNext_FleetBuilder {
 
 	public BattleNext_AssembledFleet rebuild(BattleNext_AssembledFleet currentFleet, BattleNext_FleetModel definition) {
 		return build(definition);
+	}
+
+	public void addToMission(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet fleet, String tagline) {
+		api.initFleet(side, "", FleetGoal.ATTACK, fleet.getDefinition().getTags().contains("default_ai"), 1);
+		api.setFleetTagline(side, tagline);
+		for (FleetMemberAPI member : fleet.getMembers()) {
+			api.addFleetMember(side, member);
+		}
+		BattleNext_PersonSkills.apply(api.getDefaultCommander(side), fleet.getDefinition().getSkills());
 	}
 
 	private PersonAPI createCommander(BattleNext_FleetModel definition) {

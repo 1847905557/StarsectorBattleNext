@@ -15,6 +15,7 @@ import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.fleet.BattleNext_PveFleetGenerator;
+import data.missions.BattleNext_MissionBattleMap;
 import data.test.fixture.BattleNext_TestMissionFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONException;
@@ -27,6 +28,8 @@ import org.lwjgl.input.Keyboard;
 
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 import java.util.function.Function;
 import java.io.IOException;
 
@@ -72,6 +75,50 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 	}
 
 	@Test
+	void randomMapsUseAvailableMapsForQuickBattlesPveAndEachTournamentMission() throws Exception {
+
+		quickBattles("alpha,beta,-1,1.5\n");
+		for (int map = 0; map <= BattleNext_MissionBattleMap.LAST_MAP_ID; map++) {
+			assertEquals(map, BattleNext_MissionBattleMap.resolve(map));
+		}
+		for (int sample = 0; sample < 16; sample++) {
+			int actual = BattleNext_MissionBattleMap.resolve(-1);
+			assertTrue(actual >= 0 && actual <= BattleNext_MissionBattleMap.LAST_MAP_ID);
+		}
+		List<float[]> maps = IntStream.range(0, BattleNext_MissionBattleMap.MAP_COUNT).mapToObj(map -> {
+			MissionState expected = new MissionState();
+			BattleNext_MissionBattleMap.apply(expected.getApi(), map, 1.5f);
+			return expected.getMap();
+		}).toList();
+		MissionDefinitionPlugin pvp = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_pvp.MissionDefinition")
+				.getDeclaredConstructor().newInstance();
+		for (MissionDefinitionPlugin definition : List.of(pvp, new MissionDefinition())) {
+			MissionState mission = new MissionState();
+			definition.defineMission(mission.getApi());
+			assertTrue(mission.getBriefing().contains("Map -1, map scale 1.5"));
+			assertTrue(maps.stream().anyMatch(map -> Arrays.equals(map, mission.getMap())));
+		}
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
+		tournament.setId("random_cup");
+		tournament.setName("Random Cup");
+		tournament.setFleetIds(List.of("alpha", "beta"));
+		tournament.addMatch(new BattleNext_Match("pending", "alpha", "beta", -1, 1.5f));
+		tournament.setStarted(true);
+		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
+		tournaments.reload();
+		tournaments.save(tournament);
+		tournaments.setActiveId(tournament.getId());
+		for (int creation = 0; creation < 2; creation++) {
+			MissionState mission = new MissionState();
+			pvp.defineMission(mission.getApi());
+			assertTrue(maps.stream().anyMatch(map -> Arrays.equals(map, mission.getMap())));
+			assertTrue(mission.getBriefing().contains("Map -1, map scale 1.5"));
+		}
+		tournaments.reload();
+		assertEquals(-1, tournaments.get(tournament.getId()).findMatch("pending").getMap());
+	}
+
+	@Test
 	void cyclesEachValidRowsSidesWithDuplicatesAndTheirMaps() throws Exception {
 
 		quickBattles("alpha,beta,2,1.5\nalpha,alpha,-1,2\n");
@@ -88,9 +135,15 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 			for (FleetSide side : FleetSide.values()) {
 				assertEquals(1L, mission.getEvents().stream().filter(event -> event.equals("tagline:" + side)).count());
 			}
-			float[] map = index < 2 ? new float[]{-9000f, 9000f, -6750f, 6750f}
-					: new float[]{-12000f, 12000f, -8000f, 8000f};
-			assertArrayEquals(map, mission.getMap());
+			if (index < 2) {
+				assertArrayEquals(new float[]{-9000f, 9000f, -6750f, 6750f}, mission.getMap());
+			} else {
+				assertTrue(IntStream.range(0, BattleNext_MissionBattleMap.MAP_COUNT).anyMatch(map -> {
+					MissionState expected = new MissionState();
+					BattleNext_MissionBattleMap.apply(expected.getApi(), map, 2f);
+					return Arrays.equals(expected.getMap(), mission.getMap());
+				}));
+			}
 			keys.add(Keyboard.KEY_D);
 		}
 		var wrapped = new MissionState();

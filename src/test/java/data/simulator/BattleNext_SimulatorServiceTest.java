@@ -4,13 +4,22 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.SettingsAPI;
-import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatUIAPI;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.scripts.tools.BattleNext_Settings;
-import data.test.fixture.BattleNext_TestGameFixture;
+import data.test.fixture.BattleNext_TestMissionFixture;
+import data.scripts.battle.BattleNext_BattleSourceProvider;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.model.tournament.BattleNext_TournamentModel;
+import org.json.JSONObject;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +49,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BattleNext_SimulatorServiceTest extends BattleNext_TestGameFixture {
+class BattleNext_SimulatorServiceTest extends BattleNext_TestMissionFixture {
 
 	private Object previousService;
 	private String previousSaves;
@@ -94,8 +103,8 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void failedWorkerStartupCompletesTasksAndContinuesTheFifoQueue() throws Exception {
-		BattleNext_SimulationTask first = service.submit(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.lab());
-		BattleNext_SimulationTask second = service.submit(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.lab());
+		BattleNext_SimulationTask first = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
+		BattleNext_SimulationTask second = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 		long deadline = System.nanoTime() + 15000000000L;
 		while (second.getResult() == null && System.nanoTime() < deadline) {
 			Thread.sleep(20L);
@@ -109,39 +118,114 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void pluginSubmitsOnceAndReplaysEveryObservedStageExactlyOnce() throws Exception {
-		SettingsAPI settings = Global.getSettings();
-		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
-				(instance, method, args) -> {
-			if (method.getName().equals("getCurrentState")) return GameState.COMBAT;
-			try {
-				return method.invoke(settings, args);
-			} catch (InvocationTargetException exception) {
-				throw exception.getCause();
+	void quickBattleActionsSubmitIndependentFrozenFifoTasksAndOutliveTheWidget() throws Exception {
+
+		quickBattles("alpha,beta,-1,1.5\n# alpha,beta,2,2\nmissing,beta,0,1\n");
+		BattleNext_Settings.save(false, true, false, false, 123f, 1f, 3f, 50);
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
+		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		CustomPanelAPI root = panel(900f, 500f, new BaseCustomUIPanelPlugin());
+		BattleNext_SimulatorWidget widget = new BattleNext_SimulatorWidget(router, root, () -> true, browser, sources);
+		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
+				Socket socket = listener.accept();
+				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
+			client.setSoTimeout(100);
+			socket.setSoTimeout(5000);
+			Path runtime = attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
+			widget.attach(root);
+			BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
+			List<CustomPanelAPI> rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
+			String invalid = "simulator:quick:" + display.getRows().get(2).getModel().getId();
+			rows.get(2).getPlugin().buttonPressed(invalid);
+			assertEquals(BattleNext_SimulatorService.Phase.IDLE, BattleNext_SimulatorService.status().phase());
+			String action = "simulator:quick:" + display.getRows().get(1).getModel().getId();
+			assertFalse(display.getRows().get(1).getModel().isEnabled());
+			rows.get(1).getPlugin().buttonPressed(action);
+			BattleNext_SimulationRequest first = BattleNext_SimulationRequest.fromJson(peer.receive().getJSONObject("payload"));
+			rows.get(1).getPlugin().buttonPressed(action);
+			assertEquals(1, BattleNext_SimulatorService.status().queued());
+			assertEquals(first, BattleNext_SimulatorService.status().current());
+			assertEquals(BattleNext_SimulationRequest.Kind.MATCH, first.kind());
+			assertEquals(2, first.source().getInt("actualMap"));
+			assertEquals(2d, first.source().getJSONObject("match").getDouble("mapScale"));
+			assertEquals(123f, first.config().assaultAfterSeconds());
+			assertEquals(3600f, first.config().simulationSeconds());
+			assertEquals(120f, first.config().executionSeconds());
+			peer.send("STATUS", new JSONObject().put("id", first.id()).put("state", "RUNNING"));
+			long deadline = System.nanoTime() + 5000000000L;
+			while (BattleNext_SimulatorService.status().phase() != BattleNext_SimulatorService.Phase.RUNNING && System.nanoTime() < deadline) {
+				Thread.sleep(5L);
 			}
-		}));
-		List<Object> notices = new ArrayList<>();
-		CombatUIAPI ui = proxy(CombatUIAPI.class, (method, args) -> {
-			if (method.equals("addMessage")) {
-				notices.add(args[1]);
+			widget.refreshStatus();
+			LabelAPI status = (LabelAPI) getField(widget, "statusLabel");
+			assertTrue(status.getText().contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_running")));
+			TooltipMakerAPI statusContent = (TooltipMakerAPI) getField(widget, "statusContent");
+			assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT, statusContent.getHeightSoFar());
+			TooltipMakerAPI details = root.createUIElement(480f, 0f, false);
+			attachedTooltips.get(status).createTooltip(details, false, null);
+			assertTrue(labels.stream().anyMatch(text -> text.contains(first.id())));
+			assertTrue(labels.stream().anyMatch(text -> text.contains("Configured map 2 / actual map 2 / map scale 2.00")));
+			widget.close();
+			assertTrue(Files.exists(runtime));
+			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
+			report.setId(first.id());
+			report.setName("Saved Match simulation");
+			peer.send("RESULT", new BattleNext_SimulationResult(first.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
+					report.toJson().toString(), 10f, 100000000L, 600L, 1024L, "").toJson());
+			peer.send("READY", new JSONObject());
+			BattleNext_SimulationRequest second = BattleNext_SimulationRequest.fromJson(peer.receive().getJSONObject("payload"));
+			assertNotEquals(first.id(), second.id());
+			assertJsonEquals(first.source(), second.source());
+			peer.send("RESULT", new BattleNext_SimulationResult(second.id(), BattleNext_SimulationResult.Outcome.FAILED,
+					"", 0f, 0L, 0L, 0L, "Injected simulation failure").toJson());
+			peer.send("READY", new JSONObject());
+			deadline = System.nanoTime() + 5000000000L;
+			while ((BattleNext_SimulatorService.status().result() == null || readField("active") != null) && System.nanoTime() < deadline) {
+				Thread.sleep(5L);
 			}
-			return null;
-		});
-		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> method.equals("getCombatUI") ? ui : null);
-		BattleNext_SimulatorPlugin plugin = new BattleNext_SimulatorPlugin(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.lab());
-		plugin.init(engine);
-		BattleNext_SimulationTask task = plugin.getTask();
-		plugin.init(engine);
-		assertSame(task, plugin.getTask());
-		long deadline = System.nanoTime() + 15000000000L;
-		while (task.getResult() == null && System.nanoTime() < deadline) {
-			Thread.sleep(20L);
+			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
+			BattleNext_SimulatorService.advance();
+			BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
+			reports.reload();
+			assertEquals("Saved Match simulation", reports.get(first.id()).getName());
+			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
+			widget.attach(root);
+			assertTrue(((LabelAPI) getField(widget, "statusLabel")).getText().contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_finished")));
+			status = (LabelAPI) getField(widget, "statusLabel");
+			attachedTooltips.get(status).createTooltip(root.createUIElement(480f, 0f, false), false, null);
+			assertTrue(labels.stream().anyMatch(text -> text.contains("Injected simulation failure")));
+			service.close();
+			display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
+			rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
+			rows.get(1).getPlugin().buttonPressed(action);
+			assertEquals("IllegalStateException: Simulator service is closed", browser.getStatusError());
+			assertEquals("", browser.getSelectedId());
+			assertEquals("alpha", display.getRows().get(1).getField(BattleNext_QuickBattleDisplay.Column.PLAYER).getText());
+			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
+			widget.close();
+			assertFalse(router.getSession().hasInputState());
+		} finally {
+			widget.close();
 		}
-		assertNotNull(task.getResult());
-		plugin.advance(0f, List.of());
-		assertEquals(task.getStateHistory().size(), notices.size());
-		plugin.advance(0f, List.of());
-		assertEquals(task.getStateHistory().size(), notices.size());
+	}
+
+	@Test
+	void tournamentSubmissionReportsUnsupportedExecutionAndLeavesTheServiceIdle() throws Exception {
+		quickBattles("alpha,beta,0,1\n");
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
+		sources.reloadCatalogs();
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
+		tournament.setId("cup");
+		tournament.setFleetIds(List.of("alpha", "beta"));
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(tournament,
+				sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
+		UnsupportedOperationException failure = assertThrows(UnsupportedOperationException.class, () -> service.submit(request));
+		assertEquals("Tournament simulation is not supported", failure.getMessage());
+		assertEquals(BattleNext_SimulatorService.Phase.IDLE, BattleNext_SimulatorService.status().phase());
+		assertEquals(0, BattleNext_SimulatorService.status().queued());
 	}
 
 	@ParameterizedTest
@@ -240,10 +324,8 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestGameFixture {
 			BattleNext_SimulatorProtocol channel = new BattleNext_SimulatorProtocol(client, "session");
 			OwnedProcess process = new OwnedProcess();
 			Path runtime = attachWorker(channel, process);
-			BattleNext_SimulationTask active = new BattleNext_SimulationTask(new BattleNext_SimulationRequest(UUID.randomUUID().toString(),
-					List.of("player"), List.of("enemy"), BattleNext_SimulationConfig.lab()), service);
-			BattleNext_SimulationTask queued = new BattleNext_SimulationTask(new BattleNext_SimulationRequest(UUID.randomUUID().toString(),
-					List.of("player"), List.of("enemy"), BattleNext_SimulationConfig.lab()), service);
+			BattleNext_SimulationTask active = new BattleNext_SimulationTask(BattleNext_SimulationRequest.fromVariants(List.of("player"), List.of("enemy"), BattleNext_SimulationConfig.defaults()), service);
+			BattleNext_SimulationTask queued = new BattleNext_SimulationTask(BattleNext_SimulationRequest.fromVariants(List.of("player"), List.of("enemy"), BattleNext_SimulationConfig.defaults()), service);
 			LinkedBlockingQueue<BattleNext_SimulationTask> tasks = (LinkedBlockingQueue<BattleNext_SimulationTask>) readField("queue");
 			tasks.add(active);
 			tasks.add(queued);
@@ -298,7 +380,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_TestGameFixture {
 	}
 
 	private BattleNext_SimulationTask completedTask(String name) throws Exception {
-		BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(), List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.lab());
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
 		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, service);
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId(request.id());

@@ -3,6 +3,11 @@ package data.simulator;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import org.apache.log4j.Level;
+import data.missions.BattleNext_MissionBattleMap;
+import data.model.BattleNext_LoadSource;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.battle.BattleNext_Match;
+import data.scripts.member.BattleNext_MemberModel;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -88,10 +93,11 @@ public class BattleNext_SimulatorSmoke {
 			List<BattleNext_SimulationConfig.Strategy> strategies = measurements == 0 ? Arrays.asList(BattleNext_SimulationConfig.Strategy.values())
 					: List.of(BattleNext_SimulationConfig.Strategy.AGGRESSIVE);
 			for (BattleNext_SimulationConfig.Strategy strategy : strategies) {
-				for (int iteration = 0; iteration < (measurements == 0 ? 1 : measurements + 1); iteration++) {
+				for (int iteration = 0; iteration < (measurements == 0 ? 2 : measurements + 1); iteration++) {
 					BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false);
 					List<String> wolves = List.of("wolf_CS", "wolf_CS", "wolf_CS", "wolf_CS");
-					BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(), wolves, wolves, config);
+					BattleNext_SimulationRequest request = measurements == 0 && iteration == 1 ? matchRequest(core, config)
+							: BattleNext_SimulationRequest.fromVariants(wolves, wolves, config);
 					channel.send("REQUEST", request.toJson());
 					JSONObject preparing = await(channel, process, "STATUS", System.nanoTime() + 30000000000L).getJSONObject("payload");
 					if (!preparing.getString("state").equals("PREPARING") || preparing.getDouble("fps") != activeFps) {
@@ -103,12 +109,20 @@ public class BattleNext_SimulatorSmoke {
 					}
 					JSONObject message = await(channel, process, "RESULT", System.nanoTime() + 180000000000L);
 					BattleNext_SimulationResult result = BattleNext_SimulationResult.fromJson(message.getJSONObject("payload"));
-					Files.writeString(logs.resolve(strategy + "-" + request.id() + ".json"), result.toJson().toString(), StandardCharsets.UTF_8);
-					System.out.println(strategy + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
+					Files.writeString(logs.resolve(strategy + "-" + request.kind() + "-" + request.id() + ".json"),
+							new JSONObject().put("request", request.toJson()).put("result", result.toJson()).toString(), StandardCharsets.UTF_8);
+					System.out.println(strategy + " " + request.kind() + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
 							+ "s, elapsed=" + result.executionNanos() / 1000000000d + "s, steps=" + result.steps()
 							+ ", peakHeap=" + result.peakHeapBytes());
 					if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) throw new IOException("Smoke simulation did not complete: " + result.diagnostic());
 					if (result.report().getPlayerMembers().size() != wolves.size() || result.report().getEnemyMembers().size() != wolves.size()) throw new IOException("Smoke report member count differs from the constructed input");
+					String expectedHull = new JSONObject(Files.readString(core.resolve("data/variants/wolf/wolf_CS.variant"), StandardCharsets.UTF_8)).getString("hullId");
+					var report = result.report();
+					for (var members : List.of(report.getPlayerMembers(), report.getEnemyMembers())) {
+						for (var member : members) {
+							if (!expectedHull.equals(member.getHullId())) throw new IOException("Smoke report hull identity differs from the constructed variant: " + member.getHullId());
+						}
+					}
 					if (measurements == 0 || iteration > 0) {
 						samples.put(result.toJson());
 						rates.add(result.simulationSeconds() / (result.executionNanos() / 1000000000d));
@@ -119,8 +133,7 @@ public class BattleNext_SimulatorSmoke {
 			for (String scenario : List.of("unknown", "budget", "cancel")) {
 				BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
 						12000f, 12000f, 500f, scenario.equals("budget") ? 1f : 3600f, 120f, 32, true, false);
-				BattleNext_SimulationRequest request = new BattleNext_SimulationRequest(UUID.randomUUID().toString(),
-						List.of(scenario.equals("unknown") ? "BattleNext_unknown_smoke_variant" : "wolf_CS"), List.of("wolf_CS"), config);
+				BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of(scenario.equals("unknown") ? "BattleNext_unknown_smoke_variant" : "wolf_CS"), List.of("wolf_CS"), config);
 				channel.send("REQUEST", request.toJson());
 				if (scenario.equals("cancel")) {
 					await(channel, process, "STATUS", System.nanoTime() + 30000000000L);
@@ -177,6 +190,30 @@ public class BattleNext_SimulatorSmoke {
 			System.out.println("Benchmark " + profile + ": samples=" + rates.size() + ", median=" + median + "x, startup=" + startupSeconds + "s");
 		}
 		return summary;
+	}
+
+	private static BattleNext_SimulationRequest matchRequest(Path core, BattleNext_SimulationConfig config) throws Exception {
+
+		JSONObject source = new JSONObject();
+		for (String side : List.of("player", "enemy")) {
+			List<BattleNext_MemberModel> members = new ArrayList<>();
+			JSONObject variants = new JSONObject();
+			for (int index = 0; index < 4; index++) {
+				members.add(new BattleNext_MemberModel("smoke_local_wolf", "Smoke " + side + " " + index, "aggressive",
+						List.of("helmsmanship", "helmsmanship", "combat_endurance"), "", "", List.of()));
+				variants.put(Integer.toString(index), new JSONObject(Files.readString(core.resolve("data/variants/wolf/wolf_CS.variant"),
+						StandardCharsets.UTF_8)).put("variantId", "smoke_local_wolf"));
+			}
+			BattleNext_FleetModel fleet = new BattleNext_FleetModel(side, "Smoke " + side, List.of("crew_training"),
+					List.of(side.equals("player") ? "full_assault" : "default_ai"), members);
+			source.put(side, new JSONObject().put("definition", fleet.toJson()).put("variants", variants)
+					.put("folderName", side).put("sourceType", BattleNext_LoadSource.CREATED.name()).put("sourcePath", "smoke/" + side));
+		}
+		BattleNext_Match match = new BattleNext_Match("smoke_match", "player", "enemy", -1, 1.5f);
+		source.put("match", match.toJson()).put("actualMap", BattleNext_MissionBattleMap.resolve(-1))
+				.put("sourceType", BattleNext_LoadSource.CREATED.name()).put("sourcePath", "smoke/quick_battle.csv");
+		return BattleNext_SimulationRequest.fromJson(new JSONObject().put("id", UUID.randomUUID().toString())
+				.put("kind", BattleNext_SimulationRequest.Kind.MATCH.name()).put("source", source).put("config", config.toJson()));
 	}
 
 	private static JSONObject awaitReady(BattleNext_SimulatorProtocol channel, Process process, long deadline) throws Exception {

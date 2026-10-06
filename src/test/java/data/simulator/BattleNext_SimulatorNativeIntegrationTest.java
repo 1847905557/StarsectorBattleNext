@@ -201,11 +201,11 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				throw new AssertionError("Sandbox settings snapshot must preserve bytes");
 			}
 			Class<?> configType = loader.loadClass("data.simulator.BattleNext_SimulationConfig");
-			Object config = configType.getMethod("lab").invoke(null);
+			Object config = configType.getMethod("defaults").invoke(null);
 			Class<?> requestType = loader.loadClass("data.simulator.BattleNext_SimulationRequest");
-			String id = UUID.randomUUID().toString();
-			Object request = requestType.getConstructor(String.class, List.class, List.class, configType)
-					.newInstance(id, List.of("wolf_CS", "wolf_CS"), List.of("wolf_CS"), config);
+			Object request = requestType.getMethod("fromVariants", List.class, List.class, configType)
+					.invoke(null, List.of("wolf_CS", "wolf_CS"), List.of("wolf_CS"), config);
+			String id = (String) requestType.getMethod("id").invoke(request);
 			Class<?> resultType = loader.loadClass("data.simulator.BattleNext_SimulationResult");
 			JSONObject json = new JSONObject().put("id", id).put("outcome", "FAILED").put("report", "")
 					.put("simulationSeconds", 0f).put("executionNanos", 0L).put("steps", 0L).put("peakHeapBytes", 0L).put("diagnostic", "中文 50%");
@@ -239,8 +239,11 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			Class<?> type = loader.loadClass("data.simulator.BattleNext_SimulatorService");
 			try (AutoCloseable service = (AutoCloseable) type.getMethod("getInstance").invoke(null)) {
 				Class<?> configType = loader.loadClass("data.simulator.BattleNext_SimulationConfig");
-				Object config = configType.getMethod("lab").invoke(null);
-				Object task = type.getMethod("submit", List.class, List.class, configType).invoke(service, List.of("wolf_CS"), List.of("wolf_CS"), config);
+				Object config = configType.getMethod("defaults").invoke(null);
+				Class<?> requestType = loader.loadClass("data.simulator.BattleNext_SimulationRequest");
+				Object request = requestType.getMethod("fromVariants", List.class, List.class, configType)
+						.invoke(null, List.of("wolf_CS"), List.of("wolf_CS"), config);
+				Object task = type.getMethod("submit", requestType).invoke(service, request);
 				Class<?> taskType = task.getClass();
 				long deadline = System.nanoTime() + 15000000000L;
 				Object result;

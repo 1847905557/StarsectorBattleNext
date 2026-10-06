@@ -10,6 +10,8 @@ import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Consumer;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 
 public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
@@ -19,7 +21,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	public record Action(String label, Object id, boolean enabled) { }
 
-	public record Presentation(List<Column> columns, List<Float> columnShares, boolean editable, Function<Row, Action> action) {
+	public record Presentation(List<Column> columns, List<Float> columnShares, boolean editable,
+			Function<Row, Action> action, Consumer<Object> onAction) {
 		public Presentation {
 			columns = List.copyOf(columns);
 			columnShares = List.copyOf(columnShares);
@@ -140,7 +143,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		for (int column = 0; column < cells.length; column++) {
 			columns.put(presentation.columns().get(column), cells[column]);
 		}
-		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
+		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, new RowActionPlugin(row));
 		new UIRect(0f, 0f, rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBorder(rowPanel,
 				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
 		if (columns.containsKey(Column.NUMBER)) {
@@ -236,6 +239,22 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			row.statusLabel.setText(raw ? battleStrings.get("raw_row_status") : strings.get(reasons.isEmpty() ? "available" : "unavailable"));
 			row.statusLabel.setColor(raw || !reasons.isEmpty() ? BattleNext_UiTheme.PANEL : BattleNext_UiTheme.ACCENT);
 			row.actionButton.setEnabled(presentation.action().apply(row).enabled());
+		}
+	}
+
+	private class RowActionPlugin extends BaseCustomUIPanelPlugin {
+		private final Row row;
+
+		private RowActionPlugin(Row row) {
+			this.row = row;
+		}
+
+		@Override
+		public void buttonPressed(Object id) {
+			if (!inputRouter.isEmpty()) return;
+			Action action = presentation.action().apply(row);
+			if (!action.enabled() || !action.id().equals(id)) return;
+			presentation.onAction().accept(id);
 		}
 	}
 

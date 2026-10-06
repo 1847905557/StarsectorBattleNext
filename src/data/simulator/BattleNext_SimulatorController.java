@@ -105,8 +105,9 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 			report.setId(request.id());
 			report.setCreatedAt(System.currentTimeMillis());
-			report.setName("Simulation " + request.config().strategy() + ": " + String.join(",", request.player())
-					+ " vs " + String.join(",", request.enemy()) + " - " + request.id());
+			String sourceId = request.kind() == BattleNext_SimulationRequest.Kind.MATCH
+					? request.source().getJSONObject("match").getString("id") : "variants";
+			report.setName("Simulation " + request.config().strategy() + ": " + request.label() + " - " + sourceId + " - " + request.id());
 			reportJson = report.toJson().toString();
 		}
 		BattleNext_SimulatorWorker.status(request.id(), BattleNext_SimulationTask.State.CLEANING);

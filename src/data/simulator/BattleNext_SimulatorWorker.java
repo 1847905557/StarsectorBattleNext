@@ -129,7 +129,7 @@ public class BattleNext_SimulatorWorker {
 			status(current.id(), BattleNext_SimulationTask.State.PREPARING);
 			BattleNext_SimulatorNative nativeAccess = new BattleNext_SimulatorNative(Global.getCombatEngine().getClass().getClassLoader());
 			MissionDefinitionAPI mission = nativeAccess.createMission();
-			BattleNext_ScorekeeperPlugin scorekeeper = BattleNext_SimulatorMission.define(mission, current.player(), current.enemy(), current.config());
+			BattleNext_ScorekeeperPlugin scorekeeper = BattleNext_SimulatorMission.define(mission, current);
 			if (current.config().strategy() == BattleNext_SimulationConfig.Strategy.AGGRESSIVE) {
 				mission.getContext().setInitialStepSize(1f / 60f);
 				mission.getContext().setInitialNumSteps((float) Math.ceil(current.config().simulationSeconds() * 60d) + 2f);
@@ -139,7 +139,7 @@ public class BattleNext_SimulatorWorker {
 		} catch (Throwable exception) {
 			if (current == null) throw new IllegalStateException("Simulator idle channel failed", exception);
 			BattleNext_Logger.error(BattleNext_SimulatorWorker.class, "simulator.task.prepare.failed",
-					BattleNext_Logger.fields().put("id", current.id()).put("player", current.player()).put("enemy", current.enemy()).build(), exception);
+					BattleNext_Logger.fields().put("request", current.toJson()).build(), exception);
 			try {
 				complete(new BattleNext_SimulationResult(current.id(), BattleNext_SimulationResult.Outcome.FAILED,
 						"", 0f, 0L, 0L, 0L, exception.getClass().getName() + ": " + exception.getMessage()));

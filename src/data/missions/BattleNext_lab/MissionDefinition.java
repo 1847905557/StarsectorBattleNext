@@ -10,10 +10,6 @@ import data.scripts.plugin.BattleNext_AllShipsStatusPlugin;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_FreeCameraPlugin;
 import data.scripts.plugin.BattleNext_RttPlugin;
-import data.simulator.BattleNext_SimulationConfig;
-import data.simulator.BattleNext_SimulatorPlugin;
-
-import java.util.List;
 
 public class MissionDefinition implements MissionDefinitionPlugin {
 
@@ -47,8 +43,5 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_AllShipsStatusPlugin());
 		api.addPlugin(new BattleNext_RttPlugin());
 
-		// you have been warned
-		api.addPlugin(new BattleNext_SimulatorPlugin(List.of("wolf_CS", "wolf_CS", "wolf_CS", "wolf_CS"),
-				List.of("wolf_CS", "wolf_CS", "wolf_CS", "wolf_CS"), BattleNext_SimulationConfig.lab()));
 	}
 }

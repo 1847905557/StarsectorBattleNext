@@ -193,7 +193,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		private boolean everDeployed;
 
 		private ScoreTrackedFleetMember(String variantId, String name, FleetMemberAPI member, boolean playerSide) {
-			report = new BattleNext_MemberReport(variantId, name);
+			report = new BattleNext_MemberReport(variantId, member.getVariant().getHullSpec().getHullId(), name);
 			this.member = member;
 			this.playerSide = playerSide;
 		}

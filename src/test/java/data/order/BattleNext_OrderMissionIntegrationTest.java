@@ -11,9 +11,7 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
-import data.missions.BattleNext_pvp.MissionDefinition;
 import data.model.fleet.BattleNext_FleetModel;
-import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.test.fixture.BattleNext_TestOrderFixture;
@@ -82,12 +80,8 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 			case "initFleet" -> { defaultAi.add((Boolean) args[3]); yield null; }
 			default -> null;
 		});
-		MissionDefinition mission = new MissionDefinition();
-		var configure = MissionDefinition.class.getDeclaredMethod("configureFleet", MissionDefinitionAPI.class,
-				FleetSide.class, BattleNext_AssembledFleet.class);
-		configure.setAccessible(true);
-		configure.invoke(mission, api, FleetSide.PLAYER, playerFleet);
-		configure.invoke(mission, api, FleetSide.ENEMY, enemyFleet);
+		builder.addToMission(api, FleetSide.PLAYER, playerFleet, playerDefinition.getName());
+		builder.addToMission(api, FleetSide.ENEMY, enemyFleet, enemyDefinition.getName());
 		assertEquals(List.of(player.getMember(), enemy.getMember()), added);
 		assertEquals(List.of(false, false), defaultAi);
 		var plugin = new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(playerDefinition.getTags()),

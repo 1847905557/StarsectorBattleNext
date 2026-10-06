@@ -3,7 +3,6 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
-import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.*;
@@ -102,7 +101,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 			float width = detailControlWidth(contentWidth);
 			List<BattleNext_DamageSourceReport> sources = sourcesFor(row);
 			float bodyHeight = expanded ? memberBodyHeight(sources.size()) : 0f;
-			HullSummary hull = resolveHull(member.getVariantId(), this::loadVariant);
+			HullSummary hull = resolveHull(member.getHullId(), this::loadHull);
 			String shipName = member.getName().isEmpty() ? member.getVariantId() : member.getName();
 			String side = reportStrings.get(row.playerSide() ? "side_player" : "side_enemy");
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
@@ -271,20 +270,19 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		return row.dealt() ? row.member().getDealtBySource() : row.member().getTakenBySource();
 	}
 
-	static HullSummary resolveHull(String variantId, Function<String, ShipVariantAPI> variants) {
-		ShipVariantAPI variant = variants.apply(variantId);
-		ShipHullSpecAPI hull = variant == null ? null : variant.getHullSpec();
-		if (hull == null) return new HullSummary(variantId, "");
+	static HullSummary resolveHull(String hullId, Function<String, ShipHullSpecAPI> hulls) {
+		ShipHullSpecAPI hull = hulls.apply(hullId);
+		if (hull == null) return new HullSummary(hullId, "");
 		String name = hull.getHullName();
 		String sprite = hull.getSpriteName();
-		return new HullSummary(name == null || name.isEmpty() ? variantId : name,
+		return new HullSummary(name == null || name.isEmpty() ? hullId : name,
 				sprite == null ? "" : sprite);
 	}
 
-	private ShipVariantAPI loadVariant(String id) {
+	private ShipHullSpecAPI loadHull(String id) {
 		if (id == null || id.isEmpty()) return null;
 		try {
-			return Global.getSettings().getVariant(id);
+			return Global.getSettings().getHullSpec(id);
 		} catch (RuntimeException exception) {
 			return null;
 		}

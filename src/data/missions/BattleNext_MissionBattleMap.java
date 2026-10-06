@@ -1,6 +1,7 @@
 package data.missions;
 
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class BattleNext_MissionBattleMap {
 
@@ -14,11 +15,12 @@ public class BattleNext_MissionBattleMap {
 
 	}
 
-	public static int resolve(int map, int seed) {
-		return map < 0 ? Math.floorMod(seed, MAP_COUNT) : Math.floorMod(map, MAP_COUNT);
+	public static int resolve(int map) {
+		return map == RANDOM_MAP_ID ? ThreadLocalRandom.current().nextInt(MAP_COUNT) : map;
 	}
 
 	public static void apply(MissionDefinitionAPI api, int map, float mapScale) {
+		map = resolve(map);
 		float scale = Math.max(MIN_MAP_SCALE, mapScale);
 		float width;
 		float height;
