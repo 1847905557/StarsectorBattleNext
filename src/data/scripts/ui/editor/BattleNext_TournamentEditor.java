@@ -20,8 +20,10 @@ import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_RuleSourceProvider;
 import org.json.JSONArray;
 
 import java.util.*;
@@ -57,6 +59,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	private BattleNext_OptionPicker fleetPicker;
 	private BattleNext_TableWidget tableWidget;
 	private final BattleNext_FleetSourceProvider fleetSource;
+	private final BattleNext_RuleSourceProvider ruleSource;
 	private CheckBoxGroup bracketGroup;
 	private final BattleNext_RulesCheck rulesCheck = new BattleNext_RulesCheck();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
@@ -69,6 +72,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		this.fleetStore = fleetStore;
 		this.ruleStore = ruleStore;
 		fleetSource = new BattleNext_FleetSourceProvider(fleetStore);
+		ruleSource = new BattleNext_RuleSourceProvider(ruleStore);
 	}
 
 	public boolean open(BattleNext_TournamentModel source) {
@@ -131,7 +135,12 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		}
 		bestOfField = createTextField("best_of", panel, metadataContent, fieldArea, tournamentStrings.get("best_of_count"), Integer.toString(draft.getBoCount()), !isReadOnly(), metadataContent);
 		maxFleetsField = createTextField("max_fleets", panel, metadataContent, fieldArea, tournamentStrings.get("max_fleets"), Integer.toString(draft.getMaxFleet()), !isReadOnly(), metadataContent);
-		ruleField = createTextField("rule", panel, metadataContent, fieldArea, tournamentStrings.get("rules"), draft.getRuleId(), !isReadOnly(), metadataContent);
+		if (isReadOnly()) {
+			ruleField = createTextField("rule", panel, metadataContent, fieldArea, tournamentStrings.get("rules"), draft.getRuleId(), false, metadataContent);
+		} else {
+			ruleField = createOptionField("rule", panel, metadataContent, fieldArea, tournamentStrings.get("rules"), draft.getRuleId(),
+					ruleSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, metadataContent);
+		}
 		mapField = createTextField("map", panel, metadataContent, fieldArea, battleStrings.get("map_number_label"), Integer.toString(draft.getMapId()), !isReadOnly(), metadataContent);
 	}
 

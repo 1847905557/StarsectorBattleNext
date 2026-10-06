@@ -1,6 +1,7 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
@@ -17,6 +18,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
+import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.scripts.member.BattleNext_MemberModel;
@@ -31,6 +33,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -67,11 +70,16 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(tableArea.getHeight(), table.getPanel().getPosition().getHeight());
 		assertEquals(right.getPosition().getX() + tableArea.getX(), table.getPanel().getPosition().getX());
 		assertSame(right.getPosition(), geometry.get(table.getPanel().getPosition()).getParent());
-		for (String name : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "ruleField", "mapField")) {
+		for (String name : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "mapField")) {
 			TextFieldAPI field = (TextFieldAPI) getField(editor, name);
 			assertEquals(leftWidth - 12f, field.getPosition().getWidth());
 			assertEquals(List.of(left), ((Map<?, ?>) getField(router(editor).getSession(), "registrations")).get(field));
 		}
+		TextFieldAPI ruleField = (TextFieldAPI) getField(editor, "ruleField");
+		CustomPanelAPI ruleRow = (CustomPanelAPI) getField(optionFields(editor).get(0), "row");
+		assertEquals(leftWidth - 12f, ruleRow.getPosition().getWidth());
+		assertEquals(ruleRow.getPosition().getWidth() - 32f, ruleField.getPosition().getWidth());
+		assertEquals(List.of(left), ((Map<?, ?>) getField(router(editor).getSession(), "registrations")).get(ruleField));
 		float rowWidth = table.getPanel().getPosition().getWidth();
 		for (int index = 0; index < 2; index++) {
 			CustomPanelAPI row = row(editor, index);
@@ -200,6 +208,70 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@Test
+	void ruleSelectionSearchCancelAndCommitPreserveInputsAndPersistTheSelectedIdentity() throws Exception {
+
+		BattleNext_FleetStore fleets = fleets(List.of("first", "second"));
+		BattleNext_RuleStore rules = new BattleNext_RuleStore();
+		rules.reload();
+		rules.save(new BattleNext_RuleModel("rule_a", "Rule A"));
+		rules.save(new BattleNext_RuleModel("rule_b", "Rule B 50%"));
+		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
+		tournaments.reload();
+		BattleNext_TournamentModel model = tournament(List.of("first", "second"));
+		model.setRuleId("rule_a");
+		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournaments, fleets, rules);
+		editor.open(model);
+		CustomPanelAPI root = panel(1000f, 900f, new BaseCustomUIPanelPlugin());
+		attachEditor(editor, root);
+		TextFieldAPI ruleField = (TextFieldAPI) getField(editor, "ruleField");
+		TextFieldAPI bestOfField = (TextFieldAPI) getField(editor, "bestOfField");
+		bestOfField.setText("pending");
+		String before = editor.serializeState();
+		chooseRule(editor, "Rule B", "CANCEL");
+		assertEquals(before, editor.serializeState());
+		chooseRule(editor, "Rule B", "CONFIRM");
+		assertEquals("rule_b", ruleField.getText());
+		assertTrue(editor.hasUnsavedChanges());
+		editor.refreshDraftValidation();
+		assertSame(ruleField, getField(editor, "ruleField"));
+		assertSame(bestOfField, getField(editor, "bestOfField"));
+		assertEquals("pending", bestOfField.getText());
+		assertFalse(editor.save());
+		assertNull(tournaments.get("cup"));
+		editor.refreshContent();
+		assertEquals("rule_b", ((TextFieldAPI) getField(editor, "ruleField")).getText());
+		assertEquals("pending", ((TextFieldAPI) getField(editor, "bestOfField")).getText());
+		((TextFieldAPI) getField(editor, "bestOfField")).setText("3");
+		assertTrue(editor.save(), editor.getStatusText());
+		tournaments.reload();
+		assertEquals("rule_b", tournaments.get("cup").getRuleId());
+		assertFalse(editor.hasUnsavedChanges());
+		ruleField = (TextFieldAPI) getField(editor, "ruleField");
+		ruleField.setText("unknown");
+		chooseRule(editor, "", "CONFIRM");
+		assertEquals("unknown", ruleField.getText());
+		editor.refreshDraftValidation();
+		assertFalse(valid(editor, 0).isChecked());
+		ruleField.setText("");
+		chooseRule(editor, "", "CONFIRM");
+		assertEquals("", ruleField.getText());
+		editor.refreshDraftValidation();
+		assertTrue(valid(editor, 0).isChecked());
+		assertTrue(editor.save(), editor.getStatusText());
+		tournaments.reload();
+		assertEquals("", tournaments.get("cup").getRuleId());
+		rules.save(new BattleNext_RuleModel("rule_c", "New rule"));
+		chooseRule(editor, "New rule", "CONFIRM");
+		assertEquals("rule_c", ruleField.getText());
+		editor.discard();
+		assertEquals("", ((TextFieldAPI) getField(editor, "ruleField")).getText());
+		assertFalse(editor.hasUnsavedChanges());
+		editor.close();
+		assertTrue(router(editor).isEmpty());
+		assertFalse(router(editor).getSession().hasInputState());
+	}
+
+	@Test
 	void ruleChangesUpdateStatusesAndTooltipReasonsWithoutRebuildingFocusedLeftFields() throws Exception {
 
 		BattleNext_FleetStore fleets = fleets(List.of("first", "second"));
@@ -222,8 +294,8 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 			rules.save(rule);
 			BattleNext_TournamentEditor editor = editor(fleets, rules, tournament(List.of("first", "second")), 1000f, 700f);
 			TextFieldAPI field = (TextFieldAPI) getField(editor, "ruleField");
+			chooseRule(editor, "Rule", "CONFIRM");
 			field.grabFocus(false);
-			field.setText("rule");
 			BattleNext_TableWidget table = table(editor);
 			TooltipMakerAPI previous = table.getContent();
 			editor.refreshDraftValidation();
@@ -428,6 +500,41 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 			store.save(new BattleNext_FleetModel(id, "Fleet " + id + " with its complete name", List.of(), List.of(), List.of()));
 		}
 		return store;
+	}
+
+	private void chooseRule(BattleNext_TournamentEditor editor, String searchText, String action) throws Exception {
+
+		BattleNext_OptionField optionField = optionFields(editor).get(0);
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(optionField, "picker");
+		CustomPanelAPI row = (CustomPanelAPI) getField(picker, "row");
+		plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
+		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+		assertSame(getField(editor, "overlayHost"), getField(picker, "overlayHost"));
+		((TextFieldAPI) getField(picker, "search")).setText(searchText);
+		plugins.get(popup).advance(0f);
+		if (!searchText.isEmpty()) {
+			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
+			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+			assertEquals(1, tooltips.get(grid).getComponents().size());
+			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
+			assertTrue(hover(card).stream().anyMatch(value -> value.contains(searchText)));
+			AtomicBoolean consumed = new AtomicBoolean();
+			InputEventAPI click = proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
+				case "isLMBDownEvent" -> true;
+				case "isConsumed" -> consumed.get();
+				case "consume" -> {
+					consumed.set(true);
+					yield null;
+				}
+				case "getX" -> (int) card.getPosition().getCenterX();
+				case "getY" -> (int) card.getPosition().getCenterY();
+				default -> null;
+			});
+			plugins.get(card).processInput(List.of(click));
+			assertTrue(consumed.get());
+		}
+		plugins.get(popup).buttonPressed(buttonIds.get(action));
+		assertTrue(router(editor).isEmpty());
 	}
 
 	private BattleNext_TournamentModel tournament(List<String> ids) {
