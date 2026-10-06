@@ -13,13 +13,8 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
-import org.json.JSONException;
-
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -31,11 +26,11 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	private final Runnable backAction;
 	private final Consumer<Runnable> navigation;
 	private final BiConsumer<String, Runnable> deletion;
-	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
-	private final BattleNext_RuleStore ruleStore = new BattleNext_RuleStore();
-	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
+	private final BattleNext_TournamentStore tournamentStore = provider.getTournamentStore();
+	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
+	private final BattleNext_RuleStore ruleStore = provider.getRuleStore();
+	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
 	private BattleNext_TournamentDisplay tournamentDisplay;
 
 	private String selectedId = "";
@@ -57,22 +52,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	protected void loadPageState() {
 		selectedId = "";
 		draftOpen = false;
-		status = "";
-		try {
-			fleetStore.reload();
-		} catch (IOException | JSONException | RuntimeException exception) {
-			status = exception.getMessage();
-		}
-		try {
-			tournamentStore.reload();
-		} catch (Exception exception) {
-			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
-		}
-		try {
-			ruleStore.reload();
-		} catch (Exception exception) {
-			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
-		}
+		status = String.join(" | ", provider.reloadTournamentCatalog());
 	}
 
 	@Override
@@ -125,12 +105,6 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 			attachEditor(contentPanel);
 			return;
 		}
-		Map<String, String> fleetNames = new LinkedHashMap<>();
-		for (String fleetId : tournament.getFleetIds()) {
-			if (fleetStore.get(fleetId) != null) {
-				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
-			}
-		}
 		BattleNext_Match next = tournament.getNextPendingMatch();
 		List<String> warnings = new ArrayList<>();
 		if (selectedId.equals(tournamentStore.getActiveId()) && next != null) {
@@ -138,9 +112,8 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 			warnings.addAll(provider.getWarnings());
 			warnings.addAll(provider.getRuleWarnings());
 		}
-		BattleNext_TournamentDisplay.Details details = new BattleNext_TournamentDisplay.Details(fleetNames,
-				ruleStore.get(tournament.getRuleId()) != null, next, status, warnings, false, false);
-		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, this::buttonPressed);
+		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, fleetStore, ruleStore, status, warnings);
+		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, List.of(), this::buttonPressed);
 		tournamentDisplay.attach(contentPanel);
 	}
 
@@ -245,21 +218,13 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	}
 
 	@Override
-	protected boolean savePage() {
-		if (!draftOpen || editor.isReadOnly()) return true;
-		if (!editor.save()) {
-			setStatus(editor.getStatusText());
-			return false;
-		}
+	protected void afterEditorCommit() {
 		selectedId = editor.getDraftId();
-		setStatus(strings.get("saved"));
-		try {
-			tournamentStore.reload();
-			refreshContent();
-		} catch (Exception exception) {
-			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
-		}
-		return true;
+	}
+
+	@Override
+	protected void reloadSavedData() throws Exception {
+		tournamentStore.reload();
 	}
 
 	@Override

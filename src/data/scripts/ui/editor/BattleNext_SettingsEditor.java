@@ -30,6 +30,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void buildEditorContent() {
+
 		boolean cnText = cnTextCheckbox == null ? BattleNext_Settings.isCnTextEnabled() : cnTextCheckbox.isChecked();
 		boolean graphics = fullGraphicEffectCheckbox == null ? BattleNext_Settings.isFullGraphicEffect() : fullGraphicEffectCheckbox.isChecked();
 		boolean logging = infoLogCheckbox == null ? BattleNext_Settings.isInfoLogEnabled() : infoLogCheckbox.isChecked();
@@ -44,15 +45,14 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		float areaWidth = panel.getPosition().getWidth();
 		TooltipMakerAPI fieldContent = panel.createUIElement(areaWidth, panel.getPosition().getHeight(), true);
 		BattleNext_UiTheme.configure(fieldContent);
-		UIRect checkboxArea = new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT);
-		UIRect fieldArea = new UIRect(0f, 0f, Math.min(320f, areaWidth), BattleNext_PageLayout.FORM_FIELD_HEIGHT);
+		UIRect fieldArea = new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		fieldContent.setTextWidthOverride(areaWidth);
 		BattleNext_PageLayout.contentTitle(fieldContent, settingsStrings.get("heading"), areaWidth, 0f);
 		fieldContent.addPara(settingsStrings.get("description"), 10f);
-		cnTextCheckbox = createCheckbox("cn_text", fieldContent, checkboxArea, settingsStrings.get("cn_text"), "cnText", cnText, true);
-		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, checkboxArea, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);
-		infoLogCheckbox = createCheckbox("logging", fieldContent, checkboxArea, settingsStrings.get("info_log"), "infoLog", logging, true);
-		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, checkboxArea, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
+		cnTextCheckbox = createCheckbox("cn_text", fieldContent, fieldArea, settingsStrings.get("cn_text"), "cnText", cnText, true);
+		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, fieldArea, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);
+		infoLogCheckbox = createCheckbox("logging", fieldContent, fieldArea, settingsStrings.get("info_log"), "infoLog", logging, true);
+		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, fieldArea, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
 		battleTimeLimitField = createTextField("battle_time_limit", panel, fieldContent, fieldArea, settingsStrings.get("battle_time_limit"), values[0], true, fieldContent);
 		defaultTimeMultField = createTextField("default_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("default_time_mult"), values[1], true, fieldContent);
 		boostTimeMultField = createTextField("boost_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("boost_time_mult"), values[2], true, fieldContent);

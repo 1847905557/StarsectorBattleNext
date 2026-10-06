@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.StringSelection;
 
 class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 	private final List<String> sounds = new ArrayList<>();
@@ -28,6 +32,48 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 			inputField.close();
 		}
 		router.clear();
+	}
+
+	@Test
+	void readonlyInputKeepsSelectionCopyAndNavigationWhilePreservingItsText() throws Exception {
+
+		BattleNext_TextField field = field();
+		String value = "完整文本😀 50% " + "long ".repeat(90);
+		field.setText(value);
+		field.setEditable(false);
+		field.grabFocus(false);
+		assertTrue(field.captureEditState().scroll() > 0f);
+		router.handleGlobalInput(List.of(key(Keyboard.KEY_HOME, (char) 0, false, false)));
+		assertEquals(0f, field.captureEditState().scroll());
+		router.handleGlobalInput(List.of(key(Keyboard.KEY_A, (char) 1, true, false)));
+		assertEquals(0, field.captureEditState().anchor());
+		assertEquals(value.length(), field.captureEditState().cursor());
+		var clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+		Transferable previous = clipboard.getContents(null);
+		try {
+			router.handleGlobalInput(List.of(key(Keyboard.KEY_C, (char) 3, true, false)));
+			assertEquals(value, clipboard.getData(DataFlavor.stringFlavor));
+			for (InputEventAPI event : List.of(key(Keyboard.KEY_X, (char) 24, true, false),
+					key(Keyboard.KEY_V, (char) 22, true, false), key(Keyboard.KEY_BACK, '\b', false, false),
+					key(Keyboard.KEY_DELETE, (char) 0, false, false), key(Keyboard.KEY_Z, 'z', false, false))) {
+				assertTrue(router.handleGlobalInput(List.of(event)));
+				assertTrue(event.isConsumed());
+				assertEquals(value, field.getText());
+			}
+		} finally {
+			clipboard.setContents(previous == null ? new StringSelection("") : previous, null);
+		}
+		field.insertPastedText("replacement");
+		assertFalse(field.appendCharIfPossible('x'));
+		field.deleteAll();
+		field.deleteLastWord();
+		assertEquals(value, field.getText());
+		assertTrue(sounds.isEmpty());
+		field.setText("Updated 100%");
+		assertEquals("Updated 100%", field.getText());
+		field.setEditable(true);
+		field.deleteAll(false);
+		assertEquals("", field.getText());
 	}
 
 	@Test

@@ -148,14 +148,22 @@ public class BattleNext_PageLayout {
 	}
 
 	public static LabelAPI heading(UIRect rect, CustomPanelAPI panel, String title) {
+		return heading(rect, panel, title, BattleNext_UiTheme.PANEL);
+	}
+
+	public static LabelAPI heading(UIRect rect, CustomPanelAPI panel, String title, Color backgroundColor) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH, rect.getWidth()), rect.getHeight(), false);
-		return heading(rect, panel, maker, title);
+		return heading(rect, panel, maker, title, backgroundColor);
 	}
 
 	public static LabelAPI heading(UIRect rect, CustomPanelAPI panel, TooltipMakerAPI maker, String title) {
+		return heading(rect, panel, maker, title, BattleNext_UiTheme.PANEL);
+	}
+
+	private static LabelAPI heading(UIRect rect, CustomPanelAPI panel, TooltipMakerAPI maker, String title, Color backgroundColor) {
 		LabelAPI label = maker.addSectionHeading(maker.shortenString(title,
 				rect.getWidth() - PAGE_TITLE_TRUNCATION_PADDING), BattleNext_UiTheme.TEXT,
-				BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
+				backgroundColor, Alignment.MID, 0f);
 		label.getPosition().inTL(0f, 0f);
 		maker.setHeightSoFar(rect.getHeight());
 		panel.addUIElement(maker).inTL(rect.getX(), rect.getY());
@@ -229,6 +237,45 @@ public class BattleNext_PageLayout {
 
 	public static float editorFieldWidth(float areaWidth) {
 		return Math.max(MIN_UI_WIDTH, areaWidth - editorFieldInset(areaWidth) * 2f);
+	}
+
+	public static BattleNext_TextField cellTextField(BattleNext_UiInputRouter router, CustomPanelAPI hostPanel,
+			UIRect cell, String value, boolean editable, TooltipMakerAPI... viewports) {
+		UIRect bounds = editorFieldCell(cell);
+		TooltipMakerAPI content = hostPanel.createUIElement(bounds.getWidth(), bounds.getHeight(), false);
+		BattleNext_TextField field = new BattleNext_TextField(router, hostPanel, bounds.getWidth(), bounds.getHeight(), viewports);
+		field.attach(content, hostPanel);
+		field.setEditable(editable);
+		field.setText(value);
+		field.getPosition().inTL(0f, 0f);
+		content.setHeightSoFar(bounds.getHeight());
+		hostPanel.addUIElement(content).inTL(bounds.getX(), bounds.getY());
+		return field;
+	}
+
+	public static LabelAPI cellLabel(CustomPanelAPI hostPanel, UIRect cell, String text, boolean compact,
+			TooltipMakerAPI.TooltipCreator tooltip, TooltipLocation location, boolean recreate) {
+
+		UIRect bounds = editorLabelCell(cell);
+		float cellWidth = bounds.getWidth();
+		TooltipMakerAPI content = hostPanel.createUIElement(cellWidth, bounds.getHeight(), false);
+		content.setTextWidthOverride(cellWidth);
+		if (compact) {
+			content.setParaSmallInsignia();
+		}
+		LabelAPI label = content.addPara(content.shortenString(text,
+				Math.max(1f, cell.getWidth() - CELL_LABEL_TRUNCATION_PADDING)), 0f);
+		label.setAlignment(Alignment.MID);
+		label.getPosition().setSize(cellWidth, label.getPosition().getHeight());
+		label.getPosition().inTL(0f, Math.max(0f, (cell.getHeight() - label.getPosition().getHeight()) * 0.5f));
+		if (tooltip != null) {
+			content.addTooltipTo(tooltip, content.getPrev(), location, recreate);
+		} else {
+			addMetadataTooltip(content, text);
+		}
+		content.setHeightSoFar(cell.getHeight());
+		hostPanel.addUIElement(content).inTL(bounds.getX(), bounds.getY());
+		return label;
 	}
 
 	public static float editorFieldInset(float areaWidth) {
@@ -324,12 +371,18 @@ public class BattleNext_PageLayout {
 
 	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
 			CutStyle style, boolean prominent) {
+		return fixedButton(panel, rect, title, id, style,
+				prominent ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT);
+	}
+
+	public static ButtonAPI fixedButton(CustomPanelAPI panel, UIRect rect, String title, Object id,
+			CutStyle style, Color textColor) {
 		TooltipMakerAPI maker = panel.createUIElement(Math.max(MIN_UI_WIDTH,
 				rect.getWidth() - BUTTON_EXTRA_DRAW_WIDTH), rect.getHeight(), false);
 		maker.setButtonFontOrbitron20();
 		ButtonAPI button = maker.addButton(maker.shortenString(title,
 				Math.max(MIN_UI_WIDTH, rect.getWidth() - BUTTON_TEXT_TRUNCATION_PADDING)), id,
-				prominent ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT,
+				textColor,
 				BattleNext_UiTheme.PANEL, Alignment.MID, style, rect.getWidth(), rect.getHeight(), 0f);
 		button.getPosition().inTL(0f, 0f);
 		applyButtonSounds(button);

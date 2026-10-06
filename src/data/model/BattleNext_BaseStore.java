@@ -28,6 +28,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	private final Map<String, T> entries = new LinkedHashMap<>();
 	private String loadError;
+	private long revision;
 
 	protected BattleNext_BaseStore(String notLoadedMessage) {
 		loadError = notLoadedMessage;
@@ -138,6 +139,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 		return loadError;
 	}
 
+	public long getRevision() {
+		return revision;
+	}
+
 	public T get(String id) {
 		return entries.get(id);
 	}
@@ -173,10 +178,12 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	private void replaceEntries(Map<String, T> loaded) {
 		entries.clear();
 		entries.putAll(loaded);
+		revision++;
 	}
 
 	private void removeEntry(String id) {
 		entries.remove(id);
+		revision++;
 	}
 
 	private void succeedLoad() {
@@ -186,11 +193,13 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	private void recordFailure(Exception exception) {
 		String message = exception.getMessage();
 		loadError = message == null || message.isBlank() ? exception.toString() : message;
+		revision++;
 	}
 
 	private void register(T model, String path) {
 		model.setSourceType(BattleNext_LoadSource.CREATED);
 		model.setSourcePath(path);
 		entries.put(model.getId(), model);
+		revision++;
 	}
 }

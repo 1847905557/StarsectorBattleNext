@@ -5,7 +5,10 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import data.model.tournament.BattleNext_TournamentModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.model.rule.BattleNext_RuleStore;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -17,17 +20,26 @@ import data.scripts.ui.widget.view.BattleNext_TournamentView;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.function.Consumer;
 
 public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	public record Details(Map<String, String> fleetNames, boolean ruleAvailable, BattleNext_Match currentMatch,
-			String loadError, List<String> warnings, boolean startEnabled, boolean authorizeAvailable) {
+			String loadError, List<String> warnings) {
 		public Details {
 			fleetNames = Map.copyOf(fleetNames);
 			warnings = List.copyOf(warnings);
 		}
 	}
+
+	public record Action(String label, Object id, boolean enabled, List<String> reasons) {
+		public Action {
+			reasons = List.copyOf(reasons);
+		}
+	}
+
+	public record ViewState(float scroll, BattleNext_TournamentView.ViewState chart) { }
 
 	private static final float TITLE_GAP = 10f;
 	private static final float CONTENT_WIDTH_RESERVE = 12f;
@@ -41,19 +53,42 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private final BattleNext_TournamentModel tournament;
 	private final Details details;
 	private final Consumer<Object> onAction;
+	private final List<Action> actions;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private BattleNext_TournamentView chart;
+	private TooltipMakerAPI content;
 
 	public BattleNext_TournamentDisplay(BattleNext_UiInputRouter inputRouter,
-			BattleNext_TournamentModel tournament, Details details, Consumer<Object> onAction) {
+			BattleNext_TournamentModel tournament, Details details, List<Action> actions, Consumer<Object> onAction) {
 		super(inputRouter);
 		this.tournament = tournament;
 		this.details = details;
 		this.onAction = onAction;
+		this.actions = List.copyOf(actions);
+	}
+
+	public static Details details(BattleNext_TournamentModel tournament, BattleNext_FleetStore fleets,
+			BattleNext_RuleStore rules, String loadError, List<String> warnings) {
+		Map<String, String> names = new LinkedHashMap<>();
+		for (String id : tournament.getFleetIds()) {
+			if (fleets.get(id) == null) continue;
+			names.put(id, fleets.get(id).getName());
+		}
+		return new Details(names, rules.isLoaded() && rules.get(tournament.getRuleId()) != null,
+				tournament.getNextPendingMatch(), loadError, warnings);
+	}
+
+	public ViewState captureState() {
+		return new ViewState(content.getExternalScroller().getYOffset(), chart.captureState());
+	}
+
+	public void restoreState(ViewState state) {
+		chart.restoreState(state.chart());
+		content.getExternalScroller().setYOffset(state.scroll());
 	}
 
 	@Override
@@ -73,7 +108,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		UIRect[] rows = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + TITLE_GAP);
 		BattleNext_PageLayout.heading(rows[0], panel, tournament.getName());
 		CustomPanelAPI viewport = ownPanel(panel, rows[1].createSubPanel(panel, new ActionPlugin()).getPanel());
-		TooltipMakerAPI content = viewport.createUIElement(rows[1].getWidth(), rows[1].getHeight(), true);
+		content = viewport.createUIElement(rows[1].getWidth(), rows[1].getHeight(), true);
 		BattleNext_UiTheme.configure(content);
 		content.setBgAlpha(0f);
 		chart = BattleNext_TournamentView.createView(tournament, details.fleetNames());
@@ -182,14 +217,19 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		for (String warning : details.warnings()) {
 			content.addPara(warning, WARNING_GAP);
 		}
-		if (details.authorizeAvailable()) {
-			BattleNext_PageLayout.button(content, ruleStrings.get("force_start_match"), "tournament:authorize",
-					Math.min(ACTION_BUTTON_WIDTH, width));
-		}
-		if (!tournament.isStarted()) {
-			ButtonAPI start = BattleNext_PageLayout.button(content, tournamentStrings.get("start"),
-					"tournament:start", Math.min(ACTION_BUTTON_WIDTH, width));
-			start.setEnabled(details.startEnabled());
+		for (Action action : actions) {
+			ButtonAPI button = BattleNext_PageLayout.button(content, action.label(), action.id(), Math.min(ACTION_BUTTON_WIDTH, width));
+			button.setEnabled(action.enabled());
+			if (!action.reasons().isEmpty()) {
+				content.addTooltipToPrevious(new BaseTooltipCreator() {
+					@Override
+					public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+						for (String reason : action.reasons()) {
+							tooltip.addPara(reason, WARNING_GAP);
+						}
+					}
+				}, TooltipMakerAPI.TooltipLocation.RIGHT);
+			}
 		}
 	}
 
@@ -230,9 +270,10 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		public void buttonPressed(Object buttonId) {
 			if (chart == null || !inputRouter.isEmpty()) return;
 
-			if ("tournament:start".equals(buttonId) && !tournament.isStarted() && details.startEnabled()
-					|| "tournament:authorize".equals(buttonId) && details.authorizeAvailable()) {
+			for (Action action : actions) {
+				if (!action.enabled() || !action.id().equals(buttonId)) continue;
 				onAction.accept(buttonId);
+				return;
 			}
 		}
 	}

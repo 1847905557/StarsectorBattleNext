@@ -67,6 +67,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private boolean undoOnEscape = true;
 	private boolean handleCtrlV = true;
 	private boolean verticalCursor = true;
+	private boolean editable = true;
 	private String undoText = "";
 	private char pendingHighSurrogate;
 	private Color textColor = DEFAULT_TEXT_COLOR;
@@ -99,6 +100,15 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	public EditState captureEditState() {
 		return new EditState(text, cursor, anchor, scroll, undoText, session.isFocused(this));
+	}
+
+	public boolean isEditable() {
+		return editable;
+	}
+
+	public void setEditable(boolean editable) {
+		this.editable = editable;
+		pendingHighSurrogate = 0;
 	}
 
 	public void restoreEditState(EditState state) {
@@ -252,6 +262,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	void insertPastedText(String clipboard) {
+		if (!editable) return;
 		boolean accepted = false;
 		boolean rejected = false;
 		for (int offset = 0; offset < clipboard.length();) {
@@ -301,17 +312,19 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 				refreshVisual();
 			} else if (!event.isAltDown() && key == Keyboard.KEY_C) {
 				copySelection();
-			} else if (!event.isAltDown() && key == Keyboard.KEY_X) {
+			} else if (editable && !event.isAltDown() && key == Keyboard.KEY_X) {
 				copySelection();
 				if (hasSelection()) {
 					deleteSelection();
 					playEditSound(true);
 				}
-			} else if (!event.isAltDown() && key == Keyboard.KEY_V && handleCtrlV) {
+			} else if (editable && !event.isAltDown() && key == Keyboard.KEY_V && handleCtrlV) {
 				pasteClipboard();
 			}
 			return;
 		}
+		if (!editable && key != Keyboard.KEY_LEFT && key != Keyboard.KEY_RIGHT
+				&& key != Keyboard.KEY_HOME && key != Keyboard.KEY_END && key != Keyboard.KEY_ESCAPE) return;
 		switch (key) {
 			case Keyboard.KEY_LEFT:
 				pendingHighSurrogate = 0;
@@ -344,7 +357,9 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			case Keyboard.KEY_ESCAPE:
 				pendingHighSurrogate = 0;
 				soundSink.accept(TYPE_SOUND_ID);
-				if (undoOnEscape) setText(undoText);
+				if (editable && undoOnEscape) {
+					setText(undoText);
+				}
 				releaseFocus();
 				break;
 			default:
@@ -629,6 +644,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	@Override
 	public boolean appendCharIfPossible(char c, boolean withSound) {
+		if (!editable) return false;
 		boolean accepted = insertCodePoint(c);
 		if (withSound) playEditSound(accepted);
 		return accepted;
@@ -651,6 +667,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	@Override
 	public void deleteAll(boolean withSound) {
+		if (!editable) return;
 		boolean changed = !text.isEmpty();
 		text = "";
 		cursor = 0;
@@ -661,6 +678,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	@Override
 	public void deleteLastWord() {
+		if (!editable) return;
 		if (hasSelection()) {
 			deleteSelection();
 			playEditSound(true);

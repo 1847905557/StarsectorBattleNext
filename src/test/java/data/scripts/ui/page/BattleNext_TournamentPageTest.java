@@ -82,8 +82,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 				assertEquals(expected.ruleAvailable(), details.ruleAvailable());
 				assertEquals(expected.warnings(), details.warnings());
 				assertEquals(completed, details.currentMatch() == null);
-				assertFalse(details.startEnabled());
-				assertFalse(details.authorizeAvailable());
+				assertTrue(((List<?>) getField(display, "actions")).isEmpty());
 				assertFalse(page.hasUnsavedChanges());
 				assertFalse(((ButtonAPI) getField(page, "saveButton")).isEnabled());
 				CustomPanelAPI canvas = (CustomPanelAPI) getField(chart(display), "panel");

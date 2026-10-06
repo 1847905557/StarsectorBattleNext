@@ -181,20 +181,6 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	}
 
 	@Override
-	protected boolean savePage() {
-		boolean result = editor.save();
-		setStatus(editor.getStatusText());
-		if (result) {
-			try {
-				refreshContent();
-			} catch (RuntimeException exception) {
-				setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
-			}
-		}
-		return result;
-	}
-
-	@Override
 	protected void discardPage() {
 		editor.discard();
 	}

@@ -120,14 +120,7 @@ public abstract class BattleNext_EditorView {
 
 	protected final TextFieldAPI createCellField(Object key, CustomPanelAPI hostPanel, UIRect cell,
 			String value, TooltipMakerAPI... viewports) {
-		UIRect bounds = BattleNext_PageLayout.editorFieldCell(cell);
-		TooltipMakerAPI fieldContent = hostPanel.createUIElement(bounds.getWidth(), bounds.getHeight(), false);
-		BattleNext_TextField field = own(new BattleNext_TextField(inputRouter, hostPanel, bounds.getWidth(), bounds.getHeight(), viewports));
-		field.attach(fieldContent, hostPanel);
-		field.setText(value);
-		field.getPosition().inTL(0f, 0f);
-		fieldContent.setHeightSoFar(bounds.getHeight());
-		hostPanel.addUIElement(fieldContent).inTL(bounds.getX(), bounds.getY());
+		BattleNext_TextField field = own(BattleNext_PageLayout.cellTextField(inputRouter, hostPanel, cell, value, true, viewports));
 		return bindField(key, field);
 	}
 
@@ -192,24 +185,7 @@ public abstract class BattleNext_EditorView {
 
 	protected final LabelAPI createTextCell(CustomPanelAPI hostPanel, UIRect cell, String text, boolean compact,
 			TooltipMakerAPI.TooltipCreator tooltip, TooltipMakerAPI.TooltipLocation location, boolean recreate) {
-		UIRect bounds = BattleNext_PageLayout.editorLabelCell(cell);
-		float cellWidth = bounds.getWidth();
-		TooltipMakerAPI fieldContent = hostPanel.createUIElement(cellWidth, bounds.getHeight(), false);
-		fieldContent.setTextWidthOverride(cellWidth);
-		if (compact) fieldContent.setParaSmallInsignia();
-		LabelAPI label = fieldContent.addPara(fieldContent.shortenString(text,
-				Math.max(1f, cell.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f);
-		label.setAlignment(Alignment.MID);
-		label.getPosition().setSize(cellWidth, label.getPosition().getHeight());
-		label.getPosition().inTL(0f, Math.max(0f, (cell.getHeight() - label.getPosition().getHeight()) * 0.5f));
-		if (tooltip != null) {
-			fieldContent.addTooltipTo(tooltip, fieldContent.getPrev(), location, recreate);
-		} else {
-			BattleNext_PageLayout.addMetadataTooltip(fieldContent, text);
-		}
-		fieldContent.setHeightSoFar(cell.getHeight());
-		hostPanel.addUIElement(fieldContent).inTL(bounds.getX(), bounds.getY());
-		return label;
+		return BattleNext_PageLayout.cellLabel(hostPanel, cell, text, compact, tooltip, location, recreate);
 	}
 
 	protected record EditorAction(String label, Object id, boolean enabled) { }
@@ -256,9 +232,7 @@ public abstract class BattleNext_EditorView {
 	}
 
 	protected final void captureState() {
-		for (var entry : fields.entrySet()) {
-			inputs.put(entry.getKey(), entry.getValue().captureEditState());
-		}
+		inputs.putAll(inputRouter.getSession().captureFields(fields));
 		for (var entry : checks.entrySet()) {
 			checked.put(entry.getKey(), entry.getValue().isChecked());
 		}
@@ -268,10 +242,7 @@ public abstract class BattleNext_EditorView {
 	}
 
 	protected final void restoreState() {
-		for (var entry : fields.entrySet()) {
-			BattleNext_TextField.EditState state = inputs.get(entry.getKey());
-			if (state != null) entry.getValue().restoreEditState(state);
-		}
+		inputRouter.getSession().restoreFields(fields, inputs, true);
 		for (var entry : checks.entrySet()) {
 			if (checked.containsKey(entry.getKey())) entry.getValue().setChecked(checked.get(entry.getKey()));
 		}

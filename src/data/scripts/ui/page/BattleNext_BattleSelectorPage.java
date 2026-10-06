@@ -17,13 +17,11 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_QuickBattleEditor;
-import data.scripts.ui.widget.BattleNext_DropdownField;
+import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
@@ -33,14 +31,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private static final float SOURCE_HEADER_HEIGHT = 88f;
-	private static final float SOURCE_LABEL_MAX_WIDTH = 175f;
-	private static final float SOURCE_LABEL_WIDTH_SHARE = 0.25f;
-	private static final float SOURCE_BUTTON_MAX_WIDTH = 420f;
-	private static final float SOURCE_BUTTON_WIDTH_SHARE = 0.45f;
-	private static final float SOURCE_CONTROL_GAP = 12f;
 	private static final float SOURCE_CONTROL_TOP = 44f;
 	private static final float SOURCE_CONTROL_HEIGHT = 30f;
-	private static final float SOURCE_LABEL_TEXT_TOP_INSET = 5f;
 	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = 8f;
 
 	public static class BattleSourceSelectionRequest {
@@ -58,14 +50,15 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
 	private UIRect contentRect;
-	private BattleNext_DropdownField sourceDropdown;
+	private UIRect sourceRect;
+	private BattleNext_BattleSourceField sourceField;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private BattleNext_TournamentDisplay tournamentDisplay;
-	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
-	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
-	private final BattleNext_FleetStore fleetStore = new BattleNext_FleetStore();
-	private final BattleNext_RuleStore ruleStore = new BattleNext_RuleStore();
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
+	private final BattleNext_TournamentStore tournamentStore = provider.getTournamentStore();
+	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
+	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
+	private final BattleNext_RuleStore ruleStore = provider.getRuleStore();
 	private String selectedId = "";
 	private String loadError = "";
 
@@ -88,31 +81,17 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel,
 				managementStrings.get("page_battle_selector"));
 
-		float labelWidth = Math.min(SOURCE_LABEL_MAX_WIDTH, root.getWidth() * SOURCE_LABEL_WIDTH_SHARE);
-		float buttonWidth = Math.min(SOURCE_BUTTON_MAX_WIDTH, root.getWidth() * SOURCE_BUTTON_WIDTH_SHARE);
-		float groupX = (root.getWidth() - labelWidth - SOURCE_CONTROL_GAP - buttonWidth) * 0.5f;
-		UIRect labelRect = new UIRect(groupX, SOURCE_CONTROL_TOP,
-				labelWidth, SOURCE_CONTROL_HEIGHT);
-		TooltipMakerAPI sourceLabel = labelRect.beginTooltip(panel, false);
-		sourceLabel.setParaOrbitronLarge();
-		sourceLabel.addPara(battleStrings.get("source_label"), 0f)
-				.getPosition().inTL(0f, SOURCE_LABEL_TEXT_TOP_INSET);
-		sourceLabel.setHeightSoFar(labelRect.getHeight());
-		labelRect.addTooltip();
-		UIRect sourceButtonRect = new UIRect(groupX + labelWidth + SOURCE_CONTROL_GAP,
-				SOURCE_CONTROL_TOP, buttonWidth, SOURCE_CONTROL_HEIGHT);
-		CustomPanelAPI sourceButtonPanel = sourceButtonRect.createSubPanel(panel, inputOwner).getPanel();
-		sourceDropdown = new BattleNext_DropdownField(inputRouter, panel,
-				id -> inputOwner.buttonPressed(new BattleSourceSelectionRequest(id)));
-		sourceDropdown.attach(sourceButtonPanel);
-		sourceDropdown.setOptions(sourceOptions());
-		sourceDropdown.setValue(selectedId);
-		sourceDropdown.setEnabled(tournamentStore.isLoaded());
-
+		sourceRect = new UIRect(0f, SOURCE_CONTROL_TOP, root.getWidth(), SOURCE_CONTROL_HEIGHT);
 	}
 
 	@Override
 	protected void refreshPage() {
+		sourceRect.removeLatestSubPanel();
+		CustomPanelAPI sourcePanel = sourceRect.createSubPanel(panel, inputOwner).getPanel();
+		sourceField = new BattleNext_BattleSourceField(inputRouter, panel,
+				id -> inputOwner.buttonPressed(new BattleSourceSelectionRequest(id)));
+		sourceField.attach(sourcePanel);
+		sourceField.configure(tournamentStore, selectedId);
 		contentRect.removeLatestSubPanel();
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		if (selectedId.isEmpty()) {
@@ -129,8 +108,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	@Override
 	protected void clearPageOverlays() {
 		if (quickBattleEditor != null) quickBattleEditor.closeOverlays();
-		if (sourceDropdown != null) {
-			sourceDropdown.closeOverlays();
+		if (sourceField != null) {
+			sourceField.closeOverlays();
 		}
 	}
 
@@ -141,6 +120,10 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	@Override
 	protected void clearPageResources() {
+		if (sourceField != null) {
+			sourceField.close();
+			sourceField = null;
+		}
 		closeChart();
 	}
 
@@ -184,7 +167,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	@Override
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
-		if (sourceDropdown != null && sourceDropdown.handleGlobalInput(events)) return true;
+		if (sourceField != null && sourceField.handleGlobalInput(events)) return true;
 		if (quickBattleEditor != null && quickBattleEditor.handleGlobalInput(events)) return true;
 
 		if (tournamentDisplay != null) {
@@ -208,33 +191,11 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	}
 
 	private void load() {
-		loadError = "";
-		try {
-			tournamentStore.reload();
+		List<String> errors = provider.reloadTournamentCatalog();
+		loadError = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
+		if (tournamentStore.isLoaded()) {
 			selectedId = tournamentStore.getActiveId();
-		} catch (Exception exception) {
-			loadError = strings.get("load_failed") + ": " + exception.getMessage();
 		}
-		try {
-			ruleStore.reload();
-		} catch (Exception exception) {
-			loadError += (loadError.isEmpty() ? "" : " | ") + strings.get("load_failed") + ": " + exception.getMessage();
-		}
-		try {
-			fleetStore.reload();
-		} catch (Exception exception) {
-			loadError += (loadError.isEmpty() ? "" : " | ") + strings.get("load_failed") + ": " + exception.getMessage();
-		}
-	}
-
-	private List<BattleNext_DropdownField.DropdownChoice> sourceOptions() {
-		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
-		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("quick_battle")));
-		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
-			options.add(new BattleNext_DropdownField.DropdownChoice(tournament.getId(),
-					tournament.getName()));
-		}
-		return options;
 	}
 
 	private void buildTournamentDetails(CustomPanelAPI detailPanel) {
@@ -253,12 +214,6 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			messageRect.addTooltip();
 			return;
 		}
-		Map<String, String> fleetNames = new LinkedHashMap<>();
-		for (String fleetId : tournament.getFleetIds()) {
-			if (fleetStore.get(fleetId) != null) {
-				fleetNames.put(fleetId, fleetStore.get(fleetId).getName());
-			}
-		}
 		BattleNext_Match next = tournament.getNextPendingMatch();
 		List<String> warnings = new ArrayList<>();
 		boolean authorizeAvailable = false;
@@ -269,10 +224,16 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			warnings.addAll(provider.getRuleWarnings());
 			authorizeAvailable = provider.getWarnings().isEmpty() && !provider.getRuleWarnings().isEmpty();
 		}
-		BattleNext_TournamentDisplay.Details details = new BattleNext_TournamentDisplay.Details(fleetNames,
-				ruleStore.get(tournament.getRuleId()) != null, next, loadError, warnings,
-				tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded(), authorizeAvailable);
-		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, inputOwner::buttonPressed);
+		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, fleetStore, ruleStore, loadError, warnings);
+		List<BattleNext_TournamentDisplay.Action> actions = new ArrayList<>();
+		if (authorizeAvailable) {
+			actions.add(new BattleNext_TournamentDisplay.Action(ruleStrings.get("force_start_match"), "tournament:authorize", true, List.of()));
+		}
+		if (!tournament.isStarted()) {
+			actions.add(new BattleNext_TournamentDisplay.Action(tournamentStrings.get("start"), "tournament:start",
+					tournamentStore.isLoaded() && fleetStore.isLoaded() && ruleStore.isLoaded(), List.of()));
+		}
+		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details, actions, inputOwner::buttonPressed);
 		tournamentDisplay.attach(detailPanel);
 	}
 

@@ -138,18 +138,6 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 	}
 
 	private void addLabel(UIRect rect, String value) {
-		float labelWidth = Math.max(1f,
-				rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_SIDE_INSET * 2f);
-		TooltipMakerAPI maker = panel.createUIElement(labelWidth, rect.getHeight(), false);
-		maker.setParaSmallInsignia();
-		LabelAPI label = maker.addPara(maker.shortenString(value,
-				Math.max(1f, rect.getWidth() - BattleNext_PageLayout.CELL_LABEL_TRUNCATION_PADDING)), 0f);
-		label.setAlignment(Alignment.MID);
-		label.getPosition().setSize(labelWidth, label.getPosition().getHeight());
-		label.getPosition().inTL(0f,
-				Math.max(0f, (rect.getHeight() - label.getPosition().getHeight()) * 0.5f));
-		maker.setHeightSoFar(rect.getHeight());
-		panel.addUIElement(maker).inTL(rect.getX() + BattleNext_PageLayout.CELL_LABEL_SIDE_INSET,
-				rect.getY());
+		BattleNext_PageLayout.cellLabel(panel, rect, value, true, null, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 	}
 }

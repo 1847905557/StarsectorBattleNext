@@ -63,13 +63,15 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		source.getJson().put("weaponGroups", groups);
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source, store, 1000);
-		name(display).setText("My frozen variant");
+		String fullName = "装配😀50% " + "Full name ".repeat(40).stripTrailing();
+		name(display).setText(fullName);
 		TooltipMakerAPI list = lists(display).get("groups");
 		list.getExternalScroller().setYOffset(120f);
 		assertEquals(120f, list.getExternalScroller().getYOffset());
 		display.buttonPressed("pin_save");
 		assertFalse(buttons.get("pin_save").get());
-		assertEquals("My frozen variant", name(display).getText());
+		assertEquals(fullName, name(display).getText());
+		assertEquals(fullName, store.getAll().get(0).getDisplayName());
 		assertEquals(120f, lists(display).get("groups").getExternalScroller().getYOffset());
 		assertAligned(display);
 		display.close();

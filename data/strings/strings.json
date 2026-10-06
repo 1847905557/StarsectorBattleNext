@@ -26,6 +26,8 @@
 		"BattleNext_battle_quick_battle": "Quick Battle",
 		"BattleNext_battle_raw_row_status": "Raw row",
 		"BattleNext_battle_round_progress": "Round %d / %d",
+		"BattleNext_battle_simulate": "Simulate",
+		"BattleNext_battle_simulate_tournament": "Simulate tournament",
 		"BattleNext_battle_simulator_cleaning": "cleaning up",
 		"BattleNext_battle_simulator_committing": "saving report",
 		"BattleNext_battle_simulator_finished": "finished",
@@ -67,6 +69,8 @@
 		"BattleNext_battle_quick_battle": "快速对战",
 		"BattleNext_battle_raw_row_status": "原始行",
 		"BattleNext_battle_round_progress": "回合 %d / %d",
+		"BattleNext_battle_simulate": "模拟",
+		"BattleNext_battle_simulate_tournament": "模拟赛事",
 		"BattleNext_battle_simulator_cleaning": "清理中",
 		"BattleNext_battle_simulator_committing": "保存报告中",
 		"BattleNext_battle_simulator_finished": "已结束",
@@ -394,7 +398,10 @@
 		"BattleNext_settings_info_log": "Enable info log",
 		"BattleNext_settings_invalid_number": "Enter a valid nonnegative limit or count and positive time multipliers",
 		"BattleNext_settings_report_keep_count": "Reports to keep",
-		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in Mission Battle"
+		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in Mission Battle",
+		"BattleNext_settings_simulator_confirm_message": "Enable the Battle Simulator area for this management window?",
+		"BattleNext_settings_simulator_enable": "Enable Battle Simulator",
+		"BattleNext_settings_simulator_heading": "Battle Simulator"
 	},
 	"Settings_CN": {
 		"BattleNext_settings_battle_time_limit": "战斗时间上限 (秒)",
@@ -407,7 +414,10 @@
 		"BattleNext_settings_info_log": "启用 INFO 日志",
 		"BattleNext_settings_invalid_number": "请输入有效的非负上限或数量，以及正数时间倍率",
 		"BattleNext_settings_report_keep_count": "保留作战记录数量",
-		"BattleNext_settings_rtt_in_battle": "在任务战斗中启用 RTT 控制"
+		"BattleNext_settings_rtt_in_battle": "在任务战斗中启用 RTT 控制",
+		"BattleNext_settings_simulator_confirm_message": "是否在本次管理窗口中启用战斗模拟器区域？",
+		"BattleNext_settings_simulator_enable": "启用战斗模拟器",
+		"BattleNext_settings_simulator_heading": "战斗模拟器"
 	},
 	"Tournament": {
 		"BattleNext_tournament_add_fleet": "Add fleet",

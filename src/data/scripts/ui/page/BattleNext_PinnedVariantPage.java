@@ -198,19 +198,8 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 	}
 
 	@Override
-	protected boolean savePage() {
-		if (!editor.save()) {
-			setStatus(editor.getStatusText());
-			return false;
-		}
-		setStatus(strings.get("saved"));
-		try {
-			store.reload();
-			refreshContent();
-		} catch (Exception exception) {
-			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
-		}
-		return true;
+	protected void reloadSavedData() throws Exception {
+		store.reload();
 	}
 
 	@Override

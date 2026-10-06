@@ -9,12 +9,18 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.util.Misc;
+import data.scripts.ui.BattleNext_PageLayout;
+import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.widget.BattleNext_StatusBar;
 import data.scripts.ui.page.*;
+import data.simulator.BattleNext_SimulatorWidget;
+import data.simulator.BattleNext_SimulatorService;
+import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
@@ -27,6 +33,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationTargetException;
@@ -219,6 +226,115 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed("close");
 		manager.buttonPressed("confirm_discard");
 		assertNull(getField(manager, "attachedView"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void simulatorUnlockIsConfirmedAndRetainedUntilTheManagementWindowCloses(boolean initial) throws Exception {
+
+		installSettings(initial);
+		var instance = BattleNext_SimulatorService.class.getDeclaredField("instance");
+		instance.setAccessible(true);
+		Object service = instance.get(null);
+		AtomicInteger closes = new AtomicInteger();
+		BattleNext_UiManager manager = new BattleNext_UiManager(closes::incrementAndGet);
+		CustomPanelAPI root = panel(1400f, 900f, manager);
+		manager.attach(root);
+		manager.open();
+		Object settings = tab("SETTINGS");
+		manager.buttonPressed(settings);
+		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
+		String category = initial ? "Settings_CN" : "Settings";
+		ButtonAPI enable = simulatorButtons(page).get(0);
+		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_simulator_enable"), enable.getText());
+		assertSimulatorHeading(page, initial);
+		assertFalse(page.hasUnsavedChanges());
+		String stored = savedSettings.get().toString();
+		manager.buttonPressed(enable.getCustomData());
+		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(manager, "confirmationDialog");
+		CustomPanelAPI popup = (CustomPanelAPI) getField(dialog, "confirmation");
+		assertSame(root.getPosition(), geometry.get(popup.getPosition()).getParent());
+		assertTrue(labels.contains(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_simulator_confirm_message")));
+		manager.buttonPressed(tab("FLEETS"));
+		assertEquals(settings, getField(manager, "currentPage"));
+		assertTrue(dialog.isActive());
+		manager.buttonPressed("action_cancel");
+		assertEquals(List.of(enable), simulatorButtons(page));
+		assertEquals(stored, savedSettings.get().toString());
+		manager.buttonPressed(enable.getCustomData());
+		AtomicBoolean escape = new AtomicBoolean();
+		assertTrue(manager.handleGlobalInput(List.of(event("escape", escape))));
+		assertTrue(escape.get());
+		assertFalse(dialog.isActive());
+		assertEquals(List.of(enable), simulatorButtons(page));
+		TextFieldAPI timeLimit = (TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField");
+		timeLimit.setText("pending");
+		manager.buttonPressed(enable.getCustomData());
+		manager.buttonPressed("action_confirm");
+		assertTrue(simulatorButtons(page).isEmpty());
+		assertSimulatorHeading(page, initial);
+		BattleNext_SimulatorWidget unlocked = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		PositionAPI source = ((BattleNext_BattleSourceField) getField(unlocked, "sourceField")).getPanel().getPosition();
+		assertEquals(BattleNext_PageLayout.HEADER_HEIGHT + BattleNext_PageLayout.PAGE_CONTENT_INSET,
+				unlocked.getPanel().getPosition().getY() + unlocked.getPanel().getPosition().getHeight()
+						- source.getY() - source.getHeight());
+		assertEquals(stored, savedSettings.get().toString());
+		assertSame(timeLimit, getField(getField(page, "editor"), "battleTimeLimitField"));
+		assertEquals("pending", timeLimit.getText());
+		assertTrue(page.hasUnsavedChanges());
+		assertFalse(dialog.isActive());
+		page.refreshContent();
+		assertTrue(simulatorButtons(page).isEmpty());
+		assertEquals("pending", ((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).getText());
+		page.discard();
+		assertTrue(simulatorButtons(page).isEmpty());
+		assertFalse(page.hasUnsavedChanges());
+		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(!initial);
+		manager.buttonPressed("settings_save");
+		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
+		assertTrue(simulatorButtons(page).isEmpty());
+		assertSimulatorHeading(page, !initial);
+		manager.buttonPressed(tab("FLEETS"));
+		assertNull(getField(page, "panel"));
+		manager.buttonPressed(settings);
+		assertSame(page, getField(manager, "settingsPage"));
+		assertTrue(simulatorButtons(page).isEmpty());
+		assertFalse(page.hasUnsavedChanges());
+		manager.buttonPressed("close");
+		assertEquals(1, closes.get());
+		assertNull(getField(page, "simulatorWidget"));
+		manager.open();
+		manager.buttonPressed(settings);
+		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
+		assertNotSame(page, reopened);
+		assertEquals(1, simulatorButtons(reopened).size());
+		assertEquals(BattleNext_TestTextCatalog.text(!initial ? "Settings_CN" : "Settings", "BattleNext_settings_simulator_enable"),
+				simulatorButtons(reopened).get(0).getText());
+		assertSame(service, instance.get(null));
+		manager.buttonPressed("close");
+		assertEquals(2, closes.get());
+		assertTrue(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).isEmpty());
+	}
+
+	private List<ButtonAPI> simulatorButtons(BattleNext_SettingsPage page) throws Exception {
+		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		CustomPanelAPI content = (CustomPanelAPI) children.get(widget.getPanel()).get(0);
+		return children.get(content).stream().filter(TooltipMakerAPI.class::isInstance)
+				.flatMap(child -> tooltips.get(child).getComponents().stream())
+				.filter(ButtonAPI.class::isInstance).map(ButtonAPI.class::cast)
+				.filter(button -> "simulator_enable".equals(button.getCustomData())).toList();
+	}
+
+	private void assertSimulatorHeading(BattleNext_SettingsPage page, boolean cnText) throws Exception {
+		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		CustomPanelAPI content = (CustomPanelAPI) children.get(widget.getPanel()).get(0);
+		String title = BattleNext_TestTextCatalog.text(cnText ? "Settings_CN" : "Settings", "BattleNext_settings_simulator_heading");
+		LabelAPI heading = children.get(content).stream().filter(TooltipMakerAPI.class::isInstance)
+				.flatMap(child -> tooltips.get(child).getComponents().stream()).filter(LabelAPI.class::isInstance)
+				.map(LabelAPI.class::cast).filter(label -> title.equals(label.getText())).findFirst().orElseThrow();
+		assertEquals(Misc.getNegativeHighlightColor(), headingBackgroundColors.get(heading.getPosition()));
+		assertEquals(content.getPosition().getX(), heading.getPosition().getX());
+		assertEquals(content.getPosition().getWidth(), heading.getPosition().getWidth());
 	}
 
 	private Object tab(String name) throws ClassNotFoundException {

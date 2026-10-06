@@ -194,21 +194,13 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	}
 
 	@Override
-	protected boolean savePage() {
-		if (!draftOpen) return true;
-		if (!editor.save()) {
-			setStatus(editor.getStatusText());
-			return false;
-		}
+	protected void afterEditorCommit() {
 		selectedId = editor.getDraftId();
-		setStatus(strings.get("saved"));
-		try {
-			store.reload();
-			refreshContent();
-		} catch (Exception exception) {
-			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
-		}
-		return true;
+	}
+
+	@Override
+	protected void reloadSavedData() throws Exception {
+		store.reload();
 	}
 
 	@Override

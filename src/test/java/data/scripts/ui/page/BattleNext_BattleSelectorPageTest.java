@@ -3,6 +3,7 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.widget.BattleNext_DropdownField;
+import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -14,9 +15,11 @@ class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 		BattleNext_BattleSelectorPage page = new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin());
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		CustomPanelAPI owner = (CustomPanelAPI) getField(page, "panel");
-		BattleNext_DropdownField dropdown = (BattleNext_DropdownField) getField(page, "sourceDropdown");
+		BattleNext_BattleSourceField source = (BattleNext_BattleSourceField) getField(page, "sourceField");
+		BattleNext_DropdownField dropdown = (BattleNext_DropdownField) getField(source, "dropdown");
 		CustomPanelAPI row = (CustomPanelAPI) getField(dropdown, "panel");
-		assertSame(owner.getPosition(), geometry.get(row.getPosition()).getParent());
+		CustomPanelAPI sourceContent = (CustomPanelAPI) children.get(source.getPanel()).get(0);
+		assertSame(sourceContent.getPosition(), geometry.get(row.getPosition()).getParent());
 		assertEquals(583f, row.getPosition().getX() - owner.getPosition().getX(), 0.01f);
 		assertEquals(44f, owner.getPosition().getY() + owner.getPosition().getHeight()
 				- row.getPosition().getY() - row.getPosition().getHeight(), 0.01f);
@@ -31,9 +34,11 @@ class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 		assertEquals(420f, popup.getPosition().getWidth(), 0.01f);
 		assertTrue(popup.getPosition().getHeight() > 0f);
 		dropdown.closeOverlays();
-		assertSame(owner.getPosition(), geometry.get(row.getPosition()).getParent());
+		assertSame(sourceContent.getPosition(), geometry.get(row.getPosition()).getParent());
 		dropdown.close();
-		assertTrue(children.get(owner).contains(row));
 		assertTrue(children.get(row).isEmpty());
+		CustomPanelAPI sourcePanel = source.getPanel();
+		source.close();
+		assertTrue(children.get(sourcePanel).isEmpty());
 	}
 }

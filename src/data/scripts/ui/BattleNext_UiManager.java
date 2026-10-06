@@ -49,6 +49,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+	private final BattleNext_I18nSection settingsStrings = BattleNext_I18nSection.getInstance("Settings", "BattleNext_settings_");
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private BattleNext_StatusBar statusBar;
@@ -271,7 +272,9 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 					this::confirmNavigation, this::confirmDelete);
 			return rulesPage;
 		}
-		if (settingsPage == null) settingsPage = new BattleNext_SettingsPage();
+		if (settingsPage == null) {
+			settingsPage = new BattleNext_SettingsPage(this::confirmSimulatorEnable);
+		}
 		return settingsPage;
 	}
 
@@ -310,6 +313,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			attachedView.close();
 			attachedView = null;
 		}
+		settingsPage = null;
 		closeAction.run();
 	}
 
@@ -343,6 +347,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			action.run();
 			refreshState();
 		});
+	}
+
+	private void confirmSimulatorEnable(Runnable action) {
+		confirmationDialog.requestAction(settingsStrings.get("simulator_enable"),
+				settingsStrings.get("simulator_confirm_message"), action);
 	}
 
 	private boolean applySource(String id) {

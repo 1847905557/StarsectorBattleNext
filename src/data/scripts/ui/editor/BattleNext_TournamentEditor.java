@@ -1,10 +1,8 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.ui.*;
-import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
-import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -12,9 +10,8 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.CheckBoxGroup;
 import data.scripts.battlesnext.util.ui.UIRect;
-import data.scripts.fleet.BattleNext_AssembledFleet;
-import data.scripts.fleet.BattleNext_FleetBuilder;
-import data.scripts.fleet.BattleNext_RulesCheck;
+import data.scripts.battle.BattleNext_BattleValidation;
+import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.ui.BattleNext_PageLayout;
@@ -61,8 +58,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	private final BattleNext_FleetSourceProvider fleetSource;
 	private final BattleNext_RuleSourceProvider ruleSource;
 	private CheckBoxGroup bracketGroup;
-	private final BattleNext_RulesCheck rulesCheck = new BattleNext_RulesCheck();
-	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
+	private final BattleNext_BattleValidation validation;
 	private final Map<String, List<String>> validationReasons = new LinkedHashMap<>();
 	private String validationSnapshot = "";
 
@@ -71,6 +67,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		this.store = store;
 		this.fleetStore = fleetStore;
 		this.ruleStore = ruleStore;
+		validation = new BattleNext_BattleValidation(fleetStore);
 		fleetSource = new BattleNext_FleetSourceProvider(fleetStore);
 		ruleSource = new BattleNext_RuleSourceProvider(ruleStore);
 	}
@@ -78,6 +75,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	public boolean open(BattleNext_TournamentModel source) {
 		try {
 			beginSession();
+			validation.refresh();
 			BattleNext_TournamentModel next = new BattleNext_TournamentModel();
 			if (source != null) next.fromJson(source.toJson());
 			baseline = source;
@@ -250,42 +248,26 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
 		if (tableWidget == null) return;
 		String ruleInput = isReadOnly() ? draft.getRuleId() : ruleField.getText();
-		String snapshot = ruleInput.length() + ":" + ruleInput + new JSONArray(draft.getFleetIds());
+		String snapshot = fleetStore.getRevision() + ":" + ruleStore.getRevision() + ":"
+				+ ruleInput.length() + ":" + ruleInput + new JSONArray(draft.getFleetIds());
 		if (snapshot.equals(validationSnapshot)) return;
 		validationSnapshot = snapshot;
 		validationReasons.clear();
 		String ruleId = ruleInput.trim();
-		BattleNext_RuleModel rule = ruleStore.get(ruleId);
 		for (String fleetId : draft.getFleetIds()) {
 			List<String> reasons = new ArrayList<>();
-			try {
-				if (!ruleId.isEmpty()) {
-					if (rule == null) {
-						reasons.add(tournamentStrings.get("rules_unavailable") + ": " + ruleId);
-					} else {
-						reasons.addAll(rulesCheck.missingRestrictions(rule));
-					}
-				}
-				BattleNext_FleetModel fleet = fleetStore.get(fleetId);
-				if (fleet == null) {
-					reasons.add(tournamentStrings.get("invalid_participant_fleet") + ": " + fleetId);
-				} else {
-					reasons.addAll(fleet.getLoadErrors());
-					BattleNext_AssembledFleet assembled = fleetBuilder.build(fleet);
-					reasons.addAll(assembled.getMemberErrors());
-					if (assembled.isComplete() && rule != null) reasons.addAll(rulesCheck.validateFleet(assembled, rule));
-				}
-			} catch (RuntimeException exception) {
-				reasons.add(tournamentStrings.get("validation_failed") + ": " + exception);
-				BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.fleet.validation.failed",
-						BattleNext_Logger.fields().put("tournament_id", getDraftId()).put("fleet_id", fleetId)
-								.put("rule_id", ruleId).put("reasons", reasons).build(), exception);
+			for (BattleNext_BattleValidation.Failure failure : validation.fleetRuleResult(fleetId, ruleId, ruleStore).failures()) {
+				reasons.add(failure.kind() == BattleNext_BattleValidation.FailureKind.EVALUATION
+						? tournamentStrings.get("validation_failed") + ": " + failure.message() : failure.message());
 			}
-			validationReasons.put(fleetId, List.copyOf(new LinkedHashSet<>(reasons)));
+			if (fleetStore.get(fleetId) == null) {
+				reasons.add(tournamentStrings.get("invalid_participant_fleet") + ": " + fleetId);
+			}
+			validationReasons.put(fleetId, List.copyOf(reasons));
 			if (!reasons.isEmpty()) {
 				BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.fleet.validation.rejected",
 						BattleNext_Logger.fields().put("tournament_id", getDraftId()).put("fleet_id", fleetId)
-								.put("rule_id", ruleId).put("reasons", validationReasons.get(fleetId)).build());
+								.put("rule_id", ruleId).put("reasons", reasons).build());
 			}
 		}
 		if (fleetPicker != null) release(fleetPicker);
@@ -337,15 +319,16 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			return false;
 		}
 		List<String> fleets = draft.getFleetIds();
-		if (bracketGroup.getCheckedValue() == null || boCount < 1
-				|| maxFleet < BattleNext_TournamentModel.MIN_FLEET_COUNT
-				|| maxFleet > BattleNext_TournamentModel.MAX_FLEET_COUNT
-				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT || fleets.size() > maxFleet
-				|| new HashSet<>(fleets).size() != fleets.size()
-				|| map < BattleNext_MissionBattleMap.RANDOM_MAP_ID || map > BattleNext_MissionBattleMap.LAST_MAP_ID) {
-			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
-				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).put("criterion", "Bracket, positive best-of, unique participants within fleet limits and supported map").build());
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel(getDraftId(), nameField.getText(),
+				(TournamentBracketType) bracketGroup.getCheckedValue(), boCount, maxFleet);
+		configuration.setFleetIds(fleets);
+		configuration.setMapId(map);
+		try {
+			new BattleNext_TournamentEngine().validateConfiguration(configuration);
+		} catch (IllegalArgumentException exception) {
 			statusText = tournamentStrings.get("invalid_configuration");
+			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
+					BattleNext_Logger.fields().put("configuration", configuration).put("input_state", serializeState()).build(), exception);
 			return false;
 		}
 		for (String fleet : fleets) {

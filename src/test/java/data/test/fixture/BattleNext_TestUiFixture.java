@@ -16,12 +16,16 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected final Map<PositionAPI, Alignment> labelAlignments = new IdentityHashMap<>();
 	protected final Map<PositionAPI, String> labelFonts = new IdentityHashMap<>();
 	protected final Map<PositionAPI, Color> labelColors = new IdentityHashMap<>();
+	protected final Map<PositionAPI, Color> headingBackgroundColors = new IdentityHashMap<>();
 	protected final Map<PositionAPI, List<String>> labelHighlights = new IdentityHashMap<>();
 	protected final Map<PositionAPI, String> labelPatterns = new IdentityHashMap<>();
 	protected final Map<PositionAPI, List<Color>> labelHighlightColors = new IdentityHashMap<>();
 	protected final Map<PositionAPI, List<Integer>> labelHighlightRanges = new IdentityHashMap<>();
 	protected final Map<String, AtomicBoolean> buttons = new LinkedHashMap<>();
 	protected final Map<String, PositionAPI> buttonPositions = new LinkedHashMap<>();
+	protected final Map<PositionAPI, Color> buttonColors = new IdentityHashMap<>();
+	protected final Map<PositionAPI, Color> rectangleColors = new IdentityHashMap<>();
+	protected final Map<PositionAPI, Float> rectangleThicknesses = new IdentityHashMap<>();
 	protected final Map<String, String> buttonLabels = new LinkedHashMap<>();
 	protected final Map<String, Object> buttonIds = new LinkedHashMap<>();
 	protected final List<UIComponentAPI> removedComponents = new ArrayList<>();
@@ -265,6 +269,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					labels.add(value);
 					labelFonts.put(label.getPosition(), "orbitron12-condensed");
 					labelColors.put(label.getPosition(), args[1] instanceof Color color ? color : paraColor);
+					headingBackgroundColors.put(label.getPosition(), (Color) args[2]);
 					labelPatterns.put(label.getPosition(), value);
 					PositionAPI anchorPosition = position(headingWidth, label.getPosition().getHeight());
 					UIComponentAPI anchor = proxy(UIComponentAPI.class,
@@ -335,6 +340,8 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				case "createRect" -> {
 					PositionAPI rectangle = position(1f, 1f);
+					rectangleColors.put(rectangle, (Color) args[0]);
+					rectangleThicknesses.put(rectangle, (Float) args[1]);
 					yield proxy(UIComponentAPI.class, (name, values) -> "getPosition".equals(name) ? rectangle : null);
 				}
 				case "addCustomDoNotSetPosition" -> {
@@ -375,6 +382,9 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					buttonIds.put(id, args[checkbox ? 3 : 1]);
 					PositionAPI buttonPosition = position((Float) args[checkbox ? 0 : args.length - 3],
 							(Float) args[checkbox ? 1 : args.length - 2]);
+					if (!checkbox && args[2] instanceof Color color) {
+						buttonColors.put(buttonPosition, color);
+					}
 					buttonPositions.put(id, buttonPosition);
 					ButtonAPI button = proxy(ButtonAPI.class, (name, values) -> {
 						if ("setEnabled".equals(name)) {

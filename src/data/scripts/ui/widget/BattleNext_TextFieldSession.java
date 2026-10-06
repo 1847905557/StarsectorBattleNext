@@ -39,6 +39,24 @@ public class BattleNext_TextFieldSession {
 		registrations.clear();
 	}
 
+	public <K> Map<K, BattleNext_TextField.EditState> captureFields(Map<K, BattleNext_TextField> fields) {
+		Map<K, BattleNext_TextField.EditState> states = new LinkedHashMap<>();
+		for (var entry : fields.entrySet()) {
+			states.put(entry.getKey(), entry.getValue().captureEditState());
+		}
+		return Collections.unmodifiableMap(states);
+	}
+
+	public <K> void restoreFields(Map<K, BattleNext_TextField> fields,
+			Map<K, BattleNext_TextField.EditState> states, boolean restoreText) {
+		for (var entry : fields.entrySet()) {
+			BattleNext_TextField.EditState state = states.get(entry.getKey());
+			if (state == null) continue;
+			if (!restoreText && !state.text().equals(entry.getValue().getText())) continue;
+			entry.getValue().restoreEditState(state);
+		}
+	}
+
 	public void unregister(BattleNext_TextField field) {
 		registrations.remove(field);
 		if (pointerOwner == field) {

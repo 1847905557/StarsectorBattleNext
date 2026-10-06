@@ -123,7 +123,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		nameWidget.attach(contents, metadataPanel);
 		nameWidget.setText(displayName);
 		name = nameWidget;
-		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		name.setMaxChars(-1);
 		if (!status.isEmpty()) {
 			contents.addPara(status, BattleNext_UiTheme.TEXT, INSET);
 		}

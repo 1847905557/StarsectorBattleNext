@@ -49,9 +49,11 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	private CustomPanelAPI confirmation;
 	private TooltipMakerAPI confirmationStatusContent;
 	private LabelAPI confirmationStatus;
-	private Runnable onConfirm;
-	private String deleteDescription;
+	private ConfirmationRequest request;
 	private DialogOverlay overlay;
+
+	private record ConfirmationRequest(String title, String message, String description,
+			String confirmId, String confirmLabel, String cancelId, Runnable onConfirmed) { }
 
 	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host, BattleNext_UiInputRouter inputRouter) {
 		super(inputRouter);
@@ -79,29 +81,36 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 
 	public void request(Runnable confirmAction) {
 		if (confirmation != null) return;
-		deleteDescription = null;
-		onConfirm = confirmAction;
+		request = new ConfirmationRequest(strings.get("unsaved_title"), strings.get("unsaved_message"), "",
+				"", "", "confirm_cancel", confirmAction);
 		showConfirmation();
 	}
 
 	public void requestDelete(String description, Runnable deleteAction) {
 		if (confirmation != null) return;
-		deleteDescription = description;
-		onConfirm = deleteAction;
+		request = new ConfirmationRequest(strings.get("delete_title"), strings.get("delete_message"), description,
+				"delete_confirm", strings.get("delete"), "delete_cancel", deleteAction);
+		showConfirmation();
+	}
+
+	public void requestAction(String title, String message, Runnable confirmAction) {
+		if (confirmation != null) return;
+		request = new ConfirmationRequest(title, message, "", "action_confirm", strings.get("confirm"), "action_cancel", confirmAction);
 		showConfirmation();
 	}
 
 	public void handle(Object action) {
-		if ("confirm_cancel".equals(action) || "delete_cancel".equals(action)) {
+
+		if (confirmation == null) return;
+		ConfirmationRequest current = request;
+		if ("confirm_cancel".equals(action) || current.cancelId().equals(action)) {
 			closeDialog();
 			return;
 		}
-		if (deleteDescription != null) {
-			if ("delete_confirm".equals(action)) {
+		if (!current.confirmId().isEmpty()) {
+			if (current.confirmId().equals(action)) {
 				closeDialog();
-				Runnable pending = onConfirm;
-				onConfirm = null;
-				if (pending != null) pending.run();
+				current.onConfirmed().run();
 			}
 			return;
 		}
@@ -115,9 +124,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 			host.discardCurrentPage();
 		}
 		closeDialog();
-		Runnable pending = onConfirm;
-		onConfirm = null;
-		if (pending != null) pending.run();
+		current.onConfirmed().run();
 	}
 
 	private void closeDialog() {
@@ -127,7 +134,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		overlay = null;
 		confirmationStatusContent = null;
 		confirmationStatus = null;
-		deleteDescription = null;
+		request = null;
 	}
 
 	private void showConfirmation() {
@@ -138,11 +145,10 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_MESSAGE_HEIGHT);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
 		BattleNext_UiTheme.configure(dialog);
-		dialog.addTitle(strings.get(deleteDescription == null ? "unsaved_title" : "delete_title"));
-		dialog.addPara(deleteDescription == null ? strings.get("unsaved_message")
-				: strings.get("delete_message"), DIALOG_MESSAGE_GAP);
-		if (deleteDescription != null) {
-			dialog.addPara(deleteDescription, DIALOG_MESSAGE_GAP);
+		dialog.addTitle(request.title());
+		dialog.addPara(request.message(), DIALOG_MESSAGE_GAP);
+		if (!request.description().isEmpty()) {
+			dialog.addPara(request.description(), DIALOG_MESSAGE_GAP);
 		}
 		dialogRect.addTooltip();
 		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP,
@@ -151,11 +157,11 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		confirmationStatus = confirmationStatusContent.addPara("", 0f);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
-		String[] actions = deleteDescription == null
-				? new String[]{"save", "discard", "cancel"} : new String[]{"confirm", "cancel"};
-		String[] labels = deleteDescription == null
+		String[] actions = request.confirmId().isEmpty()
+				? new String[]{"confirm_save", "confirm_discard", "confirm_cancel"} : new String[]{request.confirmId(), request.cancelId()};
+		String[] labels = request.confirmId().isEmpty()
 				? new String[]{strings.get("save"), strings.get("discard"), strings.get("cancel")}
-				: new String[]{strings.get("delete"), strings.get("cancel")};
+				: new String[]{request.confirmLabel(), strings.get("cancel")};
 		float buttonWidth = Math.min(DIALOG_BUTTON_MAX_WIDTH,
 				(width - DIALOG_BUTTON_WIDTH_RESERVE) / actions.length);
 		float firstX = (width - (buttonWidth * actions.length
@@ -165,7 +171,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 					new UIRect(firstX + index * (buttonWidth + DIALOG_BUTTON_GAP), DIALOG_BUTTON_TOP,
 							buttonWidth, DIALOG_BUTTON_HEIGHT),
 					labels[index],
-					(deleteDescription == null ? "confirm_" : "delete_") + actions[index], CutStyle.ALL, false);
+					actions[index], CutStyle.ALL, false);
 		}
 		parent.addComponent(confirmation).inMid();
 		overlay = new DialogOverlay(confirmation);

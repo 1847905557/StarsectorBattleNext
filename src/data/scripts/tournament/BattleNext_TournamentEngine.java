@@ -5,7 +5,7 @@ import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.missions.BattleNext_MissionBattleMap;
-import data.scripts.fleet.BattleNext_RulesCheck;
+import data.scripts.battle.BattleNext_BattleValidation;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
 import data.scripts.battle.BattleNext_Match;
@@ -18,25 +18,34 @@ import java.util.*;
 
 public class BattleNext_TournamentEngine {
 
+	public enum ConfigurationReason { MAP, LIMITS, PARTICIPANTS }
+
+	public static class ConfigurationRejection extends IllegalArgumentException {
+		private final ConfigurationReason reason;
+
+		private ConfigurationRejection(ConfigurationReason reason, String message) {
+			super(message);
+			this.reason = reason;
+		}
+
+		public ConfigurationReason getReason() {
+			return reason;
+		}
+	}
+
 	public void startAndActivate(BattleNext_TournamentModel source, BattleNext_TournamentStore tournaments,
 			BattleNext_FleetStore fleets, BattleNext_RuleStore rules) throws Exception {
 		if (!tournaments.isLoaded() || !fleets.isLoaded() || !rules.isLoaded()) {
 			throw new IllegalStateException(!tournaments.isLoaded() ? tournaments.getLoadError()
 					: !fleets.isLoaded() ? fleets.getLoadError() : rules.getLoadError());
 		}
-		if (source.getMapId() < -1 || source.getMapId() >= BattleNext_MissionBattleMap.MAP_COUNT) {
-			throw new IllegalArgumentException("Tournament map is outside the supported range: " + source.getMapId());
-		}
-		if (source.getFleetIds().size() < BattleNext_TournamentModel.MIN_FLEET_COUNT) {
-			throw new IllegalArgumentException("Tournament requires at least two fleets: " + source.getFleetIds());
-		}
-		if (!source.getRuleId().isEmpty()) {
-			if (rules.get(source.getRuleId()) == null) throw new IllegalArgumentException("Tournament rule is unavailable: " + source.getRuleId());
-			List<String> missing = new BattleNext_RulesCheck().missingRestrictions(rules.get(source.getRuleId()));
-			if (!missing.isEmpty()) throw new IllegalArgumentException(String.join("; ", missing));
-		}
+		validateConfiguration(source);
+		BattleNext_BattleValidation validation = new BattleNext_BattleValidation(fleets);
+		List<String> ruleErrors = validation.ruleResult(source.getRuleId(), rules).messages();
+		if (!ruleErrors.isEmpty()) throw new IllegalArgumentException(String.join("; ", ruleErrors));
 		for (String id : source.getFleetIds()) {
-			if (fleets.get(id) == null) throw new IllegalArgumentException("Tournament participant fleet is unavailable: " + id);
+			List<String> errors = validation.referenceResult(id).messages();
+			if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("; ", errors));
 		}
 		BattleNext_TournamentModel prepared = new BattleNext_TournamentModel();
 		prepared.fromJson(source.toJson());
@@ -51,7 +60,7 @@ public class BattleNext_TournamentEngine {
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.start", input);
 		try {
 			if (tournament.isStarted()) throw new IllegalStateException("Tournament has already started");
-			validate(tournament);
+			validateConfiguration(tournament);
 			tournament.clearGeneratedMatches();
 			tournament.setStarted(true);
 			tournament.setCompleted(false);
@@ -155,19 +164,23 @@ public class BattleNext_TournamentEngine {
 		}
 	}
 
-	private void validate(BattleNext_TournamentModel tournament) {
+	public void validateConfiguration(BattleNext_TournamentModel tournament) {
+
+		if (tournament.getMapId() < BattleNext_MissionBattleMap.RANDOM_MAP_ID || tournament.getMapId() > BattleNext_MissionBattleMap.LAST_MAP_ID) {
+			throw new ConfigurationRejection(ConfigurationReason.MAP, "Tournament map is outside the supported range: " + tournament.getMapId());
+		}
 		List<String> fleets = tournament.getFleetIds();
 		if (tournament.getBracketType() == null || tournament.getBoCount() < 1
 				|| tournament.getMaxFleet() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 				|| tournament.getMaxFleet() > BattleNext_TournamentModel.MAX_FLEET_COUNT
 				|| fleets.size() < BattleNext_TournamentModel.MIN_FLEET_COUNT
 				|| fleets.size() > tournament.getMaxFleet()) {
-			throw new IllegalArgumentException("Invalid tournament configuration");
+			throw new ConfigurationRejection(ConfigurationReason.LIMITS, "Invalid tournament configuration");
 		}
 		Set<String> seen = new HashSet<>();
 		for (String fleet : fleets) {
 			if (fleet.isEmpty() || !seen.add(fleet)) {
-				throw new IllegalArgumentException("Tournament fleets must be unique");
+				throw new ConfigurationRejection(ConfigurationReason.PARTICIPANTS, "Tournament fleets must be unique");
 			}
 		}
 	}

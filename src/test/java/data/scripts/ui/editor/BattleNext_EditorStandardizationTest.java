@@ -50,8 +50,11 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		assertEquals(root.getPosition().getY(), editorPanel.getPosition().getY());
 		assertEquals(root.getPosition().getWidth(), editorPanel.getPosition().getWidth());
 		assertEquals(root.getPosition().getHeight(), editorPanel.getPosition().getHeight());
-		Map<Object, BattleNext_TextField> fields = (Map<Object, BattleNext_TextField>) getField(editor, "fields");
-		if (fields.isEmpty()) editor.buttonPressed("add");
+		Map<Object, BattleNext_TextField> fields = (Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields");
+		if (fields.isEmpty()) {
+			editor.buttonPressed("add");
+			fields = (Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields");
+		}
 		Object identity = fields.keySet().iterator().next();
 		BattleNext_TextField field = fields.get(identity);
 		String value = "中文😀50% " + "Long text ".repeat(40);
@@ -63,7 +66,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		int registered = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
 		for (int iteration = 0; iteration < 3; iteration++) {
 			editor.refreshContent();
-			BattleNext_TextField next = ((Map<Object, BattleNext_TextField>) getField(editor, "fields")).get(identity);
+			BattleNext_TextField next = ((Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields")).get(identity);
 			assertNotSame(field, next);
 			assertEquals(state, next.captureEditState());
 			assertTrue(editor.hasUnsavedChanges());
@@ -77,7 +80,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		editor.attach(root);
 		assertEquals(draft, editor.serializeState());
-		assertEquals(state, ((Map<Object, BattleNext_TextField>) getField(editor, "fields")).get(identity).captureEditState());
+		assertEquals(state, ((Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields")).get(identity).captureEditState());
 		editor.close();
 		assertTrue(children.get(root).isEmpty());
 		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());

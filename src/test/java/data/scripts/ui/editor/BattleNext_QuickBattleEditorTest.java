@@ -33,16 +33,16 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		entries.add(BattleNext_QuickBattleModel.parseLine("# unfinished", false));
 		entries.add(new BattleNext_QuickBattleModel("first", "second", -1, 1f));
 		editor.refreshContent();
-		List<?> rows = (List<?>) getField(editor, "rows");
+		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
 		((TextFieldAPI) getField(rows.get(0), "rawField")).setText("first,second,4,2");
 		((TextFieldAPI) getField(rows.get(1), "mapField")).setText("pending");
 		editor.buttonPressed("add");
 		assertEquals(BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE, entries.get(0).getRowType());
 		assertEquals(3, entries.size());
 		assertEquals(-1, entries.get(1).getMap());
-		assertNotNull(getField(((List<?>) getField(editor, "rows")).get(0), "playerField"));
+		assertNotNull(getField(((List<?>) getField(getField(editor, "display"), "rows")).get(0), "playerField"));
 		assertDoesNotThrow(editor::refreshRowStatuses);
-		rows = (List<?>) getField(editor, "rows");
+		rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("first", ((TextFieldAPI) getField(rows.get(0), "playerField")).getText());
 		assertEquals("pending", ((TextFieldAPI) getField(rows.get(1), "mapField")).getText());
 	}
@@ -59,14 +59,14 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		entries.add(BattleNext_QuickBattleModel.parseLine("# raw", false));
 		entries.add(BattleNext_QuickBattleModel.parseLine("# unfinished", false));
 		editor.refreshContent();
-		List<?> rows = (List<?>) getField(editor, "rows");
+		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
 		((TextFieldAPI) getField(rows.get(0), "playerField")).setText("edited_player");
 		((TextFieldAPI) getField(rows.get(0), "mapField")).setText("pending");
 		((ButtonAPI) getField(rows.get(0), "enabledCheckbox")).setChecked(false);
 		((TextFieldAPI) getField(rows.get(2), "rawField")).setText("# unfinished draft");
 		((TextFieldAPI) getField(rows.get(1), "rawField")).setText("first,second,4,2");
 		editor.refreshRowStatuses();
-		rows = (List<?>) getField(editor, "rows");
+		rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("edited_player", ((TextFieldAPI) getField(rows.get(0), "playerField")).getText());
 		assertEquals("pending", ((TextFieldAPI) getField(rows.get(0), "mapField")).getText());
 		assertFalse(((ButtonAPI) getField(rows.get(0), "enabledCheckbox")).isChecked());
@@ -102,7 +102,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		entries.clear();
 		entries.add(new BattleNext_QuickBattleModel("first", "second", BattleNext_MissionBattleMap.RANDOM_MAP_ID, 1f));
 		editor.refreshContent();
-		Object row = ((List<?>) getField(editor, "rows")).get(0);
+		Object row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
 		String category = cnText ? "Battle_CN" : "Battle";
 		String rowError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map"), BattleNext_MissionBattleMap.LAST_MAP_ID);
 		String saveError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map_settings"), BattleNext_MissionBattleMap.LAST_MAP_ID);

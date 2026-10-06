@@ -7,6 +7,9 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.util.Misc;
+import data.simulator.BattleNext_SimulatorWidget;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -17,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +51,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 					}
 					default -> method.invoke(delegate, args);
 				}));
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		try {
 			page.attach(root);
@@ -90,23 +94,43 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = {180, 335, 336, 337, 1400})
-	void numericFieldsUseBoundedWidthInTheFullEditorHostAndPreserveDraftOnRefresh(int width) throws Exception {
+	@CsvSource({"180,43", "1400,384"})
+	void settingsAndSimulatorFillTheirOwnRegionsAndPreserveDraftOnRefresh(int width, int columnWidth) throws Exception {
 
 		deferTooltipWidth = true;
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		CustomPanelAPI root = panel(width, 900f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
 		Object editor = getField(page, "editor");
 		CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
 		CustomPanelAPI owner = (CustomPanelAPI) getField(editor, "owner");
 		assertEquals(8f, owner.getPosition().getX() - root.getPosition().getX());
-		assertEquals(width - 16f, owner.getPosition().getWidth());
+		assertEquals(columnWidth, owner.getPosition().getWidth());
 		assertEquals(owner.getPosition().getX(), editorPanel.getPosition().getX());
 		assertEquals(owner.getPosition().getY(), editorPanel.getPosition().getY());
 		assertEquals(owner.getPosition().getWidth(), editorPanel.getPosition().getWidth());
 		assertEquals(owner.getPosition().getHeight(), editorPanel.getPosition().getHeight());
-		float expectedWidth = Math.min(320f, owner.getPosition().getWidth());
+		float expectedWidth = owner.getPosition().getWidth();
+		BattleNext_SimulatorWidget simulator = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
+		PositionAPI simulatorBounds = simulator.getPanel().getPosition();
+		assertEquals(owner.getPosition().getX() + columnWidth + 10f, simulatorBounds.getX());
+		assertEquals(root.getPosition().getX() + width - 8f, simulatorBounds.getX() + simulatorBounds.getWidth());
+		assertEquals(owner.getPosition().getY() + owner.getPosition().getHeight(),
+				simulatorBounds.getY() + simulatorBounds.getHeight());
+		PositionAPI enable = buttonPositions.get("simulator_enable");
+		assertEquals(simulatorBounds.getCenterX(), enable.getCenterX(), 0.5f);
+		assertEquals(simulatorBounds.getCenterY(), enable.getCenterY(), 0.5f);
+		assertEquals(buttonPositions.get("settings_save").getY(), simulatorBounds.getY());
+		assertEquals(Misc.getNegativeHighlightColor(), buttonColors.get(enable));
+		CustomPanelAPI simulatorContent = (CustomPanelAPI) children.get(simulator.getPanel()).get(0);
+		TooltipMakerAPI border = (TooltipMakerAPI) children.get(simulatorContent).get(0);
+		PositionAPI rectangle = tooltips.get(border).getComponents().get(0).getPosition();
+		assertEquals(simulatorBounds.getX(), rectangle.getX());
+		assertEquals(simulatorBounds.getY(), rectangle.getY());
+		assertEquals(simulatorBounds.getWidth(), rectangle.getWidth());
+		assertEquals(simulatorBounds.getHeight(), rectangle.getHeight());
+		assertEquals(Misc.getNegativeHighlightColor(), rectangleColors.get(rectangle));
+		assertEquals(2f, rectangleThicknesses.get(rectangle));
 		List<String> names = List.of("battleTimeLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField");
 		List<String> values = List.of("700.5", "pending", "4.5", "75");
 		assertFalse(page.hasUnsavedChanges());
@@ -119,6 +143,8 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		}
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
+		assertNull(simulator.getPanel());
+		assertTrue(removedComponents.contains(simulatorContent));
 		for (int index = 0; index < names.size(); index++) {
 			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
 			assertEquals(expectedWidth, field.getPosition().getWidth(), names.get(index));
@@ -140,7 +166,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	void languageDraftCommitRefreshDiscardAndReopenPreserveTheSession(boolean initial) throws Exception {
 
 		installSettings(new JSONObject(), initial);
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		CustomPanelAPI root = panel(600f, 300f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
 		Object editor = getField(page, "editor");
@@ -191,7 +217,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	@ValueSource(booleans = {false, true})
 	void rejectedSaveKeepsDraftLanguageCommittedTextAndInputState(boolean initial) throws Exception {
 		installSettings(new JSONObject().put("cnText", initial), !initial);
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		page.attach(panel(600f, 500f, new BaseCustomUIPanelPlugin()));
 		Object editor = getField(page, "editor");
 		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(!initial);

@@ -88,7 +88,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		name = new BattleNext_TextField(inputRouter, contentsPanel, width - INSET * 3f,
 				BattleNext_PageLayout.FORM_FIELD_HEIGHT, content);
 		name.attach(content, contentsPanel);
-		name.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		name.setMaxChars(-1);
 		name.setText(displayName);
 		if (snapshot != null) {
 			content.addPara(fleetStrings.format("player_save_commander", commanderName), INSET);

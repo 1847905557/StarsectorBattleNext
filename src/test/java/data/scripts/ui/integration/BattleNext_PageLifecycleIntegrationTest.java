@@ -20,6 +20,7 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.widget.BattleNext_TableWidget;
+import data.simulator.BattleNext_SimulatorWidget;
 import data.scripts.ui.page.*;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,9 +67,10 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 				TextFieldAPI field = (TextFieldAPI) getField(editor, "battleTimeLimitField");
 				CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
 				assertEquals(16f, field.getPosition().getX() - root.getPosition().getX());
-				assertEquals(320f, field.getPosition().getWidth());
+				assertEquals(editorPanel.getPosition().getWidth(), field.getPosition().getWidth());
 				assertEquals(16f, editorPanel.getPosition().getX() - root.getPosition().getX());
-				assertEquals(16f, root.getPosition().getX() + width - editorPanel.getPosition().getX() - editorPanel.getPosition().getWidth());
+				PositionAPI simulator = ((BattleNext_SimulatorWidget) getField(page, "simulatorWidget")).getPanel().getPosition();
+				assertEquals(16f, root.getPosition().getX() + width - simulator.getX() - simulator.getWidth());
 				Map<?, ?> viewports = (Map<?, ?>) getField(editor, "viewports");
 				List<UIComponentAPI> components = tooltips.get(viewports.get("settings")).getComponents();
 				assertEquals(field.getPosition().getX(), components.get(0).getPosition().getX());
@@ -76,7 +78,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 				assertEquals(16f, buttonPositions.get("settings_save").getX() - root.getPosition().getX());
 			} else {
 				Object editor = getField(page, "quickBattleEditor");
-				BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+				BattleNext_TableWidget table = (BattleNext_TableWidget) getField(getField(editor, "display"), "tableWidget");
 				TooltipMakerAPI header = (TooltipMakerAPI) children.get(table.getPanel()).get(0);
 				assertEquals(16f, header.getPosition().getX() - root.getPosition().getX());
 				assertEquals(16f, root.getPosition().getX() + width - header.getPosition().getX() - header.getPosition().getWidth());
@@ -280,7 +282,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 	void dedicatedPagesUseTheSharedMountLifecycle(String kind) throws Exception {
 		BattleNext_PageView page = "selector".equals(kind)
 				? new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin())
-				: new BattleNext_SettingsPage();
+				: new BattleNext_SettingsPage(action -> {});
 		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
 		assertEquals(1, children.get(root).size());
@@ -298,7 +300,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("add");
 		Object editor = getField(page, "quickBattleEditor");
-		Object row = ((List<?>) getField(editor, "rows")).get(0);
+		Object row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
 		((TextFieldAPI) getField(row, "playerField")).setText("Draft fleet");
 		((TextFieldAPI) getField(row, "mapField")).setText("Unfinished number");
 		String snapshot = ((BattleNext_EditorView) editor).serializeState();
@@ -311,7 +313,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 
 	@Test
 	void settingsKeepsRawDraftAndDirtyStateAcrossRefresh() throws Exception {
-		BattleNext_SettingsPage page = new BattleNext_SettingsPage();
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).setText("pending");
 		assertTrue(page.hasUnsavedChanges());

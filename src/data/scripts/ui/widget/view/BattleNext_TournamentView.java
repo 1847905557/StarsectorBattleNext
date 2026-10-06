@@ -60,6 +60,19 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private Node hovered;
 	private String layoutError = "";
 
+	public record ViewState(float zoom, float panX, float panY) { }
+
+	public ViewState captureState() {
+		return new ViewState(zoom, panX, panY);
+	}
+
+	public void restoreState(ViewState state) {
+		zoom = state.zoom();
+		panX = state.panX();
+		panY = state.panY();
+		clearHover();
+	}
+
 	protected BattleNext_TournamentView(BattleNext_TournamentModel tournament, Map<String, String> names) {
 		this.tournament = tournament;
 		this.fleetNames = Map.copyOf(names);

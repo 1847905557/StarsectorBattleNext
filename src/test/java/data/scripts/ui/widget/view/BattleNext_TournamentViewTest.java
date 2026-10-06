@@ -556,9 +556,9 @@ class BattleNext_TournamentViewTest {
 				float width = Math.min(availableWidth, BattleNext_TournamentView.CANVAS_WIDTH);
 				BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(fleets, true,
 						state == 1 ? engine.getNextMatch(cup) : null,
-						"A detailed warning about tournament configuration. ".repeat(count), List.of(), true, false);
+						"A detailed warning about tournament configuration. ".repeat(count), List.of());
 				BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(),
-						cup, data, ignored -> {
+						cup, data, state == 0 ? List.of(new BattleNext_TournamentDisplay.Action("Start tournament", "tournament:start", true, List.of())) : List.of(), ignored -> {
 
 						});
 				Field chart = display.getClass().getDeclaredField("chart");
@@ -621,8 +621,10 @@ class BattleNext_TournamentViewTest {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(
 				Map.of("F1", "First", "F2", "Second"), true, started ? engine.getNextMatch(cup) : null,
-				"", List.of("Visible warning"), true, started);
-		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(router, cup, data, actions::add);
+				"", List.of("Visible warning"));
+		BattleNext_TournamentDisplay.Action operation = new BattleNext_TournamentDisplay.Action("Action",
+				started ? "tournament:authorize" : "tournament:start", true, List.of());
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(router, cup, data, List.of(operation), actions::add);
 		String json = cup.toJson().toString();
 		display.attach(harness.panel);
 		CustomUIPanelPlugin plugin = harness.displayPlugin;
@@ -687,7 +689,7 @@ class BattleNext_TournamentViewTest {
 		Map<String, String> names = new HashMap<>(Map.of("F1", "First", "F2", "Second"));
 		List<String> warnings = new ArrayList<>(List.of("Warning"));
 		BattleNext_TournamentDisplay.Details data = new BattleNext_TournamentDisplay.Details(
-				names, false, null, "", warnings, false, false);
+				names, false, null, "", warnings);
 		names.clear();
 		warnings.clear();
 		assertEquals(2, data.fleetNames().size());
@@ -696,7 +698,8 @@ class BattleNext_TournamentViewTest {
 		harness.chartBounds.api.setSize(700f, 700f);
 		List<Object> actions = new ArrayList<>();
 		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(),
-				tournament(2, BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1), data, actions::add);
+				tournament(2, BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1), data,
+				List.of(new BattleNext_TournamentDisplay.Action("Start", "tournament:start", false, List.of())), actions::add);
 		display.attach(harness.panel);
 		assertFalse(harness.buttons.get(harness.buttons.size() - 1).enabled);
 		harness.displayPlugin.buttonPressed("tournament:start");

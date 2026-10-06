@@ -150,7 +150,8 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.buttonPressed("pin_add");
 		BattleNext_PinnedVariantStore store = (BattleNext_PinnedVariantStore) getField(plugin, "pinnedStore");
 		String firstId = store.getAll().get(0).getPinId();
-		name.setText("Second name");
+		String fullName = "装配😀50% " + "Full name ".repeat(40).stripTrailing();
+		name.setText(fullName);
 		plugin.advance(0f);
 		assertTrue(buttons.get("pin_add").get());
 		plugin.buttonPressed("pin_add");
@@ -160,7 +161,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertTrue(buttons.get("pin_add").get());
 		plugin.buttonPressed("pin_add");
 		assertEquals(3, store.getAll().size());
-		assertEquals("Second name", store.getAll().get(2).getDisplayName());
+		assertEquals(fullName, store.getAll().get(2).getDisplayName());
 		assertFalse(store.get(firstId).getVariantJson().getJSONArray("sMods").toString().contains("ordinary"));
 		assertTrue(store.getAll().get(2).getVariantJson().getJSONArray("sMods").toString().contains("ordinary"));
 		assertFalse(buttons.get("pin_add").get());

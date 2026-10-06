@@ -7,6 +7,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.tools.BattleNext_Logger;
 
 public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 
@@ -111,6 +112,35 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	public boolean handleEscape() {
 		buttonPressed("back");
 		return true;
+	}
+
+	@Override
+	protected final boolean savePage() {
+		if (!isDetailOpen() || !isDetailEditable()) return true;
+		if (!editorView().save()) {
+			setStatus(editorView().getStatusText());
+			return false;
+		}
+		setStatus(strings.get("saved"));
+		String inputState = editorView().serializeState();
+		try {
+			afterEditorCommit();
+			reloadSavedData();
+			refreshContent();
+		} catch (Exception exception) {
+			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
+			BattleNext_Logger.warn(getClass(), "management.display.after_commit.failed",
+					BattleNext_Logger.fields().put("input_state", inputState).build(), exception);
+		}
+		return true;
+	}
+
+	protected void afterEditorCommit() {
+
+	}
+
+	protected void reloadSavedData() throws Exception {
+
 	}
 
 	protected abstract String pageTitle();

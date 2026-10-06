@@ -165,7 +165,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		pinName = new BattleNext_TextField(inputRouter, rightPanel, width, height, pinNameHost);
 		pinName.attach(pinNameHost, rightPanel);
 		pinName.getPosition().inTL(0f, fieldTop);
-		pinName.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+		pinName.setMaxChars(-1);
 		float blockHeight = fieldTop + height;
 		pinNameHost.setHeightSoFar(blockHeight);
 		rightPanel.addUIElement(pinNameHost).inTL(0f, buttonTop - PIN_NAME_GAP - blockHeight);

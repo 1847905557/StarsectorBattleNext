@@ -26,7 +26,7 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
 		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		List<?> rows = (List<?>) getField(editor, "rows");
+		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("BattleNext_common_available", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		assertEquals("BattleNext_common_unavailable", ((LabelAPI) getField(rows.get(1), "statusLabel")).getText());
 		var provider = new BattleNext_BattleSourceProvider();
@@ -60,12 +60,12 @@ class BattleNext_QuickBattleAssemblyIntegrationTest extends BattleNext_TestFleet
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
 		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		List<?> rows = (List<?>) getField(editor, "rows");
+		List<?> rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("BattleNext_common_unavailable", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		variant("repair", "parent_local", "parent", 0, new JSONObject().put("module", "child_local"));
 		variant("repair", "child_local", "child", 8, null);
 		editor.deserialize();
-		rows = (List<?>) getField(editor, "rows");
+		rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("BattleNext_common_available", ((LabelAPI) getField(rows.get(0), "statusLabel")).getText());
 		var provider = new BattleNext_BattleSourceProvider();
 		assertEquals(1, provider.load().size());
