@@ -28,7 +28,7 @@ public class BattleNext_EntryId {
 	}
 
 	public static boolean isReservedFolder(String folderName) {
-		return folderName.matches("(?i)_reports|_rules|_tournaments|_pinnedVariants");
+		return folderName.matches("(?i)_reports|_rules|_tournaments|_pinnedVariants|_simulations");
 	}
 
 	public static boolean sameFileName(String first, String second) {

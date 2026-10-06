@@ -133,6 +133,29 @@ public class BattleNext_SimulatorStorage {
 		return listFiles(directory("pending"), false).stream().filter(path -> path.getFileName().toString().endsWith(".json")).toList();
 	}
 
+	public void writeSnapshot(BattleNext_TournamentSnapshot snapshot) throws IOException, JSONException {
+		Path target = directory("tournaments").resolve(snapshot.getId() + ".json");
+		Path staging = target.resolveSibling(target.getFileName() + ".pending");
+		invoke(files.write, staging, snapshot.toJson().toString().getBytes(StandardCharsets.UTF_8));
+		invoke(files.move, staging, target, new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
+		BattleNext_Logger.info(getClass(), "simulator.tournament.checkpoint", BattleNext_Logger.fields().put("id", snapshot.getId()).put("version", snapshot.getVersion()).build());
+	}
+
+	public List<BattleNext_TournamentSnapshot> tournamentSnapshots() throws IOException, JSONException {
+		List<BattleNext_TournamentSnapshot> snapshots = new ArrayList<>();
+		for (Path path : listFiles(directory("tournaments"), false)) {
+			if (!path.toString().endsWith(".json")) continue;
+			BattleNext_TournamentSnapshot snapshot = new BattleNext_TournamentSnapshot();
+			snapshot.fromJson(new JSONObject(new String((byte[]) invoke(files.readAllBytes, path), StandardCharsets.UTF_8)));
+			snapshots.add(snapshot);
+		}
+		return snapshots;
+	}
+
+	public void deleteSnapshot(String id) throws IOException {
+		invoke(files.deleteIfExists, root.resolve("tournaments").resolve(id + ".json"));
+	}
+
 	public record Stored(BattleNext_SimulationRequest request, BattleNext_SimulationResult result) { }
 
 	public Stored read(Path path) throws IOException, JSONException {

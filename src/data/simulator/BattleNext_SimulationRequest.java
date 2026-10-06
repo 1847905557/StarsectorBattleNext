@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJson, BattleNext_SimulationConfig config) {
 
@@ -80,6 +81,24 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 
 	private static BattleNext_SimulationRequest create(Kind kind, JSONObject source, BattleNext_SimulationConfig config) {
 		return new BattleNext_SimulationRequest(UUID.randomUUID().toString(), kind, source.toString(), config);
+	}
+
+	public BattleNext_SimulationRequest forMatch(BattleNext_Match match) {
+		if (kind != Kind.TOURNAMENT) throw new IllegalStateException("A tournament request is required to prepare a round");
+		try {
+			JSONObject source = source();
+			String identity = id + "/" + match.getId() + "/" + match.getRounds().size();
+			JSONObject round = new JSONObject().put("match", match.toJson()).put("actualMap", BattleNext_MissionBattleMap.resolve(match.getMap()))
+					.put("player", source.getJSONObject("fleets").getJSONObject(match.getPlayer()))
+					.put("enemy", source.getJSONObject("fleets").getJSONObject(match.getEnemy()))
+					.put("sourceType", source.getString("sourceType")).put("sourcePath", source.getString("sourcePath"))
+					.put("tournamentId", id).put("tournamentName", source.getJSONObject("tournament").getString("name"))
+					.put("roundNumber", match.getRounds().size() + 1);
+			return new BattleNext_SimulationRequest(UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)).toString(),
+					Kind.MATCH, round.toString(), config);
+		} catch (JSONException exception) {
+			throw new IllegalStateException("Unable to prepare tournament simulation round: " + id + "/" + match.getId(), exception);
+		}
 	}
 
 	private static JSONObject snapshot(String id, BattleNext_FleetStore fleets) throws JSONException {

@@ -51,6 +51,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 	private LabelAPI statusLabel;
 	private Status displayedStatus;
 	private String displayedError;
+	private long tournamentVersion = -1L;
+	private String tournamentTaskId = "";
 
 	public BattleNext_SimulatorWidget(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			BooleanSupplier unlocked, BattleNext_SimulatorBrowser browser, BattleNext_BattleSourceProvider sources) {
@@ -145,6 +147,20 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			return;
 		}
 		BattleNext_TournamentModel tournament = sources.getTournamentStore().get(browser.getSelectedId());
+		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedId());
+		if (task != null) {
+			BattleNext_TournamentSnapshot snapshot = task.getTournamentSnapshot();
+			tournament = snapshot.getTournament();
+			tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, snapshotDetails(snapshot),
+					tournamentActions(task), this::handleTournamentAction);
+			tournamentDisplay.attach(bodyPanel);
+			tournamentVersion = snapshot.getVersion();
+			tournamentTaskId = snapshot.getId();
+			if (browser.getTournamentState() != null) {
+				tournamentDisplay.restoreState(browser.getTournamentState());
+			}
+			return;
+		}
 		if (tournament == null) {
 			TooltipMakerAPI error = bodyPanel.createUIElement(bodyRect.getWidth(), bodyRect.getHeight(), false);
 			BattleNext_UiTheme.configure(error);
@@ -159,11 +175,74 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, sources.getFleetStore(), sources.getRuleStore(),
 				String.join(" | ", sources.getCatalogErrors()), reasons);
 		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, details,
-				List.of(action), ignored -> {});
+				List.of(action), this::handleTournamentAction);
 		tournamentDisplay.attach(bodyPanel);
 		if (browser.getTournamentState() != null) {
 			tournamentDisplay.restoreState(browser.getTournamentState());
 		}
+	}
+
+	private BattleNext_TournamentDisplay.Details snapshotDetails(BattleNext_TournamentSnapshot snapshot) {
+		BattleNext_TournamentModel model = snapshot.getTournament();
+		return new BattleNext_TournamentDisplay.Details(snapshot.getFleetNames(), snapshot.getRequest().source().has("rule"),
+				model.getNextPendingMatch(), snapshot.getDiagnostic(), List.of());
+	}
+
+	private List<BattleNext_TournamentDisplay.Action> tournamentActions(BattleNext_SimulationTask task) {
+		String sourceId = browser.getSelectedId();
+		BattleNext_SimulationTask.State state = task.getState();
+		if (state == BattleNext_SimulationTask.State.IMPORT_FAILED) {
+			return List.of(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulator_retry_save"), "simulator:retry:" + sourceId, true, List.of()));
+		}
+		if (state == BattleNext_SimulationTask.State.FINISHED && task.getTournamentSnapshot().getTournament().isCompleted()) {
+			BattleNext_TournamentModel source = sources.getTournamentStore().get(sourceId);
+			List<String> reasons = source == null ? List.of(tournamentStrings.get("missing_detail")) : sources.tournamentErrors(source);
+			return List.of(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulate_again"), "simulator:tournament:" + sourceId, reasons.isEmpty(), reasons));
+		}
+		String role = state == BattleNext_SimulationTask.State.PAUSED ? "resume" : "pause";
+		return List.of(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulator_" + role), "simulator:" + role + ":" + sourceId, true, List.of()));
+	}
+
+	private void handleTournamentAction(Object action) {
+		if (!(action instanceof String id)) return;
+		try {
+			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedId());
+			if (id.startsWith("simulator:pause:")) {
+				task.pause();
+			} else if (id.startsWith("simulator:resume:")) {
+				task.resume();
+			} else if (id.startsWith("simulator:retry:")) {
+				task.retryImport();
+			} else if (id.startsWith("simulator:tournament:")) {
+				BattleNext_TournamentModel model = sources.getTournamentStore().get(browser.getSelectedId());
+				List<String> reasons = sources.tournamentErrors(model);
+				if (!reasons.isEmpty()) {
+					browser.setStatusError(String.join("; ", reasons));
+					refreshStatus();
+					return;
+				}
+				BattleNext_SimulatorService.getInstance().submit(BattleNext_SimulationRequest.fromTournament(model,
+						sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit())));
+			}
+			browser.setStatusError("");
+		} catch (RuntimeException exception) {
+			browser.setStatusError(exception.getClass().getSimpleName() + ": " + exception.getMessage());
+			BattleNext_Logger.warn(getClass(), "simulator.tournament.submission.failed",
+					BattleNext_Logger.fields().put("source_id", browser.getSelectedId()).build(), exception);
+		}
+		refreshStatus();
+	}
+
+	private void refreshTournament() {
+		if (tournamentDisplay == null || browser.getSelectedId().isEmpty()) return;
+		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedId());
+		if (task == null) return;
+		BattleNext_TournamentSnapshot snapshot = task.tournamentSnapshot();
+		if (snapshot.getId().equals(tournamentTaskId) && snapshot.getVersion() == tournamentVersion) return;
+		snapshot = task.getTournamentSnapshot();
+		tournamentDisplay.update(snapshot.getTournament(), snapshotDetails(snapshot), tournamentActions(task));
+		tournamentVersion = snapshot.getVersion();
+		tournamentTaskId = snapshot.getId();
 	}
 
 	private void submitQuickBattle(Object action) {
@@ -194,6 +273,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 
 	public void refreshStatus() {
 		if (!unlocked.getAsBoolean()) return;
+		refreshTournament();
 		Status current = BattleNext_SimulatorService.status();
 		String error = browser.getStatusError();
 		if (current.equals(displayedStatus) && error.equals(displayedError)) return;
@@ -229,7 +309,9 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		if (status.result() != null) {
 			try {
 				BattleNext_SimulationResult result = status.result();
-				String details = result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED
+				String details = !result.tournamentSnapshotJson().isEmpty()
+						? battleStrings.format("simulator_tournament_result", result.simulationSeconds(), result.executionNanos() / 1000000000d)
+						: result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED
 						? battleStrings.format("simulator_result", result.report().getWinner(), result.simulationSeconds(),
 								result.executionNanos() / 1000000000d, result.report().getName()) : result.diagnostic();
 				tooltip.addPara(result.outcome().name() + ": " + details, 5f);
@@ -243,6 +325,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 	}
 
 	private void clearBody() {
+		tournamentVersion = -1L;
+		tournamentTaskId = "";
 		if (quickBattleDisplay != null) {
 			browser.rememberQuickBattle(quickBattleDisplay.captureState());
 			quickBattleDisplay.close();

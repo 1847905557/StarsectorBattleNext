@@ -45,7 +45,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 		TooltipMakerAPI metadataContent = panel.createUIElement(areaWidth, 0f, false);
 		metadataContent.addTitle(target.report().getName());
 		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
-		nameField = createTextField("name", panel, metadataContent, fieldArea, reportStrings.get("name"), edited, true, metadataContent);
+		nameField = createTextField("name", panel, metadataContent, fieldArea, reportStrings.get("name"), edited, !target.isReadOnly(), metadataContent);
 		float top = metadataContent.getHeightSoFar() + 8f;
 		panel.addUIElement(metadataContent).inTL(0f, 0f);
 		CustomPanelAPI contentPanel = panel.createCustomPanel(areaWidth, Math.max(1f, areaHeight - top), new BaseCustomUIPanelPlugin());
@@ -66,6 +66,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
+		if (target.isReadOnly()) return true;
 		if (!validateName(nameField.getText(), reportStrings.get("name_required"))) return false;
 		String next = nameField.getText().trim();
 		try {

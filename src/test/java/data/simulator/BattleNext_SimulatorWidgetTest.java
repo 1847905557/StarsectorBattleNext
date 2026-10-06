@@ -140,7 +140,6 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			chart.zoomAt(60f, 60f, 3);
 			chart.panBy(12f, 7f);
 			BattleNext_TournamentDisplay.ViewState state = display.captureState();
-			((CustomPanelAPI) getField(display, "panel")).getPlugin().buttonPressed("simulator:tournament:" + phase);
 			assertEquals(json, model.toJson().toString());
 			select(widget, "");
 			select(widget, phase);

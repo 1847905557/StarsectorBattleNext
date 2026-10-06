@@ -1,8 +1,10 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
@@ -50,10 +52,10 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private static final float MATCH_GAP = 5f;
 	private static final float WARNING_GAP = 4f;
 
-	private final BattleNext_TournamentModel tournament;
-	private final Details details;
+	private BattleNext_TournamentModel tournament;
+	private Details details;
 	private final Consumer<Object> onAction;
-	private final List<Action> actions;
+	private List<Action> actions;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
@@ -61,6 +63,12 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	private BattleNext_TournamentView chart;
 	private TooltipMakerAPI content;
+	private TooltipMakerAPI headingContent;
+	private LabelAPI headingLabel;
+	private CustomPanelAPI viewport;
+	private CustomPanelAPI canvas;
+	private CustomPanelAPI summaryRow;
+	private CustomPanelAPI summaryPanel;
 
 	public BattleNext_TournamentDisplay(BattleNext_UiInputRouter inputRouter,
 			BattleNext_TournamentModel tournament, Details details, List<Action> actions, Consumer<Object> onAction) {
@@ -91,6 +99,20 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		content.getExternalScroller().setYOffset(state.scroll());
 	}
 
+	public void update(BattleNext_TournamentModel model, Details details, List<Action> actions) {
+		float scroll = content.getExternalScroller().getYOffset();
+		tournament = model;
+		this.details = details;
+		this.actions = List.copyOf(actions);
+		chart.update(model, details.fleetNames());
+		BattleNext_PageLayout.refreshHeading(headingContent, headingLabel, panel.getPosition().getWidth(), model.getName());
+		releasePanel(summaryPanel);
+		float top = canvas.getPosition().getHeight() + 10f;
+		buildSummary(summaryRow, Math.max(1f, viewport.getPosition().getWidth() - CONTENT_WIDTH_RESERVE), canvas.getPosition().getWidth(), viewport.getPlugin());
+		content.setHeightSoFar(top + SECTION_GAP + summaryRow.getPosition().getHeight());
+		content.getExternalScroller().setYOffset(scroll);
+	}
+
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
 		buildDisplay(panel);
@@ -106,14 +128,15 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		closeChart();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		UIRect[] rows = root.splitVertically(BattleNext_PageLayout.HEADER_HEIGHT + TITLE_GAP);
-		BattleNext_PageLayout.heading(rows[0], panel, tournament.getName());
-		CustomPanelAPI viewport = ownPanel(panel, rows[1].createSubPanel(panel, new ActionPlugin()).getPanel());
+		headingContent = panel.createUIElement(rows[0].getWidth(), rows[0].getHeight(), false);
+		headingLabel = BattleNext_PageLayout.heading(rows[0], panel, headingContent, tournament.getName());
+		viewport = ownPanel(panel, rows[1].createSubPanel(panel, new ActionPlugin()).getPanel());
 		content = viewport.createUIElement(rows[1].getWidth(), rows[1].getHeight(), true);
 		BattleNext_UiTheme.configure(content);
 		content.setBgAlpha(0f);
 		chart = BattleNext_TournamentView.createView(tournament, details.fleetNames());
 		float availableWidth = Math.max(1f, rows[1].getWidth() - CONTENT_WIDTH_RESERVE);
-		CustomPanelAPI canvas = chart.attach(viewport, content, viewport.getPosition(), inputRouter, availableWidth);
+		canvas = chart.attach(viewport, content, viewport.getPosition(), inputRouter, availableWidth);
 		addSummary(viewport, content, availableWidth, canvas.getPosition().getWidth());
 		viewport.addUIElement(content).inTL(0f, 0f);
 	}
@@ -134,10 +157,16 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	}
 
 	private void addSummary(CustomPanelAPI owner, TooltipMakerAPI content, float availableWidth, float width) {
+		summaryRow = ownPanel(content, owner.createCustomPanel(availableWidth, 1f, null));
+		buildSummary(summaryRow, availableWidth, width, owner.getPlugin());
+		content.addCustom(summaryRow, SECTION_GAP);
+	}
+
+	private void buildSummary(CustomPanelAPI row, float availableWidth, float width, CustomUIPanelPlugin plugin) {
 
 		float columnWidth = Math.max(1f, (width - BattleNext_PageLayout.EDITOR_COLUMN_GAP) * 0.5f);
-		CustomPanelAPI row = ownPanel(content, owner.createCustomPanel(availableWidth, 1f, null));
-		CustomPanelAPI summary = row.createCustomPanel(width, 1f, owner.getPlugin());
+		CustomPanelAPI summary = ownPanel(row, row.createCustomPanel(width, 1f, plugin));
+		summaryPanel = summary;
 		TooltipMakerAPI title = summary.createUIElement(columnWidth, 0f, false);
 		BattleNext_UiTheme.configure(title);
 		title.setBgAlpha(0f);
@@ -176,7 +205,6 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		summary.getPosition().setSize(width, height);
 		row.addComponent(summary).inTL((availableWidth - width) * 0.5f, 0f);
 		row.getPosition().setSize(availableWidth, height);
-		content.addCustom(row, SECTION_GAP);
 	}
 
 	private void addOverview(TooltipMakerAPI content, float width) {

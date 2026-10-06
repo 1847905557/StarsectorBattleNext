@@ -22,15 +22,21 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import org.json.JSONException;
 
 public class BattleNext_SimulatorService implements AutoCloseable {
 
-	public enum Phase { NOT_STARTED, IDLE, STOPPED, QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED }
+	public enum Phase { NOT_STARTED, IDLE, STOPPED, QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED, PAUSED }
 
 	private static BattleNext_SimulatorService instance;
 	private final LinkedBlockingQueue<BattleNext_SimulationTask> queue = new LinkedBlockingQueue<>();
 	private final ConcurrentLinkedQueue<BattleNext_SimulationTask> imports = new ConcurrentLinkedQueue<>();
 	private final Map<String, BattleNext_SimulationTask> failedImports = new LinkedHashMap<>();
+	private final Map<String, BattleNext_SimulationTask> tournaments = new ConcurrentHashMap<>();
+	private final BattleNext_TournamentSnapshotStore snapshotStore = new BattleNext_TournamentSnapshotStore();
+	private final ConcurrentLinkedQueue<Checkpoint> checkpoints = new ConcurrentLinkedQueue<>();
 	private final BattleNext_SimulatorStorage storage;
 	private final Path core;
 	private volatile List<String> command;
@@ -52,6 +58,26 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		Path saves = Path.of(System.getProperty("com.fs.starfarer.settings.paths.saves", "../saves")).toAbsolutePath().normalize();
 		storage = new BattleNext_SimulatorStorage(saves.resolve("common/AI_Battles_Next/simulator"));
 		command = buildCommand();
+		try {
+			List<BattleNext_TournamentSnapshot> recovered = storage.tournamentSnapshots();
+			for (BattleNext_TournamentSnapshot snapshot : recovered) {
+				BattleNext_SimulationTask task = new BattleNext_SimulationTask(snapshot, this);
+				if (snapshot.getTournament().isCompleted() && snapshot.getState() != BattleNext_SimulationTask.State.IMPORT_FAILED) {
+					task.receive(snapshot.result());
+					task.imported(true);
+				} else if (snapshot.getState() != BattleNext_SimulationTask.State.IMPORT_FAILED) {
+					snapshot.transition(BattleNext_SimulationTask.State.PAUSED, "Awaiting manual resume");
+				}
+				BattleNext_SimulationTask existing = tournaments.get(snapshot.getSourceId());
+				if (existing == null || existing.tournamentSnapshot().getCreatedAt() < snapshot.getCreatedAt()) {
+					tournaments.put(snapshot.getSourceId(), task);
+				}
+				latest = task;
+			}
+			snapshotStore.restoreCheckpoints(recovered);
+		} catch (Exception exception) {
+			BattleNext_Logger.error(getClass(), "simulator.tournament.recovery.failed", BattleNext_Logger.fields().build(), exception);
+		}
 		for (Path path : storage.pending()) {
 			try {
 				BattleNext_SimulatorStorage.Stored stored = storage.read(path);
@@ -81,17 +107,70 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	public BattleNext_SimulationTask submit(BattleNext_SimulationRequest request) {
 		if (closed) throw new IllegalStateException("Simulator service is closed");
-		if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) throw new UnsupportedOperationException("Tournament simulation is not supported");
+		if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
+			try {
+				String sourceId = request.source().getJSONObject("tournament").getString("id");
+				BattleNext_SimulationTask existing = tournaments.get(sourceId);
+				if (existing != null && existing.getState() != BattleNext_SimulationTask.State.FINISHED) return existing;
+				BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, this);
+				tournaments.put(sourceId, task);
+				latest = task;
+					if (saveTournament(task)) {
+						enqueue(task);
+					}
+				return task;
+			} catch (JSONException exception) {
+				throw new IllegalArgumentException("Invalid tournament submission: " + request.id(), exception);
+			}
+		}
 		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, this);
+		enqueue(task);
+		return task;
+	}
+
+	private void enqueue(BattleNext_SimulationTask task) {
 		queue.add(task);
 		if (supervisor == null) {
 			supervisor = new Thread(this::run, "BattleNext simulator supervisor");
 			supervisor.setDaemon(true);
 			supervisor.start();
 		}
-		BattleNext_Logger.info(getClass(), "simulator.task.queued", BattleNext_Logger.fields().put("id", request.id())
-				.put("request", request.toJson()).put("queue_size", queue.size()).build());
-		return task;
+		BattleNext_Logger.info(getClass(), "simulator.task.queued", BattleNext_Logger.fields().put("id", task.getRequest().id())
+				.put("request", task.getRequest().toJson()).put("queue_size", queue.size()).build());
+	}
+
+	public static BattleNext_SimulationTask tournament(String sourceId) {
+		return instance == null ? null : instance.tournaments.get(sourceId);
+	}
+
+	public static void deleteTournament(String id) throws Exception {
+		BattleNext_SimulatorService service = getInstance();
+		for (var entry : service.tournaments.entrySet()) {
+			BattleNext_SimulationTask task = entry.getValue();
+			if (!task.getRequest().id().equals(id)) continue;
+			synchronized (task.tournamentSnapshot()) {
+				task.markDeleted();
+				service.storage.deleteSnapshot(id);
+			}
+			service.cancel(task);
+			service.queue.remove(task);
+			service.tournaments.remove(entry.getKey(), task);
+			service.failedImports.remove(id);
+			if (service.latest == task) {
+				service.latest = null;
+			}
+		}
+		service.snapshotStore.reload();
+		service.snapshotStore.delete(id);
+		service.storage.deleteSnapshot(id);
+	}
+
+	private boolean writeCheckpoint(BattleNext_SimulationTask task) throws IOException, JSONException {
+		synchronized (task.tournamentSnapshot()) {
+			if (task.isDeleted()) return false;
+			storage.writeSnapshot(task.tournamentSnapshot());
+			return true;
+		}
 	}
 
 	public record Status(Phase phase, BattleNext_SimulationRequest current, int queued,
@@ -107,7 +186,11 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		BattleNext_SimulationTask recent = service.latest;
 		Phase phase = service.closed ? Phase.STOPPED : current != null ? Phase.valueOf(current.getState().name())
 				: recent == null ? Phase.IDLE : Phase.valueOf(recent.getState().name());
-		return new Status(phase, current == null ? null : current.getRequest(), service.queue.size(),
+		BattleNext_SimulationRequest currentRequest = current == null ? null : current.getRequest();
+		if (current != null && current.tournamentSnapshot() != null && current.tournamentSnapshot().getCurrentRound() != null) {
+			currentRequest = current.tournamentSnapshot().getCurrentRound();
+		}
+		return new Status(phase, currentRequest, service.queue.size(),
 				recent == null ? null : recent.getRequest(), recent == null ? null : recent.getResult(),
 				recent == null ? "" : recent.getImportError(), recent != null && recent.isRetained());
 	}
@@ -138,15 +221,47 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		cancellationStarted = System.nanoTime();
 		try {
 			if (channel != null) {
-				channel.send("CANCEL", new JSONObject().put("id", task.getRequest().id()));
+				BattleNext_SimulationRequest request = task.tournamentSnapshot() == null ? task.getRequest() : task.tournamentSnapshot().getCurrentRound();
+				if (request != null) {
+					channel.send("CANCEL", new JSONObject().put("id", request.id()));
+				}
 			}
 		} catch (Exception exception) {
 			BattleNext_Logger.error(getClass(), "simulator.cancel.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
 		}
 	}
 
+	void pause(BattleNext_SimulationTask task) {
+		if (task.tournamentSnapshot() == null) throw new IllegalStateException("Only tournament simulations can be paused");
+		if (task == active) {
+			cancel(task);
+			return;
+		}
+		queue.remove(task);
+		task.tournamentSnapshot().transition(BattleNext_SimulationTask.State.PAUSED, "Paused by user");
+		saveTournament(task);
+	}
+
+	void resume(BattleNext_SimulationTask task) {
+		if (closed) throw new IllegalStateException("Simulator service is closed");
+		if (task.getState() != BattleNext_SimulationTask.State.PAUSED) return;
+		task.resetCancellation();
+		task.transition(BattleNext_SimulationTask.State.QUEUED);
+		if (saveTournament(task)) {
+			enqueue(task);
+		}
+	}
+
 	void retryImport(BattleNext_SimulationTask task) {
 		if (task.getState() != BattleNext_SimulationTask.State.IMPORT_FAILED) return;
+		if (task.tournamentSnapshot() != null) {
+			task.resetCancellation();
+			task.transition(BattleNext_SimulationTask.State.QUEUED);
+			if (saveTournament(task)) {
+				enqueue(task);
+			}
+			return;
+		}
 		task.transition(BattleNext_SimulationTask.State.COMMITTING);
 		imports.add(task);
 	}
@@ -174,6 +289,11 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				active = task;
 				cancellationStarted = 0L;
 				try {
+					if (task.isDeleted()) continue;
+					if (task.tournamentSnapshot() != null) {
+						runTournament(task);
+						continue;
+					}
 					if (closed || task.isCancelled()) {
 						acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.CANCELLED,
 								closed ? "Simulator service closed" : "Cancelled while queued"));
@@ -189,8 +309,17 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					if (task.isCancelled()) {
 						cancel(task);
 					}
-					runTask(task);
+					runTask(task, task.getRequest());
 				} catch (Exception exception) {
+					if (task.tournamentSnapshot() != null) {
+						task.tournamentSnapshot().transition(BattleNext_SimulationTask.State.PAUSED, exception.getClass().getSimpleName() + ": " + exception.getMessage());
+						stopWorker();
+						if (!task.isDeleted()) {
+							checkpoint(task);
+						}
+						latest = task;
+						continue;
+					}
 					if (task.getResult() == null) {
 						acceptResult(task, failure(task, closed || task.isCancelled()
 								? BattleNext_SimulationResult.Outcome.CANCELLED : BattleNext_SimulationResult.Outcome.FAILED,
@@ -199,7 +328,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					BattleNext_Logger.error(getClass(), "simulator.worker.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
 					stopWorker();
 				} finally {
-					if (closed && task.getResult() == null) {
+					if (closed && task.getResult() == null && task.tournamentSnapshot() == null) {
 						acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.CANCELLED, "Simulator service closed"));
 					}
 					active = null;
@@ -209,6 +338,94 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			Thread.currentThread().interrupt();
 		} finally {
 			stopWorker();
+		}
+	}
+
+	private void runTournament(BattleNext_SimulationTask task) throws Exception {
+
+		BattleNext_TournamentSnapshot snapshot = task.tournamentSnapshot();
+		while (!task.isDeleted()) {
+			if (closed || task.isCancelled()) {
+				snapshot.transition(BattleNext_SimulationTask.State.PAUSED, "Simulation paused");
+				checkpoint(task);
+				latest = task;
+				return;
+			}
+			BattleNext_SimulationRequest round = snapshot.prepareRound();
+			if (round == null) {
+				task.transition(BattleNext_SimulationTask.State.COMMITTING);
+				if (!checkpoint(task)) return;
+				task.receive(snapshot.result());
+				task.imported(true);
+				writeCheckpoint(task);
+				latest = task;
+				return;
+			}
+			task.transition(BattleNext_SimulationTask.State.PREPARING);
+			if (!checkpoint(task)) return;
+			if (closed || task.isCancelled() || task.isDeleted()) continue;
+			if (reload || process == null || !process.isAlive()) {
+				stopWorker();
+				reload = false;
+				task.transition(BattleNext_SimulationTask.State.STARTING);
+				startWorker();
+			}
+			channel.send("REQUEST", round.toJson());
+			if (task.isCancelled()) {
+				cancel(task);
+			}
+			BattleNext_SimulationResult result = runTask(task, round);
+			if (task.isDeleted()) return;
+			if (result == null) continue;
+			if (!checkpoint(task)) return;
+			if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) {
+				latest = task;
+				return;
+			}
+		}
+	}
+
+	private record Checkpoint(BattleNext_SimulationTask task, CompletableFuture<Boolean> completed) { }
+
+	private boolean checkpoint(BattleNext_SimulationTask task) {
+		if (task.isDeleted()) return false;
+		try {
+			if (!writeCheckpoint(task)) return false;
+			if (closed) return false;
+			CompletableFuture<Boolean> saved = new CompletableFuture<>();
+			checkpoints.add(new Checkpoint(task, saved));
+			while (!saved.isDone() && !closed && !task.isDeleted()) {
+				Thread.sleep(20L);
+			}
+			return saved.isDone() && saved.join();
+		} catch (Exception exception) {
+			task.rejectImport(exception);
+			BattleNext_Logger.error(getClass(), "simulator.tournament.checkpoint.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
+			return false;
+		}
+	}
+
+	private boolean saveTournament(BattleNext_SimulationTask task) {
+		if (task.isDeleted()) return false;
+		try {
+			if (!writeCheckpoint(task)) return false;
+			BattleNext_TournamentSnapshot published = task.getTournamentSnapshot();
+			if (published.getTournament().isCompleted() && published.getState() == BattleNext_SimulationTask.State.COMMITTING) {
+				published.transition(BattleNext_SimulationTask.State.FINISHED, "");
+			}
+			snapshotStore.save(published);
+			failedImports.remove(task.getRequest().id());
+			return true;
+		} catch (Exception exception) {
+			task.rejectImport(exception);
+			failedImports.put(task.getRequest().id(), task);
+			try {
+				writeCheckpoint(task);
+			} catch (Exception failure) {
+				BattleNext_Logger.error(getClass(), "simulator.tournament.journal.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), failure);
+			}
+			BattleNext_Logger.error(getClass(), "simulator.tournament.save.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
+			return false;
 		}
 	}
 
@@ -260,19 +477,22 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		}
 	}
 
-	private void runTask(BattleNext_SimulationTask task) throws Exception {
+	private BattleNext_SimulationResult runTask(BattleNext_SimulationTask task, BattleNext_SimulationRequest request) throws Exception {
 
 		long started = 0L;
 		long preparing = System.nanoTime();
 		boolean received = false;
 		long returning = 0L;
+		BattleNext_SimulationResult result = null;
 		while (!closed) {
 			if (!process.isAlive()) throw new IOException("Simulator worker exited with code " + process.exitValue());
 			if (cancellationStarted != 0L && System.nanoTime() - cancellationStarted > 5000000000L) throw new IOException("Simulator cancellation grace period exhausted");
 			if (started == 0L && System.nanoTime() - preparing > 180000000000L) throw new IOException("Simulator task preparation exceeded 180 seconds");
 			if (received && System.nanoTime() - returning > 30000000000L) throw new IOException("Simulator return to idle exceeded 30 seconds");
-			if (!received && started != 0L && System.nanoTime() - started > task.getRequest().config().executionSeconds() * 1000000000d + 5000000000L) {
-				acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, "Worker exceeded execution deadline"));
+			if (!received && started != 0L && System.nanoTime() - started > request.config().executionSeconds() * 1000000000d + 5000000000L) {
+				if (task.tournamentSnapshot() == null) {
+					acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, "Worker exceeded execution deadline"));
+				}
 				throw new IOException("Simulator execution deadline exceeded");
 			}
 			JSONObject message;
@@ -283,8 +503,8 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			}
 			JSONObject payload = message.getJSONObject("payload");
 			String type = message.getString("type");
-			if (type.equals("READY") && received) return;
-			if (!task.getRequest().id().equals(payload.getString("id"))) throw new IOException("Simulator task identity mismatch");
+			if (type.equals("READY") && received) return result;
+			if (!request.id().equals(payload.getString("id"))) throw new IOException("Simulator task identity mismatch");
 			if (type.equals("STATUS")) {
 				BattleNext_SimulationTask.State state = BattleNext_SimulationTask.State.valueOf(payload.getString("state"));
 				task.transition(state);
@@ -292,13 +512,20 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					started = System.nanoTime();
 				}
 			} else if (type.equals("RESULT") && !received) {
-				acceptResult(task, BattleNext_SimulationResult.fromJson(payload));
+				result = BattleNext_SimulationResult.fromJson(payload);
+				if (task.tournamentSnapshot() == null) {
+					acceptResult(task, result);
+				} else if (!task.isDeleted()) {
+					task.tournamentSnapshot().record(result);
+					writeCheckpoint(task);
+				}
 				received = true;
 				returning = System.nanoTime();
 			} else {
 				throw new IOException("Unexpected simulator task frame: " + type);
 			}
 		}
+		return result;
 	}
 
 	private BattleNext_SimulationResult failure(BattleNext_SimulationTask task, BattleNext_SimulationResult.Outcome outcome, String reason) {
@@ -318,6 +545,10 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	private void importResults() {
 
+		Checkpoint checkpoint;
+		while ((checkpoint = checkpoints.poll()) != null) {
+			checkpoint.completed().complete(saveTournament(checkpoint.task()));
+		}
 		BattleNext_SimulationTask task;
 		while ((task = imports.poll()) != null) {
 			BattleNext_SimulationResult result = task.getResult();
@@ -395,7 +626,16 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		}
 		BattleNext_SimulationTask task;
 		while ((task = queue.poll()) != null) {
-			acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.CANCELLED, "Simulator service closed"));
+			if (task.tournamentSnapshot() == null) {
+				acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.CANCELLED, "Simulator service closed"));
+			} else if (!task.isDeleted()) {
+				task.tournamentSnapshot().transition(BattleNext_SimulationTask.State.PAUSED, "Application stopped");
+				try {
+					writeCheckpoint(task);
+				} catch (Exception exception) {
+					BattleNext_Logger.error(getClass(), "simulator.tournament.shutdown.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
+				}
+			}
 		}
 	}
 }

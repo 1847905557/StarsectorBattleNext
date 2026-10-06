@@ -13,6 +13,7 @@ import data.scripts.battle.BattleNext_MatchProgress;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.json.JSONException;
+import data.simulator.BattleNext_TournamentSnapshotStore;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -27,6 +28,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_BattleReportStore reportStore = new BattleNext_BattleReportStore();
 	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
+	private final BattleNext_TournamentSnapshotStore snapshotStore = new BattleNext_TournamentSnapshotStore();
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
@@ -131,7 +133,12 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean canDelete() {
-		return entry(selectedId).tournament() == null ? reportStore.isLoaded() : tournamentStore.isLoaded();
+		return !entry(selectedId).isReadOnly() && (entry(selectedId).tournament() == null ? reportStore.isLoaded() : tournamentStore.isLoaded());
+	}
+
+	@Override
+	protected boolean isDetailEditable() {
+		return !entry(selectedId).isReadOnly();
 	}
 
 	@Override
@@ -147,7 +154,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 		} else if ("save".equals(buttonId)) {
 			save();
 		} else if ("delete".equals(buttonId) && !selectedId.isEmpty()
-				&& entry(selectedId) != null) {
+				&& entry(selectedId) != null && !entry(selectedId).isReadOnly()) {
 			BattleNext_ReportTarget selected = entry(selectedId);
 			Runnable action = () -> deletion.accept(listLabel(selected), () -> {
 				try {
@@ -187,6 +194,11 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	private void load() {
 		entries.clear();
+		try {
+			snapshotStore.reload();
+		} catch (Exception exception) {
+			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
+		}
 		for (BattleNext_BattleReportModel report : reportStore.getAll()) {
 			entries.add(new BattleNext_ReportTarget(report, "", null, "", -1));
 		}
@@ -198,6 +210,18 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 						entries.add(new BattleNext_ReportTarget(round.getReport(),
 								context(tournament, match.getId(), index + 1), tournament, match.getId(), index));
 					}
+				}
+			}
+		}
+		entries.sort(Comparator.comparingLong((BattleNext_ReportTarget entry) -> entry.report().getCreatedAt()).reversed());
+		for (var snapshot : snapshotStore.getAll()) {
+			BattleNext_TournamentModel tournament = snapshot.getTournament();
+			for (BattleNext_Match match : tournament.getMatches()) {
+				for (int index = 0; index < match.getRounds().size(); index++) {
+					var report = match.getRounds().get(index).getReport();
+					if (report.getId().isEmpty()) continue;
+					entries.add(new BattleNext_ReportTarget(report, context(tournament, match.getId(), index + 1),
+							null, match.getId(), index, snapshot));
 				}
 			}
 		}

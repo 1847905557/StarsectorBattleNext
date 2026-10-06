@@ -13,6 +13,8 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import data.simulator.BattleNext_TournamentSnapshotStore;
+import data.simulator.BattleNext_SimulatorService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -31,9 +33,11 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
 	private final BattleNext_RuleStore ruleStore = provider.getRuleStore();
 	private final BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(tournamentStore, fleetStore, ruleStore);
+	private final BattleNext_TournamentSnapshotStore snapshotStore = new BattleNext_TournamentSnapshotStore();
 	private BattleNext_TournamentDisplay tournamentDisplay;
 
 	private String selectedId = "";
+	private String selectedSnapshotId = "";
 	private boolean draftOpen;
 
 	public BattleNext_TournamentPage(Runnable backAction, Consumer<Runnable> navigation,
@@ -51,8 +55,14 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected void loadPageState() {
 		selectedId = "";
+		selectedSnapshotId = "";
 		draftOpen = false;
 		status = String.join(" | ", provider.reloadTournamentCatalog());
+		try {
+			snapshotStore.reload();
+		} catch (Exception exception) {
+			status += (status.isEmpty() ? "" : " | ") + exception.getMessage();
+		}
 	}
 
 	@Override
@@ -82,7 +92,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean isListEmpty() {
-		return tournamentStore.getAll().isEmpty();
+		return tournamentStore.getAll().isEmpty() && snapshotStore.getAll().isEmpty();
 	}
 
 	@Override
@@ -95,11 +105,23 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
 			addListItem(listContent, tournament.getName(), "tournament:select:" + tournament.getId());
 		}
+		for (var snapshot : snapshotStore.getAll()) {
+			addListItem(listContent, snapshot.getTournament().getName(), "simulation:select:" + snapshot.getId());
+		}
 	}
 
 	@Override
 	protected void buildDetail(CustomPanelAPI contentPanel) {
 
+		if (!selectedSnapshotId.isEmpty()) {
+			var snapshot = snapshotStore.get(selectedSnapshotId);
+			var model = snapshot.getTournament();
+			var details = new BattleNext_TournamentDisplay.Details(snapshot.getFleetNames(), snapshot.getRequest().source().has("rule"),
+					model.getNextPendingMatch(), snapshot.getDiagnostic(), List.of());
+			tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, model, details, List.of(), this::buttonPressed);
+			tournamentDisplay.attach(contentPanel);
+			return;
+		}
 		BattleNext_TournamentModel tournament = tournamentStore.get(selectedId);
 		if (tournament == null || !tournament.isStarted()) {
 			attachEditor(contentPanel);
@@ -124,12 +146,12 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean hasSelection() {
-		return !selectedId.isEmpty();
+		return !selectedId.isEmpty() || !selectedSnapshotId.isEmpty();
 	}
 
 	@Override
 	protected boolean isDetailEditable() {
-		return !editor.isReadOnly();
+		return selectedSnapshotId.isEmpty() && !editor.isReadOnly();
 	}
 
 	@Override
@@ -139,7 +161,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean canDelete() {
-		return tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId);
+		return !selectedSnapshotId.isEmpty() ? snapshotStore.isLoaded() : tournamentStore.isLoaded() && tournamentStore.isManaged(selectedId);
 	}
 
 	@Override
@@ -167,7 +189,27 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected void handlePageAction(Object buttonId) {
-		if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
+		if (buttonId instanceof String action && action.startsWith("simulation:select:")) {
+			navigation.accept(() -> {
+				selectedSnapshotId = action.substring("simulation:select:".length());
+				selectedId = "";
+				draftOpen = true;
+				refreshContent();
+			});
+		} else if ("delete".equals(buttonId) && !selectedSnapshotId.isEmpty()) {
+			String id = selectedSnapshotId;
+			deletion.accept(snapshotStore.get(id).getTournament().getName(), () -> {
+				try {
+					BattleNext_SimulatorService.deleteTournament(id);
+					snapshotStore.reload();
+					selectedSnapshotId = "";
+					draftOpen = false;
+					refreshContent();
+				} catch (Exception exception) {
+					setStatus(strings.get("save_failed") + ": " + exception.getMessage());
+				}
+			});
+		} else if (buttonId instanceof String && ((String) buttonId).startsWith("tournament:select:")) {
 			String id = ((String) buttonId).substring("tournament:select:".length());
 			navigation.accept(() -> {
 				if (!editor.open(tournamentStore.get(id))) {
@@ -175,6 +217,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 					return;
 				}
 				selectedId = id;
+				selectedSnapshotId = "";
 				draftOpen = true;
 				refreshContent();
 			});
@@ -185,6 +228,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 					return;
 				}
 				selectedId = "";
+				selectedSnapshotId = "";
 				draftOpen = true;
 				refreshContent();
 			});
@@ -205,7 +249,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 				}
 			});
 		} else if ("back".equals(buttonId)) {
-			if (draftOpen) navigation.accept(() -> { selectedId = ""; draftOpen = false; refreshContent(); });
+			if (draftOpen) navigation.accept(() -> { selectedId = ""; selectedSnapshotId = ""; draftOpen = false; refreshContent(); });
 			else backAction.run();
 		} else if (draftOpen) {
 			editor.buttonPressed(buttonId);
@@ -214,7 +258,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean isPageDirty() {
-		return draftOpen && editor.hasUnsavedChanges();
+		return selectedSnapshotId.isEmpty() && draftOpen && editor.hasUnsavedChanges();
 	}
 
 	@Override
@@ -248,7 +292,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	@Override
 	public void advance(float amount) {
-		if (draftOpen) {
+		if (draftOpen && selectedSnapshotId.isEmpty()) {
 			editor.refreshDraftValidation();
 		}
 	}

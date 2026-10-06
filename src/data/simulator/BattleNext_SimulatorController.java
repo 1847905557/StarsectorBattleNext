@@ -107,6 +107,10 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			report.setCreatedAt(System.currentTimeMillis());
 			String sourceId = request.kind() == BattleNext_SimulationRequest.Kind.MATCH
 					? request.source().getJSONObject("match").getString("id") : "variants";
+			if (request.source().has("tournamentId")) {
+				sourceId = request.source().getString("tournamentName") + " / " + sourceId + " / Round "
+						+ request.source().getInt("roundNumber") + " / " + request.source().getString("tournamentId");
+			}
 			report.setName("Simulation " + request.config().strategy() + ": " + request.label() + " - " + sourceId + " - " + request.id());
 			reportJson = report.toJson().toString();
 		}

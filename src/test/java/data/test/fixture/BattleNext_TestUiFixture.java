@@ -330,7 +330,6 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				case "getHeightSoFar" -> usedHeight;
 				case "getWidthSoFar" -> uiElement ? width - (scrollable ? 15f : 10f) : width;
 				case "setHeightSoFar" -> {
-					assertFalse(mounted);
 					usedHeight = (Float) args[0];
 					yield null;
 				}

@@ -34,10 +34,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private static final Color BACKGROUND_COLOR = Color.BLACK;
 	private static final Color TOOLTIP_TARGET_COLOR = new Color(0, 0, 0, 0);
 
-	protected final BattleNext_TournamentModel tournament;
+	protected BattleNext_TournamentModel tournament;
 	protected final List<Node> nodes = new ArrayList<>();
 	protected final List<Edge> edges = new ArrayList<>();
-	private final Map<String, String> fleetNames;
+	private Map<String, String> fleetNames;
 	private final List<LabelAPI> labels = new ArrayList<>();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
@@ -45,6 +45,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private CustomPanelAPI panel;
+	private TooltipMakerAPI labelHost;
 	private PositionAPI viewport;
 	private BattleNext_UiInputRouter inputRouter;
 	private UIComponentAPI tooltipTarget;
@@ -93,11 +94,15 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			};
 		}
 		view.initializeLayout();
+		view.fitAll();
 		return view;
 	}
 
 	private void initializeLayout() {
 
+		nodes.clear();
+		edges.clear();
+		layoutError = "";
 		try {
 			if (tournament.getBracketType() == null) {
 				throw new IllegalArgumentException("Tournament bracket type is missing: " + tournament.getId());
@@ -122,7 +127,24 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			layoutError = tournament.getBracketType() + ": " + reason;
 		}
 		appendUnmappedMatches();
-		fitAll();
+	}
+
+	public void update(BattleNext_TournamentModel model, Map<String, String> names) {
+		String hoveredId = hovered == null ? "" : hovered.id;
+		List<LabelAPI> previousLabels = List.copyOf(labels);
+		tournament = model;
+		fleetNames = Map.copyOf(names);
+		initializeLayout();
+		labels.clear();
+		for (int index = 0; index < nodes.size(); index++) {
+			Node node = nodes.get(index);
+			LabelAPI label = index < previousLabels.size() ? previousLabels.get(index)
+					: labelHost.createLabel("", BattleNext_UiTheme.TEXT, node.width - 12f);
+			label.setText(nodeText(node, labelHost));
+			labels.add(label);
+		}
+		hovered = hoveredId.isEmpty() ? null : findNode(hoveredId);
+		updateTooltipTarget();
 	}
 
 	public CustomPanelAPI attach(CustomPanelAPI owner, TooltipMakerAPI scroller, PositionAPI viewport,
@@ -136,6 +158,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		float height = CANVAS_HEIGHT * scale;
 		panel = owner.createCustomPanel(width, height, this);
 		TooltipMakerAPI host = panel.createUIElement(width, height, false);
+		labelHost = host;
 		BattleNext_UiTheme.configure(host);
 		host.setBgAlpha(0f);
 
