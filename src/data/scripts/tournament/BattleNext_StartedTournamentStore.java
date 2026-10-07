@@ -43,6 +43,7 @@ public class BattleNext_StartedTournamentStore {
 	}
 
 	public void save(BattleNext_StartedTournament started) throws IOException, JSONException {
+		if (started.getExecutionKind() != BattleNext_StartedTournament.ExecutionKind.MANUAL) throw new IllegalArgumentException("Persistent tournament instances must use manual execution: " + started.getId());
 		if (!started.getLoadErrors().isEmpty()) throw new IllegalArgumentException("Started tournament is incomplete: " + started.getLoadErrors());
 		commit(started, null);
 	}

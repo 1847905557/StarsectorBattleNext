@@ -155,8 +155,9 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		return false;
 	}
 
-	private void freeze(String winner) {
+	public void freeze(String winner) {
 		if (frozenReport != null) return;
+		refreshShips();
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setWinner(winner);
 		report.setDurationMillis((long)(engine.getTotalElapsedTime(false) * 1000f));

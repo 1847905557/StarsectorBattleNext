@@ -117,6 +117,11 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	}
 
 	public void advanceInstances() {
+		if (baseline != null && BattleNext_SimulatorService.simulatedInstances().stream()
+				.anyMatch(instance -> instance.getSourceTournamentId().equals(baseline.getId()) && !instanceVersions.containsKey(instance.getId()))) {
+			refreshInstances();
+			return;
+		}
 		for (var entry : instanceVersions.entrySet()) {
 			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(entry.getKey());
 			long version = task == null ? -1L : task.getVersion();
@@ -149,10 +154,8 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 				.filter(instance -> baseline != null && instance.getSourceTournamentId().equals(baseline.getId()))
 				.toList());
 		if (baseline != null) {
-			for (BattleNext_SimulationTask task : BattleNext_SimulatorService.pendingDeletions(baseline.getId())) {
-				if (instances.stream().anyMatch(instance -> instance.getId().equals(task.getRequest().id()))) continue;
-				instances.add(task.getStartedTournament());
-			}
+			instances.addAll(BattleNext_SimulatorService.simulatedInstances().stream()
+					.filter(instance -> instance.getSourceTournamentId().equals(baseline.getId())).toList());
 		}
 		instances.sort(Comparator.comparingLong(BattleNext_StartedTournament::getStartedAt).reversed());
 		for (CatalogEntry entry : startedStore.getCatalog()) {
@@ -209,9 +212,14 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 					var metrics = task.getMetrics();
 					details.addPara(tournamentStrings.format("instance_metrics", metrics.simulationSeconds(), metrics.executionNanos() / 1000000000d,
 							metrics.steps(), metrics.peakHeapBytes() / 1048576d), 5f);
+					for (var result : task.getRoundResults()) {
+						if (result.diagnostic().isEmpty()) continue;
+						details.addPara(result.id() + ": " + result.diagnostic(), 5f);
+					}
 				}
 				try {
-					if (BattleNext_ModFileManager.exists(BattleNext_StartedTournamentStore.pendingRoundPath(instance.getId()))) {
+					if (task != null ? task.getState() == BattleNext_SimulationTask.State.IMPORT_FAILED
+							: BattleNext_ModFileManager.exists(BattleNext_StartedTournamentStore.pendingRoundPath(instance.getId()))) {
 						createButton(details, areaWidth, tournamentStrings.get("retry_round_report"), "instance:retry_round:" + instance.getId());
 					}
 				} catch (Exception exception) {

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_SimulatorNativeIntegrationTest {
@@ -36,15 +37,6 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		assertTrue(output.contains("Simulator native handles bound"), output);
 		assertTrue(output.contains("Simulator mouse isolation verified"), output);
 		assertTrue(output.contains("Simulator script sandbox verified"), output);
-	}
-
-	@Test
-	void crashReportsUseTheCallerOwnedPersistentDiagnosticsDirectory() {
-		Path core = Path.of("core").toAbsolutePath();
-		Path diagnostics = Path.of("diagnostics with spaces").toAbsolutePath();
-		List<String> command = BattleNext_SimulatorLaunch.javaCommand(core, diagnostics);
-		assertEquals(List.of("-XX:ErrorFile=" + diagnostics.resolve("hs_err_pid%p.log")),
-				command.stream().filter(option -> option.startsWith("-XX:ErrorFile=")).toList());
 	}
 
 	private String runProbe(Class<?> probe) throws Exception {
@@ -181,29 +173,14 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		}
 
 		private static void verifyStorage(ClassLoader loader, Path root) throws Exception {
-
-			Class<?> storageType = loader.loadClass("data.simulator.BattleNext_SimulatorStorage");
-			Object storage = storageType.getConstructor(Path.class).newInstance(root.resolve("owned"));
-			Path runtime = (Path) storageType.getMethod("directory", String.class).invoke(storage, "_runtime/session");
-			Class<?> configType = loader.loadClass("data.simulator.BattleNext_SimulationConfig");
-			Object config = configType.getMethod("defaults").invoke(null);
-			Class<?> requestType = loader.loadClass("data.simulator.BattleNext_SimulationRequest");
-			Object request = requestType.getMethod("fromVariants", List.class, List.class, configType)
-					.invoke(null, List.of("wolf_CS", "wolf_CS"), List.of("wolf_CS"), config);
-			String id = (String) requestType.getMethod("id").invoke(request);
-			Class<?> resultType = loader.loadClass("data.simulator.BattleNext_SimulationResult");
-			JSONObject json = new JSONObject().put("id", id).put("outcome", "FAILED").put("report", "")
-					.put("simulationSeconds", 0f).put("executionNanos", 0L).put("steps", 0L).put("peakHeapBytes", 0L).put("diagnostic", "中文 50%");
-			Object result = resultType.getMethod("fromJson", JSONObject.class).invoke(null, json);
-			storageType.getMethod("write", requestType, resultType).invoke(storage, request, result);
-			List<?> pending = (List<?>) storageType.getMethod("pending").invoke(storage);
-			if (!pending.equals(List.of(root.resolve("owned/_pending/" + id + ".json")))) throw new AssertionError("Sandbox journal listing");
-			Object stored = storageType.getMethod("read", Path.class).invoke(storage, pending.get(0));
-			if (!result.equals(stored.getClass().getMethod("result").invoke(stored))) throw new AssertionError("Sandbox journal round trip");
-			storageType.getMethod("acknowledge", String.class).invoke(storage, id);
-			if (!((List<?>) storageType.getMethod("pending").invoke(storage)).isEmpty()) throw new AssertionError("Sandbox journal acknowledgment");
-			storageType.getMethod("cleanup", Path.class).invoke(storage, runtime);
-			if (Files.exists(runtime)) throw new AssertionError("Sandbox owned runtime cleanup");
+			Class<?> type = loader.loadClass("data.simulator.BattleNext_SimulatorStorage");
+			Object storage = type.getConstructor(Path.class).newInstance(root.resolve("owned"));
+			String session = UUID.randomUUID().toString();
+			Path directory = (Path) type.getMethod("directory", String.class).invoke(storage, session);
+			if (!directory.equals(root.resolve("owned").resolve(session))) throw new AssertionError("Sandbox log directory ownership");
+			if (!Files.isDirectory(directory)) throw new AssertionError("Sandbox log directory creation");
+			List<?> listed = (List<?>) type.getMethod("listFiles", Path.class).invoke(storage, root.resolve("owned"));
+			if (!listed.equals(List.of(directory))) throw new AssertionError("Sandbox directory listing");
 		}
 
 		private static void verifyProtocol(ClassLoader loader) throws Exception {
@@ -242,20 +219,14 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				if (!result.getClass().getMethod("diagnostic").invoke(result).toString().contains("cold start")) throw new AssertionError("Sandbox startup failure phase");
 				if (!taskType.getMethod("getState").invoke(task).toString().equals("FINISHED")) throw new AssertionError("Sandbox startup terminal state");
 				service.close();
-				Path diagnostics = root.resolve("game/mods/fixture/tournament/_simulations/_diagnostics");
-				try (var paths = Files.list(diagnostics)) {
-					List<Path> logs = paths.toList();
-					if (logs.isEmpty()) throw new AssertionError("Sandbox launch must redirect worker output");
-					for (Path log : logs) {
-						if (!Files.readString(log, StandardCharsets.UTF_8).contains("ClassNotFoundException: data.simulator.BattleNext_SimulatorWorker")) throw new AssertionError("Expected isolated worker classpath failure");
-					}
+				var output = type.getDeclaredField("workerOutput");
+				output.setAccessible(true);
+				if (!output.get(service).toString().contains("ClassNotFoundException: data.simulator.BattleNext_SimulatorWorker")) {
+					throw new AssertionError("Expected isolated worker classpath diagnostic in memory");
 				}
-				JSONObject journal = new JSONObject(Files.readString(root.resolve("game/mods/fixture/tournament/_simulations/_pending/" + id + ".json"), StandardCharsets.UTF_8));
-				if (!journal.getJSONObject("request").toString().equals(requestType.getMethod("toJson").invoke(request).toString())) throw new AssertionError("Sandbox startup journal request");
-				if (!journal.getJSONObject("result").toString().equals(result.getClass().getMethod("toJson").invoke(result).toString())) throw new AssertionError("Sandbox startup journal result");
-			}
-			try (var paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations/_runtime"))) {
-				if (paths.findAny().isPresent()) throw new AssertionError("Sandbox service must release owned runtime");
+				try (var paths = Files.walk(root.resolve("game/mods/fixture/tournament/_simulations"))) {
+					if (paths.anyMatch(Files::isRegularFile)) throw new AssertionError("Sandbox startup must retain diagnostics in memory");
+				}
 			}
 		}
 	}

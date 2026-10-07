@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 
 	@Test
-	void existingManualAndSimulationInstancesKeepTheConfigurationEditorReadOnly() throws Exception {
-		for (BattleNext_StartedTournament.ExecutionKind kind : BattleNext_StartedTournament.ExecutionKind.values()) {
+	void existingManualInstancesKeepTheConfigurationEditorReadOnly() throws Exception {
+		for (BattleNext_StartedTournament.ExecutionKind kind : List.of(BattleNext_StartedTournament.ExecutionKind.MANUAL)) {
 			String id = kind.name().toLowerCase();
 			BattleNext_TournamentModel configuration = new BattleNext_TournamentModel(id, "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 			BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();

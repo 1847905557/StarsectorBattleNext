@@ -20,6 +20,7 @@ import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -121,8 +122,7 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 
 	protected Path attachWorker(BattleNext_SimulatorProtocol channel, Process process) throws Exception {
 		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
-		Path runtime = storage.directory("_runtime/owned-session");
-		writeField("runtime", runtime);
+		Path runtime = storage.directory(UUID.randomUUID().toString());
 		writeField("channel", channel);
 		writeField("process", process);
 		return runtime;
@@ -149,9 +149,6 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 		report.setCreatedAt(System.currentTimeMillis());
 		BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
 				report.toJson().toString(), 100f, 500000000L, 6000L, 1024L, "");
-		Field storageField = BattleNext_SimulatorService.class.getDeclaredField("storage");
-		storageField.setAccessible(true);
-		((BattleNext_SimulatorStorage) storageField.get(service)).write(request, result);
 		task.receive(result);
 		return task;
 	}

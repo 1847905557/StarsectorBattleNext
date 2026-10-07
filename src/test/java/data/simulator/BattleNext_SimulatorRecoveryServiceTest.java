@@ -10,6 +10,9 @@ import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.ui.page.BattleNext_TournamentPage;
+import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import org.json.JSONObject;
@@ -31,106 +34,41 @@ import java.util.List;
 class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServiceFixture {
 
 	@Test
-	void recoveredTaskReadsItsInstanceAndWaitsForManualContinuation() throws Exception {
+	void simulatorSessionStartsEmptyAndReportsRemainIndependent() throws Exception {
+		BattleNext_SimulationTask completed = completedTaskThroughService("Saved result");
+		BattleNext_SimulatorService.advance();
+		assertTrue(completed.isRetained());
 		quickBattles("alpha,beta,-1,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
 		sources.getTournamentStore().save(configuration);
-		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
+		var request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"),
+				sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
 		BattleNext_SimulationTask task = pausedTournamentThroughService(request);
-		BattleNext_StartedTournament started = task.getStartedTournament();
-		BattleNext_SimulationRequest round = task.getCurrentRound();
+		assertTrue(sources.getTournamentStore().isLocked("cup"));
+		assertEquals(task.getStartedTournament().getId(), BattleNext_SimulatorService.simulatedInstances().get(0).getId());
+		assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
+		var page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (name, action) -> action.run());
+		page.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
+		page.buttonPressed("tournament:select:cup");
+		var editor = (BattleNext_TournamentEditor) getField(page, "editor");
+		assertTrue(editor.isReadOnly());
+		editor.buttonPressed("instance:toggle:" + request.id());
+		assertTrue(buttons.get("instance:delete:" + request.id()).get());
+		page.close();
 		service.close();
 		singleton.set(null, null);
 		createOwnedService();
-		BattleNext_SimulationTask recovered = BattleNext_SimulatorService.tournament(request.id());
-		assertEquals(BattleNext_SimulationTask.State.PAUSED, recovered.getState());
-		assertEquals(round.id(), recovered.getCurrentRound().id());
-		assertEquals(round.source().getInt("actualMap"), recovered.getCurrentRound().source().getInt("actualMap"));
-		assertEquals(round, recovered.getCurrentRound());
-		assertEquals(started.toJson().toString(), recovered.getStartedTournament().toJson().toString());
+		assertNull(BattleNext_SimulatorService.tournament(request.id()));
+		assertTrue(BattleNext_SimulatorService.simulatedInstances().isEmpty());
+		assertFalse(sources.getTournamentStore().isLocked("cup"));
 		assertNull(readField("process"));
 		assertNull(readField("supervisor"));
-	}
-
-	@Test
-	void failedDeletionPersistsIntentAndRecoveryCompletesOwnedCleanup() throws Exception {
-		quickBattles("alpha,beta,0,1\n");
-		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
-		sources.reloadCatalogs();
-		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		sources.getTournamentStore().save(configuration);
-		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
-		BattleNext_SimulationTask task = pausedTournamentThroughService(request);
-		Path obstruction = directory.resolve("tournament/_simulations/_pending/" + request.id() + ".json");
-		Files.createDirectories(obstruction);
-		Files.writeString(obstruction.resolve("owned"), "Keep");
-		BattleNext_SimulatorService.deleteTournament(request.id());
-		service.close();
-		singleton.set(null, null);
-		createOwnedService();
-		BattleNext_SimulatorService.advance();
-		task = BattleNext_SimulatorService.tournament(request.id());
-		assertNotNull(task);
-		assertTrue(task.isDeletionRequested());
-		assertTrue(task.getImportError().contains("DirectoryNotEmptyException"));
-		assertTrue(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
-		assertEquals("Keep", Files.readString(obstruction.resolve("owned")));
-		Files.delete(obstruction.resolve("owned"));
-		service.close();
-		singleton.set(null, null);
-		createOwnedService();
-		BattleNext_SimulatorService.advance();
-		assertNull(BattleNext_SimulatorService.tournament(request.id()));
-		assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
-		assertFalse(Files.exists(obstruction));
-		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
-		instances.reload();
-		assertNull(instances.get(request.id()));
-	}
-
-	@Test
-	void recoveryIsolatesMalformedTasksAndPendingFilesAndImportsEveryCompleteResult() throws Exception {
-		BattleNext_SimulationTask valid = completedTaskThroughService("Recovered result");
-		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
-		storage.writeTask(valid);
-		Path root = directory.resolve("tournament/_simulations");
-		Files.writeString(root.resolve("000-broken.json"), "{ invalid task", StandardCharsets.UTF_8);
-		Files.writeString(root.resolve("_pending/000-broken.json"), "{ invalid pending", StandardCharsets.UTF_8);
-		BattleNext_SimulationRequest invalidRequest = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
-		JSONObject invalidState = valid.toJson().put("request", invalidRequest.toJson()).put("state", "UNKNOWN");
-		Files.writeString(root.resolve(invalidRequest.id() + ".json"), invalidState.toString(), StandardCharsets.UTF_8);
-		service.close();
-		singleton.set(null, null);
-		createOwnedService();
-		BattleNext_SimulatorService.advance();
 		var reports = new BattleNext_BattleReportStore();
 		reports.reload();
-		assertEquals("Recovered result", reports.get(valid.getRequest().id()).getName());
-		assertJsonEquals(valid.getResult().report().toJson(), reports.get(valid.getRequest().id()).toJson());
-		storage = (BattleNext_SimulatorStorage) readField("storage");
-		assertEquals(3, storage.getLoadErrors().size());
-		assertTrue(storage.getLoadErrors().get(root.resolve("000-broken.json")).contains("invalid task"));
-		assertTrue(storage.getLoadErrors().get(root.resolve("_pending/000-broken.json")).contains("invalid pending"));
-		assertTrue(storage.getLoadErrors().get(root.resolve(invalidRequest.id() + ".json")).contains("UNKNOWN"));
-		assertTrue(Files.exists(root.resolve("000-broken.json")));
-	}
-
-	@Test
-	void taskIdentityConflictsRejectBothFilesAndRecoverAfterTheConflictingSourceIsRemoved() throws Exception {
-		var task = completedTaskThroughService("Identity conflict");
-		var storage = (BattleNext_SimulatorStorage) readField("storage");
-		storage.writeTask(task);
-		var conflict = directory.resolve("tournament/_simulations/conflict.json");
-		Files.writeString(conflict, task.toJson().toString(), StandardCharsets.UTF_8);
-		assertTrue(storage.readTasks().isEmpty());
-		assertEquals(2, storage.getLoadErrors().size());
-		assertTrue(storage.getLoadErrors().values().stream().anyMatch(error -> error.contains("Duplicate simulator task ID")));
-		Files.delete(conflict);
-		assertEquals(task.getRequest().id(), storage.readTasks().get(0).getJSONObject("request").getString("id"));
-		assertTrue(storage.getLoadErrors().isEmpty());
+		assertEquals("Saved result", reports.get(completed.getRequest().id()).getName());
 	}
 
 	@ParameterizedTest
@@ -151,7 +89,6 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
 		assertEquals(task.getRequest().id(), reports.getAll().get(0).getId());
-		((BattleNext_SimulatorStorage) readField("storage")).write(task.getRequest(), task.getResult());
 		service.close();
 		singleton.set(null, null);
 		createOwnedService();
@@ -187,8 +124,6 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		BattleNext_SimulationResult expectedResult = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
 				expectedReport.toJson().toString(), 10f, 100000000L, 600L, 1024L, "");
 		BattleNext_SimulationTask task = completedTaskThroughService(request, expectedResult);
-		Path journal = directory.resolve("tournament/_simulations/_pending/" + task.getRequest().id() + ".json");
-		byte[] pending = Files.readAllBytes(journal);
 		BattleNext_BattleReportModel existing = new BattleNext_BattleReportModel();
 		existing.setId("existing");
 		existing.setName("Existing report");
@@ -218,7 +153,6 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals("Retry simulation", resultReport.getName());
 		assertJsonEquals(expectedReport.toJson(), resultReport.toJson());
 		assertEquals(expectedResult, task.getResult());
-		assertArrayEquals(pending, Files.readAllBytes(journal));
 		assertEquals(List.of(task), service.getFailedImports());
 		assertTrue(task.getImportError().contains("Injected report read failure"));
 		assertFalse(BattleNext_BattleSignals.consumePendingResult());
@@ -234,21 +168,15 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertNotNull(imported);
 		assertEquals(resultReport.toJson().toString(), imported.toJson().toString());
 		assertEquals(existingJson, reports.get("existing").toJson().toString());
-		assertTrue(((BattleNext_SimulatorStorage) readField("storage")).pending().isEmpty());
 		assertEquals(expectedResult, task.getResult());
 		assertEquals(10f, task.getResult().simulationSeconds());
 		assertEquals(100000000L, task.getResult().executionNanos());
 		assertEquals(600L, task.getResult().steps());
 		assertEquals(1024L, task.getResult().peakHeapBytes());
 		assertTrue(BattleNext_BattleSignals.consumePendingResult());
-		Path taskPath = directory.resolve("tournament/_simulations/" + request.id() + ".json");
-		byte[] committed = Files.readAllBytes(taskPath);
-		JSONObject published = new JSONObject(new String(committed, StandardCharsets.UTF_8));
-		assertEquals("FINISHED", published.getString("state"));
-		assertEquals(expectedResult, BattleNext_SimulationResult.fromJson(published.getJSONObject("result")));
 		task.retryImport();
 		BattleNext_SimulatorService.advance();
-		assertArrayEquals(committed, Files.readAllBytes(taskPath));
+		assertEquals(expectedResult, task.getResult());
 		assertFalse(BattleNext_BattleSignals.consumePendingResult());
 	}
 

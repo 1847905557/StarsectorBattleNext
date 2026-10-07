@@ -30,6 +30,35 @@ import java.util.stream.Collectors;
 class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture {
 
 	@Test
+	void executionWatchdogCompletesADrawWithoutStatisticsAndRetainsTheTaskInMemory() throws Exception {
+		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
+				Socket socket = listener.accept();
+				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
+			client.setSoTimeout(100);
+			socket.setSoTimeout(5000);
+			OwnedProcess worker = new OwnedProcess();
+			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), worker);
+			var config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
+					12000f, 12000f, 500f, 3600f, 0.01f, 32, true, false);
+			var task = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), config));
+			assertEquals(task.getRequest().id(), peer.receive().getJSONObject("payload").getString("id"));
+			peer.send("STATUS", new JSONObject().put("id", task.getRequest().id()).put("state", "RUNNING"));
+			long deadline = System.nanoTime() + 12000000000L;
+			while (readField("active") != null && System.nanoTime() < deadline) {
+				Thread.sleep(10L);
+			}
+			assertEquals(BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, task.getResult().outcome());
+			assertEquals("Worker exceeded execution deadline", task.getResult().diagnostic());
+			assertTrue(task.getResult().reportJson().isEmpty());
+			assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
+			assertSame(task, BattleNext_SimulatorService.task(task.getRequest().id()));
+			assertFalse(worker.isAlive());
+			assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + task.getRequest().id() + ".json")));
+		}
+	}
+
+	@Test
 	void failedWorkerStartupCompletesTasksAndContinuesTheFifoQueue() throws Exception {
 		BattleNext_SimulationTask first = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 		BattleNext_SimulationTask second = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
@@ -44,18 +73,13 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 		assertEquals(BattleNext_SimulationTask.State.FINISHED, second.getState());
 		assertTrue(first.getResult().diagnostic().contains("cold start"));
 		service.close();
-		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
 		for (BattleNext_SimulationTask task : List.of(first, second)) {
 			assertEquals(task.getRequest().id(), task.getResult().id());
 			assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
 			assertTrue(task.getResult().diagnostic().contains("cold start"));
-			BattleNext_SimulatorStorage.Stored stored = storage.read(directory.resolve("tournament/_simulations/_pending/" + task.getRequest().id() + ".json"));
-			assertEquals(task.getRequest(), stored.request());
-			assertEquals(task.getResult(), stored.result());
 		}
 		assertNull(readField("process"));
 		assertNull(readField("channel"));
-		assertNull(readField("runtime"));
 	}
 
 	@Test
@@ -181,21 +205,20 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			assertFalse(process.isAlive());
 			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 			instances.reload();
-			assertEquals(round.id(), instances.get(task.getRequest().id()).getMatches().get(0).getRounds().get(0).getReportId());
+			assertEquals(round.id(), task.getStartedTournament().getMatches().get(0).getRounds().get(0).getReportId());
 			assertNotEquals(round.id(), task.getCurrentRound().id());
 			assertTrue(task.getImportError().contains("cold start"));
-			assertEquals(1, instances.get(task.getRequest().id()).getMatches().get(0).getRounds().size());
-			assertEquals("alpha", instances.get(task.getRequest().id()).getMatches().get(0).getRounds().get(0).getWinnerFleetId());
+			assertEquals(1, task.getStartedTournament().getMatches().get(0).getRounds().size());
+			assertEquals("alpha", task.getStartedTournament().getMatches().get(0).getRounds().get(0).getWinnerFleetId());
 			assertEquals(new BattleNext_SimulationTask.Metrics(10f, 100000000L, 600L, 1024L), task.getMetrics());
 			assertNull(readField("process"));
 			assertNull(readField("channel"));
-			assertNull(readField("runtime"));
 			assertNull(readField("active"));
 		}
 	}
 
 	@Test
-	void brokenShutdownChannelStillTerminatesTheOwnedProcessAndReleasesItsRuntime() throws Exception {
+	void brokenShutdownChannelStillTerminatesTheOwnedProcessAndRetainsItsLogDirectory() throws Exception {
 		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
 				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
 				Socket peer = listener.accept()) {
@@ -205,15 +228,14 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			channel.close();
 			service.close();
 			assertFalse(process.isAlive());
-			assertFalse(Files.exists(runtime));
+			assertTrue(Files.exists(runtime));
 			assertNull(readField("process"));
 			assertNull(readField("channel"));
-			assertNull(readField("runtime"));
 		}
 	}
 
 	@Test
-	void closingAnExecutingServiceJournalsActiveAndQueuedCancellationBeforeReleasingTheWorker() throws Exception {
+	void closingAnExecutingServiceCompletesActiveAndQueuedCancellationBeforeReleasingTheWorker() throws Exception {
 
 		try (ServerSocket listener = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
 				Socket client = new Socket(InetAddress.getLoopbackAddress(), listener.getLocalPort());
@@ -231,22 +253,13 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			service.close();
 			assertFalse(supervisor.isAlive());
 			assertFalse(process.isAlive());
-			assertFalse(Files.exists(runtime));
+			assertTrue(Files.exists(runtime));
 			assertEquals("SHUTDOWN", peer.receive().getString("type"));
 			for (BattleNext_SimulationTask task : List.of(active, queued)) {
 				assertEquals(BattleNext_SimulationResult.Outcome.CANCELLED, task.getResult().outcome());
 				assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
 				assertEquals(task.getRequest().id(), task.getResult().id());
 				assertEquals("Simulator service closed", task.getResult().diagnostic());
-			}
-			BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
-			Set<String> expected = Set.of(active.getRequest().id() + ".json", queued.getRequest().id() + ".json");
-			assertEquals(expected, storage.pending().stream().map(path -> path.getFileName().toString()).collect(Collectors.toSet()));
-			for (Path journal : storage.pending()) {
-				BattleNext_SimulatorStorage.Stored stored = storage.read(journal);
-				BattleNext_SimulationTask task = stored.request().id().equals(active.getRequest().id()) ? active : queued;
-				assertEquals(task.getRequest(), stored.request());
-				assertEquals(task.getResult(), stored.result());
 			}
 		}
 	}

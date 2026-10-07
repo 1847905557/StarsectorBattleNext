@@ -6,6 +6,7 @@ import com.fs.starfarer.api.SettingsAPI;
 import data.scripts.BattleNextModPlugin;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -99,6 +100,7 @@ class BattleNext_SimulatorWorkerTest extends BattleNext_TestGameFixture {
 
 		Level threshold = LogManager.getLoggerRepository().getThreshold();
 		Level rootLevel = Logger.getRootLogger().getLevel();
+		List<?> rootAppenders = Collections.list(Logger.getRootLogger().getAllAppenders());
 		List<Logger> loggers = new ArrayList<>();
 		List<RecordingAppender> appenders = new ArrayList<>();
 		try {
@@ -134,6 +136,12 @@ class BattleNext_SimulatorWorkerTest extends BattleNext_TestGameFixture {
 			}
 			LogManager.getLoggerRepository().setThreshold(threshold);
 			Logger.getRootLogger().setLevel(rootLevel);
+			for (Object value : Collections.list(Logger.getRootLogger().getAllAppenders())) {
+				if (rootAppenders.contains(value)) continue;
+				Appender appender = (Appender) value;
+				Logger.getRootLogger().removeAppender(appender);
+				appender.close();
+			}
 		}
 	}
 

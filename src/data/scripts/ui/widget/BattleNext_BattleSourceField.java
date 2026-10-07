@@ -73,15 +73,20 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 
 	public void configureInstances(String sourceId, BattleNext_TournamentModel configuration, BattleNext_StartedTournamentStore store,
 			BattleNext_StartedTournament.ExecutionKind kind, String selectedId) {
+		configureInstances(configuration, store.getForSource(sourceId, kind), store.isLoaded(), selectedId);
+	}
+
+	public void configureInstances(BattleNext_TournamentModel configuration, List<BattleNext_StartedTournament> instances,
+			boolean loaded, String selectedId) {
 		label.setText(battleStrings.get("tournament_instance"));
 		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
 		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("tournament_base_template")));
-		for (BattleNext_StartedTournament started : store.getForSource(sourceId, kind)) {
+		for (BattleNext_StartedTournament started : instances) {
 			options.add(new BattleNext_DropdownField.DropdownChoice(started.getId(), started.getName(configuration)));
 		}
 		dropdown.setOptions(options);
 		dropdown.setValue(selectedId);
-		dropdown.setEnabled(store.isLoaded());
+		dropdown.setEnabled(loaded);
 	}
 
 	@Override

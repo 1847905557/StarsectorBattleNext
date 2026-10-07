@@ -13,6 +13,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -33,14 +34,11 @@ public class BattleNext_SimulatorSmoke {
 	static JSONObject runSession(String profile, List<String> vmOptions, int measurements) throws Exception {
 
 		Path core = Path.of("../..", "starsector-core").toAbsolutePath().normalize();
-		Path logs = (measurements == 0 ? Path.of("build/reports/simulator-smoke")
-				: Path.of("build/reports/simulator-benchmark", profile + "-" + UUID.randomUUID())).toAbsolutePath();
+		Path logs = Path.of("tournament/_simulations", UUID.randomUUID().toString()).toAbsolutePath();
 		Files.createDirectories(logs);
-		Path root = Files.createTempDirectory("BattleNext-simulator-smoke-");
-		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(root);
-		Path runtime = storage.directory("_runtime/session");
 		String token = UUID.randomUUID().toString();
-		Path workerLog = logs.resolve("worker-" + token + ".log");
+		StringBuilder workerOutput = new StringBuilder();
+		Thread outputReader = null;
 		Process process = null;
 		BattleNext_SimulatorProtocol channel = null;
 		JSONArray samples = new JSONArray();
@@ -48,20 +46,34 @@ public class BattleNext_SimulatorSmoke {
 		double startupSeconds;
 		try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
 			server.setSoTimeout(1000);
-			List<String> command = BattleNext_SimulatorLaunch.javaCommand(core, logs);
+			List<String> command = BattleNext_SimulatorLaunch.javaCommand(core);
+			command.add("-XX:ErrorFile=" + logs.resolve("hs_err_pid%p.log"));
 			if (measurements > 0) {
 				command.removeIf(Set.of("-XX:+UseG1GC", "-XX:+UseParallelGC", "-XX:+UseShenandoahGC", "-XX:+UseStringDeduplication", "-XX:-DontCompileHugeMethods")::contains);
 				command.add("-Xlog:gc*:file=" + core.relativize(logs.resolve("gc-%p.log")).toString().replace('\\', '/') + ":time,level,tags");
 			}
 			command.addAll(vmOptions);
 			command.addAll(List.of(
-					"-Dcom.fs.starfarer.settings.paths.saves=" + runtime.resolve("saves"),
-					"-Dcom.fs.starfarer.settings.paths.screenshots=" + runtime.resolve("screenshots"),
 					"-Dcom.fs.starfarer.settings.paths.mods=" + core.getParent().resolve("mods"),
 					"-Dcom.fs.starfarer.settings.paths.logs=" + logs,
 					"-cp", System.getProperty("java.class.path"), BattleNext_SimulatorWorker.class.getName(), Integer.toString(server.getLocalPort()), token));
 			long launching = System.nanoTime();
-			process = BattleNext_SimulatorLaunch.start(command, core, workerLog);
+			process = BattleNext_SimulatorLaunch.start(command, core);
+			Process worker = process;
+			outputReader = new Thread(() -> {
+				try (var reader = new InputStreamReader(worker.getInputStream(), StandardCharsets.UTF_8)) {
+					char[] buffer = new char[4096];
+					int count;
+					while ((count = reader.read(buffer)) != -1) {
+						synchronized (workerOutput) {
+							workerOutput.append(buffer, 0, count);
+						}
+					}
+				} catch (IOException exception) {
+					throw new IllegalStateException("Unable to consume smoke worker output", exception);
+				}
+			}, "Simulator smoke output");
+			outputReader.start();
 			long deadline = System.nanoTime() + 180000000000L;
 			Socket socket = null;
 			while (socket == null) {
@@ -106,8 +118,6 @@ public class BattleNext_SimulatorSmoke {
 					}
 					JSONObject message = await(channel, process, "RESULT", System.nanoTime() + 180000000000L);
 					BattleNext_SimulationResult result = BattleNext_SimulationResult.fromJson(message.getJSONObject("payload"));
-					Files.writeString(logs.resolve(strategy + "-" + request.kind() + "-" + request.id() + ".json"),
-							new JSONObject().put("request", request.toJson()).put("result", result.toJson()).toString(), StandardCharsets.UTF_8);
 					System.out.println(strategy + " " + request.kind() + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
 							+ "s, elapsed=" + result.executionNanos() / 1000000000d + "s, steps=" + result.steps()
 							+ ", peakHeap=" + result.peakHeapBytes());
@@ -127,9 +137,9 @@ public class BattleNext_SimulatorSmoke {
 					awaitReady(channel, process, System.nanoTime() + 30000000000L);
 				}
 			}
-			for (String scenario : List.of("unknown", "budget", "cancel")) {
+			for (String scenario : List.of("unknown", "budget", "execution_budget", "cancel")) {
 				BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
-						12000f, 12000f, 500f, scenario.equals("budget") ? 1f : 3600f, 120f, 32, true, false);
+						12000f, 12000f, 500f, scenario.equals("budget") ? 1f : 3600f, scenario.equals("execution_budget") ? 0.01f : 120f, 32, true, false);
 				BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of(scenario.equals("unknown") ? "BattleNext_unknown_smoke_variant" : "wolf_CS"), List.of("wolf_CS"), config);
 				channel.send("REQUEST", request.toJson());
 				if (scenario.equals("cancel")) {
@@ -140,10 +150,11 @@ public class BattleNext_SimulatorSmoke {
 						System.nanoTime() + 150000000000L).getJSONObject("payload"));
 				BattleNext_SimulationResult.Outcome expected = switch (scenario) {
 					case "unknown" -> BattleNext_SimulationResult.Outcome.FAILED;
-					case "budget" -> BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED;
+					case "budget", "execution_budget" -> BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED;
 					default -> BattleNext_SimulationResult.Outcome.CANCELLED;
 				};
 				if (result.outcome() != expected) throw new IOException("Smoke terminal outcome: " + scenario + " expected " + expected + ", actual " + result.outcome());
+				if (expected == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED && !result.report().getWinner().equals("draw")) throw new IOException("Budget exhaustion must freeze a draw report");
 				System.out.println(scenario + ": " + result.outcome());
 				awaitReady(channel, process, System.nanoTime() + 30000000000L);
 			}
@@ -182,7 +193,6 @@ public class BattleNext_SimulatorSmoke {
 					engine.recordRound(model, started, match.getId(), winner, result.report().getId());
 					simulated += result.simulationSeconds();
 					elapsed += result.executionNanos();
-					Files.writeString(logs.resolve("TOURNAMENT-" + started.getId() + ".json"), started.toJson().toString(), StandardCharsets.UTF_8);
 					System.out.println("Tournament round " + (++rounds) + ": " + result.outcome());
 					awaitReady(channel, process, System.nanoTime() + 30000000000L);
 				}
@@ -204,13 +214,18 @@ public class BattleNext_SimulatorSmoke {
 					process.destroyForcibly().waitFor();
 				}
 			}
-			storage.cleanup(runtime);
-			Files.delete(root.resolve("_runtime"));
-			Files.delete(root);
-			System.out.println("Smoke runtime cleaned; diagnostics: " + logs);
+			if (outputReader != null) {
+				outputReader.join();
+			}
+			try (var paths = Files.walk(logs)) {
+				if (paths.filter(Files::isRegularFile).anyMatch(path -> !path.toString().endsWith(".log"))) {
+					throw new IOException("Worker session contains a non-log file: " + logs);
+				}
+			}
+			System.out.println("Smoke log directory retained: " + logs);
 		}
 		Pattern header = Pattern.compile("^\\d+\\s+\\[[^\\]]*\\]\\s+(\\S+)\\s+");
-		List<String> lines = Files.readAllLines(workerLog, StandardCharsets.UTF_8);
+		List<String> lines = workerOutput.toString().lines().toList();
 		int events = 0;
 		for (String line : lines) {
 			var match = header.matcher(line);
@@ -219,7 +234,7 @@ public class BattleNext_SimulatorSmoke {
 			events++;
 		}
 		if (lines.stream().noneMatch(line -> line.contains("simulator.task.prepare.failed"))) throw new IOException("Worker must retain task failure diagnostics");
-		System.out.println("Worker WARN+ log verified: events=" + events + ", bytes=" + Files.size(workerLog));
+		System.out.println("Worker WARN+ output verified: events=" + events + ", characters=" + workerOutput.length());
 		rates.sort(Double::compareTo);
 		JSONObject summary = new JSONObject().put("profile", profile).put("vm_options", new JSONArray(vmOptions))
 				.put("startup_seconds", startupSeconds).put("samples", samples).put("diagnostics", logs.toString());

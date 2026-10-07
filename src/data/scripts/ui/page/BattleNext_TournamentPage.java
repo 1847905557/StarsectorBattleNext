@@ -52,7 +52,12 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 		}));
 		editor.setRoundRetry(id -> {
 			try {
-				BattleNext_BattleResultRecorder.retryTournamentRound(id);
+				var task = BattleNext_SimulatorService.tournament(id);
+				if (task == null) {
+					BattleNext_BattleResultRecorder.retryTournamentRound(id);
+				} else {
+					task.retryImport();
+				}
 				editor.refreshInstances();
 			} catch (Exception exception) {
 				setStatus(exception.toString());
@@ -265,7 +270,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 				try {
 					BattleNext_SimulatorService.deleteTournament(id);
 					instances.reload();
-					if (!instances.hasInstances(selectedId)) {
+					if (!tournamentStore.isLocked(selectedId)) {
 						editor.open(tournamentStore.get(selectedId));
 					}
 					editor.refreshInstances();

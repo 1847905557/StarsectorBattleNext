@@ -100,7 +100,10 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 		completed = true;
 		engine.getContext().setInitialNumSteps(0f);
 		String reportJson = "";
-		if (outcome == BattleNext_SimulationResult.Outcome.COMPLETED) {
+		if (outcome == BattleNext_SimulationResult.Outcome.COMPLETED || outcome == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) {
+			if (outcome == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) {
+				scorekeeper.freeze("draw");
+			}
 			BattleNext_SimulatorWorker.status(request.id(), BattleNext_SimulationTask.State.FROZEN);
 			BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 			report.setId(request.id());

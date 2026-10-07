@@ -10,7 +10,6 @@ import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_BattleValidation;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
-import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
@@ -19,11 +18,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -35,10 +36,9 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private final LinkedBlockingQueue<BattleNext_SimulationTask> queue = new LinkedBlockingQueue<>();
 	private final ConcurrentLinkedQueue<BattleNext_SimulationTask> imports = new ConcurrentLinkedQueue<>();
 	private final Map<String, BattleNext_SimulationTask> failedImports = new LinkedHashMap<>();
-	private final Map<String, BattleNext_SimulationTask> tournaments = new ConcurrentHashMap<>();
-	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
 	private final ConcurrentLinkedQueue<Checkpoint> checkpoints = new ConcurrentLinkedQueue<>();
 	private final Map<String, BattleNext_SimulationTask> deletions = new ConcurrentHashMap<>();
+	private final Map<String, BattleNext_SimulationTask> tasks = new ConcurrentHashMap<>();
 	private final BattleNext_SimulatorStorage storage;
 	private final Path core;
 	private volatile List<String> command;
@@ -49,8 +49,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private volatile BattleNext_SimulatorProtocol channel;
 	private volatile Process process;
 	private volatile long cancellationStarted;
-	private Path runtime;
-	private int generation;
+	private final StringBuilder workerOutput = new StringBuilder();
 	private Thread supervisor;
 
 	private BattleNext_SimulatorService() throws IOException {
@@ -59,45 +58,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		core = mod.getParent().getParent().resolve("starsector-core");
 		storage = new BattleNext_SimulatorStorage(mod.resolve("tournament/_simulations"));
 		command = buildCommand();
-		try {
-			startedStore.reload();
-			for (JSONObject json : storage.readTasks()) {
-				try {
-					BattleNext_SimulationTask task = BattleNext_SimulationTask.fromJson(json, this, startedStore);
-					if (task.isDeletionRequested()) {
-						deletions.put(task.getRequest().id(), task);
-						tournaments.put(task.getRequest().id(), task);
-						continue;
-					}
-					if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
-						if (task.getState() != BattleNext_SimulationTask.State.FINISHED && task.getState() != BattleNext_SimulationTask.State.IMPORT_FAILED) {
-							task.interrupted("Awaiting manual resume");
-						}
-						tournaments.put(task.getRequest().id(), task);
-					} else if (task.getState() != BattleNext_SimulationTask.State.FINISHED && task.getResult() != null) {
-						imports.add(task);
-					}
-					latest = task;
-				} catch (JSONException | IllegalArgumentException exception) {
-					storage.rejectTask(json, exception);
-				}
-			}
-			for (Path path : storage.pending()) {
-				try {
-					BattleNext_SimulatorStorage.Stored stored = storage.read(path);
-					if (stored.result().outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) continue;
-					boolean alreadyPending = imports.stream().anyMatch(task -> task.getRequest().id().equals(stored.request().id()));
-					if (alreadyPending) continue;
-					BattleNext_SimulationTask task = new BattleNext_SimulationTask(stored.request(), this);
-					task.receive(stored.result());
-					imports.add(task);
-				} catch (IOException | JSONException | IllegalArgumentException exception) {
-					BattleNext_Logger.warn(getClass(), "simulator.pending.item.rejected", BattleNext_Logger.fields().put("path", path.toString()).build(), exception);
-				}
-			}
-		} catch (IOException | JSONException exception) {
-			BattleNext_Logger.error(getClass(), "simulator.tasks.recovery.failed", BattleNext_Logger.fields().build(), exception);
-		}
 		Runtime.getRuntime().addShutdownHook(new Thread(this::close, "BattleNext simulator shutdown"));
 	}
 
@@ -128,17 +88,14 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 						BattleNext_StartedTournament.ExecutionKind.SIMULATION, fleetIds);
 				new BattleNext_TournamentEngine().initialize(configuration, started);
 				task.publishStarted(started);
-				storage.writeTask(task);
-				startedStore.save(started);
-				tournaments.put(request.id(), task);
 			}
-			storage.writeTask(task);
 		} catch (BattleNext_BattleValidation.Rejection rejection) {
 			throw rejection;
 		} catch (Exception exception) {
 			throw new IllegalStateException("Unable to submit simulator task: " + request.id(), exception);
 		}
 		latest = task;
+		tasks.put(request.id(), task);
 		enqueue(task);
 		return task;
 	}
@@ -155,42 +112,37 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	}
 
 	public static BattleNext_SimulationTask tournament(String instanceId) {
-		return instance == null ? null : instance.tournaments.get(instanceId);
+		BattleNext_SimulationTask task = task(instanceId);
+		return task == null || task.getRequest().kind() != BattleNext_SimulationRequest.Kind.TOURNAMENT ? null : task;
+	}
+
+	public static List<BattleNext_StartedTournament> simulatedInstances() {
+		if (instance == null) return List.of();
+		return instance.tasks.values().stream().filter(task -> task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT)
+				.map(BattleNext_SimulationTask::getStartedTournament)
+				.sorted(Comparator.comparingLong(BattleNext_StartedTournament::getStartedAt).reversed()).toList();
+	}
+
+	public static BattleNext_SimulationTask task(String id) {
+		return instance == null ? null : instance.tasks.get(id);
 	}
 
 	public static void deleteTournament(String id) throws IOException, JSONException {
-		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
-		store.reload();
-		BattleNext_StartedTournament selected = store.get(id);
-		if (selected != null && selected.getExecutionKind() == BattleNext_StartedTournament.ExecutionKind.MANUAL) {
-			store.delete(id);
-			return;
-		}
-		BattleNext_SimulatorService service = getInstance();
-		BattleNext_SimulationTask task = service.tournaments.get(id);
+		BattleNext_SimulationTask task = tournament(id);
 		if (task == null) {
-			store.delete(id);
+			new BattleNext_StartedTournamentStore().delete(id);
 			return;
 		}
+		BattleNext_SimulatorService service = instance;
 		synchronized (service) {
 			task.requestDeletion();
 			service.deletions.put(id, task);
-			try {
-				service.storage.writeTask(task);
-			} finally {
-				service.queue.remove(task);
-				if (task == service.active) {
-					service.cancel(task);
-				}
+			service.queue.remove(task);
+			if (task == service.active) {
+				service.cancel(task);
 			}
 		}
 		service.finishDeletions();
-	}
-
-	public static List<BattleNext_SimulationTask> pendingDeletions(String sourceId) {
-		if (instance == null) return List.of();
-		return instance.tournaments.values().stream().filter(task -> task.isDeletionRequested()
-				&& task.getStartedTournament().getSourceTournamentId().equals(sourceId)).toList();
 	}
 
 	public static void deleteInvalidTournament(BattleNext_StartedTournamentStore.CatalogEntry entry) throws IOException, JSONException {
@@ -202,46 +154,16 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			deleteTournament(entry.id());
 			return;
 		}
-		Path mod = Path.of(Global.getSettings().getModManager().getModSpec("AI_Battles_Next").getPath()).toAbsolutePath();
-		BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(mod.resolve("tournament/_simulations"));
-		for (JSONObject json : storage.readTasks()) {
-			JSONObject request = json.getJSONObject("request");
-			if (!request.getString("id").equals(entry.id())) continue;
-			if (!request.optString("kind", "").equals(BattleNext_SimulationRequest.Kind.TOURNAMENT.name())) continue;
-			JSONObject source = request.optJSONObject("source");
-			if (source == null || !source.optString("sourceTournamentId", "").equals(entry.sourceTournamentId())) continue;
-			JSONObject round = json.optJSONObject("currentRound");
-			if (round != null && BattleNext_EntryId.isValidPathSegment(round.optString("id", ""))) {
-				storage.acknowledge(round.getString("id"));
-			}
-			storage.deleteTask(entry.id());
-		}
 	}
 
 	private void finishDeletions() {
 		for (BattleNext_SimulationTask task : List.copyOf(deletions.values())) {
 			if (task == active) continue;
-			try {
-				storage.writeTask(task);
-				startedStore.reload();
-				if (task.getCurrentRound() != null) {
-					storage.acknowledge(task.getCurrentRound().id());
-				}
-				if (startedStore.get(task.getRequest().id()) != null) {
-					startedStore.delete(task.getRequest().id());
-				}
-				storage.deleteTask(task.getRequest().id());
-				tournaments.remove(task.getRequest().id());
-				deletions.remove(task.getRequest().id());
-				failedImports.remove(task.getRequest().id());
-				if (latest == task) {
-					latest = null;
-				}
-			} catch (Exception exception) {
-				task.rejectImport(exception);
-				deletions.remove(task.getRequest().id());
-				BattleNext_Logger.error(getClass(), "simulator.tournament.delete.failed",
-						BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
+			tasks.remove(task.getRequest().id());
+			deletions.remove(task.getRequest().id());
+			failedImports.remove(task.getRequest().id());
+			if (latest == task) {
+				latest = null;
 			}
 		}
 	}
@@ -289,6 +211,12 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		return List.copyOf(failedImports.values());
 	}
 
+	public String getWorkerOutput() {
+		synchronized (workerOutput) {
+			return workerOutput.toString();
+		}
+	}
+
 	void cancel(BattleNext_SimulationTask task) {
 		if (task != active) return;
 		cancellationStarted = System.nanoTime();
@@ -312,7 +240,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		}
 		queue.remove(task);
 		task.interrupted("Paused by user");
-		persistTask(task);
 	}
 
 	void resume(BattleNext_SimulationTask task) {
@@ -320,9 +247,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		if (task.getState() != BattleNext_SimulationTask.State.PAUSED) return;
 		task.resetCancellation();
 		task.transition(BattleNext_SimulationTask.State.QUEUED);
-		if (persistTask(task)) {
-			enqueue(task);
-		}
+		enqueue(task);
 	}
 
 	void retryImport(BattleNext_SimulationTask task) {
@@ -330,9 +255,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
 			task.resetCancellation();
 			task.transition(BattleNext_SimulationTask.State.QUEUED);
-			if (persistTask(task)) {
-				enqueue(task);
-			}
+			enqueue(task);
 			return;
 		}
 		task.transition(BattleNext_SimulationTask.State.COMMITTING);
@@ -341,13 +264,13 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	private List<String> buildCommand() throws IOException {
 		List<String> classpath = new ArrayList<>();
-		classpath.addAll(storage.listFiles(core, false).stream().filter(path -> path.toString().endsWith(".jar")).map(Path::toString).toList());
+		classpath.addAll(storage.listFiles(core).stream().filter(path -> path.toString().endsWith(".jar")).map(Path::toString).toList());
 		for (ModSpecAPI mod : Global.getSettings().getModManager().getEnabledModsCopy()) {
 			for (String jar : mod.getJars()) {
 				classpath.add(Path.of(mod.getPath(), jar).toAbsolutePath().toString());
 			}
 		}
-		List<String> launch = BattleNext_SimulatorLaunch.javaCommand(core, storage.directory("_diagnostics"));
+		List<String> launch = BattleNext_SimulatorLaunch.javaCommand(core);
 		launch.add("-cp");
 		launch.add(String.join(System.getProperty("path.separator"), classpath));
 		return List.copyOf(launch);
@@ -389,7 +312,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
 						task.interrupted(exception.getClass().getSimpleName() + ": " + exception.getMessage());
 						stopWorker();
-						persistTask(task);
 						latest = task;
 						continue;
 					}
@@ -432,9 +354,8 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			}
 			BattleNext_SimulationResult result = runTask(task, round);
 			if (result == null) break;
-			if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) {
+			if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED && result.outcome() != BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) {
 				task.interrupted(result.outcome().name() + ": " + result.diagnostic());
-				persistTask(task);
 				latest = task;
 				return;
 			}
@@ -442,7 +363,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			if (task.getState() == BattleNext_SimulationTask.State.FINISHED) return;
 		}
 		task.interrupted("Simulation paused");
-		persistTask(task);
 		latest = task;
 	}
 
@@ -457,60 +377,44 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		return saved.isDone() && saved.join();
 	}
 
-	private boolean persistTask(BattleNext_SimulationTask task) {
-		try {
-			storage.writeTask(task);
-			return true;
-		} catch (Exception exception) {
-			task.rejectImport(exception);
-			BattleNext_Logger.error(getClass(), "simulator.task.save.failed",
-					BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
-			return false;
-		}
-	}
-
 	private boolean prepareTournament(BattleNext_SimulationTask task) {
 		if (task.isDeletionRequested()) return false;
 		try {
 			BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 			List<String> errors = sources.reloadTournamentCatalog();
 			if (!errors.isEmpty()) throw new IllegalStateException(String.join("; ", errors));
-			startedStore.reload();
-			BattleNext_StartedTournament started = startedStore.get(task.getRequest().id());
-			if (started == null) {
-				throw new IllegalStateException("Missing started tournament instance: " + task.getRequest().id());
-			}
+			BattleNext_StartedTournament started = task.getStartedTournament();
 			BattleNext_TournamentModel configuration = sources.getTournamentStore().get(started.getSourceTournamentId());
 			if (configuration == null) throw new IllegalArgumentException("Missing tournament configuration: " + started.getSourceTournamentId());
 			BattleNext_SimulationResult pending = task.pendingRound();
 			if (pending != null) {
 				BattleNext_Match match = BattleNext_Match.fromJson(task.getCurrentRound().source().getJSONObject("match"));
-				String winner = switch (pending.report().getWinner()) {
+				String winner = switch (pending.reportJson().isEmpty() ? "" : pending.report().getWinner()) {
 					case "player" -> match.getPlayer();
 					case "enemy" -> match.getEnemy();
 					default -> "";
 				};
-				BattleNext_BattleReportModel report = pending.report();
-				BattleNext_BattleResultRecorder.prepareTournamentRoundReport(report, started.getName(configuration), match,
-						sources.getFleetStore().get(match.getPlayer()).getName(), sources.getFleetStore().get(match.getEnemy()).getName());
-				BattleNext_BattleResultRecorder.saveStandalone(report);
-				new BattleNext_TournamentEngine().recordRound(configuration, started, match.getId(), winner, report.getId());
-				startedStore.save(started);
+				String reportId = "";
+				if (!pending.reportJson().isEmpty()) {
+					BattleNext_BattleReportModel report = pending.report();
+					BattleNext_BattleResultRecorder.prepareTournamentRoundReport(report, started.getName(configuration), match,
+							sources.getFleetStore().get(match.getPlayer()).getName(), sources.getFleetStore().get(match.getEnemy()).getName());
+					BattleNext_BattleResultRecorder.saveStandalone(report);
+					reportId = report.getId();
+				}
+				new BattleNext_TournamentEngine().recordRound(configuration, started, match.getId(), winner, reportId);
 				task.publishStarted(started);
 				task.committedRound();
-				storage.writeTask(task);
 			}
 			task.publishStarted(started);
 			if (started.isCompleted()) {
 				task.completeTournament();
-				storage.writeTask(task);
 				failedImports.remove(task.getRequest().id());
 				latest = task;
 				return true;
 			}
 			if (task.isCancelled()) {
 				task.interrupted("Simulation paused");
-				storage.writeTask(task);
 				return true;
 			}
 			BattleNext_Match match = started.getNextPendingMatch();
@@ -522,7 +426,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			int actualMap = task.getCurrentRound() == null ? BattleNext_MissionBattleMap.resolve(configuration.getMapId())
 					: task.getCurrentRound().source().getInt("actualMap");
 			task.prepareRound(task.getRequest().forMatch(configuration, started, match, sources.getFleetStore(), actualMap));
-			storage.writeTask(task);
 			failedImports.remove(task.getRequest().id());
 			return true;
 		} catch (Exception exception) {
@@ -532,7 +435,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			} else {
 				task.interrupted(exception.toString());
 			}
-			persistTask(task);
 			BattleNext_Logger.error(getClass(), "simulator.tournament.prepare.failed",
 					BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
 			return false;
@@ -542,11 +444,9 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private void startWorker() throws Exception {
 
 		String token = UUID.randomUUID().toString();
-		runtime = storage.directory("_runtime/" + UUID.randomUUID());
-		Path logs = storage.directory("_diagnostics");
+		Path logs = storage.directory(UUID.randomUUID().toString());
 		List<String> launch = new ArrayList<>(command);
-		launch.add("-Dcom.fs.starfarer.settings.paths.saves=" + runtime.resolve("saves"));
-		launch.add("-Dcom.fs.starfarer.settings.paths.screenshots=" + runtime.resolve("screenshots"));
+		launch.add("-XX:ErrorFile=" + logs.resolve("hs_err_pid%p.log"));
 		launch.add("-Dcom.fs.starfarer.settings.paths.mods=" + core.getParent().resolve("mods"));
 		launch.add("-Dcom.fs.starfarer.settings.paths.logs=" + logs);
 		launch.add(BattleNext_SimulatorWorker.class.getName());
@@ -554,9 +454,25 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			server.setSoTimeout(1000);
 			launch.add(Integer.toString(server.getLocalPort()));
 			launch.add(token);
-			process = BattleNext_SimulatorLaunch.start(launch, core, logs.resolve("worker-" + (++generation) + "-" + token + ".log"));
+			process = BattleNext_SimulatorLaunch.start(launch, core);
+			Process worker = process;
+			Thread outputReader = new Thread(() -> {
+				try (var reader = new InputStreamReader(worker.getInputStream(), StandardCharsets.UTF_8)) {
+					char[] buffer = new char[4096];
+					int length;
+					while ((length = reader.read(buffer)) != -1) {
+						synchronized (workerOutput) {
+							workerOutput.append(buffer, 0, length);
+						}
+					}
+				} catch (IOException exception) {
+					BattleNext_Logger.warn(getClass(), "simulator.worker.output.failed", BattleNext_Logger.fields().build(), exception);
+				}
+			}, "BattleNext simulator output");
+			outputReader.setDaemon(true);
+			outputReader.start();
 			BattleNext_Logger.info(getClass(), "simulator.worker.started", BattleNext_Logger.fields().put("pid", process.pid())
-					.put("command", launch.subList(0, launch.size() - 1)).put("runtime", runtime.toString()).build());
+					.put("command", launch.subList(0, launch.size() - 1)).put("logs", logs.toString()).build());
 			long deadline = System.nanoTime() + 180000000000L;
 			Socket socket = null;
 			while (socket == null) {
@@ -597,10 +513,15 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			if (started == 0L && System.nanoTime() - preparing > 180000000000L) throw new IOException("Simulator task preparation exceeded 180 seconds");
 			if (received && System.nanoTime() - returning > 30000000000L) throw new IOException("Simulator return to idle exceeded 30 seconds");
 			if (!received && started != 0L && System.nanoTime() - started > request.config().executionSeconds() * 1000000000d + 5000000000L) {
-				if (task.getRequest().kind() != BattleNext_SimulationRequest.Kind.TOURNAMENT) {
-					acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, "Worker exceeded execution deadline"));
+				result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED,
+						"", 0f, System.nanoTime() - started, 0L, 0L, "Worker exceeded execution deadline");
+				if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
+					task.receiveRound(result);
+				} else {
+					acceptResult(task, result);
 				}
-				throw new IOException("Simulator execution deadline exceeded");
+				stopWorker();
+				return result;
 			}
 			JSONObject message;
 			try {
@@ -622,9 +543,8 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				result = BattleNext_SimulationResult.fromJson(payload);
 				if (task.getRequest().kind() != BattleNext_SimulationRequest.Kind.TOURNAMENT) {
 					acceptResult(task, result);
-				} else if (result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED) {
+				} else if (result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED || result.outcome() == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) {
 					task.receiveRound(result);
-					storage.writeTask(task);
 				}
 				received = true;
 				returning = System.nanoTime();
@@ -642,12 +562,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private void acceptResult(BattleNext_SimulationTask task, BattleNext_SimulationResult result) {
 		task.receive(result);
 		latest = task;
-		try {
-			storage.write(task.getRequest(), result);
-			storage.writeTask(task);
-		} catch (Exception exception) {
-			BattleNext_Logger.error(getClass(), "simulator.result.journal.failed", BattleNext_Logger.fields().put("id", result.id()).build(), exception);
-		}
 		imports.add(task);
 	}
 
@@ -661,13 +575,11 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		BattleNext_SimulationTask task;
 		while ((task = imports.poll()) != null) {
 			BattleNext_SimulationResult result = task.getResult();
-			if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) continue;
+			if (result.reportJson().isEmpty()) continue;
 			try {
 				BattleNext_BattleReportModel report = result.report();
 				boolean retained = BattleNext_BattleResultRecorder.saveStandalone(report);
-				storage.acknowledge(result.id());
 				task.imported(retained);
-				storage.writeTask(task);
 				failedImports.remove(result.id());
 				BattleNext_Logger.info(getClass(), "simulator.report.imported", BattleNext_Logger.fields().put("result", result.toJson()).put("retained", retained).build());
 			} catch (Exception exception) {
@@ -709,16 +621,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			channel = null;
 			process = null;
 		}
-		try {
-			if (runtime != null) {
-				storage.cleanup(runtime);
-			}
-		} catch (IOException exception) {
-			BattleNext_Logger.error(getClass(), "simulator.worker.runtime.cleanup.failed", BattleNext_Logger.fields()
-					.put("path", runtime.toString()).build(), exception);
-		} finally {
-			runtime = null;
-		}
 	}
 
 	@Override
@@ -740,11 +642,6 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				acceptResult(task, failure(task, BattleNext_SimulationResult.Outcome.CANCELLED, "Simulator service closed"));
 			} else {
 				task.interrupted("Application stopped");
-				try {
-					storage.writeTask(task);
-				} catch (Exception exception) {
-					BattleNext_Logger.error(getClass(), "simulator.tournament.shutdown.failed", BattleNext_Logger.fields().put("id", task.getRequest().id()).build(), exception);
-				}
 			}
 		}
 	}

@@ -92,28 +92,14 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 
 	@ParameterizedTest
 	@EnumSource(TournamentBracketType.class)
-	void tournamentGraphsAndSimulationActionsDescribeEveryPhaseWithoutChangingTheActiveSource(TournamentBracketType bracket) throws Exception {
+	void tournamentTemplateGraphsAndChecksPreserveTheActiveSource(TournamentBracketType bracket) throws Exception {
 
 		catalog();
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
-		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
 		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
-		List<String> phases = bracket == TournamentBracketType.SINGLE_ELIMINATION
-				? List.of("new", "running", "completed") : List.of("running");
-		for (String phase : phases) {
-			BattleNext_TournamentModel configuration = tournament(phase, bracket);
-			tournaments.save(configuration);
-			if (phase.equals("new")) continue;
-			BattleNext_StartedTournament started = engine.start(configuration, List.of(FIRST_ID, "second"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
-			if (phase.equals("completed")) {
-				while (!started.isCompleted()) {
-					var match = started.getNextPendingMatch();
-					engine.recordRound(configuration, started, match.getId(), match.getPlayer(), "");
-				}
-			}
-			instances.save(started);
-		}
+		List<String> phases = List.of("cup");
+		tournaments.save(tournament("cup", bracket));
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
 		sources.reloadCatalogs();

@@ -9,6 +9,8 @@ import data.scripts.tools.BattleNext_Logger;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.PatternLayout;
 import org.boxutil.config.BoxConfigs;
 import org.dark.shaders.util.GraphicsLibSettings;
 import org.dark.shaders.util.TextureData;
@@ -64,6 +66,7 @@ public class BattleNext_SimulatorWorker {
 	}
 
 	private static void configureLogging() {
+		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%-4r [%t] %-5p %c %x - %m%n")));
 		LogManager.getLoggerRepository().setThreshold(Level.WARN);
 		Logger.getRootLogger().setLevel(Level.WARN);
 	}

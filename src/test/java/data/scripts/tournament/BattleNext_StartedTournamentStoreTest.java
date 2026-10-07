@@ -30,7 +30,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		configurations.save(configuration);
 		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
 		BattleNext_StartedTournament first = engine.start(configuration, List.of("a", "b"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
-		BattleNext_StartedTournament second = engine.start(configuration, List.of("b", "a"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
+		BattleNext_StartedTournament second = engine.start(configuration, List.of("b", "a"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
 		assertNotEquals(first.getId(), second.getId());
 		BattleNext_StartedTournamentStore left = new BattleNext_StartedTournamentStore();
 		BattleNext_StartedTournamentStore right = new BattleNext_StartedTournamentStore();
@@ -51,7 +51,9 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		assertTrue(left.get(second.getId()).isCompleted());
 		assertTrue(left.get(first.getId()).getMatches().get(0).getRounds().isEmpty());
 		assertEquals(report.getId(), left.get(second.getId()).getMatches().get(0).getRounds().get(0).getReportId());
-		assertThrows(IllegalArgumentException.class, () -> left.activate(second.getId()));
+		BattleNext_StartedTournament simulated = engine.start(configuration, List.of("a", "b"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
+		assertThrows(IllegalArgumentException.class, () -> left.save(simulated));
+		assertThrows(IllegalArgumentException.class, () -> left.activate(simulated.getId()));
 		assertThrows(IllegalStateException.class, () -> configurations.save(configuration));
 		assertThrows(IllegalStateException.class, () -> configurations.delete("cup"));
 		assertFalse(configuration.toJson().has("matches"));
@@ -134,7 +136,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		BattleNext_StartedTournamentStore firstStore = new BattleNext_StartedTournamentStore();
 		BattleNext_StartedTournamentStore secondStore = new BattleNext_StartedTournamentStore();
 		BattleNext_StartedTournament first = new BattleNext_TournamentEngine().start(configuration, List.of("a", "b"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
-		BattleNext_StartedTournament second = new BattleNext_TournamentEngine().start(configuration, List.of("b", "a"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
+		BattleNext_StartedTournament second = new BattleNext_TournamentEngine().start(configuration, List.of("b", "a"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
 		firstStore.save(first);
 		firstStore.activate(first.getId());
 		secondStore.save(second);

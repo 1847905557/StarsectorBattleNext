@@ -166,16 +166,15 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			return;
 		}
 		BattleNext_TournamentModel tournament = sources.getTournamentStore().get(browser.getSelectedId());
-		if (tournament == null && sources.getStartedStore().getForSource(browser.getSelectedId(), BattleNext_StartedTournament.ExecutionKind.SIMULATION).isEmpty()) {
+		if (tournament == null && sources.getInstances(browser.getSelectedId(), BattleNext_StartedTournament.ExecutionKind.SIMULATION).isEmpty()) {
 			TooltipMakerAPI error = bodyPanel.createUIElement(bodyRect.getWidth(), bodyRect.getHeight(), false);
 			error.addPara(tournamentStrings.get("missing_detail") + " " + browser.getSelectedId(), 0f);
 			bodyPanel.addUIElement(error).inTL(0f, 0f);
 			return;
 		}
-		var store = sources.getStartedStore();
-		List<BattleNext_StartedTournament> instances = store.getForSource(browser.getSelectedId(), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
+		List<BattleNext_StartedTournament> instances = sources.getInstances(browser.getSelectedId(), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
 		if (browser.getSelectedInstanceId() == null || !browser.getSelectedInstanceId().isEmpty()
-				&& store.get(browser.getSelectedInstanceId()) == null && BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId()) == null) {
+				&& sources.getInstance(browser.getSelectedInstanceId()) == null) {
 			browser.selectInstance(instances.isEmpty() ? "" : instances.get(0).getId());
 		}
 		CustomPanelAPI instancePanel = new UIRect(0f, 0f, bodyRect.getWidth(), BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT)
@@ -186,8 +185,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			buildBody();
 		});
 		instanceField.attach(instancePanel);
-		instanceField.configureInstances(browser.getSelectedId(), tournament, store, BattleNext_StartedTournament.ExecutionKind.SIMULATION, browser.getSelectedInstanceId());
-		BattleNext_StartedTournament started = store.get(browser.getSelectedInstanceId());
+		instanceField.configureInstances(tournament, instances, true, browser.getSelectedInstanceId());
+		BattleNext_StartedTournament started = sources.getInstance(browser.getSelectedInstanceId());
 		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
 		if (task != null) {
 			started = task.getStartedTournament();
@@ -222,9 +221,6 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		List<BattleNext_TournamentDisplay.Action> actions = new ArrayList<>();
 		BattleNext_TournamentModel source = sources.getTournamentStore().get(browser.getSelectedId());
 		List<String> reasons = source == null ? List.of(tournamentStrings.get("missing_detail") + " " + browser.getSelectedId()) : sources.getCatalogErrors();
-		if (!sources.getStartedStore().isLoaded()) {
-			reasons = List.of(sources.getStartedStore().getLoadError());
-		}
 		actions.add(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulate_tournament"),
 				"simulator:tournament:" + browser.getSelectedId(), reasons.isEmpty(), reasons, "simulate"));
 		actions.add(new BattleNext_TournamentDisplay.Action(tournamentStrings.get("check_fleets"),
@@ -249,7 +245,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 				task.retryImport();
 			} else if (id.startsWith("simulator:tournament:") || id.startsWith("simulator:check:")) {
 				BattleNext_TournamentModel configuration = sources.getTournamentStore().get(browser.getSelectedId());
-				BattleNext_StartedTournament selected = task == null ? sources.getStartedStore().get(browser.getSelectedInstanceId()) : task.getStartedTournament();
+				BattleNext_StartedTournament selected = sources.getInstance(browser.getSelectedInstanceId());
 				List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIds() : selected.getFleetIds();
 				browser.setCheckResult(sources.checkTournament(browser.getSelectedId(), fleetIds));
 				configuration = sources.getTournamentStore().get(browser.getSelectedId());
@@ -263,7 +259,6 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 						fleetIds, sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit())));
 				clearBody();
 				browser.selectInstance(task.getRequest().id());
-				sources.getStartedStore().reload();
 				buildBody();
 			}
 			browser.setStatusError("");
@@ -308,7 +303,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			return;
 		}
 		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
-		BattleNext_StartedTournament selected = task == null ? sources.getStartedStore().get(browser.getSelectedInstanceId()) : task.getStartedTournament();
+		BattleNext_StartedTournament selected = sources.getInstance(browser.getSelectedInstanceId());
 		List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIds() : selected.getFleetIds();
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(configuration, selected, fleetIds,
 				sources.getFleetStore(), sources.getRuleStore(), "", List.of()).withCheckResult(browser.getCheckResult());
@@ -381,10 +376,15 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 				BattleNext_SimulationResult result = status.result();
 				String details = !result.startedTournamentJson().isEmpty()
 						? battleStrings.format("simulator_tournament_result", result.simulationSeconds(), result.executionNanos() / 1000000000d)
-						: result.outcome() == BattleNext_SimulationResult.Outcome.COMPLETED
+						: !result.reportJson().isEmpty()
 						? battleStrings.format("simulator_result", result.report().getWinner(), result.simulationSeconds(),
 								result.executionNanos() / 1000000000d, result.report().getName()) : result.diagnostic();
-				tooltip.addPara(result.outcome().name() + ": " + details, 5f);
+				String outcome = result.outcome() == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED
+						? tournamentStrings.get("round_draw") : result.outcome().name();
+				tooltip.addPara(outcome + ": " + details, 5f);
+				if (!result.reportJson().isEmpty() && !result.diagnostic().isEmpty()) {
+					tooltip.addPara(result.diagnostic(), 5f);
+				}
 				if (!status.importError().isEmpty()) {
 					tooltip.addPara(status.importError(), 5f);
 				}

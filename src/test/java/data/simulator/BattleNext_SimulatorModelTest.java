@@ -41,33 +41,17 @@ class BattleNext_SimulatorModelTest {
 	}
 
 	@Test
-	void journalPreservesCompleteRequestReportAndOwnershipDuringRecoveryAndAcknowledgment() throws Exception {
-		Logger logger = Logger.getLogger(BattleNext_Logger.class);
-		Level previous = logger.getLevel();
-		logger.setLevel(Level.OFF);
-		try {
-			BattleNext_SimulatorStorage storage = new BattleNext_SimulatorStorage(directory);
-			BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
-			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
-			report.setId(request.id());
-			report.setName("中文 50% report");
-			BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
-					report.toJson().toString(), 100f, 500000000L, 6000L, 1024L, "");
-			storage.write(request, result);
-			BattleNext_SimulatorStorage.Stored recovered = storage.read(storage.pending().get(0));
-			assertEquals(request, recovered.request());
-			assertEquals(result, recovered.result());
-			assertEquals("中文 50% report", recovered.result().report().getName());
-			Path runtime = storage.directory("_runtime/session");
-			storage.cleanup(runtime);
-			assertEquals(1, storage.pending().size());
-			IOException failure = assertThrows(IOException.class, () -> storage.cleanup(directory.resolve("_pending")));
-			assertTrue(failure.getMessage().contains(directory.resolve("_pending").toString()));
-			storage.acknowledge(request.id());
-			assertTrue(storage.pending().isEmpty());
-		} finally {
-			logger.setLevel(previous);
-		}
+	void completeReportTravelsThroughTheProtocolPayload() throws Exception {
+		var request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
+		var report = new BattleNext_BattleReportModel();
+		report.setId(request.id());
+		report.setName("中文 50% report");
+		var result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
+				report.toJson().toString(), 100f, 500000000L, 6000L, 1024L, "");
+		var received = BattleNext_SimulationResult.fromJson(result.toJson());
+		assertEquals(result, received);
+		assertEquals(request.id(), received.report().getId());
+		assertEquals("中文 50% report", received.report().getName());
 	}
 
 	@Test

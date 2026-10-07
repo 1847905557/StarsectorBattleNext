@@ -6,6 +6,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.model.tournament.io.BattleNext_TournamentStandardLoader;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
+import data.simulator.BattleNext_SimulatorService;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -52,7 +53,7 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 	public boolean isLocked(String id) throws IOException, JSONException {
 		BattleNext_StartedTournamentStore started = new BattleNext_StartedTournamentStore();
 		started.reload();
-		return started.hasInstances(id);
+		return started.hasInstances(id) || BattleNext_SimulatorService.simulatedInstances().stream().anyMatch(instance -> instance.getSourceTournamentId().equals(id));
 	}
 
 	private void requireEditable(String id) throws IOException, JSONException {

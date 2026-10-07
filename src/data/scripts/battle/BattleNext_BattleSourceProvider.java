@@ -14,6 +14,7 @@ import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.tournament.BattleNext_TournamentEngine;
+import data.simulator.BattleNext_SimulatorService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -241,6 +242,16 @@ public class BattleNext_BattleSourceProvider {
 
 	public BattleNext_StartedTournamentStore getStartedStore() {
 		return startedStore;
+	}
+
+	public List<BattleNext_StartedTournament> getInstances(String sourceId, BattleNext_StartedTournament.ExecutionKind kind) {
+		return kind == BattleNext_StartedTournament.ExecutionKind.MANUAL ? startedStore.getForSource(sourceId, kind)
+				: BattleNext_SimulatorService.simulatedInstances().stream().filter(started -> started.getSourceTournamentId().equals(sourceId)).toList();
+	}
+
+	public BattleNext_StartedTournament getInstance(String id) {
+		var task = BattleNext_SimulatorService.tournament(id);
+		return task == null ? startedStore.get(id) : task.getStartedTournament();
 	}
 
 	public BattleNext_TournamentStore getTournamentStore() {

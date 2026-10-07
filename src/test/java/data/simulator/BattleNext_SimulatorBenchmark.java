@@ -2,9 +2,6 @@ package data.simulator;
 
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,8 +19,6 @@ public class BattleNext_SimulatorBenchmark {
 		profiles.put("shenandoah_compact_dedup", List.of("-XX:+UnlockExperimentalVMOptions", "-XX:+UseShenandoahGC",
 				"-XX:ShenandoahGCMode=iu", "-XX:ShenandoahGCHeuristics=compact", "-XX:+UseStringDeduplication"));
 		profiles.put("g1_huge_methods", List.of("-XX:+UseG1GC", "-XX:-DontCompileHugeMethods"));
-		Path summaryPath = Path.of("build/reports/simulator-benchmark/summary.json");
-		Files.createDirectories(summaryPath.getParent());
 		JSONObject summaries = new JSONObject();
 		boolean failed = false;
 		for (var profile : profiles.entrySet()) {
@@ -34,9 +29,8 @@ public class BattleNext_SimulatorBenchmark {
 				summaries.put(profile.getKey(), new JSONObject().put("failure", exception.getClass().getName() + ": " + exception.getMessage()));
 				System.out.println("Benchmark failed: " + profile.getKey() + ": " + exception);
 			}
-			Files.writeString(summaryPath, summaries.toString(2), StandardCharsets.UTF_8);
+			System.out.println(summaries.toString(2));
 		}
-		System.out.println("Benchmark summary: " + summaryPath.toAbsolutePath());
-		if (failed) throw new IllegalStateException("Simulator benchmark contains failed profiles; inspect summary.json");
+		if (failed) throw new IllegalStateException("Simulator benchmark contains failed profiles; inspect the process output");
 	}
 }
