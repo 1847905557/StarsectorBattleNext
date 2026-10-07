@@ -188,7 +188,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			if (method.getName().equals("getColor") && args[0].equals("textFriendColor")) return Color.GREEN;
 			if (method.getName().equals("getColor") && args[0].equals("textEnemyColor")) return Color.RED;
 			try {

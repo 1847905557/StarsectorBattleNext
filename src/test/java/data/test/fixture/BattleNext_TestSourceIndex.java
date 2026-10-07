@@ -31,10 +31,12 @@ public class BattleNext_TestSourceIndex {
 		solver.add(new ClassLoaderTypeSolver(getClass().getClassLoader()));
 		JavaParser syntaxParser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
+				.setAttributeComments(false)
 				.setStoreTokens(false)
 				.setCharacterEncoding(StandardCharsets.UTF_8));
 		JavaParser runtimeParser = new JavaParser(new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
+				.setAttributeComments(false)
 				.setCharacterEncoding(StandardCharsets.UTF_8)
 				.setSymbolResolver(new JavaSymbolSolver(solver)));
 		Map<Path, CompilationUnit> parsed = new LinkedHashMap<>();

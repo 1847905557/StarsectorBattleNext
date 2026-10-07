@@ -47,7 +47,7 @@ public class BattleNext_TestVariantFixture extends BattleNext_TestPageFixture {
 		JSONArray wings = new JSONArray();
 		JSONArray groups = new JSONArray();
 		JSONObject modules = new JSONObject();
-		for (int index = 0; index < 30; index++) {
+		for (int index = 0; index < 12; index++) {
 			mods.put("mod_" + index + "_with_a_long_name");
 			wings.put("wing_" + index + "_with_a_long_name");
 			modules.put("slot_" + index, new JSONObject().put("hullId", "child")

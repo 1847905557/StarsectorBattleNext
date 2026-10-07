@@ -471,10 +471,15 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 
 	protected float labelHeight(String text, float width) {
 		float height = 0f;
-		for (String line : text.split("\\n", -1)) {
-			height += paragraphLineHeight * Math.max(1, Math.ceil(line.length() * 7f / Math.max(1f, width)));
+		float lineWidth = Math.max(1f, width);
+		int start = 0;
+		while (true) {
+			int end = text.indexOf('\n', start);
+			int length = (end < 0 ? text.length() : end) - start;
+			height += paragraphLineHeight * Math.max(1, Math.ceil(length * 7f / lineWidth));
+			if (end < 0) return height;
+			start = end + 1;
 		}
-		return height;
 	}
 
 	protected PositionAPI position(float width, float height) {
@@ -484,7 +489,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		return position;
 	}
 
-	protected static class Bounds {
+	protected class Bounds {
 		private PositionAPI parent;
 		private float left;
 		private float top;
@@ -546,13 +551,15 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		}
 
 		private float horizontal() {
-			return left + (parent == null ? 0f : parent.getX()
-					+ (middleX ? (parent.getWidth() - width) * 0.5f : 0f));
+			if (parent == null) return left + 0f;
+			Bounds owner = geometry.get(parent);
+			return left + (owner.horizontal() + (middleX ? (owner.width - width) * 0.5f : 0f));
 		}
 
 		private float vertical() {
-			return parent == null ? 0f - top : parent.getY()
-					+ (middleY ? (parent.getHeight() - height) * 0.5f : parent.getHeight() - height - top);
+			if (parent == null) return 0f - top;
+			Bounds owner = geometry.get(parent);
+			return owner.vertical() + (middleY ? (owner.height - height) * 0.5f : owner.height - height - top);
 		}
 	}
 

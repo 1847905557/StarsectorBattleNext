@@ -33,12 +33,14 @@ import java.util.Set;
 class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 	private Object previousEntries;
 	private Object previousFactory;
+	private Object previousLoadErrors;
 
 	@BeforeEach
 	void installRestrictionChoices() throws Exception {
 		var registry = BattleNext_RestrictionRegistry.getInstance();
 		previousEntries = getField(registry, "entries");
 		previousFactory = getField(registry, "scriptFactory");
+		previousLoadErrors = getField(registry, "loadErrors");
 		registry.load(new JSONArray()
 				.put(new JSONObject().put("id", "limitNumber").put("type", "number").put("script", "number").put("desc", "Number limit"))
 				.put(new JSONObject().put("id", "limitList").put("type", "list").put("script", "list").put("desc", "Item limit")),
@@ -54,6 +56,9 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		Field factory = registry.getClass().getDeclaredField("scriptFactory");
 		factory.setAccessible(true);
 		factory.set(registry, previousFactory);
+		Field loadErrors = registry.getClass().getDeclaredField("loadErrors");
+		loadErrors.setAccessible(true);
+		loadErrors.set(registry, previousLoadErrors);
 	}
 
 	@Test

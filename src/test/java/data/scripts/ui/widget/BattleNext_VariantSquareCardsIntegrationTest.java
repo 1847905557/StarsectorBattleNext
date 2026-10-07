@@ -291,61 +291,70 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		var bounds = position(120f, 120f);
 		bounds.inTL(32f, -32f);
 		setField(plugin, "position", bounds);
+		String previousLibraryPath = System.getProperty("org.lwjgl.librarypath");
 		System.setProperty("org.lwjgl.librarypath", Path.of("../../starsector-core/native/windows")
 				.toAbsolutePath().normalize().toString());
-		Pbuffer buffer = new Pbuffer(384, 384, new PixelFormat(), null, null);
 		try {
-			buffer.makeCurrent();
-			for (float scale : new float[]{1f, 1.5f, 2f}) {
-				resetGeometryContext();
-				GL11.glViewport(0, 0, 384, 384);
-				GL11.glMatrixMode(GL11.GL_PROJECTION);
-				GL11.glLoadIdentity();
-				GL11.glOrtho(0, 384f / scale, 0, 384f / scale, -1, 1);
-				GL11.glMatrixMode(GL11.GL_MODELVIEW);
-				GL11.glLoadIdentity();
-				GL11.glDisable(GL11.GL_SCISSOR_TEST);
-				GL11.glDisable(GL11.GL_LINE_SMOOTH);
-				GL11.glDisable(GL11.GL_BLEND);
-				GL11.glClearColor(1f, 0f, 1f, 1f);
-				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-				GL11.glLineWidth(7f);
-				plugin.renderBelow(1f);
-				assertEquals(7f, GL11.glGetFloat(GL11.GL_LINE_WIDTH));
-				ByteBuffer pixels = BufferUtils.createByteBuffer(384 * 384 * 4);
-				GL11.glReadPixels(0, 0, 384, 384, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-				int center = Math.round(92f * scale);
-				int edge = Math.round(32f * scale);
-				assertEquals(List.of(255, 0, 255), pixel(pixels, center, center));
-				float borderAlpha = BattleNext_UiTheme.PANEL.getAlpha() / 255f;
-				List<Integer> expectedBorder = List.of(
-						Math.round(BattleNext_UiTheme.PANEL.getRed() * borderAlpha + 255f * (1f - borderAlpha)),
-						Math.round(BattleNext_UiTheme.PANEL.getGreen() * borderAlpha),
-						Math.round(BattleNext_UiTheme.PANEL.getBlue() * borderAlpha + 255f * (1f - borderAlpha)));
-				int borderPixels = 0;
-				for (int horizontal = edge - 4; horizontal <= edge + 4; horizontal++) {
-					List<Integer> color = pixel(pixels, horizontal, center);
-					if (!color.equals(List.of(255, 0, 255))) {
-						for (int channel = 0; channel < 3; channel++) {
-							assertEquals(expectedBorder.get(channel).intValue(), color.get(channel).intValue(), 1);
+			Pbuffer buffer = new Pbuffer(384, 384, new PixelFormat(), null, null);
+			try {
+				buffer.makeCurrent();
+				for (float scale : new float[]{1f, 1.5f, 2f}) {
+					resetGeometryContext();
+					GL11.glViewport(0, 0, 384, 384);
+					GL11.glMatrixMode(GL11.GL_PROJECTION);
+					GL11.glLoadIdentity();
+					GL11.glOrtho(0, 384f / scale, 0, 384f / scale, -1, 1);
+					GL11.glMatrixMode(GL11.GL_MODELVIEW);
+					GL11.glLoadIdentity();
+					GL11.glDisable(GL11.GL_SCISSOR_TEST);
+					GL11.glDisable(GL11.GL_LINE_SMOOTH);
+					GL11.glDisable(GL11.GL_BLEND);
+					GL11.glClearColor(1f, 0f, 1f, 1f);
+					GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+					GL11.glLineWidth(7f);
+					plugin.renderBelow(1f);
+					assertEquals(7f, GL11.glGetFloat(GL11.GL_LINE_WIDTH));
+					ByteBuffer pixels = BufferUtils.createByteBuffer(384 * 384 * 4);
+					GL11.glReadPixels(0, 0, 384, 384, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+					int center = Math.round(92f * scale);
+					int edge = Math.round(32f * scale);
+					assertEquals(List.of(255, 0, 255), pixel(pixels, center, center));
+					float borderAlpha = BattleNext_UiTheme.PANEL.getAlpha() / 255f;
+					List<Integer> expectedBorder = List.of(
+							Math.round(BattleNext_UiTheme.PANEL.getRed() * borderAlpha + 255f * (1f - borderAlpha)),
+							Math.round(BattleNext_UiTheme.PANEL.getGreen() * borderAlpha),
+							Math.round(BattleNext_UiTheme.PANEL.getBlue() * borderAlpha + 255f * (1f - borderAlpha)));
+					int borderPixels = 0;
+					for (int horizontal = edge - 4; horizontal <= edge + 4; horizontal++) {
+						List<Integer> color = pixel(pixels, horizontal, center);
+						if (!color.equals(List.of(255, 0, 255))) {
+							for (int channel = 0; channel < 3; channel++) {
+								assertEquals(expectedBorder.get(channel).intValue(), color.get(channel).intValue(), 1);
+							}
+							borderPixels++;
 						}
-						borderPixels++;
 					}
+					assertEquals(2, borderPixels);
+					GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+					GL11.glEnable(GL11.GL_SCISSOR_TEST);
+					GL11.glScissor(edge + 3, 0, 384 - edge - 3, 384);
+					plugin.renderBelow(1f);
+					assertTrue(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST));
+					GL11.glReadPixels(0, 0, 384, 384, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+					assertEquals(List.of(255, 0, 255), pixel(pixels, edge, center));
+					assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
 				}
-				assertEquals(2, borderPixels);
-				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-				GL11.glEnable(GL11.GL_SCISSOR_TEST);
-				GL11.glScissor(edge + 3, 0, 384 - edge - 3, 384);
-				plugin.renderBelow(1f);
-				assertTrue(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST));
-				GL11.glReadPixels(0, 0, 384, 384, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-				assertEquals(List.of(255, 0, 255), pixel(pixels, edge, center));
-				assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
+			} finally {
+				resetGeometryContext();
+				buffer.destroy();
+				details.close();
 			}
 		} finally {
-			resetGeometryContext();
-			buffer.destroy();
-			details.close();
+			if (previousLibraryPath == null) {
+				System.clearProperty("org.lwjgl.librarypath");
+			} else {
+				System.setProperty("org.lwjgl.librarypath", previousLibraryPath);
+			}
 		}
 	}
 

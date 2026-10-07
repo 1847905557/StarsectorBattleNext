@@ -17,7 +17,6 @@ import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestGameFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,19 +40,13 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			try {
 				return method.invoke(delegate, args);
 			} catch (InvocationTargetException exception) {
 				throw exception.getCause();
 			}
 		}));
-		BattleNext_BattleSignals.consumePendingResult();
-	}
-
-	@AfterEach
-	void releaseReportNotificationState() {
-		BattleNext_BattleSignals.consumePendingResult();
 	}
 
 	@ParameterizedTest

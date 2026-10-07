@@ -30,7 +30,7 @@ class BattleNext_BaseStoreTest {
 
 		store.reload();
 		assertTrue(store.isLoaded());
-		assertFalse(store.getErrors().get(0).diagnostic().isBlank());
+		assertEquals(IOException.class.getName(), store.getErrors().get(0).diagnostic());
 		store.save(new Entry("alpha"));
 		assertEquals("alpha", store.get("alpha").getId());
 	}
@@ -108,7 +108,7 @@ class BattleNext_BaseStoreTest {
 	}
 
 	@Test
-	void stateFailureKeepsOldEntriesAndSuccessfulReloadClearsTheError() throws Exception {
+	void stateFailureKeepsPublishedEntriesAndSuccessfulReloadClearsTheError() throws Exception {
 		MemoryStore store = new MemoryStore();
 		Entry original = new Entry("original");
 		store.loaded = List.of(original);
@@ -126,7 +126,7 @@ class BattleNext_BaseStoreTest {
 	}
 
 	@Test
-	void saveFailurePreservesExistingEntryAndInputSourceMetadata() throws Exception {
+	void saveFailurePreservesPublishedEntryAndInputSourceMetadata() throws Exception {
 		MemoryStore store = new MemoryStore();
 		Entry original = new Entry("entry");
 		store.loaded = List.of(original);

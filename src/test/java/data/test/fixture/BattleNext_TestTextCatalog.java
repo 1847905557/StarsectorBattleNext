@@ -28,7 +28,11 @@ public class BattleNext_TestTextCatalog {
 		if (domain.endsWith("_CN")) {
 			domain = domain.substring(0, domain.length() - 3);
 		}
-		TextKey key = new TextKey(BattleNext_Settings.isCnTextEnabled() ? domain + "_CN" : domain, id.toString());
+		return lookup(BattleNext_Settings.isCnTextEnabled() ? domain + "_CN" : domain, id);
+	}
+
+	public static String lookup(Object category, Object id) {
+		TextKey key = new TextKey(category.toString(), id.toString());
 		assertTrue(ENTRIES.containsKey(key), "Missing text: " + key);
 		return ENTRIES.get(key);
 	}

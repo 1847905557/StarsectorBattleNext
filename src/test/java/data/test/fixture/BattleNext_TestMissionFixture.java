@@ -37,6 +37,10 @@ import java.util.function.IntPredicate;
 
 public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture {
 
+	protected Variant activeVariant;
+	protected Variant otherVariant;
+	protected PersonAPI player;
+	protected PersonAPI officer;
 	protected final Set<Integer> keys = new HashSet<>();
 	protected final List<FactionSpecAPI> factionSpecs = new ArrayList<>();
 	protected final JSONArray pveFactionRows = new JSONArray();
@@ -52,6 +56,24 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 
 	@BeforeEach
 	protected void configureMission() throws Exception {
+
+		activeVariant = new Variant("parent_variant", hulls.get("parent"));
+		activeVariant.getJson().put("displayName", "Active draft");
+		activeVariant.getApi().setNumFluxVents(42);
+		activeVariant.getJson().put("wings", selectedVariant.getJson().getJSONArray("wings"));
+		activeVariant.getJson().put("weaponGroups", selectedVariant.getJson().getJSONArray("weaponGroups"));
+		activeVariant.getApi().setModuleVariant("module", selectedVariant.getModules().get("module"));
+		activeVariant.getApi().addMod("ordinary");
+		activeVariant.getApi().addPermaMod("sm", true);
+		activeVariant.getApi().addPermaMod("active_dmod", false);
+		activeVariant.getApi().getSModdedBuiltIns().add("built");
+		activeVariant.getApi().getSuppressedMods().add("d");
+		otherVariant = new Variant("parent_variant", hulls.get("parent"));
+		otherVariant.getApi().setNumFluxVents(13);
+		player = person("Player", "player.png", "aggressive", false, true, false,
+				Map.of("combat", 2f, "fleet", 1f, "industry", 1f, "unlearned", 0f));
+		officer = person("Officer", "officer.png", "reckless", false, false, false,
+				Map.of("gunnery", 2f, "helmsmanship", 1f));
 
 		keyboardInput = BattleNext_KeyTuning.class.getDeclaredField("keyPressed");
 		keyboardInput.setAccessible(true);
@@ -108,7 +130,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 				return new JSONArray(pveFactionRows.toString());
 			}
 			if (Set.of("getAllWeaponSpecs", "getAllFighterWingSpecs", "getAllHullModSpecs").contains(method.getName())) return List.of();
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			try {
 				return method.invoke(settings, args);
 			} catch (InvocationTargetException exception) {
@@ -153,13 +175,6 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 			case "getRepairTracker" -> repair;
 			default -> null;
 		});
-	}
-
-	protected void quickBattles(String rows) throws Exception {
-		standard("alpha", "alpha", "parent_variant");
-		standard("beta", "beta", "child_variant");
-		write("tournament/quick_battle.csv", "player,enemy,map,size\n" + rows);
-		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
 	}
 
 	protected void fleetSkills(String id, List<String> skills, List<String> tags) throws Exception {

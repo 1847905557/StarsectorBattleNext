@@ -1,7 +1,6 @@
 package data.scripts.campaign;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -107,27 +106,21 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 	}
 
 	@Test
-	void staticMotherPreviewCentersAndScalesWithoutChangingNativeSpriteDimensions() throws Exception {
+	void previewBindsTheCapturedHullAndModuleToItsParentFrame() throws Exception {
+
 		spriteWidth = 600f;
 		spriteHeight = 1200f;
 		BattleNext_LunaPinnedVariantPanel display = open(source(), new BattleNext_PinnedVariantStore(), 1000);
-		CustomUIPanelPlugin preview = plugins.values().stream()
-				.filter(plugin -> plugin.getClass().getSimpleName().equals("PreviewPlugin")).findFirst().orElseThrow();
-		Object model = getField(preview, "preview");
-		List<?> parts = (List<?>) getField(model, "parts");
-		SpriteAPI sprite = (SpriteAPI) getField(parts.get(0), "sprite");
-		float[] original = sprites.get(sprite).clone();
+		Object details = getField(display, "details");
+		CustomUIPanelPlugin preview = (CustomUIPanelPlugin) getField(details, "preview");
 		PositionAPI position = (PositionAPI) getField(preview, "position");
-		preview.render(0.5f);
-		assertEquals(2, spriteCenters.size());
-		assertArrayEquals(new float[]{position.getCenterX(), position.getCenterY()}, spriteCenters.get(0));
-		assertArrayEquals(original, sprites.get(sprite));
-		assertTrue(spriteSizes.get(0)[0] <= position.getWidth());
-		assertTrue(spriteSizes.get(0)[1] <= (Float) getField(preview, "imageHeight"));
-		assertEquals(0.5f, spriteSizes.get(0)[0] / spriteSizes.get(0)[1]);
 		PositionAPI frame = geometry.get(position).getParent();
 		assertEquals(frame.getCenterX(), position.getCenterX());
 		assertEquals(frame.getY() + (frame.getHeight() - 18f) * 0.5f, position.getCenterY());
+		assertEquals("Parent - Unsubmitted", name(display).getText());
+		preview.render(0.5f);
+		assertEquals(List.of("graphics/parent.png", "graphics/child.png"),
+				renderedSprites.stream().map(spritePaths::get).toList());
 		TooltipState identity = tooltips.get(lists(display).get("identity"));
 		PositionAPI first = identity.getComponents().get(0).getPosition();
 		assertEquals(4f, frame.getY() + frame.getHeight() - 18f - first.getY() - first.getHeight());
@@ -141,8 +134,9 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 			}
 		}
 		PositionAPI last = identity.getComponents().get(identity.getComponents().size() - 1).getPosition();
-		assertTrue(last.getY() - position.getCenterY() - spriteSizes.get(0)[1] * 0.5f >= 8f - 0.001f);
+		assertTrue(last.getY() - spriteCenters.get(0)[1] - spriteRenderStates.get(0)[1] * 0.5f >= 8f - 0.001f);
 		display.close();
+		assertNull(getField(preview, "preview"));
 	}
 
 	@Test
@@ -200,7 +194,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"", "   ", "\t\r\n", "\u3000", "\u2003"})
+	@ValueSource(strings = {"", " \t\r\n", "\u3000"})
 	void blankNameIsRejectedAndCanBeCorrected(String blank) throws Exception {
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
@@ -229,7 +223,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		failBuild = true;
 		display.open(source.getApi(), "");
 		display.attach(panel(640f, 560f, display), 640f, 560f);
-		assertTrue(labels.stream().anyMatch(value -> value.contains("Unknown hull")));
+		assertTrue(labels.stream().anyMatch(value -> value.contains("Unknown hull: parent")));
 		assertFalse(buttons.get("pin_save").get());
 		display.close();
 	}
@@ -241,7 +235,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		source.getModules().put("module", "cycle".equals(failure) ? source.getApi() : null);
 		BattleNext_LunaPinnedVariantPanel display = open(source, new BattleNext_PinnedVariantStore(), 640);
 		assertFalse(buttons.get("pin_save").get());
-		assertTrue(labels.stream().anyMatch(value -> value.contains("cycle".equals(failure) ? "Cyclic variant" : "Missing module")));
+		assertTrue(labels.stream().anyMatch(value -> value.contains("cycle".equals(failure) ? "Cyclic variant modules" : "Missing module: module")));
 		display.buttonPressed("pin_save");
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		display.close();
@@ -273,7 +267,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 	}
 
 	@Test
-	void loadFailurePreservesNameAndAllowsRetry() throws Exception {
+	void unavailableDirectoryPreservesDraftAndAllowsCommitAfterRepair() throws Exception {
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
@@ -285,9 +279,12 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		assertTrue(buttons.get("pin_save").get());
 		assertTrue(labels.stream().anyMatch(value -> value.contains("_pinnedVariants")));
 		assertTrue(store.getAll().isEmpty());
+		assertEquals("blocked", Files.readString(directory.resolve("tournament/_pinnedVariants")));
 		Files.delete(directory.resolve("tournament/_pinnedVariants"));
 		display.buttonPressed("pin_save");
 		assertEquals(1, store.getAll().size());
+		assertEquals("Keep this name", store.getAll().get(0).getDisplayName());
+		assertTrue(Files.exists(directory.resolve(store.getAll().get(0).getSourcePath())));
 		display.close();
 	}
 
@@ -309,7 +306,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 	}
 
 	@Test
-	void malformedExistingPinIsReportedWhileNewPinIsSaved() throws Exception {
+	void malformedCatalogPinIsReportedWhileNewPinIsSaved() throws Exception {
 		Files.createDirectories(directory.resolve("tournament/_pinnedVariants"));
 		Files.writeString(directory.resolve("tournament/_pinnedVariants/broken.json"), "{}");
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();

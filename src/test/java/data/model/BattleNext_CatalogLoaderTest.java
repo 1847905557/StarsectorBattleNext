@@ -40,7 +40,12 @@ class BattleNext_CatalogLoaderTest extends BattleNext_TestGameFixture {
 		assertEquals(List.of("first", "last"), loader.load().stream().map(Entry::getId).toList());
 		assertEquals("broken", loader.getErrors().get(0).path());
 		assertEquals("broken", loader.getErrors().get(0).id());
-		assertTrue(loader.getErrors().get(0).diagnostic().contains(kind));
+		String exceptionType = switch (kind) {
+			case "io" -> IOException.class.getName();
+			case "json" -> JSONException.class.getName();
+			default -> IllegalArgumentException.class.getName();
+		};
+		assertEquals(exceptionType + ": " + kind, loader.getErrors().get(0).diagnostic());
 		assertEquals(List.of("first", "broken", "last"), loader.parsed);
 	}
 
@@ -48,20 +53,8 @@ class BattleNext_CatalogLoaderTest extends BattleNext_TestGameFixture {
 	void directoryFailurePropagatesBeforeParsing() {
 		MemoryLoader loader = new MemoryLoader();
 		loader.failDirectory = true;
-		assertThrows(IOException.class, loader::load);
+		assertEquals("directory", assertThrows(IOException.class, loader::load).getMessage());
 		assertEquals(List.of(), loader.parsed);
-	}
-
-	@Test
-	void sourceMetadataIsExplicitAndIndependentOfIdentity() {
-		Entry entry = new Entry("identity");
-		assertEquals(BattleNext_LoadSource.CREATED, entry.getSourceType());
-		assertEquals("", entry.getSourcePath());
-		entry.setSourceType(BattleNext_LoadSource.LEGACY);
-		entry.setSourcePath("path.csv");
-		assertEquals("identity", entry.getId());
-		assertEquals(BattleNext_LoadSource.LEGACY, entry.getSourceType());
-		assertEquals("path.csv", entry.getSourcePath());
 	}
 
 	private static class Entry extends BattleNext_BaseModel {

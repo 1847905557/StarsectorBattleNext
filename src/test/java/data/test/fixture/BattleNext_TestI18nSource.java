@@ -50,11 +50,11 @@ public class BattleNext_TestI18nSource {
 
 		List<Read> reads = new ArrayList<>();
 		for (MethodCallExpr call : calls) {
-			if (insideSection(call)) continue;
 			String name = call.getNameAsString();
 			if (!Set.of("get", "format", "getString").contains(name)) continue;
 			if (call.getScope().isEmpty()) continue;
 			if (call.getArguments().isEmpty()) continue;
+			if (insideSection(call)) continue;
 
 			Expression scope = call.getScope().orElseThrow();
 			if (name.equals("getString") && call.getArguments().size() == 2

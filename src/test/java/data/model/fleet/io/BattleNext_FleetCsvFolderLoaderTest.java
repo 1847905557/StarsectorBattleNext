@@ -103,7 +103,7 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 	}
 
 	@Test
-	void missingMembersAndModulesUseTheExistingErrorChannels() throws Exception {
+	void missingMembersAndModulesUseThePublishedErrorChannels() throws Exception {
 
 		csvFleet("missing", "1", "1,parent_local,,,,,,\n2,unknown_member,,,,,,\n");
 		variant("missing", "parent_local", "parent", 0, new JSONObject().put("module", "unknown_module"));

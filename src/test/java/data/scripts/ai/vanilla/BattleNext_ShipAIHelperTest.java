@@ -154,11 +154,11 @@ class BattleNext_ShipAIHelperTest {
 				case "getTotalElapsedTime" -> time[0];
 				default -> null;
 			});
-		assertEquals(1, BattleNext_ShipAIHelper.getBlockingShips(engine).size());
+		assertEquals(List.of(hulk), BattleNext_ShipAIHelper.getBlockingShips(engine));
 		ships.set(List.of());
-		assertEquals(1, BattleNext_ShipAIHelper.getBlockingShips(engine).size());
+		assertEquals(List.of(hulk), BattleNext_ShipAIHelper.getBlockingShips(engine));
 		time[0] = 2f;
-		assertEquals(0, BattleNext_ShipAIHelper.getBlockingShips(engine).size());
+		assertEquals(List.of(), BattleNext_ShipAIHelper.getBlockingShips(engine));
 	}
 
 	@Test

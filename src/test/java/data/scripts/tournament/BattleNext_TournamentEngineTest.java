@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -172,7 +173,11 @@ class BattleNext_TournamentEngineTest {
 	void fleetLimitRejectsExcessParticipants() {
 		BattleNext_TournamentModel tournament = tournament(5, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		tournament.setMaxFleet(4);
-		assertThrows(IllegalArgumentException.class, () -> start(tournament));
+		BattleNext_TournamentEngine.ConfigurationRejection rejected = assertThrows(BattleNext_TournamentEngine.ConfigurationRejection.class,
+				() -> start(tournament));
+		assertEquals(BattleNext_TournamentEngine.ConfigurationReason.LIMITS, rejected.getReason());
+		assertEquals("Tournament seed positions must match maxFleet", rejected.getMessage());
+		assertFalse(instances.containsKey(tournament));
 	}
 
 	@Test
@@ -264,9 +269,15 @@ class BattleNext_TournamentEngineTest {
 	@Test
 	void participantValidationRejectsDuplicateIdentityInsufficientFleetsAndCapacityMismatch() {
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 4);
-		for (List<String> slots : List.of(List.of("a", "a", "", ""), List.of("a", "", "", ""), List.of("a", "b"))) {
-			assertThrows(BattleNext_TournamentEngine.ConfigurationRejection.class,
+		Map<List<String>, BattleNext_TournamentEngine.ConfigurationReason> inputs = new LinkedHashMap<>();
+		inputs.put(List.of("a", "a", "", ""), BattleNext_TournamentEngine.ConfigurationReason.DUPLICATE_FLEETS);
+		inputs.put(List.of("a", "", "", ""), BattleNext_TournamentEngine.ConfigurationReason.MINIMUM_FLEETS);
+		inputs.put(List.of("a", "b"), BattleNext_TournamentEngine.ConfigurationReason.LIMITS);
+		for (var input : inputs.entrySet()) {
+			List<String> slots = input.getKey();
+			BattleNext_TournamentEngine.ConfigurationRejection rejected = assertThrows(BattleNext_TournamentEngine.ConfigurationRejection.class,
 					() -> engine.start(configuration, slots, ExecutionKind.MANUAL));
+			assertEquals(input.getValue(), rejected.getReason());
 		}
 	}
 

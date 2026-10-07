@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
-	void managedDeletionReleasesItsDirectoryAndLegacyDeletionPreservesTheSource() throws Exception {
+	void managedDeletionReleasesItsDirectoryAndNumberedCsvDeletionPreservesTheSource() throws Exception {
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		standard("managed", "managed", "parent_variant");
 		var store = new BattleNext_FleetStore();
@@ -61,7 +61,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	@Test
-	void rootAndFolderConflictUsesTheSameLegacyIdentity() throws Exception {
+	void rootAndFolderConflictUsesTheSameNumberedCsvIdentity() throws Exception {
 		csvFleet("", "01", "1,parent_variant,,,,,,\n");
 		csvFleet("package", "01", "1,parent_variant,,,,,,\n");
 		var store = new BattleNext_FleetStore();
@@ -74,7 +74,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	@Test
-	void leadingZerosKeepTheExistingDistinctNumberStrings() throws Exception {
+	void leadingZerosKeepDistinctNumberStrings() throws Exception {
 		csvFleet("", "01", "1,parent_variant,,,,,,\n");
 		csvFleet("package", "1", "1,parent_variant,,,,,,\n");
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
@@ -102,7 +102,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	@Test
-	void exportPreservesEveryLegacyByteAndReloadsCompleteLocalModules() throws Exception {
+	void exportPreservesEveryNumberedCsvByteAndReloadsCompleteLocalModules() throws Exception {
 
 		csvFleet("package", "1", "1,parent_local,,,,,,\n");
 		csvFleet("other", "2", "1,parent_variant,,,,,,\n");

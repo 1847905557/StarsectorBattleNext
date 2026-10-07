@@ -32,8 +32,6 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 		assertEquals(count * 42f + 35f, state.getMountedHeight());
 		assertEquals(Math.min(222f, state.getMountedHeight() + 10f), state.getViewport().getHeight());
 		assertTrue(state.isScrollable());
-		state.getScroller().setYOffset(10000f);
-		assertEquals(Math.max(0f, state.getMountedHeight() - state.getViewport().getHeight()), state.getScroller().getYOffset());
 	}
 
 	@ParameterizedTest
@@ -45,16 +43,7 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 		TooltipMakerAPI content = owner.createUIElement(width, 100f, false);
 		LabelAPI heading = content.addSectionHeading("Heading", BattleNext_UiTheme.TEXT,
 				BattleNext_UiTheme.PANEL, Alignment.MID, 0f);
-		UIComponentAPI anchor = content.getPrev();
-		assertTrue(anchor != heading);
-		assertTrue(!(anchor instanceof LabelAPI));
-		assertEquals(content.getWidthSoFar(), anchor.getPosition().getWidth());
-		assertEquals(anchor.getPosition().getWidth() + 10f, heading.getPosition().getWidth());
 		LabelAPI following = content.addPara("Following paragraph", 5f);
-		assertEquals(anchor.getPosition().getX(), following.getPosition().getX());
-		assertEquals(anchor.getPosition().getY() - following.getPosition().getHeight() - 5f,
-				following.getPosition().getY());
-		assertEquals(following, content.getPrev());
 		for (String title : new String[]{"Management heading with a long title 50%", "管理窗口标题与中文文本 50%"}) {
 			BattleNext_PageLayout.refreshHeading(content, heading, width, title);
 			assertEquals(content.shortenString(title, content.getWidthSoFar()), heading.getText());

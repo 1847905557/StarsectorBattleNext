@@ -26,6 +26,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 	private int panelsBeforeFailure = -1;
+	private static final Map<Class<?>, Constructor<?>> savingRefitConstructors = new HashMap<>();
 
 	@ParameterizedTest
 	@ValueSource(ints = {1000})
@@ -580,9 +582,14 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 	}
 
 	private Object savingRefit(DraftVariant current, Runnable afterSave, AtomicBoolean failRead) throws Exception {
+		return savingRefitConstructor(current.api.getClass()).newInstance(current.api, afterSave, failRead);
+	}
 
+	private static synchronized Constructor<?> savingRefitConstructor(Class<?> variantType) throws Exception {
+		Constructor<?> cached = savingRefitConstructors.get(variantType);
+		if (cached != null) return cached;
 		SimpleCompiler compiler = new SimpleCompiler();
-		compiler.setParentClassLoader(current.api.getClass().getClassLoader());
+		compiler.setParentClassLoader(variantType.getClassLoader());
 		compiler.cook("public class RefitDisplay {"
 				+ " public com.fs.starfarer.api.combat.ShipVariantAPI variant;"
 				+ " public Runnable afterSave;"
@@ -593,12 +600,13 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 				+ " public RefitDisplay getShipDisplay() { return this; }"
 				+ " public com.fs.starfarer.api.combat.ShipVariantAPI getCurrentVariant() {"
 				+ " if (failRead.get()) throw new IllegalStateException(\"Read failure\"); return variant; }"
-				+ " public void syncWithVariant(" + current.api.getClass().getName() + " variant) { this.variant = variant; }"
+				+ " public void syncWithVariant(" + variantType.getName() + " variant) { this.variant = variant; }"
 				+ " public void syncWithCurrentVariant() {}"
 				+ " public void saveCurrentVariant() { afterSave.run(); } }");
-		return compiler.getClassLoader().loadClass("RefitDisplay")
-				.getConstructor(ShipVariantAPI.class, Runnable.class, AtomicBoolean.class)
-				.newInstance(current.api, afterSave, failRead);
+		Constructor<?> constructor = compiler.getClassLoader().loadClass("RefitDisplay")
+				.getConstructor(ShipVariantAPI.class, Runnable.class, AtomicBoolean.class);
+		savingRefitConstructors.put(variantType, constructor);
+		return constructor;
 	}
 
 	@Override

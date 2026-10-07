@@ -14,6 +14,7 @@ import org.lwjgl.opengl.InputImplementation;
 import org.lwjgl.opengl.PixelFormat;
 
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -22,21 +23,19 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_SimulatorNativeIntegrationTest {
 
 	@Test
-	void allNativeHandlesBindAgainstActualGameJars() throws Exception {
+	void nativeHandlesMouseIsolationAndScriptSandboxUseActualGameDependencies() throws Exception {
 		String output = runProbe(Probe.class);
 		assertTrue(output.contains("Simulator native handles bound"), output);
-	}
-
-	@Test
-	void realLwjglCursorRequestsRemainVirtualAndCleanupRestoresTheOwnedBackend() throws Exception {
-		String output = runProbe(MouseProbe.class);
 		assertTrue(output.contains("Simulator mouse isolation verified"), output);
+		assertTrue(output.contains("Simulator script sandbox verified"), output);
 	}
 
 	@Test
@@ -46,12 +45,6 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		List<String> command = BattleNext_SimulatorLaunch.javaCommand(core, diagnostics);
 		assertEquals(List.of("-XX:ErrorFile=" + diagnostics.resolve("hs_err_pid%p.log")),
 				command.stream().filter(option -> option.startsWith("-XX:ErrorFile=")).toList());
-	}
-
-	@Test
-	void simulatorFileTransportLaunchAndNativeOperationsRunThroughTheActualScriptSandbox() throws Exception {
-		String output = runProbe(SandboxProbe.class);
-		assertTrue(output.contains("Simulator script sandbox verified"), output);
 	}
 
 	private String runProbe(Class<?> probe) throws Exception {
@@ -73,6 +66,8 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		public static void main(String[] arguments) throws Exception {
 			new BattleNext_SimulatorNative(Probe.class.getClassLoader());
 			System.out.println("Simulator native handles bound");
+			MouseProbe.main(arguments);
+			SandboxProbe.main(arguments);
 		}
 	}
 
@@ -144,9 +139,11 @@ class BattleNext_SimulatorNativeIntegrationTest {
 						default -> null;
 					}));
 			JSONObject nativeSettings = new JSONObject().put("devMode", false);
+			Map<Field, Object> previousNativeSettings = new LinkedHashMap<>();
 			for (var field : Class.forName("com.fs.starfarer.settings.StarfarerSettings").getDeclaredFields()) {
 				if (field.getType() != JSONObject.class || !Modifier.isStatic(field.getModifiers())) continue;
 				field.setAccessible(true);
+				previousNativeSettings.put(field, field.get(null));
 				field.set(null, nativeSettings);
 			}
 			ClassLoader restricted = (ClassLoader) Class.forName("com.fs.starfarer.loading.scripts.B")
@@ -166,6 +163,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				verifyService(loader, root);
 				System.out.println("Simulator script sandbox verified");
 			} finally {
+				for (var entry : previousNativeSettings.entrySet()) {
+					entry.getKey().set(null, entry.getValue());
+				}
 				Global.setSettings(previous);
 				if (saves == null) {
 					System.clearProperty("com.fs.starfarer.settings.paths.saves");
@@ -229,6 +229,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				Object request = requestType.getMethod("fromVariants", List.class, List.class, configType)
 						.invoke(null, List.of("wolf_CS"), List.of("wolf_CS"), config);
 				Object task = type.getMethod("submit", requestType).invoke(service, request);
+				String id = (String) requestType.getMethod("id").invoke(request);
 				Class<?> taskType = task.getClass();
 				long deadline = System.nanoTime() + 15000000000L;
 				Object result;
@@ -237,14 +238,21 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				}
 				if (result == null) throw new AssertionError("Sandbox startup failure must resolve the task");
 				if (!result.getClass().getMethod("outcome").invoke(result).toString().equals("FAILED")) throw new AssertionError("Sandbox startup outcome");
+				if (!result.getClass().getMethod("id").invoke(result).equals(id)) throw new AssertionError("Sandbox startup result identity");
+				if (!result.getClass().getMethod("diagnostic").invoke(result).toString().contains("cold start")) throw new AssertionError("Sandbox startup failure phase");
+				if (!taskType.getMethod("getState").invoke(task).toString().equals("FINISHED")) throw new AssertionError("Sandbox startup terminal state");
+				service.close();
 				Path diagnostics = root.resolve("game/mods/fixture/tournament/_simulations/_diagnostics");
 				try (var paths = Files.list(diagnostics)) {
 					List<Path> logs = paths.toList();
 					if (logs.isEmpty()) throw new AssertionError("Sandbox launch must redirect worker output");
 					for (Path log : logs) {
-						if (!Files.readString(log, StandardCharsets.UTF_8).contains("BattleNext_SimulatorWorker")) throw new AssertionError("Expected isolated worker classpath failure");
+						if (!Files.readString(log, StandardCharsets.UTF_8).contains("ClassNotFoundException: data.simulator.BattleNext_SimulatorWorker")) throw new AssertionError("Expected isolated worker classpath failure");
 					}
 				}
+				JSONObject journal = new JSONObject(Files.readString(root.resolve("game/mods/fixture/tournament/_simulations/_pending/" + id + ".json"), StandardCharsets.UTF_8));
+				if (!journal.getJSONObject("request").toString().equals(requestType.getMethod("toJson").invoke(request).toString())) throw new AssertionError("Sandbox startup journal request");
+				if (!journal.getJSONObject("result").toString().equals(result.getClass().getMethod("toJson").invoke(result).toString())) throw new AssertionError("Sandbox startup journal result");
 			}
 			try (var paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations/_runtime"))) {
 				if (paths.findAny().isPresent()) throw new AssertionError("Sandbox service must release owned runtime");

@@ -12,6 +12,7 @@ import data.scripts.order.BattleNext_OrderProcessor;
 import data.scripts.order.BattleNext_OrderThread;
 import data.test.fixture.BattleNext_TestOrderFixture;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
@@ -133,17 +134,22 @@ class BattleNext_OrderThreadIntegrationTest extends BattleNext_TestOrderFixture 
 	@Test
 	void runtimeFailureReportsOnceAndDisablesOnlyItsOriginalStatement() throws Exception {
 
-		var rows = csvRows();
+		var rows = new JSONArray()
+				.put(new JSONObject().put("id", "engage").put("type", "starter")
+						.put("script", "data.order.starter.EngageStarter").put("desc", "Engage"))
+				.put(new JSONObject().put("id", "nearest").put("type", "picker")
+						.put("script", "data.order.picker.NearestPicker").put("desc", "Nearest"));
 		rows.put(new JSONObject().put("id", "fail").put("type", "filter")
 				.put("script", "fail_script").put("desc", "Failure"));
 		AtomicInteger calls = new AtomicInteger();
-		var registry = BattleNext_OrderRegistry.getInstance();
+		var registry = new BattleNext_OrderRegistry();
 		registry.load(rows, name -> name.equals("fail_script") ? new FailingFilter(calls) : instantiate(name));
 		ShipState ship = world.ship(0, 0f);
 		world.ship(1, 100f);
 		var field = world.field(ship);
 		var errors = new ArrayList<String>();
-		var processor = processor("engage.missing.nearest;\nengage.fail.nearest;engage.nearest", errors);
+		var processor = new BattleNext_OrderProcessor("engage.missing.nearest;\nengage.fail.nearest;engage.nearest",
+				"ship A", registry, errors::add);
 		for (int index = 0; index < 100; index++) {
 			processor.advance(ship.getApi(), world.getEngine(), field);
 		}

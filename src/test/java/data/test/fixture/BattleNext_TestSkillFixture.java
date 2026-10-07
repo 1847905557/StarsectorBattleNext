@@ -54,7 +54,7 @@ public class BattleNext_TestSkillFixture extends BattleNext_TestUiFixture {
 				case "getSkillSpec" -> args[0].equals(SKILL_ID) ? skill : null;
 				case "getSortedSkillIds" -> List.of(SKILL_ID);
 				case "getCurrentState" -> GameState.TITLE;
-				case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
+				case "getString" -> BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 				case "createPerson" -> {
 					PreviewStats stats = new PreviewStats();
 					previews.add(stats);

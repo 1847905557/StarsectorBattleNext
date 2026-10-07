@@ -4,6 +4,9 @@ import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.input.InputEventAPI;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
@@ -24,46 +27,23 @@ class BattleNext_RttPluginTest {
 		assertFalse(BattleNext_RttPlugin.acceptsMouseInput(engine(true, false, false, true)));
 	}
 
-	@Test
-	void advanceClearsUiCoveredGestureWhilePreservingSelectedShips() throws ReflectiveOperationException {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void advanceUpdatesGestureCoverageWhilePreservingSelectedShips(boolean covered) throws ReflectiveOperationException {
 
 		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI ship = commandShip(new AtomicInteger(), new AtomicInteger());
-		plugin.init(commandEngine(List.of(ship), true, new AtomicInteger()));
+		AtomicBoolean commandUi = new AtomicBoolean();
+		plugin.init(commandEngine(List.of(ship), commandUi, new AtomicInteger()));
 		select(plugin, ship);
-		for (String name : List.of("pressing", "dragging", "addSelection")) {
-			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
-			field.setAccessible(true);
-			field.setBoolean(plugin, true);
-		}
+		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("down", -10, -10, true),
+				mouseEvent("move", 10, 10, true)));
+		commandUi.set(covered);
 		plugin.advance(0f, List.of());
 		for (String name : List.of("pressing", "dragging", "addSelection")) {
 			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
 			field.setAccessible(true);
-			assertFalse(field.getBoolean(plugin), name);
-		}
-		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
-		selected.setAccessible(true);
-		assertEquals(Set.of(ship), selected.get(plugin));
-	}
-
-	@Test
-	void advancePreservesUncoveredGestureAndSelection() throws ReflectiveOperationException {
-
-		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
-		ShipAPI ship = commandShip(new AtomicInteger(), new AtomicInteger());
-		plugin.init(commandEngine(List.of(ship), false, new AtomicInteger()));
-		select(plugin, ship);
-		for (String name : List.of("pressing", "dragging", "addSelection")) {
-			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
-			field.setAccessible(true);
-			field.setBoolean(plugin, true);
-		}
-		plugin.advance(0f, List.of());
-		for (String name : List.of("pressing", "dragging", "addSelection")) {
-			Field field = BattleNext_RttPlugin.class.getDeclaredField(name);
-			field.setAccessible(true);
-			assertTrue(field.getBoolean(plugin), name);
+			assertEquals(!covered, field.getBoolean(plugin), name);
 		}
 		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
 		selected.setAccessible(true);
@@ -99,6 +79,7 @@ class BattleNext_RttPluginTest {
 		ShipAPI ship = commandShip(commands, aiChanges);
 		plugin.init(commandEngine(List.of(ship), false, coordinateConversions));
 		select(plugin, ship);
+		coordinateConversions.set(0);
 		AtomicBoolean consumed = new AtomicBoolean();
 
 		plugin.processInputPreCoreControls(0f, List.of(controlEvent("SHIP_USE_SYSTEM", false, consumed)));
@@ -114,14 +95,16 @@ class BattleNext_RttPluginTest {
 		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		AtomicInteger commands = new AtomicInteger();
 		ShipAPI ship = commandShip(commands, new AtomicInteger());
-		plugin.init(commandEngine(List.of(ship), true, new AtomicInteger()));
+		AtomicBoolean commandUi = new AtomicBoolean();
+		plugin.init(commandEngine(List.of(ship), commandUi, new AtomicInteger()));
 		select(plugin, ship);
+		commandUi.set(true);
 		AtomicBoolean covered = new AtomicBoolean();
 		plugin.processInputPreCoreControls(0f, List.of(controlEvent("SHIP_VENT_FLUX", false, covered)));
 		assertFalse(covered.get());
 		assertEquals(0, commands.get());
 
-		plugin.init(commandEngine(List.of(ship), false, new AtomicInteger()));
+		commandUi.set(false);
 		AtomicBoolean repeat = new AtomicBoolean();
 		plugin.processInputPreCoreControls(0f, List.of(controlEvent("SHIP_VENT_FLUX", true, repeat)));
 		assertFalse(repeat.get());
@@ -143,12 +126,25 @@ class BattleNext_RttPluginTest {
 		assertSame(wrapper, installed.get());
 	}
 
-	@SuppressWarnings("unchecked")
 	private void select(BattleNext_RttPlugin plugin, ShipAPI... ships) throws ReflectiveOperationException {
+		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("down", -10, -10, false),
+				mouseEvent("move", 10, 10, false), mouseEvent("up", 10, 10, false)));
 		Field field = BattleNext_RttPlugin.class.getDeclaredField("selected");
 		field.setAccessible(true);
-		Set<ShipAPI> selected = (Set<ShipAPI>) field.get(plugin);
-		selected.addAll(List.of(ships));
+		assertEquals(Set.of(ships), field.get(plugin));
+	}
+
+	private InputEventAPI mouseEvent(String phase, int x, int y, boolean shift) {
+		return (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{InputEventAPI.class},
+				(instance, method, args) -> switch (method.getName()) {
+					case "isLMBDownEvent" -> phase.equals("down");
+					case "isMouseMoveEvent" -> phase.equals("move");
+					case "isLMBUpEvent" -> phase.equals("up");
+					case "isShiftDown" -> shift;
+					case "getX" -> x;
+					case "getY" -> y;
+					default -> method.getReturnType() == boolean.class ? false : null;
+				});
 	}
 
 	private ShipAPI commandShip(AtomicInteger commands, AtomicInteger aiChanges) {
@@ -159,6 +155,7 @@ class BattleNext_RttPluginTest {
 					case "isAlive" -> true;
 					case "isExpired", "isFighter", "isDrone", "isStation", "isStationModule" -> false;
 					case "getOwner", "getOriginalOwner" -> 0;
+					case "getLocation" -> new Vector2f();
 					case "giveCommand" -> {
 						assertSame(ShipCommand.VENT_FLUX, args[0]);
 						commands.incrementAndGet();
@@ -173,6 +170,10 @@ class BattleNext_RttPluginTest {
 	}
 
 	private CombatEngineAPI commandEngine(List<ShipAPI> ships, boolean commandUi, AtomicInteger conversions) {
+		return commandEngine(ships, new AtomicBoolean(commandUi), conversions);
+	}
+
+	private CombatEngineAPI commandEngine(List<ShipAPI> ships, AtomicBoolean commandUi, AtomicInteger conversions) {
 		ShipAPI player = proxy(ShipAPI.class, name -> "isShuttlePod".equals(name));
 		ViewportAPI viewport = (ViewportAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{ViewportAPI.class}, (instance, method, args) -> switch (method.getName()) {
@@ -183,7 +184,7 @@ class BattleNext_RttPluginTest {
 					}
 					default -> null;
 				});
-		CombatUIAPI ui = proxy(CombatUIAPI.class, name -> "isShowingCommandUI".equals(name) && commandUi);
+		CombatUIAPI ui = proxy(CombatUIAPI.class, name -> "isShowingCommandUI".equals(name) && commandUi.get());
 		return proxy(CombatEngineAPI.class, name -> switch (name) {
 			case "getPlayerShip" -> player;
 			case "getViewport" -> viewport;

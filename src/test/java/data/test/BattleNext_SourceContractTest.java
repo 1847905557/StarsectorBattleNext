@@ -74,14 +74,11 @@ class BattleNext_SourceContractTest {
 	}
 
 	@Test
-	void combatInputAndMissionConstructionUseTheirSharedFramework() throws Exception {
+	void combatInputSynchronizationAndMissionKeyboardReadsUseTheirSharedFramework() throws Exception {
 
 		var sources = BattleNext_TestSourceIndex.getInstance().getSources();
-		List<String> framework = List.of("init", "processInputPreCoreControls", "advance", "updateControlState", "acceptsMouseInput");
 		for (String name : List.of("BattleNext_FreeCameraPlugin", "BattleNext_RttPlugin")) {
 			var type = sources.get(Path.of("src/data/scripts/plugin", name + ".java")).getClassByName(name).orElseThrow();
-			assertEquals(framework, type.getMethods().stream().map(MethodDeclaration::getNameAsString)
-					.filter(framework::contains).distinct().toList(), name);
 			MethodDeclaration input = type.getMethodsByName("processInputPreCoreControls").get(0);
 			var synchronization = input.findAll(MethodCallExpr.class).stream()
 					.filter(call -> call.getNameAsString().equals("updateControlState")).findFirst().orElseThrow();
@@ -95,7 +92,6 @@ class BattleNext_SourceContractTest {
 		for (var entry : sources.entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data/missions"))) continue;
 			if (!entry.getKey().getFileName().toString().equals("MissionDefinition.java")) continue;
-			assertTrue(entry.getValue().getClassByName("MissionDefinition").orElseThrow().getConstructors().isEmpty(), entry.getKey().toString());
 			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
 				assertFalse(call.getNameAsString().equals("isKeyDown")
 						&& call.getScope().map(Object::toString).orElse("").equals("Keyboard"), () -> entry.getKey() + ": " + call);

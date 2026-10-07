@@ -22,6 +22,7 @@ class BattleNext_I18nSectionTest {
 	private SettingsAPI previousSettings;
 	private Field settingsValues;
 	private Object previousValues;
+	private final List<TextKey> requested = new ArrayList<>();
 	private final AtomicReference<JSONObject> stored = new AtomicReference<>(new JSONObject());
 
 	@BeforeEach
@@ -32,7 +33,10 @@ class BattleNext_I18nSectionTest {
 		previousValues = settingsValues.get(null);
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> switch (method.getName()) {
-					case "getString" -> BattleNext_TestTextCatalog.text(arguments[0], arguments[1]);
+					case "getString" -> {
+						requested.add(new TextKey(arguments[0].toString(), arguments[1].toString()));
+						yield BattleNext_TestTextCatalog.lookup(arguments[0], arguments[1]);
+					}
 					case "getBoolean" -> false;
 					case "readJSONFromCommon" -> stored.get();
 					case "writeJSONToCommon" -> { stored.set(new JSONObject(((JSONObject) arguments[1]).toString())); yield null; }
@@ -98,7 +102,7 @@ class BattleNext_I18nSectionTest {
 			Global.setSettings((SettingsAPI) Proxy.newProxyInstance(
 					getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 					(instance, method, arguments) -> method.getName().equals("getString")
-							? BattleNext_TestTextCatalog.text(arguments[0], arguments[1]) : null));
+							? BattleNext_TestTextCatalog.lookup(arguments[0], arguments[1]) : null));
 			BattleNext_I18nSection fleet = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_commander_skills"), fleet.get("commander_skills"));
 			assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_player_save_members"), 5), fleet.format("player_save_members", 5));
@@ -116,6 +120,7 @@ class BattleNext_I18nSectionTest {
 		BattleNext_I18nSection label = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_commander_skills");
 		for (boolean enabled : List.of(true, false, true)) {
 			BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+			requested.clear();
 			String category = "Fleet";
 			assertSame(fleet, BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_"));
 			assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_fleet_commander_skills"), fleet.get("commander_skills"));
@@ -123,6 +128,16 @@ class BattleNext_I18nSectionTest {
 			assertEquals(fleet.get("commander_skills"), fleet.format("commander_skills"));
 			assertEquals(String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_fleet_player_save_saved"),
 					"舰队 50%", "tournament/example/fleet_data.json"), fleet.format("player_save_saved", "舰队 50%", "tournament/example/fleet_data.json"));
+			String expectedDomain = "Fleet";
+			if (enabled) {
+				expectedDomain += "_CN";
+			}
+			assertEquals(List.of(new TextKey(expectedDomain, "BattleNext_fleet_commander_skills"),
+					new TextKey(expectedDomain, "BattleNext_fleet_commander_skills"),
+					new TextKey(expectedDomain, "BattleNext_fleet_commander_skills"),
+					new TextKey(expectedDomain, "BattleNext_fleet_commander_skills"),
+					new TextKey(expectedDomain, "BattleNext_fleet_commander_skills"),
+					new TextKey(expectedDomain, "BattleNext_fleet_player_save_saved")), requested);
 		}
 	}
 

@@ -53,7 +53,8 @@ class BattleNext_AttackAIModuleTest {
 
 	@Test
 	void rejectsNonMissileSpecWithWeaponId() {
-		assertThrows(IllegalArgumentException.class,
+		IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
 				() -> BattleNext_AttackAIModule.requireMissileSpec(new Object(), "wrong_spec"));
+		assertEquals("MISSILE weapons must fire missiles; weapon id: [wrong_spec]", error.getMessage());
 	}
 }

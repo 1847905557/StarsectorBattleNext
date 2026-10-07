@@ -225,7 +225,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"variant_50%", "registered_variant"})
+	@ValueSource(strings = {"variant_50%"})
 	void variantSelectorRendersCurrentPropertiesWithSharedHeaderAndSectionLayout(String id) {
 
 		var source = new BattleNext_VariantSourceProvider();

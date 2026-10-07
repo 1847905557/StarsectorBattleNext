@@ -29,25 +29,23 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		for (boolean expanded : List.of(false, true)) {
-			String id = "fleet_" + expanded;
-			BattleNext_MemberModel member = new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of());
-			BattleNext_FleetModel source = new BattleNext_FleetModel(id, "Fleet", List.of(), List.of(), List.of(member));
-			source.putVariant(BattleNext_VariantBuilder.fromVariant(selectedVariant.getApi()));
-			BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
-			editor.open(source, false);
-			attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-			if (expanded) editor.buttonPressed("toggle_member:0");
-			assertTrue(editor.save(), editor.getStatusText());
-			store.reload();
-			BattleNext_FleetModel saved = store.get(id);
-			assertEquals(member.getName(), saved.getMembers().get(0).getName());
-			var assembled = new BattleNext_FleetBuilder().build(saved);
-			assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
-			String expected = name.isBlank() ? selectedVariant.getApi().getHullSpec().getHullName() : name;
-			assertEquals(expected, assembled.getMembers().get(0).getShipName());
-			editor.close();
-		}
+		String id = "fleet";
+		BattleNext_MemberModel member = new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of());
+		BattleNext_FleetModel source = new BattleNext_FleetModel(id, "Fleet", List.of(), List.of(), List.of(member, member));
+		source.putVariant(BattleNext_VariantBuilder.fromVariant(selectedVariant.getApi()));
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
+		editor.open(source, false);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		editor.buttonPressed("toggle_member:1");
+		assertTrue(editor.save(), editor.getStatusText());
+		store.reload();
+		BattleNext_FleetModel saved = store.get(id);
+		assertEquals(List.of(name.trim(), name.trim()), saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		var assembled = new BattleNext_FleetBuilder().build(saved);
+		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
+		String expected = name.isBlank() ? selectedVariant.getApi().getHullSpec().getHullName() : name;
+		assertEquals(List.of(expected, expected), assembled.getMembers().stream().map(memberApi -> memberApi.getShipName()).toList());
+		editor.close();
 	}
 
 	@Test
@@ -175,8 +173,13 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		} else {
 			activeVariant.getApi().setModuleVariant("module", "cycle".equals(failure) ? activeVariant.getApi() : null);
 		}
-		assertThrows(IllegalArgumentException.class,
+		var exception = assertThrows(IllegalArgumentException.class,
 				() -> BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi()));
+		assertEquals(switch (failure) {
+			case "cycle" -> "Cyclic variant modules";
+			case "missing" -> "Missing module: module";
+			default -> "Unknown hull: parent";
+		}, exception.getMessage());
 		assertFalse(Files.exists(directory.resolve("tournament")));
 	}
 

@@ -34,12 +34,14 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 
 	private Object previousEntries;
 	private Object previousFactory;
+	private Object previousLoadErrors;
 
 	@BeforeEach
 	void registerRestrictions() throws Exception {
 		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		previousEntries = getField(registry, "entries");
 		previousFactory = getField(registry, "scriptFactory");
+		previousLoadErrors = getField(registry, "loadErrors");
 		registry.load(new JSONArray()
 				.put(new JSONObject().put("id", "limit").put("type", "number").put("script", "limit_script").put("desc", "Fleet limit 50%"))
 				.put(new JSONObject().put("id", "items").put("type", "list").put("script", "items_script").put("desc", "Equipment list")),
@@ -55,6 +57,9 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		Field factory = registry.getClass().getDeclaredField("scriptFactory");
 		factory.setAccessible(true);
 		factory.set(registry, previousFactory);
+		Field loadErrors = registry.getClass().getDeclaredField("loadErrors");
+		loadErrors.setAccessible(true);
+		loadErrors.set(registry, previousLoadErrors);
 	}
 
 	@Test

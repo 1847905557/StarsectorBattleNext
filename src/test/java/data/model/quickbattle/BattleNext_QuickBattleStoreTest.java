@@ -13,7 +13,7 @@ import java.util.List;
 class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
-	void headerOnlyStandardAndUnavailableLegacyPublishAnEmptyCatalog() throws Exception {
+	void headerOnlyStandardAndUnavailableNumberedCsvPublishAnEmptyCatalog() throws Exception {
 		write("tournament/quick_battle.csv", "player,enemy,map,size\n");
 		BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 		store.reload();
@@ -37,10 +37,10 @@ class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 		assertArrayEquals(standard, Files.readAllBytes(directory.resolve("tournament/quick_battle.csv")));
 		var added = new BattleNext_QuickBattleModel("c", "d", 2, 1);
 		added.setId("new");
-		byte[] legacy = Files.readAllBytes(directory.resolve("tournament/PvP_matches.csv"));
+		byte[] numberedSource = Files.readAllBytes(directory.resolve("tournament/PvP_matches.csv"));
 		store.save(added);
 		assertEquals("tournament/quick_battle.csv", added.getSourcePath());
-		assertArrayEquals(legacy, Files.readAllBytes(directory.resolve("tournament/PvP_matches.csv")));
+		assertArrayEquals(numberedSource, Files.readAllBytes(directory.resolve("tournament/PvP_matches.csv")));
 		store.delete("pvp-legacy-0");
 		assertEquals(List.of("player,enemy,map,size", "# note"), Files.readAllLines(directory.resolve("tournament/PvP_matches.csv"), StandardCharsets.UTF_8));
 		store.reload();

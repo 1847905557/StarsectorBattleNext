@@ -64,8 +64,11 @@ class BattleNext_CustomSystemAITest {
 	@Test
 	void customScriptMissingFailsConfiguration() {
 		ShipAPI ship = proxy(ShipAPI.class, (method, args) -> null);
-		assertThrows(IllegalArgumentException.class,
-				() -> new BattleNext_CustomSystemAI(ship, system(null), new ShipwideAIFlags()));
+		IllegalStateException error = assertThrows(IllegalStateException.class,
+				() -> BattleNext_SystemAIFactory.create(ship, system(null), new ShipwideAIFlags(), null, null, null, null));
+		assertEquals("Error creating AI of type [CUSTOM] for ship system [test_system]", error.getMessage());
+		assertInstanceOf(IllegalArgumentException.class, error.getCause());
+		assertEquals("CUSTOM ship system AI has no aiScript: test_system", error.getCause().getMessage());
 	}
 
 	private ShipSystemAPI system(ShipSystemAIScript script) throws JSONException {

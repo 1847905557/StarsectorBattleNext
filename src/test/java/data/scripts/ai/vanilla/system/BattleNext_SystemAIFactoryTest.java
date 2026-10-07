@@ -24,6 +24,7 @@ class BattleNext_SystemAIFactoryTest extends BattleNext_TestGameFixture {
 
 	private CombatEngineAPI previousEngine;
 	private final AtomicInteger customInitializations = new AtomicInteger();
+	private final Object[] customInitialization = new Object[4];
 
 	@BeforeEach
 	void installConstructionEngine() {
@@ -76,11 +77,48 @@ class BattleNext_SystemAIFactoryTest extends BattleNext_TestGameFixture {
 			BattleNext_SystemAI ai = assertDoesNotThrow(() -> BattleNext_SystemAIFactory.create(ship, system, flags, threat, attack, flocking, maneuver), type);
 			if (type.equals("NONE")) {
 				assertNull(ai);
-			} else {
-				assertNotNull(ai, type);
-				if (type.equals("EMP")) {
-					assertInstanceOf(BattleNext_EmpSystemAI.class, ai);
-				}
+				continue;
+			}
+			Class<? extends BattleNext_SystemAI> expected = switch (type) {
+				case "FLARE" -> BattleNext_BomberWeaponSystemAI.class;
+				case "FLARE_JAMMER" -> BattleNext_WingWeaponSystemAI.class;
+				case "CANISTER_FLAK" -> BattleNext_TargetScanWeaponSystemAI.class;
+				case "BURN_DRIVE" -> BattleNext_RetreatSystemAI.class;
+				case "BURN_DRIVE_TOGGLE" -> BattleNext_EngineModSystemAI.class;
+				case "MANEUVERING_JETS" -> BattleNext_WingEngineModSystemAI.class;
+				case "FAST_RELOAD" -> BattleNext_FastReloadSystemAI.class;
+				case "AMMO_RELOAD" -> BattleNext_AmmoReloadSystemAI.class;
+				case "FORTRESS_SHIELD" -> BattleNext_ShieldModSystemAI.class;
+				case "DAMPER_FIELD" -> BattleNext_DamperFieldOmegaSystemAI.class;
+				case "HIGH_ENERGY_FOCUS" -> BattleNext_ShieldFluxSystemAI.class;
+				case "PHASE_TELEPORTER" -> BattleNext_TeleporterTaskSystemAI.class;
+				case "PHASE_TELEPORTER_2" -> BattleNext_TeleporterTargetingSystemAI.class;
+				case "PHASE_DISPLACER" -> BattleNext_DisplacerSystemAI.class;
+				case "DRONE_LAUNCHER_PD", "DRONE_LAUNCHER_STANDARD" -> BattleNext_DroneLauncherSystemAI.class;
+				case "WEAPON_BOOST" -> BattleNext_WeaponTypeSystemAI.class;
+				case "DYNAMIC_STABILIZER" -> BattleNext_GenericSystemAI.class;
+				case "LIDAR_ARRAY" -> BattleNext_LidarArraySystemAI.class;
+				case "TEMPORAL_SHELL" -> BattleNext_EngagementSystemAI.class;
+				case "ACAUSAL_DISRUPTOR" -> BattleNext_AcausalDisruptorSystemAI.class;
+				case "MOTE_ATTRACTOR" -> BattleNext_MoteControlSystemAI.class;
+				case "ENTROPY_AMPLIFIER" -> BattleNext_EntropyAmplifierSystemAI.class;
+				case "INTERDICTOR" -> BattleNext_PhaseStateSystemAI.class;
+				case "MINE_STRIKE" -> BattleNext_MineStrikeSystemAI.class;
+				case "DRONE_STRIKE" -> BattleNext_DroneStrikeSystemAI.class;
+				case "EMP" -> BattleNext_EmpSystemAI.class;
+				case "PHASE_CLOAK" -> BattleNext_PhaseCloakSystemAI.class;
+				case "TARGETING_FEED" -> BattleNext_WingSupportSystemAI.class;
+				case "RESERVE_DEPLOYMENT" -> BattleNext_ReserveWingSystemAI.class;
+				case "RECALL_DEVICE" -> BattleNext_RecallDeviceSystemAI.class;
+				case "CUSTOM" -> BattleNext_CustomSystemAI.class;
+				default -> throw new AssertionError("Unspecified system test: " + type);
+			};
+			assertInstanceOf(expected, ai, type);
+			if (type.equals("CUSTOM")) {
+				assertSame(ship, customInitialization[0]);
+				assertSame(system, customInitialization[1]);
+				assertSame(flags, customInitialization[2]);
+				assertSame(Global.getCombatEngine(), customInitialization[3]);
 			}
 		}
 		assertEquals(1, customInitializations.get());
@@ -88,11 +126,16 @@ class BattleNext_SystemAIFactoryTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void missingAndUnknownTypesFailWithSystemIdentity() throws JSONException {
-		assertThrows(IllegalStateException.class,
+		IllegalStateException missing = assertThrows(IllegalStateException.class,
 				() -> BattleNext_SystemAIFactory.create(null, system(null), null, null, null, null, null));
+		assertEquals("Error creating AI of type [null] for ship system [test_system]", missing.getMessage());
+		assertInstanceOf(IllegalArgumentException.class, missing.getCause());
+		assertEquals("Missing aiType for ship system test_system", missing.getCause().getMessage());
 		IllegalStateException error = assertThrows(IllegalStateException.class,
 				() -> BattleNext_SystemAIFactory.create(null, system("NOT_REGISTERED"), null, null, null, null, null));
-		assertTrue(error.getMessage().contains("test_system"));
+		assertEquals("Error creating AI of type [NOT_REGISTERED] for ship system [test_system]", error.getMessage());
+		assertInstanceOf(IllegalArgumentException.class, error.getCause());
+		assertEquals("Unknown aiType NOT_REGISTERED", error.getCause().getMessage());
 	}
 
 	private ShipSystemAPI system(String type) throws JSONException {
@@ -103,10 +146,7 @@ class BattleNext_SystemAIFactoryTest extends BattleNext_TestGameFixture {
 			case "getId" -> "test_system";
 			case "getAIScript" -> proxy(ShipSystemAIScript.class, (name, values) -> {
 				if (name.equals("init")) {
-					assertNotNull(values[0]);
-					assertNotNull(values[1]);
-					assertNotNull(values[2]);
-					assertSame(Global.getCombatEngine(), values[3]);
+					System.arraycopy(values, 0, customInitialization, 0, customInitialization.length);
 					customInitializations.incrementAndGet();
 				}
 				return null;

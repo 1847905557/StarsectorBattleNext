@@ -94,14 +94,14 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 	void filesystemFailurePreservesTheInputModel(String kind) throws Exception {
 		var model = model(kind, "entry");
 		model.setSourceType(BattleNext_LoadSource.STANDARD);
-		model.setSourcePath("existing.json");
+		model.setSourcePath("source.json");
 		String before = model.toJson().toString();
 		var blocked = directory.resolve(root(kind));
 		Files.createDirectories(blocked.getParent());
 		Files.writeString(blocked, "blocked", StandardCharsets.UTF_8);
 		assertThrows(IOException.class, () -> saver(kind).save(model));
 		assertEquals(before, model.toJson().toString());
-		assertEquals("existing.json", model.getSourcePath());
+		assertEquals("source.json", model.getSourcePath());
 		assertEquals(BattleNext_LoadSource.STANDARD, model.getSourceType());
 		assertEquals("blocked", Files.readString(blocked, StandardCharsets.UTF_8));
 	}

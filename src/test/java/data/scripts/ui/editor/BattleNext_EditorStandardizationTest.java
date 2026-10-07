@@ -41,7 +41,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	@ParameterizedTest
 	@CsvSource({"fleet,180", "rule,1000", "tournament,1000", "quick,1000", "pinned,1000", "report,1000", "settings,1000"})
-	void everySessionPreservesLongTextFocusSelectionAndScrollAcrossRefreshAndReattach(String kind, int width) throws Exception {
+	void eachEditorBindsItsDraftFieldAndPreservesEditStateAcrossRefresh(String kind, int width) throws Exception {
 
 		BattleNext_EditorView editor = editor(kind);
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
@@ -49,17 +49,13 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		editor.setInputRouter(router);
 		editor.setOverlayHost(root);
 		editor.attach(root);
-		CustomPanelAPI editorPanel = (CustomPanelAPI) getField(editor, "panel");
-		assertEquals(root.getPosition().getX(), editorPanel.getPosition().getX());
-		assertEquals(root.getPosition().getY(), editorPanel.getPosition().getY());
-		assertEquals(root.getPosition().getWidth(), editorPanel.getPosition().getWidth());
-		assertEquals(root.getPosition().getHeight(), editorPanel.getPosition().getHeight());
 		Map<Object, BattleNext_TextField> fields = (Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields");
 		if (fields.isEmpty()) {
 			editor.buttonPressed("add");
 			fields = (Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields");
 		}
-		Object identity = fields.keySet().iterator().next();
+		Object identity = kind.equals("quick") ? fields.keySet().iterator().next()
+				: kind.equals("settings") ? "battle_time_limit" : "name";
 		BattleNext_TextField field = fields.get(identity);
 		String value = "中文😀50% " + "Long text ".repeat(40);
 		field.restoreEditState(new BattleNext_TextField.EditState(value, 12, 4, 0f, "Previous value", true));
@@ -67,28 +63,43 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		assertEquals(value, state.text());
 		assertEquals(-1, field.getMaxChars());
 		assertTrue(editor.hasUnsavedChanges());
-		int registered = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
-		for (int iteration = 0; iteration < 3; iteration++) {
-			editor.refreshContent();
-			BattleNext_TextField next = ((Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields")).get(identity);
-			assertNotSame(field, next);
-			assertEquals(state, next.captureEditState());
-			assertTrue(editor.hasUnsavedChanges());
-			assertEquals(1, children.get(root).size());
-			assertEquals(registered, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
-			field = next;
-		}
 		String draft = editor.serializeState();
+		editor.refreshContent();
+		BattleNext_TextField next = ((Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields")).get(identity);
+		assertNotSame(field, next);
+		assertEquals(state, next.captureEditState());
+		assertTrue(editor.hasUnsavedChanges());
+		assertEquals(draft, editor.serializeState());
+		editor.close();
+	}
+
+	@Test
+	void sharedEditorSessionOwnsRefreshReattachAndIdempotentRelease() throws Exception {
+		ProbeEditor editor = new ProbeEditor();
+		CustomPanelAPI root = panel(180f, 350f, new BaseCustomUIPanelPlugin());
+		attachEditor(editor, root);
+		BattleNext_TextField first = editor.field;
+		first.restoreEditState(new BattleNext_TextField.EditState("中文😀50% " + "Long text ".repeat(40),
+				12, 4, 0f, "Previous value", true));
+		BattleNext_TextField.EditState state = first.captureEditState();
+		String draft = editor.serializeState();
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(editor, "inputRouter");
+		editor.refreshContent();
+		assertEquals(state, editor.field.captureEditState());
+		assertFalse(first.hasFocus());
+		assertEquals(draft, editor.serializeState());
+		assertTrue(editor.hasUnsavedChanges());
+		assertFalse(((Map<?, ?>) getField(router.getSession(), "registrations")).containsKey(first));
 		editor.detach();
 		assertTrue(children.get(root).isEmpty());
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
+		assertFalse(router.getSession().hasInputState());
 		editor.attach(root);
+		assertEquals(state, editor.field.captureEditState());
 		assertEquals(draft, editor.serializeState());
-		assertEquals(state, ((Map<Object, BattleNext_TextField>) getField(kind.equals("quick") ? getField(editor, "display") : editor, "fields")).get(identity).captureEditState());
+		editor.close();
 		editor.close();
 		assertTrue(children.get(root).isEmpty());
-		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
-		editor.close();
+		assertFalse(router.getSession().hasInputState());
 	}
 
 	@Test

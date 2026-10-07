@@ -18,7 +18,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 
 	@Test
 	void mergedRowsPopulateRegistryAndRejectBadTypes() throws Exception {
-		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		JSONArray rows = new JSONArray();
 		rows.put(new JSONObject().put("id", "custom").put("type", "starter")
 				.put("script", "data.order.starter.AssaultStarter").put("desc", "Custom starter"));
@@ -59,7 +59,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 			} else if (change.equals("empty")) {
 				inputs.clear();
 			}
-			BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+			BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 			registry.load(new JSONArray(inputs), BattleNext_OrderRegistryTest::instantiate);
 			assertEquals(inputs.stream().map(input -> input.optString("id").trim()).toList(),
 					registry.getAll().stream().map(BattleNext_OrderSpec::getId).toList());
@@ -80,7 +80,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 
 	@Test
 	void invalidRegistrationPublishesDiagnosticsAndRejectsAllConflictingRows() throws Exception {
-		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "assault")
 				.put("type", "starter").put("script", "data.order.starter.AssaultStarter").put("desc", "Assault"));
 		registry.load(valid, BattleNext_OrderRegistryTest::instantiate);
@@ -99,7 +99,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 
 	@Test
 	void factoryValidatesAtLoadAndCreatesFreshInstancesOnDemand() throws Exception {
-		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		AtomicInteger creations = new AtomicInteger();
 		registry.load(new JSONArray().put(row("assault", "starter", "assaultScript")), name -> {
 			creations.incrementAndGet();
@@ -116,7 +116,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 
 	@Test
 	void parserKeepsCommandStructure() throws Exception {
-		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		JSONArray rows = new JSONArray();
 		rows.put(row("assault", "starter", "data.order.starter.AssaultStarter"));
 		rows.put(row("distance", "filter", "data.order.filter.DistanceFilter"));

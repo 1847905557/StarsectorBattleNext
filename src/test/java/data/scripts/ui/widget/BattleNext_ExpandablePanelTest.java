@@ -17,9 +17,6 @@ class BattleNext_ExpandablePanelTest {
 
 	@Test
 	void commonGeometryKeepsImagesTextAndMetricsInBounds() {
-		assertEquals(40f, BattleNext_ExpandablePanel.HEADER_HEIGHT);
-		assertEquals(32f, BattleNext_ExpandablePanel.ICON_SIZE);
-		assertEquals(4f, BattleNext_ExpandablePanel.ROW_GAP);
 		assertEquals(40f, BattleNext_ExpandablePanel.panelHeight(false, 200f));
 		assertEquals(240f, BattleNext_ExpandablePanel.panelHeight(true, 200f));
 		BattleNext_ExpandablePanel.HeaderLayout fleet =

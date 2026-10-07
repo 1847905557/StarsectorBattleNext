@@ -1,39 +1,23 @@
 package data.missions.BattleNext_pve;
 
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
 import data.missions.BattleNext_MissionBattleMap;
-import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
-import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.fleet.BattleNext_PveFleetGenerator;
-import data.scripts.plugin.BattleNext_RttPlugin;
-import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
-import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_KeyTuning;
-import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestMissionFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
-import org.json.JSONException;
-import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.input.Keyboard;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 class MissionDefinitionTest extends BattleNext_TestMissionFixture {
@@ -221,202 +205,4 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 				"mod_faction", 100, 45), mission.getNames().get(FleetSide.ENEMY));
 	}
 
-	@Test
-	void mergedOverrideAddsHiddenFactionToSelectionCountsAndTagline() throws Exception {
-
-		quickBattles("alpha,beta,0,1\n");
-		pveFactionRows.put(new JSONObject().put("id", "hidden"));
-		var hidden = new MissionState();
-		new MissionDefinition().defineMission(hidden.getApi());
-		assertEquals("hidden", generatedParameters.get(0).factionId);
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 3, 1, 2), hidden.getBriefing().get(1));
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
-				"hidden", 100, 45), hidden.getNames().get(FleetSide.ENEMY));
-		keys.add(Keyboard.KEY_RIGHT);
-		var next = new MissionState();
-		new MissionDefinition().defineMission(next.getApi());
-		assertEquals("mod_faction", generatedParameters.get(1).factionId);
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 3, 1, 2), next.getBriefing().get(1));
-		keys.clear();
-		pveFactionRows.put(0, new JSONObject().put("id", "hegemony"));
-		var reloaded = new MissionState();
-		new MissionDefinition().defineMission(reloaded.getApi());
-		assertEquals("hegemony", generatedParameters.get(2).factionId);
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 2, 1, 2), reloaded.getBriefing().get(1));
-	}
-
-	@Test
-	void overrideAllowsMissionWhenAllLoadedFactionsAreHidden() throws Exception {
-		quickBattles("alpha,beta,0,1\n");
-		factionSpecs.removeIf(faction -> faction.isShowInIntelTab());
-		pveFactionRows.put(new JSONObject().put("id", "hidden"));
-		var mission = new MissionState();
-		new MissionDefinition().defineMission(mission.getApi());
-		assertEquals("hidden", generatedParameters.get(0).factionId);
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 1, 1, 2), mission.getBriefing().get(1));
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"read", "parse", "row", "runtime"})
-	void factionSourceErrorsPublishUsableFactionsAndInternalErrorsBlockTheMission(String failure) throws Exception {
-
-		quickBattles("alpha,beta,0,1\n");
-		if (failure.equals("row")) {
-			pveFactionRows.put("Malformed merged row");
-		} else {
-			pveFactionReadFailure = switch (failure) {
-				case "read" -> new IOException("Injected faction CSV read failure");
-				case "parse" -> new JSONException("Injected faction CSV parse failure");
-				default -> new IllegalStateException("Injected faction CSV runtime failure");
-			};
-		}
-		var blocked = new MissionState();
-		new MissionDefinition().defineMission(blocked.getApi());
-		if (failure.equals("runtime")) {
-			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_factions_load_failed"), blocked.getBriefing().get(0));
-			assertTrue(blocked.getBriefing().get(1).contains(BattleNext_PveFleetGenerator.FACTIONS_PATH));
-			assertTrue(blocked.getPlugins().isEmpty());
-			assertTrue(generatedParameters.isEmpty());
-		} else {
-			assertEquals("mod_faction", generatedParameters.get(0).factionId);
-			assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 2), blocked.getBriefing().get(1));
-			assertFalse(blocked.getPlugins().isEmpty());
-		}
-		pveFactionReadFailure = null;
-		pveFactionRows.put(0, new JSONObject().put("id", "hidden"));
-		var recovered = new MissionState();
-		new MissionDefinition().defineMission(recovered.getApi());
-		assertEquals("hidden", generatedParameters.get(generatedParameters.size() - 1).factionId);
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"null", "empty", "exception", "inflation"})
-	void failedGenerationKeepsSelectionAndNextClickRetries(String failure) throws Exception {
-
-		quickBattles("alpha,beta,0,1\n");
-		Function<FleetParamsV3, CampaignFleetAPI> original = generator;
-		generator = params -> switch (failure) {
-			case "null" -> null;
-			case "empty" -> new GeneratedFleet("empty", params.factionId, List.of(), player).getApi();
-			case "inflation" -> proxy(CampaignFleetAPI.class, (method, args) -> {
-				if (method.equals("inflateIfNeeded")) throw new IllegalStateException("Inflation failed");
-				return null;
-			});
-			default -> throw new IllegalStateException("Generation failed");
-		};
-		keys.addAll(List.of(Keyboard.KEY_RIGHT, Keyboard.KEY_UP, Keyboard.KEY_D));
-		var blocked = new MissionState();
-		new MissionDefinition().defineMission(blocked.getApi());
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_generation_failed"), blocked.getNames().get(FleetSide.ENEMY));
-		assertTrue(blocked.getBriefing().get(1).startsWith("hegemony: "));
-		assertTrue(blocked.getPlugins().isEmpty());
-		assertTrue(blocked.getMembers().get(FleetSide.PLAYER).isEmpty());
-		generator = original;
-		keys.clear();
-		var retry = new MissionState();
-		new MissionDefinition().defineMission(retry.getApi());
-		assertEquals("child_variant", retry.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
-		assertEquals("hegemony", generatedParameters.get(1).factionId);
-		assertEquals(110f, generatedParameters.get(1).combatPts);
-	}
-
-	@Test
-	void emptySourcesAndFactionsUseBlockedMissionPresentation() throws Exception {
-		quickBattles("# alpha,beta,0,1\n");
-		var noRows = new MissionState();
-		new MissionDefinition().defineMission(noRows.getApi());
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_no_valid_battle"), noRows.getBriefing().get(0));
-		assertTrue(noRows.getPlugins().isEmpty());
-		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,0,1\n");
-		factionSpecs.removeIf(faction -> faction.isShowInIntelTab());
-		var noFactions = new MissionState();
-		new MissionDefinition().defineMission(noFactions.getApi());
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_no_factions"), noFactions.getBriefing().get(0));
-		assertTrue(generatedParameters.isEmpty());
-		assertTrue(noFactions.getPlugins().isEmpty());
-	}
-
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void pvpAndPveRegisterSamePluginsAndApplyCommanderSkills(boolean rtt) throws Exception {
-
-		quickBattles("alpha,beta,2,1.5\n");
-		fleetSkills("alpha", List.of("combat", "combat", "fleet"), List.of("full_assault"));
-		fleetSkills("beta", List.of("gunnery", "gunnery", "industry"), List.of("default_ai"));
-		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50);
-		var tournaments = new BattleNext_TournamentStore();
-		tournaments.reload();
-		var tournament = new BattleNext_TournamentModel();
-		tournament.setId("active");
-		tournament.setName("Active");
-		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
-		started.addGeneratedMatch(new BattleNext_Match("match", "alpha", "beta", 2, 1.5f));
-		tournaments.save(tournament);
-		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
-		instances.save(started);
-		instances.activate(started.getId());
-		var pvp = new MissionState();
-		MissionDefinitionPlugin pvpDefinition = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_pvp.MissionDefinition")
-				.getDeclaredConstructor().newInstance();
-		pvpDefinition.defineMission(pvp.getApi());
-		var pve = new MissionState();
-		new MissionDefinition().defineMission(pve.getApi());
-		assertEquals(pvp.getPlugins().stream().map(Object::getClass).toList(), pve.getPlugins().stream().map(Object::getClass).toList());
-		assertEquals(rtt, pve.getPlugins().stream().anyMatch(plugin -> plugin instanceof BattleNext_RttPlugin));
-		for (MissionState mission : List.of(pvp, pve)) {
-			assertEquals(2f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("combat"));
-			assertEquals(1f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("fleet"));
-			assertFalse(mission.getDefaultAi().get(FleetSide.PLAYER));
-			assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
-			assertEquals(123f, getField(mission.getPlugins().get(1), "timeLimit"));
-			assertEquals(123f, getField(mission.getPlugins().get(3), "timeLimit"));
-			for (FleetSide side : FleetSide.values()) {
-				assertTrue(mission.getEvents().indexOf("init:" + side) < mission.getEvents().indexOf("member:" + side));
-				assertTrue(mission.getEvents().lastIndexOf("member:" + side) < mission.getEvents().indexOf("commander:" + side));
-			}
-		}
-		assertEquals(2f, pvp.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("gunnery"));
-		assertEquals(1f, pvp.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("industry"));
-		assertEquals(2f, pve.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("combat"));
-		assertEquals("mod_faction patrol", getField(pve.getPlugins().get(pve.getPlugins().size() - 1), "enemyName"));
-		assertSame(generatedFleets.get(0).getMembers().get(0), pve.getMembers().get(FleetSide.ENEMY).get(0));
-	}
-
-	@ParameterizedTest
-	@ValueSource(ints = {0, 1})
-	void pveReportUsesNativeMembersMarkerAndRetentionWithoutAdvancingTournament(int keepCount) throws Exception {
-
-		quickBattles("alpha,beta,0,1\n");
-		write(BattleNext_StartedTournamentStore.PATH, "{\"formatVersion\":1,\"activeTournamentId\":\"missing\",\"instances\":[]}");
-		var meta = directory.resolve(BattleNext_StartedTournamentStore.PATH);
-		byte[] original = Files.readAllBytes(meta);
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount);
-		var mission = new MissionState();
-		new MissionDefinition().defineMission(mission.getApi());
-		var combat = new CombatState(mission);
-		BattleNext_ScorekeeperPlugin scorekeeper = mission.getPlugins().stream()
-				.filter(plugin -> plugin instanceof BattleNext_ScorekeeperPlugin).map(plugin -> (BattleNext_ScorekeeperPlugin) plugin).findFirst().orElseThrow();
-		BattleNext_BattleResultRecorder recorder = mission.getPlugins().stream()
-				.filter(plugin -> plugin instanceof BattleNext_BattleResultRecorder).map(plugin -> (BattleNext_BattleResultRecorder) plugin).findFirst().orElseThrow();
-		scorekeeper.init(combat.getApi());
-		scorekeeper.advance(0.1f, List.of());
-		assertTrue(scorekeeper.isFrozen());
-		recorder.init(combat.getApi());
-		recorder.advance(0.1f, List.of());
-		recorder.advance(0.1f, List.of());
-		var reports = new BattleNext_BattleReportStore();
-		reports.reload();
-		assertEquals(keepCount, reports.getAll().size());
-		var report = scorekeeper.getFrozenReport();
-		assertTrue(report.getName().contains("PvE row 1 (PLAYER), faction mod_faction, budget 100 FP, actual 45 FP"));
-		assertTrue(report.getName().startsWith("Standard vs mod_faction patrol - "));
-		assertEquals("player", report.getWinner());
-		assertEquals(24000L, report.getDurationMillis());
-		assertEquals(generatedFleets.get(0).getMembers().stream().map(member -> member.getShipName()).toList(),
-				report.getEnemyMembers().stream().map(member -> member.getName()).toList());
-		assertTrue(report.getEnemyMembers().stream().allMatch(member -> member.getStatus().equals("destroyed")));
-		assertEquals(1, combat.getNotices().size());
-		assertArrayEquals(original, Files.readAllBytes(meta));
-		assertTrue(BattleNext_BattleSignals.consumePendingResult());
-	}
 }

@@ -162,9 +162,11 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 	void generationFailureAndEmptyFleetsRemainExplicitFailures() {
 		var generator = new BattleNext_PveFleetGenerator();
 		this.generator = params -> null;
-		assertThrows(IllegalStateException.class, () -> generator.generate("hegemony", 100));
+		assertEquals("Fleet generator returned no fleet for hegemony",
+				assertThrows(IllegalStateException.class, () -> generator.generate("hegemony", 100)).getMessage());
 		this.generator = params -> new GeneratedFleet("empty", params.factionId, List.of(), player).getApi();
-		assertThrows(IllegalStateException.class, () -> generator.generate("hegemony", 100));
+		assertEquals("Fleet generator returned no ships for hegemony",
+				assertThrows(IllegalStateException.class, () -> generator.generate("hegemony", 100)).getMessage());
 		this.generator = params -> { throw new IllegalArgumentException("Unavailable hull"); };
 		assertEquals("Unavailable hull", assertThrows(IllegalArgumentException.class,
 				() -> generator.generate("hegemony", 100)).getMessage());

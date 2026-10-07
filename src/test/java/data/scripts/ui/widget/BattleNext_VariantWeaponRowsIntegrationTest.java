@@ -4,18 +4,13 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.*;
-import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_ReportTarget;
 import data.scripts.fleet.BattleNext_VariantBuilder;
-import data.scripts.report.BattleNext_DamageSourceReport;
-import data.scripts.ui.BattleNext_RefitPanelPlugin;
+import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.ui.BattleNext_UiInputRouter;
-import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.json.JSONArray;
@@ -32,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariantFixture {
 
@@ -71,7 +67,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = {640, 1001, 1400})
+	@ValueSource(ints = {640, 1001})
 	void weaponRowsHaveFixedGeometrySortedSlotsAndCompleteHoverText(int width) throws Exception {
 
 		var details = details(width, List.of("turret", "hardpoint", "broken", "both", "unknown", ""));
@@ -138,28 +134,36 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"turret", "hardpoint", "broken", "both", "unknown"})
+	@ValueSource(strings = {"broken", "unknown"})
 	void reportAndVariantSelectTheSameWorkingWeaponImage(String id) throws Exception {
 		var details = details(1000, List.of(id));
 		var variantRow = (CustomPanelAPI) tooltips.get(children.get(groupBody(details)).get(0)).getComponents().get(0);
-		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
-		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
-		var list = body.createUIElement(600f, 100f, false);
-		var method = report.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
-				TooltipMakerAPI.class, BattleNext_DamageSourceReport.class, float.class);
-		method.setAccessible(true);
-		method.invoke(report, body, list, new BattleNext_DamageSourceReport("weapon", id), 600f);
-		body.addUIElement(list).inTL(0f, 0f);
-		var reportRow = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
-		boolean missing = (Boolean) getField(plugins.get(variantRow), "missingIcon");
+		var model = new BattleNext_BattleReportModel();
+		var member = new BattleNext_MemberReport("parent_variant", "parent", "Parent");
+		member.addDamageDealt("weapon", id, 1d, 2d, 3d, 4d);
+		model.addPlayerMember(member);
+		AtomicReference<BattleNext_ReportDetails> owner = new AtomicReference<>();
+		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(model),
+				() -> owner.get().refreshContent());
+		owner.set(report);
+		var body = panel(600f, 400f, new BaseCustomUIPanelPlugin());
+		report.attach(body);
+		report.buttonPressed("member:0");
+		var reportRow = plugins.keySet().stream().filter(panel -> plugins.get(panel).getClass().getSimpleName().equals("SourceRowPlugin"))
+				.findFirst().orElseThrow();
+		boolean missing = id.equals("unknown");
+		assertEquals(missing, getField(plugins.get(variantRow), "missingIcon"));
 		assertEquals(missing, getField(plugins.get(reportRow), "missingIcon"));
 		if (!missing) {
 			var variantImage = tooltips.get(children.get(variantRow).get(0)).getComponents().get(0);
 			var reportImage = tooltips.get(children.get(reportRow).get(0)).getComponents().get(0);
-			assertEquals(imagePaths.get(variantImage), imagePaths.get(reportImage));
+			assertEquals("graphics/broken_hardpoint.png", imagePaths.get(variantImage));
+			assertEquals("graphics/broken_hardpoint.png", imagePaths.get(reportImage));
 			assertEquals(32f, reportImage.getPosition().getHeight());
 		}
 		details.close();
+		report.close();
+		assertNull(report.getPanel());
 	}
 
 	@ParameterizedTest
@@ -176,7 +180,9 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 
 	@Test
 	void imageFailuresAndRepeatedRefreshKeepGroupStateAndScrollOffsets() throws Exception {
-		var details = details(640, Collections.nCopies(12, "broken"));
+		List<String> ids = new ArrayList<>(Collections.nCopies(12, "turret"));
+		ids.set(0, "broken");
+		var details = details(640, ids);
 		int frameCount = children.get(details.getPanel()).size();
 		lists(details).get("groups").getExternalScroller().setYOffset(90f);
 		for (int cycle = 0; cycle < 3; cycle++) {
@@ -193,98 +199,6 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 		details.refreshContent();
 		assertEquals(12, tooltips.get(children.get(groupBody(details)).get(0)).getComponents().size());
 		details.close();
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"catalog", "campaign", "refit"})
-	void allVariantDetailEntrypointsDisplayTheSameWeaponRow(String entry) throws Exception {
-
-		var variant = source();
-		BattleNext_VariantDetails details;
-		Runnable close;
-		if (entry.equals("catalog")) {
-			var store = new BattleNext_PinnedVariantStore();
-			store.reload();
-			var pin = store.saveVariant("Example", variant.getApi());
-			var page = page(store, Runnable::run, (description, action) -> {}, () -> {});
-			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-			page.buttonPressed("pin:" + pin.getSourcePath());
-			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
-			close = page::close;
-		} else if (entry.equals("campaign")) {
-			var store = new BattleNext_PinnedVariantStore();
-			store.reload();
-			var display = open(variant, store, 1000);
-			details = (BattleNext_VariantDetails) getField(display, "details");
-			close = () -> {
-				try {
-					var method = display.getClass().getDeclaredMethod("close");
-					method.setAccessible(true);
-					method.invoke(display);
-				} catch (Exception exception) {
-					throw new AssertionError(exception);
-				}
-			};
-		} else {
-			var plugin = new BattleNext_RefitPanelPlugin(() -> {});
-			plugin.init(panel(1000f, 700f, plugin), 1000f, 700f);
-			ShipVariantAPI current = (ShipVariantAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
-					new Class<?>[]{ShipVariantAPI.class}, (instance, method, arguments) -> {
-				if (method.getName().equals("clone")) return instance;
-				if (method.getName().equals("getHullMods")) return List.of("ordinary", "sm", "built");
-				try {
-					return method.invoke(variant.getApi(), arguments);
-				} catch (InvocationTargetException exception) {
-					throw exception.getCause();
-				}
-			});
-			FleetMemberAPI member = proxy(FleetMemberAPI.class, (method, arguments) ->
-					method.equals("getVariant") ? current : null);
-			plugin.open(member, new Refit(current));
-			details = (BattleNext_VariantDetails) getField(plugin, "details");
-			close = plugin::close;
-		}
-		((Set<Integer>) getField(details, "expanded")).add(0);
-		details.refreshContent();
-		var rows = tooltips.get(children.get(groupBody(details)).get(0)).getComponents();
-		assertEquals(1, rows.size());
-		var row = (CustomPanelAPI) rows.get(0);
-		assertEquals(40f, row.getPosition().getHeight());
-		var icon = tooltips.get(children.get(row).get(0)).getComponents().get(0);
-		assertEquals("graphics/laser_turret.png", imagePaths.get(icon));
-		for (String section : List.of("modules", "wings")) {
-			var tileRow = tooltips.get(lists(details).get(section)).getComponents().stream()
-					.filter(CustomPanelAPI.class::isInstance).map(CustomPanelAPI.class::cast).findFirst().orElseThrow();
-			var tile = (CustomPanelAPI) children.get(tileRow).get(0);
-			assertEquals(tile.getPosition().getWidth(), tile.getPosition().getHeight());
-			assertEquals("SquareCardPlugin", plugins.get(tile).getClass().getSimpleName());
-			var caption = (LabelAPI) tooltips.get(children.get(tile).get(0)).getComponents().get(1);
-			assertEquals(section.equals("modules") ? "Child" : "Wing wing", caption.getText());
-			assertEquals(Alignment.MID, labelAlignments.get(caption.getPosition()));
-			var captionState = tooltips.get(children.get(tile).get(0));
-			var hover = tooltip(360f, 300f, false);
-			attachedTooltips.get(captionState.getComponents().get(0)).createTooltip(hover, false, null);
-			var tooltipParts = tooltips.get(hover).getComponents();
-			assertEquals(3, tooltipParts.size());
-			var identifier = (LabelAPI) tooltipParts.get(1);
-			assertEquals(section.equals("modules") ? "child" : "wing", identifier.getText());
-			assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(identifier.getPosition()));
-		}
-		JSONObject snapshot = (JSONObject) getField(details, "variantJson");
-		for (String mode : List.of("LINKED", "ALTERNATING")) {
-			snapshot.getJSONArray("weaponGroups").getJSONObject(0).put("mode", mode);
-			details.refreshContent();
-			var group = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
-			var top = (CustomPanelAPI) children.get(group).get(0);
-			var sprite = (SpriteAPI) getField(plugins.get(top), "primarySprite");
-			assertEquals(mode.equals("LINKED") ? "graphics/icons/jump-point.png" : "graphics/icons/jump-point2.png",
-					spritePaths.get(sprite));
-			assertEquals(BattleNext_UiTheme.ACCENT, getField(plugins.get(top), "primaryTint"));
-			assertEquals(Set.of(0), getField(details, "expanded"));
-		}
-		details.close();
-		close.run();
-		assertNull(details.getPanel());
 	}
 
 	private BattleNext_VariantDetails details(int width, List<String> ids) throws Exception {

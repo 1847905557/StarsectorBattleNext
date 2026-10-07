@@ -25,10 +25,12 @@ import java.util.*;
 
 public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 
+	private static List<List<String>> sourceRows;
 	protected final World world = new World();
 	private CombatEngineAPI previousEngine;
 	private Object previousEntries;
 	private Object previousFactory;
+	private Object previousLoadErrors;
 
 	@BeforeEach
 	void installOrders() throws Exception {
@@ -37,6 +39,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		var registry = BattleNext_OrderRegistry.getInstance();
 		previousEntries = state(registry, "entries");
 		previousFactory = state(registry, "scriptFactory");
+		previousLoadErrors = state(registry, "loadErrors");
 		registry.load(csvRows(), BattleNext_TestOrderFixture::instantiate);
 	}
 
@@ -46,6 +49,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		var registry = BattleNext_OrderRegistry.getInstance();
 		setState(registry, "entries", previousEntries);
 		setState(registry, "scriptFactory", previousFactory);
+		setState(registry, "loadErrors", previousLoadErrors);
 	}
 
 	protected static Object instantiate(String name) {
@@ -56,12 +60,18 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		}
 	}
 
-	protected static JSONArray csvRows() throws Exception {
+	protected static synchronized JSONArray csvRows() throws Exception {
+		if (sourceRows == null) {
+			List<List<String>> parsed = new ArrayList<>();
+			List<String> lines = Files.readAllLines(Path.of(BattleNext_OrderRegistry.PATH), StandardCharsets.UTF_8);
+			for (String line : lines.subList(1, lines.size())) {
+				if (line.isBlank() || line.stripLeading().startsWith("#")) continue;
+				parsed.add(List.copyOf(BattleNext_CsvLine.parse(line)));
+			}
+			sourceRows = List.copyOf(parsed);
+		}
 		JSONArray rows = new JSONArray();
-		List<String> lines = Files.readAllLines(Path.of(BattleNext_OrderRegistry.PATH), StandardCharsets.UTF_8);
-		for (String line : lines.subList(1, lines.size())) {
-			if (line.isBlank() || line.stripLeading().startsWith("#")) continue;
-			List<String> fields = BattleNext_CsvLine.parse(line);
+		for (List<String> fields : sourceRows) {
 			rows.put(new JSONObject().put("id", fields.get(0)).put("type", fields.get(1))
 					.put("script", fields.get(2)).put("desc", fields.get(3)));
 		}

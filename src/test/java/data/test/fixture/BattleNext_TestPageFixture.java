@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,6 +97,8 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 			for (int index = 0; index < array.length(); index++) {
 				assertJsonEquals(array.get(index), other.get(index));
 			}
+		} else if (expected instanceof Number number) {
+			assertEquals(0, new BigDecimal(number.toString()).compareTo(new BigDecimal(((Number) actual).toString())));
 		} else {
 			assertEquals(expected, actual);
 		}

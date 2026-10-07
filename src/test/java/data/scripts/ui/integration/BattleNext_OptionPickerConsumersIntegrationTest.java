@@ -11,11 +11,14 @@ import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
+import data.model.tournament.BattleNext_TournamentModel;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
@@ -25,6 +28,9 @@ import data.scripts.ui.editor.BattleNext_FleetEditor;
 import data.scripts.ui.editor.BattleNext_RuleEditor;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_TournamentDisplay;
+import data.scripts.ui.widget.view.BattleNext_TournamentTemplate;
+import data.scripts.ui.widget.view.BattleNext_TournamentView;
 import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
@@ -33,8 +39,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -42,14 +47,20 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVariantFixture {
 
 	private static final String PARAGRAPH = "Complete description 20%. " + "Full first paragraph. ".repeat(30).strip();
 	private Object previousRestrictions;
 	private Object previousScriptFactory;
+	private Object previousLoadErrors;
 	private ShipVariantAPI variant;
 	private BattleNext_RefitPanelPlugin refit;
+	private BattleNext_FleetEditor fleetEditor;
+	private BattleNext_TournamentTemplate template;
+	private final List<Runnable> ownerClosers = new ArrayList<>();
 
 	@BeforeEach
 	void installChoiceData() throws Exception {
@@ -57,6 +68,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		var registry = BattleNext_RestrictionRegistry.getInstance();
 		previousRestrictions = getField(registry, "entries");
 		previousScriptFactory = getField(registry, "scriptFactory");
+		previousLoadErrors = getField(registry, "loadErrors");
 		registry.load(new JSONArray().put(new JSONObject().put("id", "limit").put("type", "number")
 				.put("script", "restriction").put("desc", "Fleet limit 20%")),
 				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
@@ -137,30 +149,53 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 
 	@AfterEach
 	void restoreChoiceRegistry() throws Exception {
-		if (refit != null) refit.close();
-		BattleNext_UiInputRouter.activate(null);
-		var registry = BattleNext_RestrictionRegistry.getInstance();
-		setField(registry, "entries", previousRestrictions);
-		setField(registry, "scriptFactory", previousScriptFactory);
+		try {
+			for (int index = ownerClosers.size() - 1; index >= 0; index--) {
+				ownerClosers.get(index).run();
+			}
+		} finally {
+			ownerClosers.clear();
+			refit = null;
+			fleetEditor = null;
+			BattleNext_UiInputRouter.activate(null);
+			var registry = BattleNext_RestrictionRegistry.getInstance();
+			setField(registry, "entries", previousRestrictions);
+			setField(registry, "scriptFactory", previousScriptFactory);
+			setField(registry, "loadErrors", previousLoadErrors);
+		}
 	}
 
-	@ParameterizedTest
-	@CsvSource({"commander,520,Sensors,sensors", "officer,520,Sensors,sensors",
-			"variant,360,Parent - Unsubmitted,parent_variant", "personality,360,Steady,steady",
-			"portrait,520,Hegemony,graphics/portraits/hegemony.png", "tournament,360,Fleet name,fleet_id",
-			"smod,360,Hullmod ordinary,ordinary", "dmod,360,Hullmod damaged,damaged",
-			"restriction,360,Fleet limit 20%,limit"})
-	void allNineConsumersUseTheirNativeWidthIdentityAndCompleteText(String kind, int width,
-			String title, String id) throws Exception {
-
+	@Test
+	void allNineConsumersUseTheirNativeWidthIdentityAndCompleteText() throws Exception {
 		CustomPanelAPI root = panel(1000f, 900f, new BaseCustomUIPanelPlugin());
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		List<List<String>> consumers = List.of(
+				List.of("commander", "520", "Sensors", "sensors"),
+				List.of("officer", "520", "Sensors", "sensors"),
+				List.of("variant", "360", "Parent - Unsubmitted", "parent_variant"),
+				List.of("personality", "360", "Steady", "steady"),
+				List.of("portrait", "520", "Hegemony", "graphics/portraits/hegemony.png"),
+				List.of("tournament", "360", "Fleet name", "fleet_id"),
+				List.of("smod", "360", "Hullmod ordinary", "ordinary"),
+				List.of("dmod", "360", "Hullmod damaged", "damaged"),
+				List.of("restriction", "360", "Fleet limit 20%", "limit"));
+		for (List<String> consumer : consumers) {
+			assertConsumer(root, router, consumer.get(0), Integer.parseInt(consumer.get(1)), consumer.get(2), consumer.get(3));
+		}
+	}
+
+	private void assertConsumer(CustomPanelAPI root, BattleNext_UiInputRouter router, String kind, int width,
+			String title, String id) throws Exception {
+
 		BattleNext_OptionPicker picker = picker(kind, root, router);
 		router = (BattleNext_UiInputRouter) getField(picker, "inputRouter");
-		int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
+		int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size()
+				- (kind.equals("tournament") ? 1 : 0);
 		var open = picker.getClass().getDeclaredMethod("open");
 		open.setAccessible(true);
-		open.invoke(picker);
+		if (!kind.equals("tournament")) {
+			open.invoke(picker);
+		}
 		CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
 		assertEquals(1, tooltips.get(grid).getComponents().size());
@@ -217,13 +252,41 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		if (kind.equals("dmod")) {
 			assertEquals(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_suitable"), ((LabelAPI) components.get(3)).getText());
 		}
-		picker.closeOverlays();
+		if (List.of("commander", "officer", "variant", "personality", "portrait").contains(kind)) {
+			Map<TextFieldAPI, String> siblings = new LinkedHashMap<>();
+			BattleNext_OptionField selected = null;
+			for (BattleNext_OptionField field : optionFields(fleetEditor)) {
+				if (getField(field, "picker") == picker) {
+					selected = field;
+				} else {
+					siblings.put(field.getField(), field.getField().getText());
+				}
+			}
+			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
+			selection.clear();
+			selection.put(id, 1);
+			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			plugins.get(popup).buttonPressed(buttonIds.get("CONFIRM"));
+			assertEquals(id, selected.getField().getText());
+			for (var sibling : siblings.entrySet()) {
+				assertEquals(sibling.getValue(), sibling.getKey().getText());
+			}
+		} else if (kind.equals("tournament")) {
+			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
+			selection.put(id, 1);
+			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			plugins.get(popup).buttonPressed(buttonIds.get("CONFIRM"));
+			assertEquals(List.of(id, ""), template.getFleetIds());
+		} else {
+			picker.closeOverlays();
+		}
 		assertNull(getField(picker, "popup"));
 		assertTrue(removedComponents.contains(gridPanel));
 		assertTrue(router.isEmpty());
 		assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
-		picker.close();
-		router.clear();
+		if (kind.equals("tournament")) {
+			picker.close();
+		}
 	}
 
 	private BattleNext_OptionPicker picker(String kind, CustomPanelAPI root, BattleNext_UiInputRouter router) throws Exception {
@@ -241,38 +304,69 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 					return List.of(new BattleNext_FleetModel("fleet_id", "Fleet name", List.of(), List.of(), List.of()));
 				}
 			};
-			BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, root, 190f, 30f, "Select fleet", 0f,
-					new BattleNext_FleetSourceProvider(fleets), BattleNext_OptionPicker.OptionSelectionMode.SINGLE, List::of, ids -> {});
-			TooltipMakerAPI host = root.createUIElement(190f, 30f, false);
-			picker.attach(host, root);
-			root.addUIElement(host).inTL(0f, 0f);
-			return picker;
+			template = new BattleNext_TournamentTemplate(2);
+			var configuration = new BattleNext_TournamentModel("cup", "Cup",
+					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+			var display = new BattleNext_TournamentDisplay(router, configuration, null,
+					BattleNext_TournamentDisplay.details(configuration, null, template.getFleetIds(), fleets,
+							new BattleNext_RuleStore(), "", List.of()), List.of(), action -> {});
+			ownerClosers.add(display::close);
+			display.enableTemplateEditing(root, new BattleNext_FleetSourceProvider(fleets), template::getFleetIds, template::select);
+			display.attach(root);
+			var chart = (BattleNext_TournamentView) getField(display, "chart");
+			var node = (BattleNext_TournamentView.Node) ((List<?>) getField(chart, "nodes")).get(0);
+			float[] point = chart.project(node.x + 110f, node.y + 33f);
+			for (boolean down : List.of(true, false)) {
+				AtomicBoolean consumed = new AtomicBoolean();
+				InputEventAPI click = proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
+					case "isLMBDownEvent", "isMouseDownEvent" -> down;
+					case "isLMBUpEvent" -> !down;
+					case "isMouseEvent" -> true;
+					case "getX" -> (int) point[0];
+					case "getY" -> (int) point[1];
+					case "isConsumed" -> consumed.get();
+					case "consume" -> {
+						consumed.set(true);
+						yield null;
+					}
+					default -> null;
+				});
+				chart.handleInput(List.of(click));
+				assertTrue(consumed.get());
+			}
+			return (BattleNext_OptionPicker) getField(display, "fleetPicker");
 		} else if (kind.equals("restriction")) {
 			var editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
+			ownerClosers.add(editor::close);
 			editor.open(null);
 			editor.setInputRouter(router);
 			attachEditor(editor, root);
 			return (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
 		} else if (kind.equals("smod") || kind.equals("dmod")) {
-			var plugin = new BattleNext_RefitPanelPlugin(() -> {});
-			refit = plugin;
-			plugin.init(root, 1000f, 900f);
-			plugin.open(proxy(FleetMemberAPI.class, (method, arguments) -> method.equals("getVariant") ? variant : null),
-					new Refit(null, variant));
-			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin,
+			if (refit == null) {
+				refit = new BattleNext_RefitPanelPlugin(() -> {});
+				ownerClosers.add(refit::close);
+				refit.init(root, 1000f, 900f);
+				refit.open(proxy(FleetMemberAPI.class, (method, arguments) -> method.equals("getVariant") ? variant : null),
+						new Refit(null, variant));
+			}
+			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(refit,
 					kind.equals("smod") ? "sModPicker" : "dModPicker");
 			return picker;
 		} else {
-			var editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
-			editor.open(null, false);
-			editor.setInputRouter(router);
-			editor.setOverlayHost(root);
-			attachEditor(editor, root);
-			editor.buttonPressed("add_member");
+			if (fleetEditor == null) {
+				fleetEditor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+				ownerClosers.add(fleetEditor::close);
+				fleetEditor.open(null, false);
+				fleetEditor.setInputRouter(router);
+				fleetEditor.setOverlayHost(root);
+				attachEditor(fleetEditor, root);
+				fleetEditor.buttonPressed("add_member");
+			}
 			if (kind.equals("commander")) {
-				field = optionFields(editor).get(0);
+				field = optionFields(fleetEditor).get(0);
 			} else {
-				List<BattleNext_OptionField> members = optionFields(editor).subList(1, optionFields(editor).size());
+				List<BattleNext_OptionField> members = optionFields(fleetEditor).subList(1, optionFields(fleetEditor).size());
 				int index = List.of("variant", "personality", "officer", "portrait").indexOf(kind);
 				field = members.get(index);
 			}

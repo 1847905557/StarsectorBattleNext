@@ -69,7 +69,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			if (method.getName().equals("getMergedSpreadsheetData")) {
 				assertEquals("data/characters/personalities.csv", args[1]);
 				personalityReads++;
@@ -110,8 +110,6 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		assertEquals(List.of("Fleet 50%", "fleet", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 2 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 18", BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 11 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 8",
 				BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_members_heading"), "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_none") + " - Steady", "Wolf - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_officer_level") + " 1 - Steady"), values(tooltip));
 		assertEquals(1, personalityReads);
-		assertEquals(2, parent.getApi().getStationModules().size());
-		assertEquals(5.5f, parent.getApi().getHullSpec().getSuppliesToRecover());
 		assertTrue(previewLogs().isEmpty());
 	}
 

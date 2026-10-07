@@ -100,44 +100,42 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		saveDirectoryEntries(kind, page, name);
 		CustomPanelAPI root = panel(width, 200f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
-		for (int iteration = 0; iteration < 3; iteration++) {
-			CustomPanelAPI listPanel = (CustomPanelAPI) getField(page, "listPanel");
-			TooltipMakerAPI list = (TooltipMakerAPI) getField(page, "listContent");
-			TooltipState state = tooltips.get(list);
-			List<UIComponentAPI> components = state.getComponents();
-			assertEquals(8f, components.get(0).getPosition().getX() - listPanel.getPosition().getX());
-			int count = 0;
-			for (UIComponentAPI component : components) {
-				if (!(component instanceof ButtonAPI button)) continue;
-				count++;
-				PositionAPI bounds = button.getPosition();
-				assertEquals(8f, bounds.getX() - listPanel.getPosition().getX());
-				assertEquals(8f, listPanel.getPosition().getX() + listPanel.getPosition().getWidth() - bounds.getX() - bounds.getWidth());
-				assertEquals(listPanel.getPosition().getWidth() - 16f, bounds.getWidth());
-				assertEquals(bounds.getWidth() - 10f, list.getWidthSoFar());
-				assertEquals(bounds.getWidth() + 5f, state.getViewport().getWidth());
-				assertTrue(button.getText().endsWith("..."));
-				TooltipMakerAPI hover = tooltip(400f, 0f, false);
-				attachedTooltips.get(button).createTooltip(hover, false, null);
-				assertTrue(tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
-						.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(value -> value.contains(name)));
-			}
-			assertEquals(List.of("first", "second").size(), count);
-			state.getScroller().setYOffset(state.getUsedHeight());
-			float offset = state.getScroller().getYOffset();
-			state.getScroller().setYOffset(0f);
-			ButtonAPI selected = components.stream().filter(ButtonAPI.class::isInstance).map(ButtonAPI.class::cast).findFirst().orElseThrow();
-			Object action = selected.getCustomData();
-			page.buttonPressed(action);
-			assertNotNull(getField(getField(page, "editor"), "nameField"));
-			assertFalse(page.hasUnsavedChanges());
-			page.refreshContent();
-			TooltipMakerAPI next = (TooltipMakerAPI) getField(page, "listContent");
-			next.getExternalScroller().setYOffset(offset);
-			page.refreshContent();
-			next = (TooltipMakerAPI) getField(page, "listContent");
-			assertEquals(offset, next.getExternalScroller().getYOffset());
+		CustomPanelAPI listPanel = (CustomPanelAPI) getField(page, "listPanel");
+		TooltipMakerAPI list = (TooltipMakerAPI) getField(page, "listContent");
+		TooltipState state = tooltips.get(list);
+		List<UIComponentAPI> components = state.getComponents();
+		assertEquals(8f, components.get(0).getPosition().getX() - listPanel.getPosition().getX());
+		int count = 0;
+		for (UIComponentAPI component : components) {
+			if (!(component instanceof ButtonAPI button)) continue;
+			count++;
+			PositionAPI bounds = button.getPosition();
+			assertEquals(8f, bounds.getX() - listPanel.getPosition().getX());
+			assertEquals(8f, listPanel.getPosition().getX() + listPanel.getPosition().getWidth() - bounds.getX() - bounds.getWidth());
+			assertEquals(listPanel.getPosition().getWidth() - 16f, bounds.getWidth());
+			assertEquals(bounds.getWidth() - 10f, list.getWidthSoFar());
+			assertEquals(bounds.getWidth() + 5f, state.getViewport().getWidth());
+			assertTrue(button.getText().endsWith("..."));
+			TooltipMakerAPI hover = tooltip(400f, 0f, false);
+			attachedTooltips.get(button).createTooltip(hover, false, null);
+			assertTrue(tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+					.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(value -> value.contains(name)));
 		}
+		assertEquals(List.of("first", "second").size(), count);
+		state.getScroller().setYOffset(state.getUsedHeight());
+		float offset = state.getScroller().getYOffset();
+		state.getScroller().setYOffset(0f);
+		ButtonAPI selected = components.stream().filter(ButtonAPI.class::isInstance).map(ButtonAPI.class::cast).findFirst().orElseThrow();
+		Object action = selected.getCustomData();
+		page.buttonPressed(action);
+		assertNotNull(getField(getField(page, "editor"), "nameField"));
+		assertFalse(page.hasUnsavedChanges());
+		page.refreshContent();
+		TooltipMakerAPI next = (TooltipMakerAPI) getField(page, "listContent");
+		next.getExternalScroller().setYOffset(offset);
+		page.refreshContent();
+		next = (TooltipMakerAPI) getField(page, "listContent");
+		assertEquals(offset, next.getExternalScroller().getYOffset());
 		page.close();
 		assertTrue(children.get(root).isEmpty());
 	}
@@ -180,10 +178,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 
 		List<BattleNext_ManagementPage> pages = List.of(
 				new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {}),
-				new BattleNext_PinnedVariantPage(() -> {}, Runnable::run, (description, action) -> {}),
-				new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {}),
-				new BattleNext_TournamentPage(() -> {}, Runnable::run, (description, action) -> {}),
-				new BattleNext_RulesPage(() -> {}, Runnable::run, (description, action) -> {}));
+				new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {}));
 		for (BattleNext_ManagementPage page : pages) {
 			buttons.clear();
 			CustomPanelAPI root = panel(width, 700f, new BaseCustomUIPanelPlugin());

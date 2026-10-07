@@ -43,16 +43,12 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 		assertEquals(candidates, filtered(id, List.of("0%"), source, candidates));
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"targetHp", "selfHp", "targetFlux", "selfFlux"})
-	void mixedBoundsCompareAbsoluteAndRelativeEndpointsIndependently(String id) {
-		ShipState ship = world.ship(0, 0f);
-		ship.setHp(1500f, 0.4f);
-		ship.setFlux(1500f, 0.4f);
-		assertEquals(1, filtered(id, List.of("1000", "50%"), ship, List.of(ship.getApi())).size());
-		assertEquals(1, filtered(id, List.of("30%", "1500"), ship, List.of(ship.getApi())).size());
-		assertTrue(filtered(id, List.of("1600", "50%"), ship, List.of(ship.getApi())).isEmpty());
-		assertTrue(filtered(id, List.of("30%", "1400"), ship, List.of(ship.getApi())).isEmpty());
+	@Test
+	void mixedBoundsCompareAbsoluteAndRelativeEndpointsIndependently() {
+		assertTrue(BattleNext_OrderRange.compile(List.of("1000", "50%"), true, false).contains(1500f, 0.4f, 0f));
+		assertTrue(BattleNext_OrderRange.compile(List.of("30%", "1500"), true, false).contains(1500f, 0.4f, 0f));
+		assertFalse(BattleNext_OrderRange.compile(List.of("1600", "50%"), true, false).contains(1500f, 0.4f, 0f));
+		assertFalse(BattleNext_OrderRange.compile(List.of("30%", "1400"), true, false).contains(1500f, 0.4f, 0f));
 	}
 
 	@Test
@@ -83,7 +79,7 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 		enemy.setOverloaded(true);
 		enemy.setFlux(9500f, 0.95f);
 		assertTrue(filtered("targetFlux", List.of("30%", "70%"), source, List.of(enemy.getApi())).isEmpty());
-		assertEquals(1, filtered("targetFlux", List.of("100%"), source, List.of(enemy.getApi())).size());
+		assertEquals(List.of(enemy.getApi()), filtered("targetFlux", List.of("100%"), source, List.of(enemy.getApi())));
 	}
 
 	@Test
@@ -135,20 +131,37 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"engage.targetHp.nearest", "engage.targetHp().nearest", "engage.targetHp(1,2,3).nearest",
-			"engage.targetHp(NaN).nearest", "engage.targetHp(Infinity).nearest", "engage.targetHp(-1).nearest",
-			"engage.targetHp(10,5).nearest", "engage.targetFlux(70%,30%).nearest", "engage.distance(50%).nearest",
-			"engage.targetSpeed(50%).nearest", "engage.hullsize(FRIGATE).nearest", "engage.hullsize().nearest",
-			"engage.hulltype(any,unknown).nearest", "assault.targetHp(4000).nearest",
-			"capture.hullsize(frigate).nearest", "defend.targetSpeed(self).nearest", "control.hulltype(any).nearest",
-			"engage.nearest.priority", "engage.nearest.priority(NaN)", "engage.nearest.priority(1,2)",
-			"engage.nearest.persist(1)"})
-	void compilationRejectsInvalidParametersAndTargetKinds(String expression) {
+	@CsvSource(delimiter = '|', value = {
+			"engage.targetHp.nearest|targetHp|Expected 1..2 parameters",
+			"engage.targetHp().nearest|targetHp|Expected 1..2 parameters",
+			"engage.targetHp(1,2,3).nearest|targetHp|Expected 1..2 parameters",
+			"engage.targetHp(NaN).nearest|targetHp|Expected a finite number",
+			"engage.targetHp(Infinity).nearest|targetHp|Expected a finite number",
+			"engage.targetHp(-1).nearest|targetHp|Expected a nonnegative bound",
+			"engage.targetHp(10,5).nearest|targetHp|Lower bound exceeds upper bound",
+			"engage.targetFlux(70%,30%).nearest|targetFlux|Lower bound exceeds upper bound",
+			"engage.distance(50%).nearest|distance|Percentage is not supported",
+			"engage.targetSpeed(50%).nearest|targetSpeed|Percentage is not supported",
+			"engage.hullsize(FRIGATE).nearest|hullsize|Unknown hull size",
+			"engage.hullsize().nearest|hullsize|Expected 1..2147483647 parameters",
+			"engage.hulltype(any,unknown).nearest|hulltype|Unknown hull type",
+			"assault.targetHp(4000).nearest|targetHp|Filter requires SHIP targets, starter supplies OBJECTIVE",
+			"capture.hullsize(frigate).nearest|hullsize|Filter requires SHIP targets, starter supplies OBJECTIVE",
+			"defend.targetSpeed(self).nearest|targetSpeed|Filter requires SHIP targets, starter supplies OBJECTIVE",
+			"control.hulltype(any).nearest|hulltype|Filter requires SHIP targets, starter supplies OBJECTIVE",
+			"engage.nearest.priority|priority|Expected 1..1 parameters",
+			"engage.nearest.priority(NaN)|priority|Expected a finite number",
+			"engage.nearest.priority(1,2)|priority|Expected 1..1 parameters",
+			"engage.nearest.persist(1)|persist|Expected 0..0 parameters"})
+	void compilationRejectsInvalidParametersAndTargetKinds(String expression, String script, String reason) {
 		var registry = BattleNext_OrderRegistry.getInstance();
 		var parsed = BattleNext_OrderParser.parse(expression, registry);
 		assertTrue(parsed.isValid(), parsed.getError());
-		assertThrows(BattleNext_OrderThread.OrderScriptExecutionException.class,
+		var error = assertThrows(BattleNext_OrderThread.OrderScriptExecutionException.class,
 				() -> new BattleNext_OrderThread(parsed.getCommand(), registry));
+		assertEquals(script, error.getScriptId());
+		assertInstanceOf(IllegalArgumentException.class, error.getCause());
+		assertTrue(error.getCause().getMessage().contains(reason), error.getCause().getMessage());
 	}
 
 	@Test

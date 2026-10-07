@@ -33,8 +33,7 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		TooltipMakerAPI grid = grid(picker);
 		List<UIComponentAPI> targets = nativeTargets(owner);
 		assertEquals(30, targets.size());
-		for (int index = 0; index < targets.size(); index++) {
-			UIComponentAPI target = targets.get(index);
+		for (UIComponentAPI target : targets) {
 			var creator = attachedTooltips.get(target);
 			var binding = tooltipBindings.get(target);
 			assertInstanceOf(BaseTooltipCreator.class, creator);
@@ -43,14 +42,11 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			assertFalse(binding.recreateEveryFrame());
 			assertFalse(creator.isTooltipExpandable(null));
 			assertEquals(360f, creator.getTooltipWidth(null));
-			TooltipMakerAPI content = render(target);
-			List<String> values = textValues(content);
-			assertEquals(3, values.size());
-			assertEquals(LONG_PARAGRAPH, values.get(2));
-			assertEquals("Name " + values.get(1).substring(3), values.get(0));
-			assertTrue(content.getHeightSoFar() > 240f);
-			assertEquals(0f, content.getPosition().getHeight());
 		}
+		TooltipMakerAPI content = render(targets.get(0));
+		assertEquals(List.of("Name 0", "id_0", LONG_PARAGRAPH), textValues(content));
+		assertTrue(content.getHeightSoFar() > 240f);
+		assertEquals(0f, content.getPosition().getHeight());
 		picker.close();
 		assertTrue(nativeTargets(owner).isEmpty());
 		assertTrue(router.isEmpty());

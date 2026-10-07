@@ -1,6 +1,5 @@
 package data.scripts.fleet;
 
-import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONArray;
@@ -13,19 +12,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
 
 class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
-
-	@Test
-	void emptyVariantHasHullModuleSlotsButOnlyInstalledModulesAppearInTheVariant() throws Exception {
-		var hull = hull("parent", "Parent", List.of("left", "right"));
-		var variant = Global.getSettings().createEmptyVariant("parent", hull);
-		assertTrue(hull.getWeaponSlot("left").isStationModule());
-		assertEquals(List.of(), variant.getModuleSlots());
-		assertTrue(variant.getStationModules().isEmpty());
-		var child = Global.getSettings().createEmptyVariant("child", hull("child", "Child", List.of()));
-		variant.setModuleVariant("left", child);
-		assertEquals(List.of("left"), variant.getModuleSlots());
-		assertEquals("child", variant.getStationModules().get("left"));
-	}
 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
@@ -54,7 +40,7 @@ class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
-	void absentModuleSlotHasTheSameExplicitErrorAsAnInvalidSlotType() throws Exception {
+	void absentModuleSlotReportsTheRequestedSlot() throws Exception {
 		hulls.put("parent", proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
 			case "getHullId" -> "parent";
 			default -> null;

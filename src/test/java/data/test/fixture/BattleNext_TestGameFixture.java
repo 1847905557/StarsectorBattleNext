@@ -17,7 +17,9 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.loading.specs.Q;
 import data.scripts.tools.BattleNext_CsvLine;
+import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
+import data.scripts.ui.BattleNext_UiInputRouter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BattleNext_TestGameFixture {
 
+	private static final Object[] NO_ARGUMENTS = new Object[0];
 	private static final Color TEXT_COLOR = new Color(220, 220, 220);
 	private static final Color BUTTON_TEXT_COLOR = new Color(170, 222, 255);
 	private static final Color HIGHLIGHT_COLOR = new Color(255, 210, 0);
@@ -52,6 +55,9 @@ public class BattleNext_TestGameFixture {
 	protected SectorAPI previousSector;
 	private Field settingsValues;
 	private Object previousSettingsValues;
+	private boolean previousPendingResult;
+	private Field currentRouter;
+	private BattleNext_UiInputRouter previousRouter;
 	protected final Map<String, ShipHullSpecAPI> hulls = new LinkedHashMap<>();
 	protected final Map<String, ShipVariantAPI> registeredVariants = new LinkedHashMap<>();
 	protected final List<String> dataReads = new ArrayList<>();
@@ -75,6 +81,11 @@ public class BattleNext_TestGameFixture {
 	@BeforeEach
 	protected void configureGameServices() throws ReflectiveOperationException {
 
+		previousPendingResult = BattleNext_BattleSignals.consumePendingResult();
+		currentRouter = BattleNext_UiInputRouter.class.getDeclaredField("CURRENT");
+		currentRouter.setAccessible(true);
+		previousRouter = (BattleNext_UiInputRouter) ((ThreadLocal<?>) currentRouter.get(null)).get();
+		BattleNext_UiInputRouter.activate(new BattleNext_UiInputRouter());
 		previousSettings = Global.getSettings();
 		previousSector = Global.getSector();
 		settingsValues = BattleNext_Settings.class.getDeclaredField("values");
@@ -89,7 +100,7 @@ public class BattleNext_TestGameFixture {
 		});
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> switch (method) {
 			case "getModManager" -> mods;
-			case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
+			case "getString" -> BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			case "getSpriteName" -> BattleNext_TestSpriteCatalog.path(args[0], args[1]);
 			case "getColor" -> switch ((String) args[0]) {
 				case "standardTextColor" -> TEXT_COLOR;
@@ -209,9 +220,18 @@ public class BattleNext_TestGameFixture {
 
 	@AfterEach
 	protected void restoreGameServices() throws ReflectiveOperationException {
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) ((ThreadLocal<?>) currentRouter.get(null)).get();
+		if (router != null) {
+			router.clear();
+		}
+		BattleNext_UiInputRouter.activate(previousRouter);
 		Global.setSettings(previousSettings);
 		Global.setSector(previousSector);
 		settingsValues.set(null, previousSettingsValues);
+		BattleNext_BattleSignals.consumePendingResult();
+		if (previousPendingResult) {
+			BattleNext_BattleSignals.markPendingResult();
+		}
 	}
 
 	protected JSONArray readCsv(Path path) throws IOException, JSONException {
@@ -452,7 +472,7 @@ public class BattleNext_TestGameFixture {
 			if ("equals".equals(method.getName())) return instance == args[0];
 			if ("hashCode".equals(method.getName())) return System.identityHashCode(instance);
 			if ("clone".equals(method.getName())) return instance;
-			Object result = handler.apply(method.getName(), args == null ? new Object[0] : args);
+			Object result = handler.apply(method.getName(), args == null ? NO_ARGUMENTS : args);
 			if (method.getName().equals("getSpriteSpec") && result == null) return spriteSpec;
 			if (result != null && method.getReturnType() == void.class) return null;
 			if (result != null) return result;

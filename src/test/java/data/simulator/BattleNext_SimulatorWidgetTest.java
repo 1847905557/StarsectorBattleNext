@@ -99,7 +99,9 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		tournaments.reload();
 		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
 		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
-		for (String phase : List.of("new", "running", "completed")) {
+		List<String> phases = bracket == TournamentBracketType.SINGLE_ELIMINATION
+				? List.of("new", "running", "completed") : List.of("running");
+		for (String phase : phases) {
 			BattleNext_TournamentModel configuration = tournament(phase, bracket);
 			tournaments.save(configuration);
 			if (phase.equals("new")) continue;
@@ -120,7 +122,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		CustomPanelAPI root = panel(1000f, 600f, new BaseCustomUIPanelPlugin());
 		BattleNext_SimulatorWidget widget = new BattleNext_SimulatorWidget(router, root, () -> true, browser, sources);
 		widget.attach(root);
-		for (String phase : List.of("new", "running", "completed")) {
+		for (String phase : phases) {
 			select(widget, phase);
 			BattleNext_BattleSourceField instanceField = (BattleNext_BattleSourceField) getField(widget, "instanceField");
 			BattleNext_DropdownField instanceDropdown = (BattleNext_DropdownField) getField(instanceField, "dropdown");
@@ -227,7 +229,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SettingsAPI.class.getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(arguments[0], arguments[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(arguments[0], arguments[1]);
 			if (method.getName().equals("readJSONFromCommon")) return saved.get();
 			if (method.getName().equals("writeJSONToCommon")) {
 				saved.set(new JSONObject(((JSONObject) arguments[1]).toString()));

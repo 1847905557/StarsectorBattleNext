@@ -18,16 +18,20 @@ class BattleNext_RuleRestrictionTest {
 
 	private Object entries;
 	private Object factory;
+	private Object loadErrors;
 
 	@BeforeEach
 	void configureRegistry() throws Exception {
 		var registry = BattleNext_RestrictionRegistry.getInstance();
 		Field entryField = BattleNext_RestrictionRegistry.class.getDeclaredField("entries");
 		Field factoryField = BattleNext_RestrictionRegistry.class.getDeclaredField("scriptFactory");
+		Field errorsField = BattleNext_RestrictionRegistry.class.getDeclaredField("loadErrors");
 		entryField.setAccessible(true);
 		factoryField.setAccessible(true);
+		errorsField.setAccessible(true);
 		entries = entryField.get(registry);
 		factory = factoryField.get(registry);
+		loadErrors = errorsField.get(registry);
 		var row = new JSONObject().put("id", "testRegisteredNumber").put("type", "number")
 				.put("script", "data.restriction.numeric.FleetMaxShips").put("desc", "Test");
 		registry.load(new JSONArray().put(row), name -> new FleetMaxShips());
@@ -37,10 +41,13 @@ class BattleNext_RuleRestrictionTest {
 	void restoreRegistry() throws Exception {
 		Field entryField = BattleNext_RestrictionRegistry.class.getDeclaredField("entries");
 		Field factoryField = BattleNext_RestrictionRegistry.class.getDeclaredField("scriptFactory");
+		Field errorsField = BattleNext_RestrictionRegistry.class.getDeclaredField("loadErrors");
 		entryField.setAccessible(true);
 		factoryField.setAccessible(true);
+		errorsField.setAccessible(true);
 		entryField.set(BattleNext_RestrictionRegistry.getInstance(), entries);
 		factoryField.set(BattleNext_RestrictionRegistry.getInstance(), factory);
+		errorsField.set(BattleNext_RestrictionRegistry.getInstance(), loadErrors);
 	}
 
 	@Test
@@ -63,7 +70,7 @@ class BattleNext_RuleRestrictionTest {
 
 	@ParameterizedTest
 	@ValueSource(doubles = {-1, Double.NaN})
-	void invalidNumbersPreserveTheExistingValue(double value) {
+	void invalidNumbersPreserveThePublishedValue(double value) {
 		var restriction = new BattleNext_RuleRestriction("number", "number");
 		restriction.setValue(2.5);
 		assertThrows(IllegalArgumentException.class, () -> restriction.setValue(value));
@@ -71,7 +78,7 @@ class BattleNext_RuleRestrictionTest {
 	}
 
 	@Test
-	void listsNormalizeAndRejectDuplicateOrEmptyItemsWithoutChangingTheOldList() {
+	void listsNormalizeAndRejectDuplicateOrEmptyItemsWithoutChangingThePublishedList() {
 		var restriction = new BattleNext_RuleRestriction("list", "list");
 		restriction.setItems(List.of(" a ", "b"));
 		assertEquals(List.of("a", "b"), restriction.getItems());

@@ -33,6 +33,14 @@ class BattleNext_FleetModelTest {
 		assertEquals(List.of("skill", "skill"), loaded.getSkills());
 		assertEquals(List.of("tag"), loaded.getTags());
 		assertEquals(member.toJson().toString(), loaded.getMembers().get(0).toJson().toString());
+		var restoredMember = loaded.getMembers().get(0);
+		assertEquals("variant", restoredMember.getVariantId());
+		assertEquals("Ship", restoredMember.getName());
+		assertEquals("steady", restoredMember.getPersonality());
+		assertEquals(List.of("skill", "skill"), restoredMember.getSkills());
+		assertEquals("portrait", restoredMember.getPortrait());
+		assertEquals("order", restoredMember.getOrders());
+		assertEquals(List.of("tag"), restoredMember.getTags());
 		assertEquals("folder", fleet.getFolderName());
 		assertThrows(UnsupportedOperationException.class, () -> fleet.getSkills().clear());
 		assertThrows(UnsupportedOperationException.class, () -> fleet.getTags().clear());

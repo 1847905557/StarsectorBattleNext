@@ -15,10 +15,10 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 	void saveReloadSortAndDeleteUseThePersistedCatalog() throws Exception {
 		var store = new BattleNext_BattleReportStore();
 		store.reload();
-		var old = new BattleNext_BattleReportModel();
-		old.setId("old");
-		old.setName("Old");
-		old.setCreatedAt(1);
+		var earlier = new BattleNext_BattleReportModel();
+		earlier.setId("earlier");
+		earlier.setName("Earlier");
+		earlier.setCreatedAt(1);
 		var recent = new BattleNext_BattleReportModel();
 		recent.setId("recent");
 		recent.setName("Recent");
@@ -27,17 +27,17 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 		tie.setId("another_recent");
 		tie.setName("Another recent");
 		tie.setCreatedAt(recent.getCreatedAt());
-		store.save(old);
+		store.save(earlier);
 		store.save(recent);
 		store.save(tie);
 		assertEquals("tournament/_reports/recent.json", recent.getSourcePath());
 		store.reload();
-		assertEquals(List.of("another_recent", "recent", "old"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of("another_recent", "recent", "earlier"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
 		store.delete("recent");
 		assertNull(store.get("recent"));
 		assertFalse(Files.exists(directory.resolve("tournament/_reports/recent.json")));
 		store.reload();
-		assertEquals(List.of("another_recent", "old"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of("another_recent", "earlier"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
 	}
 
 	@Test

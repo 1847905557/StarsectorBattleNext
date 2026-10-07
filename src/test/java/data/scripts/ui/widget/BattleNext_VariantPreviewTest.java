@@ -1,17 +1,26 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.BaseHullMod;
+import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.Alignment;
+import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.loading.specs.Q;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
+import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestVariantPreviewFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,6 +32,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.awt.Color;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture {
@@ -464,9 +475,11 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 
 	@ParameterizedTest
 	@ValueSource(strings = {"catalog", "campaign", "refit"})
-	void sharedEntrypointsRefreshThePreviewAndReleaseOldModels(String entry) throws Exception {
+	void sharedEntrypointsBindCompleteVariantDisplayRefreshAndRelease(String entry) throws Exception {
 
 		Variant variant = source();
+		variant.getApi().addMod("installed");
+		installConsumerHullmod();
 		Q hullSprite = ((HullSpriteSpec) variant.getApi().getHullSpec()).getSpriteSpec();
 		hullSprite.getClass().getMethod("o00000", float.class, float.class).invoke(hullSprite, 31f, 83f);
 		previewWeapon("laser", false, List.of(), List.of());
@@ -506,26 +519,146 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 			refresh = details::refreshContent;
 			close = plugin::close;
 		}
-		Object firstPlugin = getField(details, "preview");
-		assertNotNull(firstPlugin);
-		BattleNext_VariantPreview first = (BattleNext_VariantPreview) getField(firstPlugin, "preview");
-		renderPreview(first, 1000f, 1000f);
-		assertEquals(List.of("graphics/parent.png", "graphics/laser_turret.png", "graphics/laser_turret_gun.png",
-				"graphics/child.png"), renderedPaths());
-		assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
-		((Set<Integer>) getField(details, "expanded")).add(0);
-		refresh.run();
-		assertNull(getField(firstPlugin, "preview"));
-		assertEquals(Set.of(0), getField(details, "expanded"));
-		Object currentPlugin = getField(details, "preview");
-		assertNotSame(firstPlugin, currentPlugin);
-		renderPreview((BattleNext_VariantPreview) getField(currentPlugin, "preview"), 1000f, 1000f);
-		assertTrue(renderedPaths().contains("graphics/laser_turret.png"));
-		assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
-		CustomPanelAPI owner = details.getPanel();
-		close.run();
-		assertNull(getField(currentPlugin, "preview"));
-		assertNull(details.getPanel());
-		assertTrue(children.get(owner).isEmpty());
+		try {
+			Object firstPlugin = getField(details, "preview");
+			assertNotNull(firstPlugin);
+			BattleNext_VariantPreview first = (BattleNext_VariantPreview) getField(firstPlugin, "preview");
+			renderPreview(first, 1000f, 1000f);
+			assertEquals(List.of("graphics/parent.png", "graphics/laser_turret.png", "graphics/laser_turret_gun.png",
+					"graphics/child.png"), renderedPaths());
+			assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
+			((Set<Integer>) getField(details, "expanded")).add(0);
+			details.refreshContent();
+			assertConsumerDisplay(details);
+			JSONObject snapshot = (JSONObject) getField(details, "variantJson");
+			for (String mode : List.of("ALTERNATING", "LINKED")) {
+				snapshot.getJSONArray("weaponGroups").getJSONObject(0).put("mode", mode);
+				details.refreshContent();
+				var currentGroup = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+				var header = (CustomPanelAPI) children.get(currentGroup).get(0);
+				var sprite = (SpriteAPI) getField(plugins.get(header), "primarySprite");
+				assertEquals(mode.equals("LINKED") ? "graphics/icons/jump-point.png" : "graphics/icons/jump-point2.png",
+						spritePaths.get(sprite));
+				assertEquals(BattleNext_UiTheme.ACCENT, getField(plugins.get(header), "primaryTint"));
+				assertEquals(Set.of(0), getField(details, "expanded"));
+			}
+			firstPlugin = getField(details, "preview");
+			assertNotNull(getField(firstPlugin, "preview"));
+			refresh.run();
+			assertNull(getField(firstPlugin, "preview"));
+			assertEquals(Set.of(0), getField(details, "expanded"));
+			Object currentPlugin = getField(details, "preview");
+			assertNotSame(firstPlugin, currentPlugin);
+			assertNotNull(getField(currentPlugin, "preview"));
+			renderPreview((BattleNext_VariantPreview) getField(currentPlugin, "preview"), 1000f, 1000f);
+			assertTrue(renderedPaths().contains("graphics/laser_turret.png"));
+			assertArrayEquals(new float[]{120f, 120f, 31f, 83f}, Arrays.copyOf(spriteRenderStates.get(0), 4));
+			assertConsumerDisplay(details);
+			CustomPanelAPI owner = details.getPanel();
+			close.run();
+			assertNull(getField(currentPlugin, "preview"));
+			assertNull(details.getPanel());
+			assertTrue(children.get(owner).isEmpty());
+			assertTrue(((List<?>) getField(details, "ownedPanels")).isEmpty());
+		} finally {
+			close.run();
+		}
+	}
+
+	private void installConsumerHullmod() {
+		BaseHullMod effect = new BaseHullMod() {
+			@Override
+			public String getDescriptionParam(int index, ShipAPI.HullSize size) {
+				return index == 0 ? size + " 20%" : index == 1 ? "Literal %s, %d and 50%" : null;
+			}
+
+			@Override
+			public void addPostDescriptionSection(TooltipMakerAPI tooltip, ShipAPI.HullSize size,
+					ShipAPI ship, float width, boolean isForModSpec) {
+				tooltip.addPara("Custom post 50%", 8f);
+			}
+
+			@Override
+			public boolean hasSModEffectSection(ShipAPI.HullSize size, ShipAPI ship, boolean isForModSpec) {
+				return true;
+			}
+
+			@Override
+			public void addSModSection(TooltipMakerAPI tooltip, ShipAPI.HullSize size, ShipAPI ship,
+					float width, boolean isForModSpec, boolean isForBuiltInList) {
+				tooltip.addPara("Enhanced: " + size + " 30%.\nComplete extra effect 40%.", 8f);
+			}
+		};
+		HullModSpecAPI spec = proxy(HullModSpecAPI.class, (method, arguments) -> switch (method) {
+			case "getId" -> "installed";
+			case "getDisplayName" -> "Alpha installed";
+			case "getDescriptionFormat" -> "First: %s.\nSecond: %s.";
+			case "getEffect" -> effect;
+			default -> null;
+		});
+		effect.init(spec);
+		SettingsAPI previous = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {
+			if (method.getName().equals("getHullModSpec") && arguments[0].equals("installed")) return spec;
+			try {
+				Object result = method.invoke(previous, arguments);
+				if (!method.getName().equals("getHullSpec") || result == null) return result;
+				return Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{ShipHullSpecAPI.class, HullSpriteSpec.class},
+						(hull, query, values) -> {
+					if (query.getName().equals("getHullSize")) return ShipAPI.HullSize.FRIGATE;
+					try {
+						return query.invoke(result, values);
+					} catch (InvocationTargetException exception) {
+						throw exception.getCause();
+					}
+				});
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+	}
+
+	private void assertConsumerDisplay(BattleNext_VariantDetails details) throws Exception {
+		var group = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+		var container = (CustomPanelAPI) children.get(group).get(1);
+		var body = (CustomPanelAPI) children.get(container).get(0);
+		var rows = tooltips.get(children.get(body).get(0)).getComponents();
+		assertEquals(1, rows.size());
+		var row = (CustomPanelAPI) rows.get(0);
+		assertEquals(40f, row.getPosition().getHeight());
+		var image = tooltips.get(children.get(row).get(0)).getComponents().get(0);
+		assertEquals("graphics/laser_turret.png", imagePaths.get(image));
+		for (String section : List.of("modules", "wings")) {
+			var tileRow = (CustomPanelAPI) tooltips.get(lists(details).get(section)).getComponents().get(0);
+			var tile = (CustomPanelAPI) children.get(tileRow).get(0);
+			assertEquals(tile.getPosition().getWidth(), tile.getPosition().getHeight());
+			var caption = tooltips.get(children.get(tile).get(0));
+			var name = (LabelAPI) caption.getComponents().get(1);
+			assertEquals(section.equals("modules") ? "Child" : "Wing wing", name.getText());
+			assertEquals(Alignment.MID, labelAlignments.get(name.getPosition()));
+			var hover = tooltip(360f, 0f, false);
+			attachedTooltips.get(caption.getComponents().get(0)).createTooltip(hover, false, null);
+			var identifier = (LabelAPI) tooltips.get(hover).getComponents().get(1);
+			assertEquals(section.equals("modules") ? "child" : "wing", identifier.getText());
+			assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(identifier.getPosition()));
+		}
+		var mod = tooltips.get(lists(details).get("plugins")).getComponents().stream()
+				.filter(component -> attachedTooltips.containsKey(component))
+				.filter(component -> tooltips.get(children.get((CustomPanelAPI) component).get(0)).getComponents().stream()
+						.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast)
+						.anyMatch(label -> label.getText().equals("Alpha installed"))).findFirst().orElseThrow();
+		var hover = tooltip(360f, 0f, false);
+		assertEquals(360f, attachedTooltips.get(mod).getTooltipWidth(null));
+		attachedTooltips.get(mod).createTooltip(hover, false, null);
+		var text = tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+				.map(LabelAPI.class::cast).map(LabelAPI::getText).toList();
+		assertEquals("installed", text.get(1));
+		assertTrue(text.contains("First: FRIGATE 20%.\nSecond: Literal %s, %d and 50%."));
+		assertTrue(text.contains("Custom post 50%"));
+		assertTrue(text.contains("Enhanced: FRIGATE 30%.\nComplete extra effect 40%."));
+		var description = tooltips.get(hover).getComponents().get(2).getPosition();
+		assertEquals("First: %s.\nSecond: %s.", labelPatterns.get(description));
+		assertEquals(List.of(Misc.getHighlightColor()), labelHighlightColors.get(description));
 	}
 }

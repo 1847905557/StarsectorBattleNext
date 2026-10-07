@@ -31,8 +31,10 @@ class BattleNext_RulesCheckTest {
 	private final BattleNext_RulesCheck check = new BattleNext_RulesCheck();
 	private Field registryEntries;
 	private Field registryFactory;
+	private Field registryErrors;
 	private Object previousEntries;
 	private Object previousFactory;
+	private Object previousErrors;
 
 	@BeforeEach
 	void loadRestrictions() throws Exception {
@@ -41,8 +43,11 @@ class BattleNext_RulesCheckTest {
 		registryFactory = BattleNext_RestrictionRegistry.class.getDeclaredField("scriptFactory");
 		registryEntries.setAccessible(true);
 		registryFactory.setAccessible(true);
+		registryErrors = BattleNext_RestrictionRegistry.class.getDeclaredField("loadErrors");
+		registryErrors.setAccessible(true);
 		previousEntries = registryEntries.get(registry);
 		previousFactory = registryFactory.get(registry);
+		previousErrors = registryErrors.get(registry);
 		BattleNext_RestrictionRegistry.getInstance().load(restrictionRows(), this::createRestriction);
 	}
 
@@ -51,6 +56,7 @@ class BattleNext_RulesCheckTest {
 		var registry = BattleNext_RestrictionRegistry.getInstance();
 		registryEntries.set(registry, previousEntries);
 		registryFactory.set(registry, previousFactory);
+		registryErrors.set(registry, previousErrors);
 	}
 
 	private JSONArray restrictionRows() throws Exception {
@@ -202,26 +208,32 @@ class BattleNext_RulesCheckTest {
 		BattleNext_RuleModel rule = new BattleNext_RuleModel("rules", "Rules");
 		rule.setRestrictions(restrictions);
 		List<String> reasons = check.validateFleet(assembledFleet, rule);
-		for (BattleNext_RuleRestriction restriction : restrictions) {
-			assertTrue(reasons.stream().anyMatch(reason -> reason.contains(restriction.getId())), restriction.getId());
-		}
-		assertEquals(8, reasons.size());
+		assertEquals(List.of("fleet_a fleetMaxShips 2.0/1.0", "fleet_a fleetMaxDp 24.0/20.0",
+				"fleet_a hull wolf fleetMaxSameHull 2.0/1.0", "fleet_a fleetHullSizeLimitFrigate 2.0/1.0",
+				"fleet_a officerMaxCount 1.0/0.0", "fleet_a member[0] officerMaxLevel 1.0/0.0",
+				"fleet_a member[0] officerMaxElite 1.0/0.0", "fleet_a fleetSkillMaxCount 1.0/0.0"), reasons);
 	}
 
 	@Test
 	void filtersApplyAcrossAllFourCategoriesAndSources() {
+
 		for (String category : List.of("weapon", "wing", "hullmod", "hull")) {
 			BattleNext_RuleModel rule = new BattleNext_RuleModel("rules", "Rules");
 			String suffix = Character.toUpperCase(category.charAt(0)) + category.substring(1);
 			rule.setRestrictions(List.of(list("filterAllowMods", "vanilla"),
 					list("filterBlack" + suffix, "item"), list("filterWhite" + suffix, "other")));
-			assertEquals(2, check.validateEquipment(rule, "fleet member[0]", category, "item", "vanilla").size());
-			assertEquals(3, check.validateEquipment(rule, "fleet member[0]", category, "item", "someMod").size());
+			String context = "fleet member[0] " + category + " ";
+			assertEquals(List.of(context + "item in filterBlack" + suffix, context + "item outside filterWhite" + suffix),
+					check.validateEquipment(rule, "fleet member[0]", category, "item", "vanilla"));
+			assertEquals(List.of(context + "item mod someMod outside filterAllowMods",
+					context + "item in filterBlack" + suffix, context + "item outside filterWhite" + suffix),
+					check.validateEquipment(rule, "fleet member[0]", category, "item", "someMod"));
 			assertTrue(check.validateEquipment(rule, "fleet member[0]", category, "other", "vanilla").isEmpty());
 			rule.getRestriction("filterAllowMods").setItems(List.of());
-			assertEquals(1, check.validateEquipment(rule, "fleet member[0]", category, "other", "vanilla").size());
-			assertTrue(check.validateEquipment(rule, "fleet member[0]", category, "other", "").get(0)
-					.contains("source mod unknown"));
+			assertEquals(List.of(context + "other mod vanilla outside filterAllowMods"),
+					check.validateEquipment(rule, "fleet member[0]", category, "other", "vanilla"));
+			assertEquals(List.of(context + "other source mod unknown"),
+					check.validateEquipment(rule, "fleet member[0]", category, "other", ""));
 		}
 	}
 
@@ -236,10 +248,8 @@ class BattleNext_RulesCheckTest {
 		rule.setRestrictions(List.of(number("fleetHullSizeLimitCapitalShip", 0),
 				number("refitMaxDecks", 0), number("refitSmods", 0)));
 		List<String> reasons = check.validateFleet(assembledFleet, rule);
-		assertEquals(3, reasons.size());
-		assertTrue(reasons.stream().anyMatch(reason -> reason.contains("fleetHullSizeLimitCapitalShip")));
-		assertTrue(reasons.stream().anyMatch(reason -> reason.contains("refitMaxDecks")));
-		assertTrue(reasons.stream().anyMatch(reason -> reason.contains("refitSmods")));
+		assertEquals(List.of("fleet fleetHullSizeLimitCapitalShip 1.0/0.0",
+				"fleet refitMaxDecks 1.0/0.0", "fleet refitSmods 1.0/0.0"), reasons);
 	}
 
 	@Test

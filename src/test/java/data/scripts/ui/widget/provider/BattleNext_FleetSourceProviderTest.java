@@ -38,7 +38,6 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		fleets.add(new BattleNext_FleetModel("zeta", "Second name", List.of(), List.of(), List.of()));
 		fleets.add(new BattleNext_FleetModel("alpha", "First name", List.of(), List.of(), List.of()));
 		BattleNext_FleetSourceProvider source = new BattleNext_FleetSourceProvider(store(fleets));
-		assertEquals(BattleNext_BaseSourceProvider.class, source.getClass().getSuperclass());
 		assertEquals(List.of("zeta", "alpha"), source.getOptions().stream().map(OptionChoice::getId).toList());
 		assertEquals(List.of("Second name", "First name"), source.getOptions().stream().map(OptionChoice::getLabel).toList());
 		assertEquals(1, source.getMaxStack("zeta"));

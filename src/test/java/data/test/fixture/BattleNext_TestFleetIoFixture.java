@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
-public class BattleNext_TestFleetIoFixture extends BattleNext_TestCampaignFleetFixture {
+public class BattleNext_TestFleetIoFixture extends BattleNext_TestMemberFixture {
 
 	@BeforeEach
 	protected void registerFleetVariants() {
@@ -21,6 +21,13 @@ public class BattleNext_TestFleetIoFixture extends BattleNext_TestCampaignFleetF
 	protected void write(String path, String text) throws Exception {
 		Files.createDirectories(directory.resolve(path).getParent());
 		Files.writeString(directory.resolve(path), text, StandardCharsets.UTF_8);
+	}
+
+	protected void quickBattles(String rows) throws Exception {
+		standard("alpha", "alpha", "parent_variant");
+		standard("beta", "beta", "child_variant");
+		write("tournament/quick_battle.csv", "player,enemy,map,size\n" + rows);
+		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
 	}
 
 	protected void csvFleet(String folder, String number, String members) throws Exception {

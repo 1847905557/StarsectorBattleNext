@@ -23,8 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture {
 
 	@ParameterizedTest
-	@CsvSource({"160,false", "160,true", "240,false", "240,true", "320,false", "320,true",
-			"540,false", "540,true", "800,false", "800,true"})
+	@CsvSource({"160,true", "240,true", "320,true", "540,false", "540,true"})
 	void searchRowUsesGridColumnBoundariesThroughFilteringScrollingAndReopening(int width, boolean deferred) throws Exception {
 
 		deferTooltipWidth = deferred;

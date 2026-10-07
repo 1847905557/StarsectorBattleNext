@@ -25,8 +25,8 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 		Files.writeString(root.resolve("broken.json"), "broken", StandardCharsets.UTF_8);
 		var loader = new BattleNext_PinnedVariantStandardLoader();
 		loader.load();
-		var oldCatalog = loader.getCatalog();
-		var oldErrors = loader.getLoadErrors();
+		var initialCatalog = loader.getCatalog();
+		var initialErrors = loader.getLoadErrors();
 		var previous = Global.getSettings();
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> {
 			throw new IllegalStateException("injected directory failure");
@@ -42,7 +42,9 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 				BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson()).toJson().toString(), StandardCharsets.UTF_8);
 		assertEquals(1, loader.load().size());
 		assertEquals(List.of(), loader.getLoadErrors());
-		assertEquals(1, oldErrors.size());
+		assertEquals(1, initialErrors.size());
+		assertEquals(List.of("tournament/_pinnedVariants/broken.json"), initialCatalog.stream().map(entry -> entry.path()).toList());
+		assertEquals("broken", initialCatalog.get(0).raw());
 	}
 
 	@Test

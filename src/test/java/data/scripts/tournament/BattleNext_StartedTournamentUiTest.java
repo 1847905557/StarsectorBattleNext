@@ -21,7 +21,7 @@ import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
 import data.scripts.ui.widget.view.BattleNext_TournamentTemplate;
 import data.scripts.ui.widget.view.BattleNext_TournamentView;
-import data.test.fixture.BattleNext_TestMissionFixture;
+import data.test.fixture.BattleNext_TestFleetIoFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class BattleNext_StartedTournamentUiTest extends BattleNext_TestMissionFixture {
+class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
@@ -42,7 +42,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestMissionFixture {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			try {
 				return method.invoke(delegate, args);
 			} catch (InvocationTargetException exception) {

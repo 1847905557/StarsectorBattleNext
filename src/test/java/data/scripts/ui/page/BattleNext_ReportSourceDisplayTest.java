@@ -93,7 +93,7 @@ class BattleNext_ReportSourceDisplayTest extends BattleNext_TestGameFixture {
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "getBoolean" -> cnText;
-					case "getString" -> BattleNext_TestTextCatalog.text(args[0], args[1]);
+					case "getString" -> BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 					default -> method.invoke(delegate, args);
 				}));
 		BattleNext_ReportSourceDisplay.SourceVisual visual =

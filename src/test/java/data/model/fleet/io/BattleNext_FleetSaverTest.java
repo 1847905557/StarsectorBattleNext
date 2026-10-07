@@ -20,8 +20,8 @@ class BattleNext_FleetSaverTest {
 	@Test
 	void saveCreatesCompleteBackupAndPreservesOtherFiles() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
-		files.put("tournament/alpha/fleet_data.json.bak", "legacy bak");
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
+		files.put("tournament/alpha/fleet_data.json.bak", "unrelated backup");
 		files.put("tournament/alpha/stale.variant", "stale");
 		files.put("tournament/alpha/keep.txt", "keep");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
@@ -30,17 +30,17 @@ class BattleNext_FleetSaverTest {
 
 		assertFalse(files.contains("tournament/alpha/stale.variant"));
 		assertTrue(files.contains("tournament/alpha/keep.txt"));
-		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("{\"id\":\"persisted\"}", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
 		assertEquals("stale", files.text("tournament/alpha/backup/20260930-010203-004/stale.variant"));
-		assertEquals("legacy bak", files.text("tournament/alpha/fleet_data.json.bak"));
+		assertEquals("unrelated backup", files.text("tournament/alpha/fleet_data.json.bak"));
 		assertTrue(files.contains("tournament/alpha/current.variant"));
 	}
 
 	@Test
 	void repeatedSavesKeepHistoryAndDisambiguateSameTimestamp() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/alpha/fleet_data.json", "old");
-		files.put("tournament/alpha/old.variant", "old variant");
+		files.put("tournament/alpha/fleet_data.json", "persisted fleet");
+		files.put("tournament/alpha/persisted.variant", "persisted variant");
 		BattleNext_FleetSaver saver = new BattleNext_FleetSaver(files,
 				() -> LocalDateTime.of(2026, 9, 30, 1, 2, 3, 4_000_000));
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
@@ -50,41 +50,42 @@ class BattleNext_FleetSaverTest {
 		fleet.setSourcePath("tournament/alpha/fleet_data.json");
 		saver.save(fleet);
 
-		assertEquals("old", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
-		assertEquals("old variant", files.text("tournament/alpha/backup/20260930-010203-004/old.variant"));
+		assertEquals("persisted fleet", files.text("tournament/alpha/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("persisted variant", files.text("tournament/alpha/backup/20260930-010203-004/persisted.variant"));
 		assertEquals(firstVersion,
 				files.text("tournament/alpha/backup/20260930-010203-004-1/fleet_data.json"));
 	}
 
 	@Test
-	void saveMovesRenamedFleetAndRemovesOldDirectory() throws Exception {
+	void saveMovesRenamedFleetAndRemovesSourceDirectory() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/old/fleet_data.json", "old");
-		files.put("tournament/old/old.variant", "old variant");
-		files.put("tournament/old/backup/20260929-010203-004/fleet_data.json", "older");
+		files.put("tournament/source/fleet_data.json", "persisted fleet");
+		files.put("tournament/source/persisted.variant", "persisted variant");
+		files.put("tournament/source/backup/20260929-010203-004/fleet_data.json", "previous backup");
 		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
-		fleet.setSourcePath("tournament/old/fleet_data.json");
+		fleet.setSourcePath("tournament/source/fleet_data.json");
 
 		new BattleNext_FleetSaver(files, () -> LocalDateTime.of(2026, 9, 30, 1, 2, 3, 4_000_000)).save(fleet);
 
-		assertFalse(files.contains("tournament/old/fleet_data.json"));
-		assertFalse(files.contains("tournament/old/old.variant"));
+		assertFalse(files.contains("tournament/source/fleet_data.json"));
+		assertFalse(files.contains("tournament/source/persisted.variant"));
 		assertTrue(files.contains("tournament/new/fleet_data.json"));
-		assertEquals("older", files.text("tournament/new/backup/20260929-010203-004/fleet_data.json"));
-		assertEquals("old", files.text("tournament/new/backup/20260930-010203-004/fleet_data.json"));
-		assertEquals("old variant", files.text("tournament/new/backup/20260930-010203-004/old.variant"));
+		assertEquals("previous backup", files.text("tournament/new/backup/20260929-010203-004/fleet_data.json"));
+		assertEquals("persisted fleet", files.text("tournament/new/backup/20260930-010203-004/fleet_data.json"));
+		assertEquals("persisted variant", files.text("tournament/new/backup/20260930-010203-004/persisted.variant"));
 	}
 
 	@Test
-	void renameRejectsExistingTargetFleet() throws Exception {
+	void renameRejectsOccupiedTargetFleet() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/old/fleet_data.json", "old");
+		files.put("tournament/source/fleet_data.json", "persisted fleet");
 		files.put("tournament/new/fleet_data.json", "new");
 		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
-		fleet.setSourcePath("tournament/old/fleet_data.json");
+		fleet.setSourcePath("tournament/source/fleet_data.json");
 
-		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
-		assertEquals("old", files.text("tournament/old/fleet_data.json"));
+		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals("Fleet target already exists: tournament/new/fleet_data.json", failure.getMessage());
+		assertEquals("persisted fleet", files.text("tournament/source/fleet_data.json"));
 		assertEquals("new", files.text("tournament/new/fleet_data.json"));
 	}
 
@@ -92,7 +93,7 @@ class BattleNext_FleetSaverTest {
 	void deleteRemovesBackupHistory() throws Exception {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/alpha/fleet_data.json", "current");
-		files.put("tournament/alpha/backup/20260930-010203-004/fleet_data.json", "old");
+		files.put("tournament/alpha/backup/20260930-010203-004/fleet_data.json", "previous backup");
 
 		new BattleNext_FleetSaver(files).delete(fleet("alpha", "alpha", "current"));
 
@@ -101,35 +102,39 @@ class BattleNext_FleetSaverTest {
 	}
 
 	@Test
-	void writeFailureRestoresTargetAndOldDirectory() throws Exception {
+	void writeFailureRestoresTargetAndSourceDirectory() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/old/fleet_data.json", "{\"id\":\"old\"}");
-		files.put("tournament/old/old.variant", "old variant");
-		files.put("tournament/new/fleet_data.json", "{\"id\":\"new\"}");
+		files.put("tournament/source/fleet_data.json", "{\"id\":\"persisted\"}");
+		files.put("tournament/source/persisted.variant", "persisted variant");
 		files.put("tournament/new/stale.variant", "stale");
 		BattleNext_FleetModel fleet = fleet("renamed", "new", "current");
-		fleet.setSourcePath("tournament/old/fleet_data.json");
+		fleet.setSourcePath("tournament/source/fleet_data.json");
 		files.failWritePath = "tournament/new/current.variant";
 
-		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals("Injected write failure: tournament/new/current.variant", failure.getMessage());
+		assertEquals(0, failure.getSuppressed().length);
 
-		assertEquals("{\"id\":\"new\"}", files.text("tournament/new/fleet_data.json"));
+		assertEquals(List.of("tournament/new/stale.variant"), files.list("tournament/new", true));
+		assertEquals(List.of("tournament/source/fleet_data.json", "tournament/source/persisted.variant"), files.list("tournament/source", true));
+		assertFalse(files.contains("tournament/new/fleet_data.json"));
 		assertEquals("stale", files.text("tournament/new/stale.variant"));
-		assertEquals("{\"id\":\"old\"}", files.text("tournament/old/fleet_data.json"));
-		assertEquals("old variant", files.text("tournament/old/old.variant"));
+		assertEquals("{\"id\":\"persisted\"}", files.text("tournament/source/fleet_data.json"));
+		assertEquals("persisted variant", files.text("tournament/source/persisted.variant"));
 	}
 
 	@Test
 	void staleVariantDeleteFailureRestoresTarget() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
 		files.put("tournament/alpha/stale.variant", "stale");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
 		files.failDeletePath = "tournament/alpha/stale.variant";
 
-		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals("Injected delete failure: tournament/alpha/stale.variant", failure.getMessage());
 
-		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json"));
+		assertEquals("{\"id\":\"persisted\"}", files.text("tournament/alpha/fleet_data.json"));
 		assertEquals("stale", files.text("tournament/alpha/stale.variant"));
 		assertFalse(files.contains("tournament/alpha/current.variant"));
 	}
@@ -137,28 +142,30 @@ class BattleNext_FleetSaverTest {
 	@Test
 	void invalidVariantIsRejectedBeforeAnyMutation() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
 		BattleNext_FleetModel fleet = new BattleNext_FleetModel("id", "alpha", "name", List.of(), List.of(), List.of());
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(new JSONObject("{\"variantId\":\"bad/id\"}"), "bad/id"));
 
 		assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
 
 		assertEquals(1, files.size());
-		assertEquals("{\"id\":\"old\"}", files.text("tournament/alpha/fleet_data.json"));
+		assertEquals("{\"id\":\"persisted\"}", files.text("tournament/alpha/fleet_data.json"));
 	}
 
 	@Test
 	void rollbackFailureIsSuppressedOnOriginalFailure() throws Exception {
 		MemoryFiles files = new MemoryFiles();
-		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"old\"}");
+		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
 		files.failWritePath = "tournament/alpha/current.variant";
 		files.failDeleteDirectory = "tournament/alpha";
 
 		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
 
-		assertTrue(failure.getMessage().contains("Injected write failure"));
-		assertTrue(failure.getSuppressed().length > 0);
+		assertEquals("Injected write failure: tournament/alpha/current.variant", failure.getMessage());
+		assertEquals(1, failure.getSuppressed().length);
+		assertInstanceOf(IOException.class, failure.getSuppressed()[0]);
+		assertEquals("Injected delete failure: tournament/alpha", failure.getSuppressed()[0].getMessage());
 	}
 
 	private BattleNext_FleetModel fleet(String id, String folder, String variantId) throws Exception {
@@ -169,12 +176,12 @@ class BattleNext_FleetSaverTest {
 	}
 
 	@Test
-	void directLegacyExportRequiresNewIdentityAndProtectsTheSourceDirectory() throws Exception {
+	void directNumberedCsvExportRequiresNewIdentityAndProtectsTheSourceDirectory() throws Exception {
 
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/package/player01_data.csv", "metadata");
 		files.put("tournament/package/player01_fleet.csv", "members");
-		files.put("tournament/package/old.variant", "original");
+		files.put("tournament/package/source.variant", "source variant");
 		BattleNext_FleetModel fleet = fleet("ab_player01", "exported", "current");
 		fleet.setSourceType(BattleNext_LoadSource.LEGACY);
 		fleet.setSourcePath("tournament/package/player01_data.csv");
@@ -186,13 +193,13 @@ class BattleNext_FleetSaverTest {
 		assertEquals(3, files.size());
 		fleet.setFolderName("exported");
 		saver.save(fleet);
-		assertEquals("original", files.text("tournament/package/old.variant"));
+		assertEquals("source variant", files.text("tournament/package/source.variant"));
 		assertEquals("metadata", files.text("tournament/package/player01_data.csv"));
 		assertTrue(files.contains("tournament/exported/current.variant"));
 	}
 
 	@Test
-	void createdFleetCannotClaimAnExistingLegacyPackage() throws Exception {
+	void createdFleetCannotClaimANumberedCsvPackage() throws Exception {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/package/player1_data.csv", "metadata");
 		files.put("tournament/package/player1_fleet.csv", "members");

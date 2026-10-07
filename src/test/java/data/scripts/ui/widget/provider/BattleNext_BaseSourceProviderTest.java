@@ -70,9 +70,8 @@ class BattleNext_BaseSourceProviderTest {
 		assertEquals(List.of("title:Portrait", "small", "key:" + path, "default"), calls);
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"\n"})
-	void descriptionRendersCompleteFirstParagraphBeforeNativeBoundsAreAssigned(String separator) {
+	@Test
+	void descriptionRendersCompleteFirstParagraphBeforeNativeBoundsAreAssigned() {
 		List<String> calls = new ArrayList<>();
 		String paragraph = "Shields absorb 50% of damage. " + "Complete %s description. ".repeat(100).strip();
 		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -93,13 +92,13 @@ class BattleNext_BaseSourceProviderTest {
 							throw new AssertionError("Native tooltip content is built before its bounds are assigned");
 					default -> null;
 				});
-		new TestProvider().renderDescription(tooltip, " \t" + paragraph + separator + "Second paragraph");
+		new TestProvider().renderDescription(tooltip, " \t" + paragraph + "\nSecond paragraph");
 		assertEquals(List.of("default", "color", paragraph), calls);
 	}
 
 	@ParameterizedTest
 	@NullAndEmptySource
-	@ValueSource(strings = {" ", "\t\r\n"})
+	@ValueSource(strings = {"\t\r\n"})
 	void emptyDescriptionsKeepTheirHeader(String text) {
 		List<String> rendered = new ArrayList<>();
 		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),

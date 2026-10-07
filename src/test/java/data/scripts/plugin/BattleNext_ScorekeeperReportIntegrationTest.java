@@ -3,21 +3,38 @@ package data.scripts.plugin;
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
+import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 class BattleNext_ScorekeeperReportIntegrationTest {
 	private final Map<ShipAPI, Object[]> damageParams = new IdentityHashMap<>();
+	private final Map<BattleNext_ScorekeeperPlugin, Map<String, Object>> registrations = new IdentityHashMap<>();
+	private final List<Object> listeners = new ArrayList<>();
+	private final List<Object> removed = new ArrayList<>();
+
+	@AfterEach
+	void releaseScorekeepers() {
+		for (var entry : registrations.entrySet()) {
+			entry.getKey().cleanup();
+			assertTrue(entry.getValue().isEmpty());
+		}
+		assertTrue(listeners.isEmpty());
+		assertEquals(registrations.size(), removed.size());
+	}
 
 	@Test
 	void projectileBeamFighterAndModuleDamageUseTheirExpectedBuckets() throws Exception {
@@ -50,7 +67,9 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
 		assertEquals(36d, playerReport.getDamageDealt());
 		assertEquals(3, playerReport.getDealtBySource().size());
-		assertEquals(4, playerReport.getDealtBySource().get(0).getTotal() / 6d);
+		assertEquals("weapon", playerReport.getDealtBySource().get(0).getKind());
+		assertEquals("lightmg", playerReport.getDealtBySource().get(0).getId());
+		assertEquals(24d, playerReport.getDealtBySource().get(0).getTotal());
 		assertEquals("fighter_wing", playerReport.getDealtBySource().get(1).getKind());
 		assertEquals("talon_wing", playerReport.getDealtBySource().get(1).getId());
 		assertEquals("modulegun", playerReport.getDealtBySource().get(2).getId());
@@ -178,6 +197,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		assertEquals(0, report(scorekeeper, 0).getDealtBySource().size());
 		assertEquals(0, report(scorekeeper, 1).getTakenBySource().size());
 
+		scorekeeper = new BattleNext_ScorekeeperPlugin(List.of(playerMember), List.of(enemyMember));
 		apply(scorekeeper, player, enemy, projectile(player, weapon("lightmg", player), "proj"),
 				damage(0f, 0f, 0f, 4f));
 
@@ -229,6 +249,25 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 	private void apply(BattleNext_ScorekeeperPlugin scorekeeper, Object source, ShipAPI target,
 			Object damageParam, ApplyDamageResultAPI result) {
+		if (!registrations.containsKey(scorekeeper)) {
+			Map<String, Object> custom = new HashMap<>();
+			CombatListenerManagerAPI manager = proxy(CombatListenerManagerAPI.class, (name, args) -> switch (name) {
+				case "addListener" -> listeners.add(args[0]);
+				case "removeListener" -> listeners.remove(args[0]);
+				default -> null;
+			});
+			scorekeeper.init(proxy(CombatEngineAPI.class, (name, args) -> switch (name) {
+				case "getCustomData" -> custom;
+				case "getListenerManager" -> manager;
+				case "getShips" -> List.copyOf(damageParams.keySet());
+				case "getTotalElapsedTime" -> 2f;
+				case "removePlugin" -> removed.add(args[0]);
+				default -> null;
+			}));
+			assertSame(scorekeeper, custom.get(scorekeeper.getCustomDataKey()));
+			assertTrue(listeners.contains(scorekeeper));
+			registrations.put(scorekeeper, custom);
+		}
 		Object[] param = damageParams.get(target);
 		param[0] = damageParam;
 		try {
@@ -239,12 +278,12 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	}
 
 	private BattleNext_MemberReport report(BattleNext_ScorekeeperPlugin scorekeeper, int index) throws Exception {
-		Field trackedField = BattleNext_ScorekeeperPlugin.class.getDeclaredField("trackedMembers");
-		trackedField.setAccessible(true);
-		Object tracked = ((List<?>) trackedField.get(scorekeeper)).get(index);
-		Field reportField = tracked.getClass().getDeclaredField("report");
-		reportField.setAccessible(true);
-		return (BattleNext_MemberReport) reportField.get(tracked);
+		scorekeeper.advance(0.1f, List.of());
+		assertTrue(scorekeeper.isFrozen());
+		var frozen = scorekeeper.getFrozenReport();
+		assertEquals("player", frozen.getWinner());
+		assertEquals(2000L, frozen.getDurationMillis());
+		return (index == 0 ? frozen.getPlayerMembers() : frozen.getEnemyMembers()).get(0);
 	}
 
 	private FleetMemberAPI member(String id) {
@@ -258,6 +297,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 			case "getId" -> id;
 			case "getVariant" -> variant;
 			case "getShipName" -> id;
+			case "getRepairTracker" -> proxy(RepairTrackerAPI.class, (repairMethod, values) -> repairMethod.equals("getCR") ? 0.7f : null);
 			default -> null;
 		});
 	}
@@ -268,6 +308,9 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		Object[] damageParam = new Object[1];
 		ShipAPI ship = proxy(ShipAPI.class, (name, args) -> switch (name) {
 			case "getFleetMember" -> member;
+			case "getOwner" -> member != null && member.getId().equals("enemy") ? 1 : 0;
+			case "isAlive" -> member != null && member.getId().equals("player");
+			case "getHullLevel" -> member != null && member.getId().equals("player") ? 0.8f : 0f;
 			case "getHullSpec" -> hull;
 			case "getParamAboutToApplyDamage" -> damageParam[0];
 			case "isFighter" -> fighter;

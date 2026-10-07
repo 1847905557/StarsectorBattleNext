@@ -11,17 +11,16 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
 class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFixture {
 
-	@ParameterizedTest
-	@ValueSource(ints = {3, 7})
-	void generatedPackageUsesFormalCatalogAssemblyAndBattleSourceEntrypoints(int memberCount) throws Exception {
+	@Test
+	void generatedPackageUsesFormalCatalogAssemblyAndBattleSourceEntrypoints() throws Exception {
 
+		int memberCount = 3;
 		String folder = "中文舰队包";
 		String number = "41";
 		String id = "ab_player" + number;
@@ -102,11 +101,11 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 				List.of(id, "alpha"), List.of("alpha", id));
 		write("tournament/quick_battle.csv", "player,enemy,map,size\n" + quickBattles.stream()
 				.map(pair -> String.join(",", pair) + ",-1,1").reduce((left, right) -> left + "\n" + right).orElseThrow() + "\n");
-		List<List<String>> legacyBattles = List.of(List.of(number, "42"), List.of("42", number));
-		write("tournament/PvP_matches.csv", "player,enemy,map,size\n" + legacyBattles.stream()
+		List<List<String>> numberedBattles = List.of(List.of(number, "42"), List.of("42", number));
+		write("tournament/PvP_matches.csv", "player,enemy,map,size\n" + numberedBattles.stream()
 				.map(pair -> String.join(",", pair) + ",8,1").reduce((left, right) -> left + "\n" + right).orElseThrow() + "\n");
 		List<List<String>> expectedBattles = new ArrayList<>(quickBattles);
-		expectedBattles.addAll(legacyBattles.stream().map(pair -> pair.stream().map(value -> "ab_player" + value).toList()).toList());
+		expectedBattles.addAll(numberedBattles.stream().map(pair -> pair.stream().map(value -> "ab_player" + value).toList()).toList());
 		var provider = new BattleNext_BattleSourceProvider();
 		var matches = provider.load();
 		assertTrue(provider.getWarnings().isEmpty(), provider.getWarnings().toString());

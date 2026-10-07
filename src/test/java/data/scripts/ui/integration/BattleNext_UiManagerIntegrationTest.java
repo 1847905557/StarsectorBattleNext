@@ -344,7 +344,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			if (method.getName().equals("readJSONFromCommon")) return savedSettings.get();
 			if (method.getName().equals("writeJSONToCommon")) {
 				if (failSettingsWrite) throw new IOException("Injected settings write failure");

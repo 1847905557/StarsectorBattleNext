@@ -22,9 +22,7 @@ class BattleNext_PageLayoutSoundIntegrationTest {
 
 		BattleNext_PageLayout.applyButtonSounds(button);
 
-		assertEquals("ui_button_mouseover", BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID);
-		assertEquals("ui_button_pressed", BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID);
-		assertEquals(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, hover.get());
-		assertEquals(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID, pressed.get());
+		assertEquals("ui_button_mouseover", hover.get());
+		assertEquals("ui_button_pressed", pressed.get());
 	}
 }

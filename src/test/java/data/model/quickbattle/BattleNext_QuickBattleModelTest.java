@@ -19,26 +19,42 @@ class BattleNext_QuickBattleModelTest {
 	void supportedMapsAndQuotedFleetNamesRoundTrip(int map) {
 		var row = BattleNext_QuickBattleModel.fromCsvRow("\"team,one\",enemy," + map + ",1.5");
 		assertEquals("team,one", row.getPlayer());
+		assertEquals("enemy", row.getEnemy());
 		assertEquals(map, row.getMap());
 		assertEquals(1.5f, row.getMapScale());
 		assertEquals(row.toCsvLine(), BattleNext_QuickBattleModel.fromCsvRow(row.toCsvLine()).toCsvLine());
+		var restored = BattleNext_QuickBattleModel.fromCsvRow(row.toCsvLine());
+		assertEquals("team,one", restored.getPlayer());
+		assertEquals("enemy", restored.getEnemy());
+		assertEquals(map, restored.getMap());
+		assertEquals(1.5f, restored.getMapScale());
 	}
 
 	@ParameterizedTest
 	@ValueSource(strings = {"a,b,0,0", "a,b,0,NaN", "a,b,x,1", "a,b,1,x", ",b,1,1", "a,b,1", "a,b,1,1,extra"})
 	void invalidCsvKeepsThePriorModelAndProducesEditableRawRows(String line) {
+
 		var row = new BattleNext_QuickBattleModel("original", "enemy", 3, 2f);
 		String before = row.toCsvLine();
-		assertThrows(IllegalArgumentException.class, () -> row.fromCsvLine(BattleNext_CsvLine.parse(line)));
+		var failure = assertThrows(IllegalArgumentException.class, () -> row.fromCsvLine(BattleNext_CsvLine.parse(line)));
+		var fields = BattleNext_CsvLine.parse(line);
+		if (fields.size() != 4) {
+			assertEquals("Quick battle row must have 4 columns", failure.getMessage());
+		} else if (line.equals("a,b,x,1") || line.equals("a,b,1,x")) {
+			assertEquals("Invalid quick battle row numbers", failure.getMessage());
+			assertInstanceOf(NumberFormatException.class, failure.getCause());
+		} else {
+			assertEquals("Invalid quick battle row", failure.getMessage());
+		}
 		assertEquals(before, row.toCsvLine());
 		var raw = BattleNext_QuickBattleModel.parseLine(line, false);
 		assertEquals(QuickBattleRowType.RAW, raw.getRowType());
 		assertFalse(raw.isEnabled());
-		assertTrue(raw.toSourceLine().startsWith("# "));
+		assertEquals("# " + line, raw.toSourceLine());
 	}
 
 	@Test
-	void headersCommentsAndLegacyCopyRetainTheirDistinctSemantics() {
+	void headersCommentsAndNumberedCsvCopyRetainTheirDistinctSemantics() {
 		assertNull(BattleNext_QuickBattleModel.parseLine("player,enemy,map,size", false));
 		assertNull(BattleNext_QuickBattleModel.fromCsvRow("# a,b,1,1"));
 		var row = BattleNext_QuickBattleModel.parseLine("# 01,02,3,2", true);
@@ -49,6 +65,8 @@ class BattleNext_QuickBattleModelTest {
 		assertEquals("ab_player01", copy.getPlayer());
 		assertEquals("ab_player02", copy.getEnemy());
 		assertEquals(QuickBattleRowType.COMMENT_BATTLE, copy.getRowType());
+		assertEquals(3, copy.getMap());
+		assertEquals(2f, copy.getMapScale());
 		assertEquals(row.toSourceLine(), copy.toSourceLine());
 		assertEquals("row", copy.getId());
 		assertEquals(BattleNext_LoadSource.LEGACY, copy.getSourceType());

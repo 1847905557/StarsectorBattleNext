@@ -12,9 +12,13 @@ class BattleNext_RuleModelTest {
 
 	@Test
 	void restrictionsReplaceInOrderAndTheirOwnViewCanBeReassigned() throws Exception {
+
 		var rule = new BattleNext_RuleModel(" id ", " Name ");
 		var number = new BattleNext_RuleRestriction("testNumeric", "number");
 		var items = new BattleNext_RuleRestriction("testItems", "list");
+		number.setEnabled(true);
+		number.setValue(3.5);
+		items.setItems(List.of("first", "second"));
 		rule.setRestrictions(List.of(number, items));
 		rule.setRestrictions(rule.getRestrictions());
 		assertEquals(List.of(number, items), rule.getRestrictions());
@@ -26,6 +30,13 @@ class BattleNext_RuleModelTest {
 		assertEquals("id", loaded.getId());
 		assertEquals("Name", loaded.getName());
 		assertEquals(rule.toJson().toString(), loaded.toJson().toString());
+		assertEquals(List.of("testNumeric", "testItems"), loaded.getRestrictions().stream().map(BattleNext_RuleRestriction::getId).toList());
+		assertEquals("number", loaded.getRestriction("testNumeric").getType());
+		assertTrue(loaded.getRestriction("testNumeric").isEnabled());
+		assertEquals(3.5, loaded.getRestriction("testNumeric").getValue());
+		assertEquals("list", loaded.getRestriction("testItems").getType());
+		assertFalse(loaded.getRestriction("testItems").isEnabled());
+		assertEquals(List.of("first", "second"), loaded.getRestriction("testItems").getItems());
 	}
 
 	@Test

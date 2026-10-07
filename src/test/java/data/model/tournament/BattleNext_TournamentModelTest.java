@@ -5,6 +5,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -19,6 +20,13 @@ class BattleNext_TournamentModelTest {
 		BattleNext_TournamentModel restored = new BattleNext_TournamentModel();
 		restored.fromJson(configuration.toJson());
 		assertEquals(configuration.toJson().toString(), restored.toJson().toString());
+		assertEquals("cup", restored.getId());
+		assertEquals("Cup 中文 50%", restored.getName());
+		assertEquals(TournamentBracketType.DOUBLE_ELIMINATION, restored.getBracketType());
+		assertEquals(5, restored.getBoCount());
+		assertEquals(3, restored.getMaxFleet());
+		assertEquals("rule", restored.getRuleId());
+		assertEquals(8, restored.getMapId());
 		assertEquals(3, restored.getWinTarget());
 		restored.setMaxFleet(4);
 		assertEquals(3, configuration.getMaxFleet());
@@ -38,15 +46,18 @@ class BattleNext_TournamentModelTest {
 			case "missing" -> json.remove("boCount");
 		}
 		Class<? extends Exception> exceptionType = failure.equals("missing") ? JSONException.class : IllegalArgumentException.class;
-		assertThrows(exceptionType, () -> configuration.fromJson(json));
+		var exception = assertThrows(exceptionType, () -> configuration.fromJson(json));
+		if (failure.equals("missing")) {
+			assertTrue(exception.getMessage().contains("boCount"));
+		} else {
+			assertEquals(failure.equals("enum") ? "Invalid tournament.bracketType: INVALID" : "Invalid tournament limits", exception.getMessage());
+		}
 		assertEquals(before, configuration.toJson().toString());
 	}
 
 	@Test
 	void configurationComputesLargeBoThreshold() {
-		for (TournamentBracketType bracket : TournamentBracketType.values()) {
-			BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", bracket, Integer.MAX_VALUE, 4);
-			assertEquals(1073741824, configuration.getWinTarget());
-		}
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, Integer.MAX_VALUE, 4);
+		assertEquals(1073741824, configuration.getWinTarget());
 	}
 }

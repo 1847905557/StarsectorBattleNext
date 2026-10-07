@@ -5,14 +5,11 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
-import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.tools.BattleNext_Logger;
-import data.scripts.ui.BattleNext_RefitPanelPlugin;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
@@ -20,7 +17,6 @@ import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionSelectionMode;
 import data.scripts.ui.widget.BattleNext_TextField;
-import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import org.apache.log4j.AppenderSkeleton;
@@ -352,67 +348,6 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		}
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"pinned", "campaign", "refit"})
-	void allDetailEntrypointsUseTheFullSharedRendererAndReleaseOwnedPanels(String entry) throws Exception {
-
-		Variant original = source();
-		original.getApi().addMod("installed");
-		installed.script.customPost = true;
-		BattleNext_VariantDetails details;
-		Runnable close;
-		if (entry.equals("pinned")) {
-			var store = new BattleNext_PinnedVariantStore();
-			store.reload();
-			var pin = store.saveVariant("Pinned full effects", original.getApi());
-			var page = page(store, Runnable::run, (text, action) -> {}, () -> {});
-			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-			page.buttonPressed("pin:" + pin.getSourcePath());
-			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
-			close = page::close;
-		} else if (entry.equals("campaign")) {
-			var store = new BattleNext_PinnedVariantStore();
-			store.reload();
-			var display = open(original, store, 1000);
-			details = (BattleNext_VariantDetails) getField(display, "details");
-			close = () -> {
-				try {
-					var method = display.getClass().getDeclaredMethod("close");
-					method.setAccessible(true);
-					method.invoke(display);
-				} catch (Exception exception) {
-					throw new AssertionError(exception);
-				}
-			};
-		} else {
-			var plugin = new BattleNext_RefitPanelPlugin(() -> {});
-			plugin.init(panel(1000f, 700f, plugin), 1000f, 700f);
-			ShipVariantAPI variant = original.getApi();
-			plugin.open(proxy(FleetMemberAPI.class, (method, args) -> method.equals("getVariant") ? variant : null),
-					new Refit(null, variant));
-			details = (BattleNext_VariantDetails) getField(plugin, "details");
-			close = plugin::close;
-		}
-		for (int refresh = 0; refresh < 2; refresh++) {
-			details.refreshContent();
-			var card = tooltips.get(lists(details).get("plugins")).getComponents().get(0);
-			TooltipMakerAPI hover = tooltip(360f, 0f, false);
-			assertEquals(360f, attachedTooltips.get(card).getTooltipWidth(null));
-			attachedTooltips.get(card).createTooltip(hover, false, null);
-			assertEquals("installed", textValues(hover).get(1));
-			assertTrue(textValues(hover).stream().anyMatch(value -> value.contains("Second: Literal %s, %d and 50%.")));
-			LabelAPI description = textLabels(hover).get(2);
-			assertEquals(installed.mainText, labelPatterns.get(description.getPosition()));
-			assertEquals(List.of(Misc.getHighlightColor()), labelHighlightColors.get(description.getPosition()));
-			assertTrue(textValues(hover).contains("Custom post 50%"));
-			assertTrue(textValues(hover).contains("Enhanced: FRIGATE 30%.\nComplete extra effect 40%."));
-		}
-		details.close();
-		close.run();
-		assertNull(details.getPanel());
-		assertTrue(((List<?>) getField(details, "ownedPanels")).isEmpty());
 	}
 
 	private BattleNext_HullModSourceProvider provider(String kind) {

@@ -94,7 +94,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
-			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.text(args[0], args[1]);
+			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			if (method.getName().equals("getBoolean") && args[0].equals("colorblindMode")) return colorblind;
 			if (method.getName().equals("getColor") && args[0].equals("textEnemyColor")) return Color.RED;
 			if (method.getName().equals("getHullSpec") && args[0].equals(originalHull.getHullId())) return hull;
