@@ -36,7 +36,7 @@ public abstract class BattleNext_CatalogLoader<T extends BattleNext_BaseModel> e
 			recordInput(path, -1, value.getId(), raw);
 			result.add(value);
 			BattleNext_Logger.operationSucceeded(getClass(), "resource.load",
-					BattleNext_Logger.fields().put("path", path).put("model", value).build());
+					() -> BattleNext_Logger.fields().put("path", path).put("model", value).build());
 		}
 		return finishLoad(result);
 	}

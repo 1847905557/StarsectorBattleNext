@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 class BattleNext_LoggerTest {
 	private Field settingsValues;
@@ -84,6 +86,40 @@ class BattleNext_LoggerTest {
 		BattleNext_Logger.info(getClass(), "test.info", fields);
 		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
 		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
+		assertEquals(3, appender.events.size());
+	}
+
+	@Test
+	void infoFactoriesCaptureEachEnabledEventAndPreserveCallTimeSnapshots() throws Exception {
+
+		AtomicInteger captures = new AtomicInteger();
+		JSONObject input = new JSONObject().put("value", "Before");
+		Supplier<BattleNext_Logger.Fields> fields = () -> {
+			captures.incrementAndGet();
+			return BattleNext_Logger.fields().put("input", input).build();
+		};
+		BattleNext_Logger.info(getClass(), "test.info", fields);
+		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
+		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
+		assertEquals(0, captures.get());
+		assertTrue(appender.events.isEmpty());
+		JSONObject settings = (JSONObject) settingsValues.get(null);
+		settings.put("infoLog", true);
+		BattleNext_Logger.info(getClass(), "test.info", fields);
+		input.put("value", "During");
+		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
+		input.put("value", "After");
+		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
+		input.put("value", "Changed after emission");
+		assertEquals(3, captures.get());
+		for (int index = 0; index < appender.events.size(); index++) {
+			JSONObject entry = new JSONObject(appender.events.get(index).getRenderedMessage());
+			assertEquals(List.of("observed", "started", "succeeded").get(index), entry.getString("phase"));
+			assertEquals(List.of("Before", "During", "After").get(index), entry.getJSONObject("fields").getJSONObject("input").getString("value"));
+		}
+		settings.put("infoLog", false);
+		BattleNext_Logger.info(getClass(), "test.info", fields);
+		assertEquals(3, captures.get());
 		assertEquals(3, appender.events.size());
 	}
 

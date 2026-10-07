@@ -1,0 +1,63 @@
+import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.TestDescriptor
+import org.gradle.api.tasks.testing.TestListener
+import org.gradle.api.tasks.testing.TestResult
+
+if (Boolean.getBoolean("test.profiler")) {
+	gradle.beforeProject { project ->
+		project.tasks.withType(Test).configureEach { task ->
+			def rows = Collections.synchronizedList(new ArrayList<Map>())
+			task.addTestListener(new TestListener() {
+				@Override
+				void beforeSuite(TestDescriptor suite) {
+					if (suite.parent == null) {
+						rows.clear()
+					}
+				}
+
+				@Override
+				void beforeTest(TestDescriptor descriptor) {
+
+				}
+
+				@Override
+				void afterTest(TestDescriptor descriptor, TestResult result) {
+					rows.add([
+							milliseconds: result.endTime - result.startTime,
+							status: result.resultType.name(),
+							className: descriptor.className,
+							name: descriptor.name,
+							displayName: descriptor.displayName
+					])
+				}
+
+				@Override
+				void afterSuite(TestDescriptor suite, TestResult result) {
+					if (suite.parent != null) return
+
+					def ordered = new ArrayList<Map>(rows)
+					ordered.sort { first, second ->
+						(second.milliseconds <=> first.milliseconds)
+								?: (first.className <=> second.className)
+								?: (first.name <=> second.name)
+					}
+					def report = project.layout.buildDirectory.file("reports/test-profiler/${task.name}.tsv").get().asFile
+					report.parentFile.mkdirs()
+					report.withWriter("UTF-8") { writer ->
+						writer.write("duration_ms\tstatus\tclass\tname\tdisplay_name\n")
+						for (row in ordered) {
+							writer.write([row.milliseconds, row.status, row.className, row.name, row.displayName]
+									.collect { value -> value.toString().replace("\t", "\\t").replace("\r", "\\r").replace("\n", "\\n") }
+									.join("\t") + "\n")
+						}
+					}
+					task.logger.lifecycle("Test profiler ${task.path}: ${ordered.size()} cases, descending duration (ms)")
+					for (row in ordered) {
+						task.logger.lifecycle("${row.milliseconds} ms\t${row.status}\t${row.className} :: ${row.name}")
+					}
+					task.logger.lifecycle("Test profiler report: ${report}")
+				}
+			})
+		}
+	}
+}

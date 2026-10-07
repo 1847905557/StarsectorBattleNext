@@ -24,25 +24,33 @@ public class BattleNext_TestI18nSource {
 
 	public record Read(TextKey key, List<Expression> arguments, Node origin) { }
 
-	private final List<CompilationUnit> units;
-	private final List<MethodCallExpr> calls;
-	private final Set<String> sectionNames;
+	private final List<MethodCallExpr> calls = new ArrayList<>();
+	private final List<MethodReferenceExpr> references = new ArrayList<>();
+	private final Map<String, List<MethodCallExpr>> callsByName = new HashMap<>();
+	private final Map<String, List<MethodDeclaration>> methodsByName = new HashMap<>();
+	private final Set<String> sectionNames = new HashSet<>();
 	private final Map<Node, Set<Object>> values = new IdentityHashMap<>();
 	private final Set<Node> active = Collections.newSetFromMap(new IdentityHashMap<>());
 
 	public BattleNext_TestI18nSource(Path root) throws IOException {
 
-		units = BattleNext_TestSourceIndex.getInstance().getSources().entrySet().stream()
+		List<CompilationUnit> units = BattleNext_TestSourceIndex.getInstance().getSources().entrySet().stream()
 				.filter(entry -> entry.getKey().startsWith(root)).map(Map.Entry::getValue).toList();
-		calls = units.stream().flatMap(unit -> unit.findAll(MethodCallExpr.class).stream()).toList();
-		sectionNames = new HashSet<>();
 		for (CompilationUnit unit : units) {
-			for (VariableDeclarator variable : unit.findAll(VariableDeclarator.class)) {
-				if (variable.getType().asString().endsWith("BattleNext_I18nSection")) sectionNames.add(variable.getNameAsString());
-			}
-			for (Parameter parameter : unit.findAll(Parameter.class)) {
-				if (parameter.getType().asString().endsWith("BattleNext_I18nSection")) sectionNames.add(parameter.getNameAsString());
-			}
+			unit.walk(node -> {
+				if (node instanceof MethodCallExpr call) {
+					calls.add(call);
+					callsByName.computeIfAbsent(call.getNameAsString(), name -> new ArrayList<>()).add(call);
+				} else if (node instanceof MethodDeclaration method) {
+					methodsByName.computeIfAbsent(method.getNameAsString(), name -> new ArrayList<>()).add(method);
+				} else if (node instanceof MethodReferenceExpr reference) {
+					references.add(reference);
+				} else if (node instanceof VariableDeclarator variable) {
+					if (variable.getType().asString().endsWith("BattleNext_I18nSection")) sectionNames.add(variable.getNameAsString());
+				} else if (node instanceof Parameter parameter) {
+					if (parameter.getType().asString().endsWith("BattleNext_I18nSection")) sectionNames.add(parameter.getNameAsString());
+				}
+			});
 		}
 	}
 
@@ -99,10 +107,10 @@ public class BattleNext_TestI18nSource {
 
 	private Set<Object> evaluate(Expression expression) {
 		if (values.containsKey(expression)) return values.get(expression);
-		assertTrue(active.add(expression), "Cyclic text expression: " + expression);
+		assertTrue(active.add(expression), () -> "Cyclic text expression: " + expression);
 		Set<Object> result = compute(expression);
 		active.remove(expression);
-		assertFalse(result.isEmpty(), "Unresolved text expression: " + expression);
+		assertFalse(result.isEmpty(), () -> "Unresolved text expression: " + expression);
 		values.put(expression, result);
 		return result;
 	}
@@ -178,8 +186,7 @@ public class BattleNext_TestI18nSource {
 			int index = method.getParameters().indexOf(parameter);
 			Set<Object> result = new LinkedHashSet<>();
 			String signature = method.resolve().getQualifiedSignature();
-			for (MethodCallExpr call : calls) {
-				if (!call.getNameAsString().equals(method.getNameAsString())) continue;
+			for (MethodCallExpr call : callsByName.getOrDefault(method.getNameAsString(), List.of())) {
 				if (call.getArguments().size() != method.getParameters().size()) continue;
 				if (!call.resolve().getQualifiedSignature().equals(signature)) continue;
 				result.addAll(evaluate(call.getArgument(index)));
@@ -240,14 +247,11 @@ public class BattleNext_TestI18nSource {
 			}
 			return result;
 		}
-		for (CompilationUnit unit : units) {
-			for (MethodDeclaration implementation : unit.findAll(MethodDeclaration.class)) {
-				if (!implementation.getNameAsString().equals(name)) continue;
-				if (implementation.getBody().isEmpty()) continue;
-				if (!declaration.declaringType().isAssignableBy(implementation.resolve().declaringType())) continue;
-				for (ReturnStmt statement : implementation.findAll(ReturnStmt.class)) {
-					result.addAll(evaluate(statement.getExpression().orElseThrow()));
-				}
+		for (MethodDeclaration implementation : methodsByName.getOrDefault(name, List.of())) {
+			if (implementation.getBody().isEmpty()) continue;
+			if (!declaration.declaringType().isAssignableBy(implementation.resolve().declaringType())) continue;
+			for (ReturnStmt statement : implementation.findAll(ReturnStmt.class)) {
+				result.addAll(evaluate(statement.getExpression().orElseThrow()));
 			}
 		}
 		return result;
@@ -265,30 +269,28 @@ public class BattleNext_TestI18nSource {
 
 	private void collectReferences(List<Read> reads) {
 
-		for (CompilationUnit unit : units) {
-			for (MethodReferenceExpr reference : unit.findAll(MethodReferenceExpr.class)) {
-				if (!reference.getIdentifier().equals("get")) continue;
-				if (!sectionNames.contains(reference.getScope().isFieldAccessExpr()
-						? reference.getScope().asFieldAccessExpr().getNameAsString() : reference.getScope().toString()) && !(reference.getScope() instanceof MethodCallExpr factory
-						&& factory.getScope().map(value -> value.toString().endsWith("BattleNext_I18nSection")).orElse(false))) continue;
-				if (!reference.getScope().calculateResolvedType().describe().equals(
-						"data.scripts.battlesnext.util.BattleNext_I18nSection")) continue;
-				Section section = (Section) evaluate(reference.getScope()).iterator().next();
-				AssignExpr assignment = reference.findAncestor(AssignExpr.class).orElseThrow();
-				String field = assignment.getTarget().asFieldAccessExpr().getNameAsString();
-				TypeDeclaration<?> owner = reference.findAncestor(TypeDeclaration.class).orElseThrow();
-				for (MethodCallExpr call : owner.findAll(MethodCallExpr.class)) {
-					if (!call.getNameAsString().equals("apply")) continue;
-					if (!call.getScope().orElseThrow().toString().equals(field)) continue;
-					List<Expression> arguments = List.of();
-					Node parent = call.getParentNode().orElseThrow();
-					if (parent instanceof MethodCallExpr format && format.getNameAsString().equals("format")
-							&& format.getArgument(0) == call) {
-						arguments = List.copyOf(format.getArguments().subList(1, format.getArguments().size()));
-					}
-					for (Object key : evaluate(call.getArgument(0))) {
-						reads.add(new Read(new TextKey(section.category(), section.prefix() + key), arguments, call));
-					}
+		for (MethodReferenceExpr reference : references) {
+			if (!reference.getIdentifier().equals("get")) continue;
+			if (!sectionNames.contains(reference.getScope().isFieldAccessExpr()
+					? reference.getScope().asFieldAccessExpr().getNameAsString() : reference.getScope().toString()) && !(reference.getScope() instanceof MethodCallExpr factory
+					&& factory.getScope().map(value -> value.toString().endsWith("BattleNext_I18nSection")).orElse(false))) continue;
+			if (!reference.getScope().calculateResolvedType().describe().equals(
+					"data.scripts.battlesnext.util.BattleNext_I18nSection")) continue;
+			Section section = (Section) evaluate(reference.getScope()).iterator().next();
+			AssignExpr assignment = reference.findAncestor(AssignExpr.class).orElseThrow();
+			String field = assignment.getTarget().asFieldAccessExpr().getNameAsString();
+			TypeDeclaration<?> owner = reference.findAncestor(TypeDeclaration.class).orElseThrow();
+			for (MethodCallExpr call : owner.findAll(MethodCallExpr.class)) {
+				if (!call.getNameAsString().equals("apply")) continue;
+				if (!call.getScope().orElseThrow().toString().equals(field)) continue;
+				List<Expression> arguments = List.of();
+				Node parent = call.getParentNode().orElseThrow();
+				if (parent instanceof MethodCallExpr format && format.getNameAsString().equals("format")
+						&& format.getArgument(0) == call) {
+					arguments = List.copyOf(format.getArguments().subList(1, format.getArguments().size()));
+				}
+				for (Object key : evaluate(call.getArgument(0))) {
+					reads.add(new Read(new TextKey(section.category(), section.prefix() + key), arguments, call));
 				}
 			}
 		}

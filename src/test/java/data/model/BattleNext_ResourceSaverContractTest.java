@@ -15,6 +15,7 @@ import data.model.tournament.io.BattleNext_TournamentSaver;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -25,15 +26,16 @@ import java.util.List;
 
 class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 
-	@ParameterizedTest
-	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
-	void optionalResourceRootsPublishLoadedEmptyCatalogsWithoutReadingFiles(String kind) throws Exception {
-		var store = store(kind);
-		store.reload();
-		assertTrue(store.isLoaded());
-		assertTrue(store.getAll().isEmpty());
-		assertTrue(dataReads.isEmpty());
-		assertFalse(Files.exists(directory.resolve(root(kind))));
+	@Test
+	void optionalResourceRootsPublishLoadedEmptyCatalogsWithoutReadingFiles() throws Exception {
+		for (String kind : List.of("report", "rule", "tournament", "pin")) {
+			var store = store(kind);
+			store.reload();
+			assertTrue(store.isLoaded());
+			assertTrue(store.getAll().isEmpty());
+			assertTrue(dataReads.isEmpty());
+			assertFalse(Files.exists(directory.resolve(root(kind))));
+		}
 	}
 
 	@ParameterizedTest
@@ -79,31 +81,33 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 		saver.delete(model);
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
-	void invalidIdentityFailsBeforeCreatingTheResourceDirectory(String kind) throws Exception {
-		var model = model(kind, "");
-		var saver = saver(kind);
-		assertThrows(IOException.class, () -> saver.save(model));
-		assertThrows(IOException.class, () -> saver.delete(model));
-		assertFalse(Files.exists(directory.resolve(root(kind))));
+	@Test
+	void invalidIdentityFailsBeforeCreatingTheResourceDirectory() throws Exception {
+		for (String kind : List.of("report", "rule", "tournament", "pin")) {
+			var model = model(kind, "");
+			var saver = saver(kind);
+			assertThrows(IOException.class, () -> saver.save(model));
+			assertThrows(IOException.class, () -> saver.delete(model));
+			assertFalse(Files.exists(directory.resolve(root(kind))));
+		}
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"report", "rule", "tournament", "pin"})
-	void filesystemFailurePreservesTheInputModel(String kind) throws Exception {
-		var model = model(kind, "entry");
-		model.setSourceType(BattleNext_LoadSource.STANDARD);
-		model.setSourcePath("source.json");
-		String before = model.toJson().toString();
-		var blocked = directory.resolve(root(kind));
-		Files.createDirectories(blocked.getParent());
-		Files.writeString(blocked, "blocked", StandardCharsets.UTF_8);
-		assertThrows(IOException.class, () -> saver(kind).save(model));
-		assertEquals(before, model.toJson().toString());
-		assertEquals("source.json", model.getSourcePath());
-		assertEquals(BattleNext_LoadSource.STANDARD, model.getSourceType());
-		assertEquals("blocked", Files.readString(blocked, StandardCharsets.UTF_8));
+	@Test
+	void filesystemFailurePreservesTheInputModel() throws Exception {
+		for (String kind : List.of("report", "rule", "tournament", "pin")) {
+			var model = model(kind, "entry");
+			model.setSourceType(BattleNext_LoadSource.STANDARD);
+			model.setSourcePath("source.json");
+			String before = model.toJson().toString();
+			var blocked = directory.resolve(root(kind));
+			Files.createDirectories(blocked.getParent());
+			Files.writeString(blocked, "blocked", StandardCharsets.UTF_8);
+			assertThrows(IOException.class, () -> saver(kind).save(model));
+			assertEquals(before, model.toJson().toString());
+			assertEquals("source.json", model.getSourcePath());
+			assertEquals(BattleNext_LoadSource.STANDARD, model.getSourceType());
+			assertEquals("blocked", Files.readString(blocked, StandardCharsets.UTF_8));
+		}
 	}
 
 	private BattleNext_BaseStore<? extends BattleNext_JsonModel> store(String kind) {

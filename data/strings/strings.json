@@ -252,7 +252,7 @@
 		"BattleNext_fleet_tags": "舰队标签"
 	},
 	"Management": {
-		"BattleNext_management_active_tournament": "Active tournament",
+		"BattleNext_management_active_tournament": "Active tournament: %s",
 		"BattleNext_management_heading": "AI Battles Next",
 		"BattleNext_management_page_battle_selector": "Battle Selector",
 		"BattleNext_management_page_fleets": "Fleets",
@@ -261,10 +261,10 @@
 		"BattleNext_management_page_rules": "Rules",
 		"BattleNext_management_page_settings": "Settings",
 		"BattleNext_management_page_tournaments": "Tournaments",
-		"BattleNext_management_report_updated": "Battle report updated"
+		"BattleNext_management_report_updated": "Battle report updated: %s"
 	},
 	"Management_CN": {
-		"BattleNext_management_active_tournament": "当前赛事",
+		"BattleNext_management_active_tournament": "当前赛事: %s",
 		"BattleNext_management_heading": "AI Battles Next",
 		"BattleNext_management_page_battle_selector": "对战选择",
 		"BattleNext_management_page_fleets": "舰队",
@@ -273,7 +273,7 @@
 		"BattleNext_management_page_rules": "规则",
 		"BattleNext_management_page_settings": "设置",
 		"BattleNext_management_page_tournaments": "赛事",
-		"BattleNext_management_report_updated": "作战记录已更新"
+		"BattleNext_management_report_updated": "作战记录已更新: %s"
 	},
 	"Member": {
 		"BattleNext_member_custom_portrait": "Custom portrait",

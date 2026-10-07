@@ -53,7 +53,7 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 			}
 			super.save(model);
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetStore.class, "fleet.store.commit",
-					BattleNext_Logger.fields().put("model", model).build());
+					() -> BattleNext_Logger.fields().put("model", model).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_FleetStore.class, "fleet.store.commit", input, exception);
 			throw exception;

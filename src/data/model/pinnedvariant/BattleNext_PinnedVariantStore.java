@@ -42,7 +42,7 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 			model.toBuilder().build();
 			super.save(model);
 			BattleNext_Logger.operationSucceeded(BattleNext_PinnedVariantStore.class, "variant.pin.commit",
-					BattleNext_Logger.fields().put("model", model).build());
+					() -> BattleNext_Logger.fields().put("model", model).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_PinnedVariantStore.class, "variant.pin.commit.rejected", input, exception);
@@ -73,7 +73,7 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 			BattleNext_PinnedVariantModel renamed = new BattleNext_PinnedVariantModel(pinId, displayName, model.getVariantJson());
 			save(renamed);
 			BattleNext_Logger.operationSucceeded(BattleNext_PinnedVariantStore.class, "variant.pin.rename",
-					BattleNext_Logger.fields().put("pin_id", pinId).put("display_name", displayName).build());
+					() -> BattleNext_Logger.fields().put("pin_id", pinId).put("display_name", displayName).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_PinnedVariantStore.class, "variant.pin.rename.rejected", input, exception);

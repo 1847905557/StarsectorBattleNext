@@ -4,19 +4,23 @@ public class BattleNext_BattleSignals {
 
 	private static final BattleNext_BattleSignals INSTANCE = new BattleNext_BattleSignals();
 
-	private volatile boolean pendingResult;
+	private String reportId = "";
 
 	private BattleNext_BattleSignals() {
 
 	}
 
-	public static void markPendingResult() {
-		INSTANCE.pendingResult = true;
+	public static synchronized void markPendingResult(String reportId) {
+		INSTANCE.reportId = reportId;
 	}
 
-	public static boolean consumePendingResult() {
-		boolean value = INSTANCE.pendingResult;
-		INSTANCE.pendingResult = false;
+	public static synchronized String consumePendingResult() {
+		String value = INSTANCE.reportId;
+		INSTANCE.reportId = "";
 		return value;
+	}
+
+	public static synchronized void clearPendingResult() {
+		INSTANCE.reportId = "";
 	}
 }

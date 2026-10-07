@@ -21,7 +21,7 @@ public class BattleNext_Settings {
 
 	public static void load() {
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.load",
-				BattleNext_Logger.fields().put("path", PATH).build());
+				() -> BattleNext_Logger.fields().put("path", PATH).build());
 		values = defaults();
 		try {
 			JSONObject stored = readStored(PATH);
@@ -41,10 +41,10 @@ public class BattleNext_Settings {
 			boolean cnText = Global.getSettings().getBoolean("showCNTranslationCredits");
 			put(values, "cnText", cnText);
 			BattleNext_Logger.info(BattleNext_Settings.class, "settings.field.default",
-					BattleNext_Logger.fields().put("key", "cnText").put("source_key", "showCNTranslationCredits").put("value", cnText).build());
+					() -> BattleNext_Logger.fields().put("key", "cnText").put("source_key", "showCNTranslationCredits").put("value", cnText).build());
 		}
 		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.load",
-				BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
+				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
 	}
 
 	public static boolean isCnTextEnabled() {
@@ -108,10 +108,10 @@ public class BattleNext_Settings {
 			put(next, "reportKeepCount", reportKeepCount);
 			try {
 				BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.write",
-				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
+				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
 				Global.getSettings().writeJSONToCommon(PATH, next, false);
 				BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.write",
-				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
+				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
 			} catch (IOException | JSONException exception) {
 				BattleNext_Logger.operationFailed(BattleNext_Settings.class, "settings.write",
 				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build(), exception);
@@ -119,7 +119,7 @@ public class BattleNext_Settings {
 			}
 			values = next;
 			BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.save",
-					BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
+					() -> BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
 		} catch (RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException) {
 				BattleNext_Logger.warn(BattleNext_Settings.class, "settings.validation.rejected", input, exception);
@@ -136,10 +136,10 @@ public class BattleNext_Settings {
 		try {
 			JSONObject stored = Global.getSettings().readJSONFromCommon(path, false);
 			BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.read",
-					BattleNext_Logger.fields().put("path", path).put("settings", stored).build());
+					() -> BattleNext_Logger.fields().put("path", path).put("settings", stored).build());
 			if (stored == null) {
 				BattleNext_Logger.info(BattleNext_Settings.class, "settings.defaults.applied",
-						BattleNext_Logger.fields().put("path", path).put("settings", values).build());
+						() -> BattleNext_Logger.fields().put("path", path).put("settings", values).build());
 			}
 			return stored;
 		} catch (IOException | JSONException | RuntimeException exception) {
@@ -162,7 +162,7 @@ public class BattleNext_Settings {
 
 	private static void merge(JSONObject stored) {
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.merge",
-				BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
+				() -> BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
 		if (stored.has("cnText")) put(values, "cnText", stored.optBoolean("cnText"));
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
 		putIf(values, "infoLog", stored.has("infoLog") ? stored.optBoolean("infoLog") : null);
@@ -176,7 +176,7 @@ public class BattleNext_Settings {
 		}
 		putIf(values, "reportKeepCount", stored.has("reportKeepCount") && stored.optInt("reportKeepCount", -1) >= 0 ? stored.optInt("reportKeepCount") : null);
 		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.merge",
-				BattleNext_Logger.fields().put("stored", stored).put("settings", values).build());
+				() -> BattleNext_Logger.fields().put("stored", stored).put("settings", values).build());
 	}
 
 	private static void put(JSONObject object, String key, Object value) {
@@ -192,7 +192,7 @@ public class BattleNext_Settings {
 			put(object, key, value);
 		} else {
 			BattleNext_Logger.info(BattleNext_Settings.class, "settings.field.default",
-					BattleNext_Logger.fields().put("key", key).put("value", object.opt(key)).build());
+					() -> BattleNext_Logger.fields().put("key", key).put("value", object.opt(key)).build());
 		}
 	}
 

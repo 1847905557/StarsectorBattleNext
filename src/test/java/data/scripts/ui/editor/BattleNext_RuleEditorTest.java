@@ -120,14 +120,25 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals("pending", values.get("limitNumber").getText());
 		assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").isChecked());
 		values.get("limitNumber").setText("12");
-		int registrations = ((Map<?, ?>) getField(router.getSession(), "registrations")).size();
-		for (int iteration = 0; iteration < 20; iteration++) {
+		for (int iteration = 0; iteration < 2; iteration++) {
+			List<?> previousFields = List.copyOf(((Map<?, ?>) getField(router.getSession(), "registrations")).keySet());
 			confirmRestrictions(editor, List.of("limitList"));
+			TextFieldAPI added = ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("limitList");
 			editor.buttonPressed("rule:remove:1");
-			assertEquals(registrations, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
-			assertEquals("12", ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("limitNumber").getText());
+			Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
+			values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+			assertEquals(Set.of("limitNumber"), values.keySet());
+			assertEquals(Set.of(getField(editor, "idField"), getField(editor, "nameField"), values.get("limitNumber")), registrations.keySet());
+			for (Object previous : previousFields) {
+				assertFalse(registrations.containsKey(previous));
+			}
+			assertFalse(registrations.containsKey(added));
+			assertEquals("12", values.get("limitNumber").getText());
+			assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").isChecked());
 			assertTrue(router.isEmpty());
 		}
+		editor.close();
+		assertFalse(router.getSession().hasInputState());
 	}
 
 	@Test

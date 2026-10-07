@@ -9,7 +9,6 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -103,11 +102,13 @@ class BattleNext_BaseSourceProviderTest {
 		List<String> rendered = new ArrayList<>();
 		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> {
+					if ("addTitle".equals(method.getName())) rendered.add((String) args[0]);
 					if ("addPara".equals(method.getName())) rendered.add((String) args[0]);
 					return null;
 				});
+		new TestProvider().renderHeader(tooltip, "portrait");
 		new TestProvider().renderDescription(tooltip, text);
-		assertTrue(rendered.isEmpty());
+		assertEquals(List.of("Portrait", "portrait"), rendered);
 	}
 
 	private static class TestProvider extends BattleNext_BaseSourceProvider {

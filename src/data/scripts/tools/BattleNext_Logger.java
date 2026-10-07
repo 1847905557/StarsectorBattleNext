@@ -25,6 +25,7 @@ import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.reflect.Array;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class BattleNext_Logger {
 
@@ -43,7 +44,12 @@ public class BattleNext_Logger {
 	}
 
 	public static void info(Class<?> source, String event, Fields fields) {
+		if (!BattleNext_Settings.isInfoLogEnabled()) return;
 		emit(Level.INFO, source, event, "observed", fields, null);
+	}
+
+	public static void info(Class<?> source, String event, Supplier<Fields> fields) {
+		emitInfo(source, event, "observed", fields);
 	}
 
 	public static void warn(Class<?> source, String event, Fields fields) {
@@ -59,11 +65,21 @@ public class BattleNext_Logger {
 	}
 
 	public static void operationStarted(Class<?> source, String event, Fields fields) {
+		if (!BattleNext_Settings.isInfoLogEnabled()) return;
 		emit(Level.INFO, source, event, "started", fields, null);
 	}
 
+	public static void operationStarted(Class<?> source, String event, Supplier<Fields> fields) {
+		emitInfo(source, event, "started", fields);
+	}
+
 	public static void operationSucceeded(Class<?> source, String event, Fields fields) {
+		if (!BattleNext_Settings.isInfoLogEnabled()) return;
 		emit(Level.INFO, source, event, "succeeded", fields, null);
+	}
+
+	public static void operationSucceeded(Class<?> source, String event, Supplier<Fields> fields) {
+		emitInfo(source, event, "succeeded", fields);
 	}
 
 	public static void operationFailed(Class<?> source, String event, Fields fields, Throwable exception) {
@@ -77,8 +93,12 @@ public class BattleNext_Logger {
 		return entry.toString();
 	}
 
+	private static void emitInfo(Class<?> source, String event, String phase, Supplier<Fields> fields) {
+		if (!BattleNext_Settings.isInfoLogEnabled()) return;
+		emit(Level.INFO, source, event, phase, fields.get(), null);
+	}
+
 	private static void emit(Level level, Class<?> source, String event, String phase, Fields fields, Throwable exception) {
-		if (level == Level.INFO && !BattleNext_Settings.isInfoLogEnabled()) return;
 		try {
 			LOGGER.log(level, format(source, event, phase, fields, exception));
 		} catch (Exception failure) {

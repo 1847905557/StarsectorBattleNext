@@ -60,7 +60,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 			markSource(fleet, path);
 			BattleNext_FleetVariantLoader.load(fleet, paths);
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetStandardLoader.class, "fleet.resource.load",
-					BattleNext_Logger.fields().put("path", path).put("fleet", fleet).build());
+					() -> BattleNext_Logger.fields().put("path", path).put("fleet", fleet).build());
 			return fleet;
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_FleetStandardLoader.class, "fleet.resource.load", input, exception);

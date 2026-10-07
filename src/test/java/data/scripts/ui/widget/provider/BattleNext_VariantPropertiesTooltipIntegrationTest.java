@@ -17,6 +17,8 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip.Content;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip.VariantSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
@@ -155,11 +157,12 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		store.reload();
 		var pin = store.saveVariant("Pinned properties", root.getApi());
+		BattleNext_VariantSourceProvider source = new BattleNext_VariantSourceProvider(store);
+		String id = BattleNext_VariantSourceProvider.PINNED_PREFIX + pin.getPinId();
 		List<String> registered = show(new BattleNext_VariantSourceProvider(), SELECTION);
 		root.getApi().setNumFluxCapacitors(99);
 		store.reload();
-		String id = BattleNext_VariantSourceProvider.PINNED_PREFIX + pin.getPinId();
-		List<String> pinned = show(new BattleNext_VariantSourceProvider(store), id);
+		List<String> pinned = show(source, id);
 		assertEquals(id, pinned.get(1));
 		assertEquals(registered.subList(2, registered.size()), pinned.subList(2, pinned.size()));
 		assertEquals(99, root.getApi().getNumFluxCapacitors());
@@ -257,9 +260,12 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		List<String> rows = new ArrayList<>(List.of("Name with : 0 ×2", "Other name ×1"));
 		VariantSection section = new VariantSection("Weapons", 3, rows);
 		rows.clear();
-		assertEquals("Weapons", section.title());
-		assertEquals(3, section.count());
-		assertEquals(List.of("Name with : 0 ×2", "Other name ×1"), section.rows());
+		TooltipMakerAPI hover = tooltip(360f, 0f, false);
+		BattleNext_EquipmentTooltip.renderVariant(hover,
+				new Content("Selection", "id", "Facts", List.of()), List.of(section));
+		assertEquals(List.of("Selection", "id", "Facts", "Weapons: 3", "Name with : 0 ×2", "Other name ×1"),
+				tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+						.map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 		assertThrows(UnsupportedOperationException.class, () -> section.rows().clear());
 	}
 
@@ -355,9 +361,16 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertEquals(360f, attachedTooltips.get(tile).getTooltipWidth(null));
 			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(tile).createTooltip(hover, false, null);
-			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3"));
-			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
+			List<String> currentText = tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+					.map(LabelAPI.class::cast).map(LabelAPI::getText).toList();
+			assertEquals(pinned ? "Pinned properties" : "Root - " + SELECTION, currentText.get(0));
+			assertEquals(id, currentText.get(1));
+			assertTrue(currentText.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3"));
+			assertTrue(currentText.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
+			search.grabFocus(false);
+			assertTrue(search.hasFocus());
 			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
+			assertFalse(search.hasFocus());
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 		}

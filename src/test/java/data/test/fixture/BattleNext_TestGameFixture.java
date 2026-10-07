@@ -55,7 +55,7 @@ public class BattleNext_TestGameFixture {
 	protected SectorAPI previousSector;
 	private Field settingsValues;
 	private Object previousSettingsValues;
-	private boolean previousPendingResult;
+	private String previousPendingResult;
 	private Field currentRouter;
 	private BattleNext_UiInputRouter previousRouter;
 	protected final Map<String, ShipHullSpecAPI> hulls = new LinkedHashMap<>();
@@ -229,8 +229,8 @@ public class BattleNext_TestGameFixture {
 		Global.setSector(previousSector);
 		settingsValues.set(null, previousSettingsValues);
 		BattleNext_BattleSignals.consumePendingResult();
-		if (previousPendingResult) {
-			BattleNext_BattleSignals.markPendingResult();
+		if (!previousPendingResult.isEmpty()) {
+			BattleNext_BattleSignals.markPendingResult(previousPendingResult);
 		}
 	}
 

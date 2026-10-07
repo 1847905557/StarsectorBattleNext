@@ -112,7 +112,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
 		api.addPlugin(pageant);
 		BattleNext_Logger.info(MissionDefinition.class, "battle.created",
-				BattleNext_Logger.fields().put("match", match).put("actual_map", actualMap).put("tournament", tournament).put("player", assembledPlayerFleet.getDefinition()).put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags())).put("enemy_mode", BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags())).put("time_limit", timeLimit).put("rtt", BattleNext_Settings.isRttInBattle()).put("marker", reportMarker).build());
+				() -> BattleNext_Logger.fields().put("match", match).put("actual_map", actualMap).put("tournament", tournament).put("player", assembledPlayerFleet.getDefinition()).put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags())).put("enemy_mode", BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags())).put("time_limit", timeLimit).put("rtt", BattleNext_Settings.isRttInBattle()).put("marker", reportMarker).build());
 	}
 
 	private String progress(BattleNext_StartedTournament tournament, BattleNext_Match match) {

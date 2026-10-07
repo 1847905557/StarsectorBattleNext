@@ -60,7 +60,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		SaveOutcome outcome;
 		BattleNext_Logger.operationStarted(BattleNext_BattleResultRecorder.class, "battle.report.record",
-				BattleNext_Logger.fields().put("report", report).put("match", match).build());
+				() -> BattleNext_Logger.fields().put("report", report).put("match", match).build());
 		try {
 			outcome = record(report);
 		} catch (IOException | JSONException | RuntimeException exception) {
@@ -70,7 +70,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			return;
 		}
 		BattleNext_Logger.operationSucceeded(BattleNext_BattleResultRecorder.class, "battle.report.record",
-				BattleNext_Logger.fields().put("report", report).put("match", match).put("outcome", outcome).build());
+				() -> BattleNext_Logger.fields().put("report", report).put("match", match).put("outcome", outcome).build());
 		String message = outcome == SaveOutcome.RETAINED
 				? reportStrings.format("generated", report.getName()) : reportStrings.get("not_retained");
 		combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, message);
@@ -145,12 +145,15 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
 		reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 		BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
-				BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
+				() -> BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
 		for (int index = keepCount; index < reports.size(); index++) {
 			store.delete(reports.get(index).getId());
 		}
-		BattleNext_BattleSignals.markPendingResult();
-		return reports.subList(0, Math.min(keepCount, reports.size())).stream().anyMatch(retained -> retained.getId().equals(report.getId()));
+		boolean retained = reports.subList(0, Math.min(keepCount, reports.size())).stream().anyMatch(value -> value.getId().equals(report.getId()));
+		if (retained) {
+			BattleNext_BattleSignals.markPendingResult(report.getId());
+		}
+		return retained;
 	}
 
 	public static String defaultName(String playerName, String enemyName, String marker, long createdAt) {

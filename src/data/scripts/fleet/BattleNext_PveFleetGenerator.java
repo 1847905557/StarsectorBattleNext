@@ -63,7 +63,7 @@ public class BattleNext_PveFleetGenerator {
 		List<FactionSpecAPI> factions = specs.stream()
 				.filter(spec -> spec.isShowInIntelTab() || allowed.contains(spec.getId())).toList();
 		BattleNext_Logger.info(BattleNext_PveFleetGenerator.class, "pve.factions.loaded",
-				BattleNext_Logger.fields().put("path", FACTIONS_PATH).put("allowed_ids", allowed)
+				() -> BattleNext_Logger.fields().put("path", FACTIONS_PATH).put("allowed_ids", allowed)
 						.put("faction_ids", factions.stream().map(FactionSpecAPI::getId).toList()).build());
 		return factions;
 	}
@@ -97,7 +97,7 @@ public class BattleNext_PveFleetGenerator {
 					BattleNext_PersonSkills.capture(commander), List.of("default_ai"), definitions);
 			BattleNext_AssembledFleet result = new BattleNext_AssembledFleet(definition, commander, members, List.of());
 			BattleNext_Logger.operationSucceeded(BattleNext_PveFleetGenerator.class, "pve.fleet.generate",
-					BattleNext_Logger.fields().put("parameters", parameters(params)).put("definition", definition)
+					() -> BattleNext_Logger.fields().put("parameters", parameters(params)).put("definition", definition)
 							.put("commander", commander).put("members", members).put("actual_points", fleet.getFleetPoints()).build());
 			return result;
 		} catch (RuntimeException exception) {

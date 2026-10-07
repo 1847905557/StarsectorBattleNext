@@ -25,8 +25,6 @@ import data.test.fixture.BattleNext_TestFleetIoFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -36,9 +34,8 @@ import java.util.Map;
 
 class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void templateCreationAndInstanceActivationFollowSelectionAndPreserveBrowseState(boolean cnText) throws Exception {
+	@Test
+	void templateCreationAndInstanceActivationFollowSelectionAndPreserveBrowseState() throws Exception {
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
@@ -49,7 +46,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 				throw exception.getCause();
 			}
 		}));
-		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
@@ -68,7 +65,22 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		instances.reload();
 		assertTrue(instances.getActiveId().isEmpty());
 		BattleNext_BattleSourceField field = (BattleNext_BattleSourceField) getField(selector, "instanceField");
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_tournament_instance"), ((LabelAPI) getField(field, "label")).getText());
+		for (boolean language : List.of(false, true, false)) {
+			if (language != BattleNext_Settings.isCnTextEnabled()) {
+				BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+				selector.refreshContent();
+			}
+			field = (BattleNext_BattleSourceField) getField(selector, "instanceField");
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_tournament_instance"), ((LabelAPI) getField(field, "label")).getText());
+			BattleNext_DropdownField templateChoices = (BattleNext_DropdownField) getField(field, "dropdown");
+			List<?> options = (List<?>) getField(templateChoices, "options");
+			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_tournament_base_template"), getField(options.get(0), "label"));
+			if (language) {
+				selector.buttonPressed("tournament:create");
+				assertEquals(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2), selector.getStatusText());
+			}
+			assertEquals("", getField(selector, "selectedInstanceId"));
+		}
 		BattleNext_TournamentDisplay templateDisplay = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
 		assertTrue(templateDisplay.isEditable());
 		selector.buttonPressed("tournament:create");

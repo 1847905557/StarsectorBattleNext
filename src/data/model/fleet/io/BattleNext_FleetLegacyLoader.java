@@ -85,7 +85,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 				}
 				markSource(result, dataPath);
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load",
-					BattleNext_Logger.fields().put("fleet", result).put("metadata_path", dataPath).put("members_path", fleetPath).build());
+					() -> BattleNext_Logger.fields().put("fleet", result).put("metadata_path", dataPath).put("members_path", fleetPath).build());
 				return result;
 			} catch (IOException | JSONException exception) {
 				throw new IOException("Unable to load legacy fleet from " + dataPath + " and " + fleetPath

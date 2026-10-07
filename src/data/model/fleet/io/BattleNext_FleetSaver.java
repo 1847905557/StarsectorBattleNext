@@ -102,18 +102,18 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 					files.deleteRecursively(oldDirectory);
 				}
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.commit",
-					BattleNext_Logger.fields().put("fleet", fleet).put("path", path).put("variant_paths", variants.keySet()).put("stale_variants", staleVariants).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).put("path", path).put("variant_paths", variants.keySet()).put("stale_variants", staleVariants).build());
 				return path;
 			} catch (Exception exception) {
 				BattleNext_Logger.operationFailed(BattleNext_FleetSaver.class, "fleet.commit",
 					BattleNext_Logger.fields().put("fleet", fleet).put("path", path).put("variant_paths", variants.keySet()).put("stale_variants", staleVariants).build(), exception);
 				BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.rollback",
-					BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
 				try {
 					restore(directory, targetSnapshot);
 					restore(oldDirectory, oldSnapshot);
 					BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.rollback",
-					BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
 				} catch (Exception rollbackException) {
 					BattleNext_Logger.operationFailed(BattleNext_FleetSaver.class, "fleet.rollback",
 					BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).build(), rollbackException);
@@ -143,7 +143,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			}
 			files.deleteRecursively(BASE_ROOT + fleet.getFolderName());
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.delete",
-					BattleNext_Logger.fields().put("fleet", fleet).put("path", BASE_ROOT + fleet.getFolderName()).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).put("path", BASE_ROOT + fleet.getFolderName()).build());
 		} catch (IOException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.delete.rejected", input, exception);
@@ -162,7 +162,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			String sourceData = sourceDirectory + "/" + DATA_FILE;
 			if (!files.exists(sourceData)) {
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup",
-						BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
+						() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
 							.put("created", false).build());
 				return;
 			}
@@ -175,7 +175,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 				}
 			}
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup",
-					BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build());
+					() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build());
 		} catch (IOException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.backup.rejected", input, exception);
@@ -194,7 +194,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			String sourceBackup = sourceDirectory + "/" + BACKUP_FOLDER;
 		if (!files.exists(sourceBackup)) {
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup.history.copy",
-					BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
+					() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
 						.put("copied", false).build());
 			return;
 		}
@@ -208,7 +208,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 				files.writeBytes(targetPath, files.readBytes(path));
 			}
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup.history.copy",
-					BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build());
+					() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build());
 		} catch (IOException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.backup.history.copy.rejected", input, exception);

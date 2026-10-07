@@ -67,29 +67,12 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		name(display).setText(fullName);
 		TooltipMakerAPI list = lists(display).get("groups");
 		list.getExternalScroller().setYOffset(120f);
-		assertEquals(120f, list.getExternalScroller().getYOffset());
 		display.buttonPressed("pin_save");
 		assertFalse(buttons.get("pin_save").get());
 		assertEquals(fullName, name(display).getText());
 		assertEquals(fullName, store.getAll().get(0).getDisplayName());
 		assertEquals(120f, lists(display).get("groups").getExternalScroller().getYOffset());
 		assertAligned(display);
-		display.close();
-	}
-
-	@Test
-	void savingReplacesTheManagedContentsTreeWithoutDuplicateRootPanels() throws Exception {
-
-		BattleNext_LunaPinnedVariantPanel display = open(source(), new BattleNext_PinnedVariantStore(), 1000);
-		CustomPanelAPI rightPanel = (CustomPanelAPI) getField(display, "rightPanel");
-		CustomPanelAPI firstContentsPanel = (CustomPanelAPI) getField(display, "contentsPanel");
-		assertEquals(1, children.getOrDefault(rightPanel, List.of()).size());
-
-		display.buttonPressed("pin_save");
-
-		CustomPanelAPI secondContentsPanel = (CustomPanelAPI) getField(display, "contentsPanel");
-		assertNotSame(firstContentsPanel, secondContentsPanel);
-		assertEquals(List.of(secondContentsPanel), children.get(rightPanel));
 		display.close();
 	}
 
@@ -140,18 +123,24 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 	}
 
 	@Test
-	void openingFreezesFullParentSnapshotAndCollectionIsConsumable() throws Exception {
+	void openingFreezesFullSnapshotAndDistinctPinsReplaceContentsAndRemainConsumable() throws Exception {
 
 		Variant source = source();
 		String before = BattleNext_VariantBuilder.fromVariant(source.getApi()).toJson().toString();
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source, store, 640);
+		CustomPanelAPI rightPanel = (CustomPanelAPI) getField(display, "rightPanel");
+		CustomPanelAPI firstContentsPanel = (CustomPanelAPI) getField(display, "contentsPanel");
+		assertEquals(List.of(firstContentsPanel), children.get(rightPanel));
 		assertEquals(before, BattleNext_VariantBuilder.fromVariant(source.getApi()).toJson().toString());
 		source.getJson().put("displayName", "Later change");
 		source.getModules().get("module").setNumFluxVents(99);
 		String changed = BattleNext_VariantBuilder.fromVariant(source.getApi()).toJson().toString();
 		display.buttonPressed("pin_save");
 		display.buttonPressed("pin_save");
+		CustomPanelAPI secondContentsPanel = (CustomPanelAPI) getField(display, "contentsPanel");
+		assertNotSame(firstContentsPanel, secondContentsPanel);
+		assertEquals(List.of(secondContentsPanel), children.get(rightPanel));
 		assertEquals(1, store.getAll().size());
 		BattleNext_PinnedVariantModel pin = store.getAll().get(0);
 		JSONObject json = pin.getVariantJson();
@@ -167,6 +156,15 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		Path path = directory.resolve("tournament/_pinnedVariants/" + pin.getPinId() + ".json");
 		assertTrue(Files.exists(path));
 		assertEquals(pin.getPinId(), new JSONObject(Files.readString(path)).getString("pinId"));
+		display.close();
+		BattleNext_LunaPinnedVariantPanel second = open(source(), store, 640);
+		second.buttonPressed("pin_save");
+		assertEquals(2, store.getAll().size());
+		BattleNext_PinnedVariantModel secondPin = store.getAll().get(1);
+		assertNotEquals(pin.getPinId(), secondPin.getPinId());
+		assertEquals(pin.getDisplayName(), secondPin.getDisplayName());
+		assertJsonEquals(pin.getVariantJson(), secondPin.getVariantJson());
+		second.close();
 		BattleNext_VariantSourceProvider provider = new BattleNext_VariantSourceProvider();
 		assertTrue(provider.getOptions().stream().anyMatch(option -> option.getId().equals("pinned:" + pin.getPinId())));
 		BattleNext_VariantBuilder local = BattleNext_VariantBuilder.fromVariant(provider.resolve("pinned:" + pin.getPinId()));
@@ -175,34 +173,23 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		store.delete(pin.getPinId());
 		assertEquals("Unsubmitted", fleet.getVariant(pin.getPinId()).build().getDisplayName());
 		assertNotNull(fleet.getVariant(pin.getPinId()).build().getModuleVariant("module"));
-		display.close();
 	}
 
 	@Test
-	void separateOpeningsPermitIdenticalNamesAndSnapshots() throws Exception {
-		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
-		Variant source = source();
-		BattleNext_LunaPinnedVariantPanel first = open(source, store, 640);
-		first.buttonPressed("pin_save");
-		first.close();
-		BattleNext_LunaPinnedVariantPanel second = open(source, store, 640);
-		second.buttonPressed("pin_save");
-		assertEquals(2, store.getAll().size());
-		assertNotEquals(store.getAll().get(0).getPinId(), store.getAll().get(1).getPinId());
-		assertEquals(store.getAll().get(0).getDisplayName(), store.getAll().get(1).getDisplayName());
-		second.close();
-	}
+	void blankNamesAreRejectedAndCanBeCorrected() throws Exception {
 
-	@ParameterizedTest
-	@ValueSource(strings = {"", " \t\r\n", "\u3000"})
-	void blankNameIsRejectedAndCanBeCorrected(String blank) throws Exception {
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		BattleNext_LunaPinnedVariantPanel display = open(source(), store, 640);
-		name(display).setText(blank);
-		display.buttonPressed("pin_save");
-		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
-		assertEquals(blank, name(display).getText());
-		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
+		for (String blank : List.of("", " \t\r\n", "\u3000")) {
+			labels.clear();
+			name(display).setText(blank);
+			display.buttonPressed("pin_save");
+			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
+			assertEquals(blank, name(display).getText());
+			assertTrue(buttons.get("pin_save").get());
+			assertTrue(store.getAll().isEmpty());
+			assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
+		}
 		name(display).setText("Named snapshot");
 		display.buttonPressed("pin_save");
 		assertEquals("Named snapshot", store.getAll().get(0).getDisplayName());

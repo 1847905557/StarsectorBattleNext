@@ -79,8 +79,8 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
 		}
 		assertEquals(List.of(keep == 0 ? BattleNext_TestTextCatalog.text("Report", "BattleNext_report_not_retained")
 				: String.format(BattleNext_TestTextCatalog.text("Report", "BattleNext_report_generated"), scorekeeper.report.getName())), notices);
-		assertTrue(BattleNext_BattleSignals.consumePendingResult());
-		assertFalse(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals(keep == 0 ? "" : scorekeeper.report.getId(), BattleNext_BattleSignals.consumePendingResult());
+		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 	}
 
 	@Test
@@ -88,9 +88,11 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
 
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
-		provider.getFleetStore().reload();
 		for (String id : List.of("alpha", "beta")) {
-			provider.getFleetStore().save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
+			var root = directory.resolve("tournament/" + id);
+			Files.createDirectories(root);
+			Files.writeString(root.resolve("fleet_data.json"),
+					new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()).toJson().toString(), StandardCharsets.UTF_8);
 		}
 		BattleNext_TournamentStore tournaments = provider.getTournamentStore();
 		tournaments.reload();
@@ -130,7 +132,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
 		recorder.advance(0f, List.of());
 		assertEquals(List.of(BattleNext_TestTextCatalog.text("Report", "BattleNext_report_save_failed")), notices);
 		assertEquals(snapshot, scorekeeper.report.toJson().toString());
-		assertFalse(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 	}
 
 	private BattleNext_BattleResultRecorder recorder(FrozenScorekeeper scorekeeper,
@@ -176,9 +178,11 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
 	void tournamentReportFailureKeepsCompletePendingResultAndRetryCommitsItsStableIdentity() throws Exception {
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
-		provider.getFleetStore().reload();
 		for (String id : List.of("alpha", "beta")) {
-			provider.getFleetStore().save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
+			var root = directory.resolve("tournament/" + id);
+			Files.createDirectories(root);
+			Files.writeString(root.resolve("fleet_data.json"),
+					new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()).toJson().toString(), StandardCharsets.UTF_8);
 		}
 		provider.getTournamentStore().reload();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);

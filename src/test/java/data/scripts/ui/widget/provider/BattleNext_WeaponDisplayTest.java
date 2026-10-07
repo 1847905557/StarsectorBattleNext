@@ -7,6 +7,7 @@ import data.scripts.ui.page.BattleNext_ReportSourceDisplay;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Proxy;
@@ -14,12 +15,12 @@ import java.lang.reflect.Proxy;
 class BattleNext_WeaponDisplayTest {
 
 	@ParameterizedTest
-	@ValueSource(strings = {"Ion Pulser", "", "   ", "null"})
+	@NullSource
+	@ValueSource(strings = {"Ion Pulser", "   "})
 	void sharedVisualMatchesTheReportWeaponSource(String name) {
-		String displayName = name.equals("null") ? null : name;
 		WeaponSpecAPI spec = (WeaponSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{WeaponSpecAPI.class}, (instance, method, arguments) -> switch (method.getName()) {
-					case "getWeaponName" -> displayName;
+					case "getWeaponName" -> name;
 					case "getTurretSpriteName" -> "graphics/turret.png";
 					case "getHardpointSpriteName" -> "graphics/hardpoint.png";
 					default -> null;
@@ -27,14 +28,14 @@ class BattleNext_WeaponDisplayTest {
 		SettingsAPI settings = settings(spec, false);
 		var visual = BattleNext_WeaponDisplay.resolve("ion", settings);
 		var report = BattleNext_ReportSourceDisplay.resolve(new BattleNext_DamageSourceReport("weapon", "ion"), settings);
-		assertEquals(displayName == null || displayName.isBlank() ? "ion" : displayName, visual.name());
+		assertEquals(name == null || name.isBlank() ? "ion" : name, visual.name());
 		assertTrue(visual.resolved());
 		assertEquals("graphics/turret.png", visual.primarySprite());
 		assertEquals("graphics/hardpoint.png", visual.secondarySprite());
-		assertEquals(visual.name(), report.name());
-		assertEquals(visual.primarySprite(), report.primarySprite());
-		assertEquals(visual.secondarySprite(), report.secondarySprite());
-		assertEquals(visual.resolved(), report.resolved());
+		assertEquals(name == null || name.isBlank() ? "ion" : name, report.name());
+		assertEquals("graphics/turret.png", report.primarySprite());
+		assertEquals("graphics/hardpoint.png", report.secondarySprite());
+		assertTrue(report.resolved());
 	}
 
 	@ParameterizedTest
@@ -47,7 +48,7 @@ class BattleNext_WeaponDisplayTest {
 		assertFalse(visual.resolved());
 		assertEquals("", visual.primarySprite());
 		assertEquals("", visual.secondarySprite());
-		assertEquals(visual.name(), report.name());
+		assertEquals("missing", report.name());
 		assertFalse(report.resolved());
 	}
 

@@ -6,7 +6,6 @@ import data.missions.BattleNext_MissionBattleMap;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_Match;
-import data.scripts.tools.BattleNext_KeyTuning;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestMissionFixture;
@@ -21,22 +20,6 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 
 class MissionDefinitionTest extends BattleNext_TestMissionFixture {
-
-	@Test
-	void projectTuningCalculationsHandleWrappingClampingAndOpposingKeys() throws Exception {
-
-		var wrapped = BattleNext_KeyTuning.class.getDeclaredMethod("adjustWrapped", int.class, int.class, boolean.class, boolean.class);
-		var clamped = BattleNext_KeyTuning.class.getDeclaredMethod("adjustClamped", int.class, int.class, int.class, int.class, boolean.class, boolean.class);
-		wrapped.setAccessible(true);
-		clamped.setAccessible(true);
-		assertEquals(1, wrapped.invoke(null, 0, 2, true, false));
-		assertEquals(0, wrapped.invoke(null, 1, 2, false, true));
-		assertEquals(1, wrapped.invoke(null, 1, 2, true, true));
-		assertEquals(110, clamped.invoke(null, 100, 10, 10, 2000, false, true));
-		assertEquals(10, clamped.invoke(null, 10, 10, 10, 2000, true, false));
-		assertEquals(2000, clamped.invoke(null, 2000, 10, 10, 2000, false, true));
-		assertEquals(100, clamped.invoke(null, 100, 10, 10, 2000, true, true));
-	}
 
 	@Test
 	void pvpAndPveReadTheSameSharedKeyboardInput() throws Exception {

@@ -38,19 +38,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
 
-	@ParameterizedTest
-	@ValueSource(ints = {1400})
-	void everyPageUsesShellAndMainContentInsetsAndAlignedFooters(int width) throws Exception {
+	@Test
+	void everyPageBindsShellGeometryAndReleasesItsInputBeforeNavigationAndClose() throws Exception {
 
+		int width = 1400;
 		deferTooltipWidth = true;
 		Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
-		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
+		AtomicBoolean closed = new AtomicBoolean();
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> closed.set(true));
 		CustomPanelAPI root = panel(width, 900f, manager);
 		manager.attach(root);
 		manager.open();
-		for (Object tab : tabs) {
-			manager.buttonPressed(tab);
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(manager, "inputRouter");
+		for (int index = 0; index < tabs.length; index++) {
+			manager.buttonPressed(tabs[index]);
 			BattleNext_PageView page = (BattleNext_PageView) getField(manager, "attachedView");
+			assertEquals(tabs[index], getField(manager, "currentPage"));
+			assertSame(router, getField(page, "inputRouter"));
 			CustomPanelAPI body = (CustomPanelAPI) getField(page, "panel");
 			assertEquals(8f, body.getPosition().getX() - root.getPosition().getX());
 			assertEquals(8f, root.getPosition().getX() + width - body.getPosition().getX() - body.getPosition().getWidth());
@@ -84,9 +88,40 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 				assertEquals(16f, root.getPosition().getX() + width - header.getPosition().getX() - header.getPosition().getWidth());
 				assertEquals(16f, buttonPositions.get("add").getX() - root.getPosition().getX());
 			}
+			List<?> inputs = List.copyOf(((Map<?, ?>) getField(router.getSession(), "registrations")).keySet());
+			AtomicBoolean overlayClosed = new AtomicBoolean();
+			router.push(new BattleNext_UiInputRouter.Overlay() {
+				@Override
+				public PositionAPI getBounds() {
+					return body.getPosition();
+				}
+
+				@Override
+				public boolean handleGlobalInput(List<InputEventAPI> events) {
+					return false;
+				}
+
+				@Override
+				public void close() {
+					overlayClosed.set(true);
+				}
+			});
+			manager.buttonPressed(tabs[(index + 1) % tabs.length]);
+			assertTrue(overlayClosed.get());
+			assertTrue(router.isEmpty());
+			assertNull(getField(page, "panel"));
+			assertTrue(removedComponents.contains(body));
+			Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
+			for (Object input : inputs) {
+				assertFalse(registrations.containsKey(input));
+			}
 		}
+		BattleNext_PageView next = (BattleNext_PageView) getField(manager, "attachedView");
 		manager.buttonPressed("close");
-		assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).getSession().hasInputState());
+		assertTrue(closed.get());
+		assertNull(getField(next, "panel"));
+		assertNull(getField(manager, "attachedView"));
+		assertFalse(router.getSession().hasInputState());
 	}
 
 	@ParameterizedTest
@@ -128,9 +163,8 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		ButtonAPI selected = components.stream().filter(ButtonAPI.class::isInstance).map(ButtonAPI.class::cast).findFirst().orElseThrow();
 		Object action = selected.getCustomData();
 		page.buttonPressed(action);
-		assertNotNull(getField(getField(page, "editor"), "nameField"));
+		assertEquals(name + "first", ((TextFieldAPI) getField(getField(page, "editor"), "nameField")).getText());
 		assertFalse(page.hasUnsavedChanges());
-		page.refreshContent();
 		TooltipMakerAPI next = (TooltipMakerAPI) getField(page, "listContent");
 		next.getExternalScroller().setYOffset(offset);
 		page.refreshContent();
@@ -212,12 +246,18 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 			assertEquals(save.getX(), savePosition.getX() - shell.getPosition().getX());
 			assertEquals(save.getY(), shell.getPosition().getY() + shell.getPosition().getHeight()
 					- savePosition.getY() - savePosition.getHeight());
-			int childCount = children.get(shell).size();
+			CustomPanelAPI previousList = (CustomPanelAPI) getField(page, "listPanel");
+			CustomPanelAPI previousDetail = (CustomPanelAPI) getField(page, "detailPanel");
 			page.refreshContent();
-			assertEquals(childCount, children.get(shell).size());
-			assertEquals(1, children.get(root).size());
+			assertTrue(removedComponents.containsAll(List.of(previousList, previousDetail)));
+			assertFalse(children.get(shell).contains(previousList));
+			assertFalse(children.get(shell).contains(previousDetail));
+			assertTrue(children.get(shell).contains(getField(page, "listPanel")));
+			assertTrue(children.get(shell).contains(getField(page, "detailPanel")));
+			assertEquals(List.of(shell), children.get(root));
 			page.createContents();
-			assertEquals(1, children.get(root).size());
+			assertTrue(removedComponents.contains(shell));
+			assertEquals(List.of(getField(page, "panel")), children.get(root));
 			page.close();
 			assertTrue(children.get(root).isEmpty());
 		}
@@ -319,11 +359,11 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.buttonPressed("add");
 		assertTrue(buttons.get("save").get());
 		Object editor = getField(page, "editor");
-		TextFieldAPI field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "nameField" : "nameField");
+		TextFieldAPI field = (TextFieldAPI) getField(editor, "nameField");
 		field.setText("Draft name");
 		assertTrue(page.hasUnsavedChanges());
 		page.refreshContent();
-		field = (TextFieldAPI) getField(editor, "fleet".equals(kind) ? "nameField" : "nameField");
+		field = (TextFieldAPI) getField(editor, "nameField");
 		assertEquals("Draft name", field.getText());
 		assertTrue(page.hasUnsavedChanges());
 		page.buttonPressed("back");

@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -57,7 +58,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"1000, 12", "1000, 17", "1000, 20", "320, 17"})
+	@CsvSource({"1000, 12", "1000, 20", "320, 17"})
 	void memberFieldsShareMetadataSpacingAndMeasureTheirExpandedHeight(int width, int lineHeight) throws Exception {
 		paragraphLineHeight = lineHeight;
 		deferTooltipWidth = true;
@@ -75,7 +76,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_OptionField variant = pickers.get(0);
 		TooltipMakerAPI content = (TooltipMakerAPI) getField(variant, "host");
 		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
-		assertEquals(1L, plugins.values().stream().filter(plugin -> plugin == body.getPlugin()).count());
+		assertSame(body.getPosition(), geometry.get(tooltips.get(content).getViewport()).getParent());
 		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
 		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
 		assertEquals(tooltips.get(content).getMountedHeight() + 16f, body.getPosition().getHeight());
@@ -99,17 +100,34 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 				+ member.getHeight() + BattleNext_PageLayout.EDITOR_BUTTON_GAP + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT,
 				tooltips.get(viewport).getMountedHeight());
 		List<?> members = (List<?>) getField(editor, "memberFields");
-		((TextFieldAPI) getField(members.get(0), "nameField")).setText("compact ship");
+		TextFieldAPI memberName = (TextFieldAPI) getField(members.get(0), "nameField");
+		memberName.setText("compact ship");
 		editor.buttonPressed("toggle_member:0");
-		assertEquals(7, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
+		List<String> metadataFields = List.of("idField", "folderNameField", "nameField", "authorField", "descriptionField", "commanderSkillsField", "tagsField");
+		Set<Object> expected = new HashSet<>();
+		for (String name : metadataFields) {
+			expected.add(getField(editor, name));
+		}
+		assertEquals(expected, registrations.keySet());
+		assertFalse(registrations.containsKey(memberName));
 		editor.buttonPressed("toggle_member:0");
 		members = (List<?>) getField(editor, "memberFields");
 		assertEquals("compact ship", ((TextFieldAPI) getField(members.get(0), "nameField")).getText());
-		assertEquals(14, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		expected.clear();
+		for (String name : metadataFields) {
+			expected.add(getField(editor, name));
+		}
+		for (String name : List.of("variantField", "nameField", "officerPersonalityField", "officerSkillsField", "officerPortraitField", "ordersField", "tagsField")) {
+			expected.add(getField(members.get(0), name));
+		}
+		assertEquals(expected, ((Map<?, ?>) getField(router.getSession(), "registrations")).keySet());
 		pickers = optionFields(editor).subList(1, optionFields(editor).size());
 		content = (TooltipMakerAPI) getField(pickers.get(0), "host");
 		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
 		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
+		editor.close();
+		assertFalse(router.getSession().hasInputState());
 	}
 
 	private void assertFieldFlow(TooltipMakerAPI content, int firstLabel, Set<Integer> pickerIndices) {

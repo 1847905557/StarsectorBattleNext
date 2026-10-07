@@ -105,7 +105,7 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		assertTrue(report.getEnemyMembers().stream().allMatch(member -> member.getStatus().equals("destroyed")));
 		assertEquals(1, combat.getNotices().size());
 		assertArrayEquals(original, Files.readAllBytes(meta));
-		assertTrue(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals(keepCount == 0 ? "" : report.getId(), BattleNext_BattleSignals.consumePendingResult());
 	}
 
 }

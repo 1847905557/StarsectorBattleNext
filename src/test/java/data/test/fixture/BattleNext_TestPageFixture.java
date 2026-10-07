@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -74,12 +73,14 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 
 	protected Object getField(Object target, String name) throws Exception {
 		Class<?> owner = target.getClass();
-		while (Arrays.stream(owner.getDeclaredFields()).noneMatch(field -> field.getName().equals(name))) {
+		while (true) {
+			for (Field field : owner.getDeclaredFields()) {
+				if (!field.getName().equals(name)) continue;
+				field.setAccessible(true);
+				return field.get(target);
+			}
 			owner = owner.getSuperclass();
 		}
-		Field field = owner.getDeclaredField(name);
-		field.setAccessible(true);
-		return field.get(target);
 	}
 
 	protected void assertJsonEquals(Object expected, Object actual) throws Exception {

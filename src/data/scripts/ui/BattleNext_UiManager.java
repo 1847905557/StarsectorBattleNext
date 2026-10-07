@@ -64,7 +64,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final ButtonAPI[] tabButtons = new ButtonAPI[BattleManagementPage.values().length];
 	private BattleManagementPage currentPage = BattleManagementPage.BATTLE_SELECTOR;
 	private String activeTournamentId = "";
-	private boolean pendingResult;
+	private String reportId = "";
 
 	private BattleNext_BattleSelectorPage battleSelectorPage;
 	private BattleNext_FleetLibraryPage fleetPage;
@@ -86,6 +86,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public void open() {
+		clearReportNotification();
 		currentPage = BattleManagementPage.BATTLE_SELECTOR;
 		refreshState();
 		showPage();
@@ -101,6 +102,13 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
+		if (attachedView != null) {
+			String savedId = BattleNext_BattleSignals.consumePendingResult();
+			if (!savedId.isEmpty()) {
+				reportId = savedId;
+				statusBar.reportSaved(reportId);
+			}
+		}
 		if (attachedView != null && !confirmationDialog.isActive()) {
 			attachedView.advance(amount);
 		}
@@ -161,8 +169,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		return activeTournamentId;
 	}
 
-	public boolean hasPendingResult() {
-		return pendingResult;
+	public String getPendingReportId() {
+		return reportId;
 	}
 
 	private void returnToBattleSelector() {
@@ -292,12 +300,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 		if (hasUnsavedChanges()) {
 			confirmationDialog.request(() -> {
+				clearReportNotification();
 				currentPage = page;
 				refreshState();
 				showPage();
 			});
 			return;
 		}
+		clearReportNotification();
 		currentPage = page;
 		refreshState();
 		showPage();
@@ -316,6 +326,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void close() {
+		clearReportNotification();
 		if (attachedView != null) {
 			attachedView.close();
 			attachedView = null;
@@ -386,7 +397,6 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	private void refreshState() {
-		pendingResult = BattleNext_BattleSignals.consumePendingResult();
 		String error = "";
 		try {
 			tournamentStore.reload();
@@ -396,7 +406,13 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		} catch (Exception exception) {
 			error = strings.get("load_failed") + ": " + exception.getMessage();
 		}
-		statusBar.update(error, activeTournamentId, pendingResult);
+		statusBar.update(error, activeTournamentId, reportId);
+	}
+
+	private void clearReportNotification() {
+		BattleNext_BattleSignals.clearPendingResult();
+		reportId = "";
+		statusBar.reportSaved(reportId);
 	}
 
 	@Override

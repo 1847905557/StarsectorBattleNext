@@ -121,7 +121,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName());
 		api.addPlugin(pageant);
 		BattleNext_Logger.info(MissionDefinition.class, "battle.created",
-				BattleNext_Logger.fields().put("mission", "pve").put("match", match).put("source", source)
+				() -> BattleNext_Logger.fields().put("mission", "pve").put("match", match).put("source", source)
 						.put("source_side", sourceSide).put("source_index", quickBattleMatchIndex).put("faction_id", faction.getId())
 						.put("budget", expectedFp).put("actual_points", actualPoints).put("player", assembledPlayerFleet.getDefinition())
 						.put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()))

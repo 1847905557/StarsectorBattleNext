@@ -23,28 +23,32 @@ import java.util.*;
 
 class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetFixture {
 
-	@ParameterizedTest
-	@ValueSource(strings = {"", "   ", "\u3000", "Named ship"})
-	void optionalMemberNamesPersistAndBlankNamesResolveToHullNames(String name) throws Exception {
+	@Test
+	void optionalMemberNamesPersistAndBlankNamesResolveToHullNames() throws Exception {
 
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		String id = "fleet";
-		BattleNext_MemberModel member = new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of());
-		BattleNext_FleetModel source = new BattleNext_FleetModel(id, "Fleet", List.of(), List.of(), List.of(member, member));
+		List<String> names = List.of("", "   ", "\u3000", "Named ship");
+		List<BattleNext_MemberModel> members = new ArrayList<>();
+		for (String name : names) {
+			members.add(new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of()));
+		}
+		BattleNext_FleetModel source = new BattleNext_FleetModel(id, "Fleet", List.of(), List.of(), members);
 		source.putVariant(BattleNext_VariantBuilder.fromVariant(selectedVariant.getApi()));
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(source, false);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-		editor.buttonPressed("toggle_member:1");
+		editor.buttonPressed("toggle_member:2");
 		assertTrue(editor.save(), editor.getStatusText());
 		store.reload();
 		BattleNext_FleetModel saved = store.get(id);
-		assertEquals(List.of(name.trim(), name.trim()), saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(List.of("", "", "\u3000", "Named ship"),
+				saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
 		var assembled = new BattleNext_FleetBuilder().build(saved);
 		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
-		String expected = name.isBlank() ? selectedVariant.getApi().getHullSpec().getHullName() : name;
-		assertEquals(List.of(expected, expected), assembled.getMembers().stream().map(memberApi -> memberApi.getShipName()).toList());
+		assertEquals(List.of("Parent", "Parent", "Parent", "Named ship"),
+				assembled.getMembers().stream().map(memberApi -> memberApi.getShipName()).toList());
 		editor.close();
 	}
 
@@ -136,33 +140,32 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 	}
 
 	@Test
-	void separateCapturesCreateUniqueFleetAndVariantIdentities() throws Exception {
-		BattleNext_FleetModel first = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
-		BattleNext_FleetModel second = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
-		assertNotEquals(first.getId(), second.getId());
-		assertEquals(first.getId(), first.getFolderName());
-		assertTrue(first.getName().matches("Player-\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"));
-		assertTrue(second.getName().matches("Player-\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"));
-		Set<String> ids = new HashSet<>();
-		first.getVariants().forEach(variant -> ids.add(variant.getId()));
-		second.getVariants().forEach(variant -> assertTrue(ids.add(variant.getId())));
-	}
+	void capturesUniqueIdentitiesWithPlayerNameAndCurrentTimeAsFleetMetadata() throws Exception {
 
-	@ParameterizedTest
-	@ValueSource(strings = {"Player", "Jane Doe", "玩家"})
-	void capturesPlayerNameAndCurrentTimeAsFleetMetadata(String playerName) throws Exception {
-		player = person(playerName, "player.png", "aggressive", false, true, false, Map.of());
-		long before = System.currentTimeMillis() / 1000L;
-		BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
-		long after = System.currentTimeMillis() / 1000L;
-		assertTrue(snapshot.getName().startsWith(playerName + "-"));
-		String time = snapshot.getName().substring(playerName.length() + 1);
-		assertTrue(time.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"));
-		long captured = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).parse(time).getTime() / 1000L;
-		assertTrue(captured >= before && captured <= after);
-		assertEquals(playerName, snapshot.getAuthor());
-		assertEquals(snapshot.getName(), snapshot.toJson().getString("name"));
-		assertEquals(playerName, snapshot.toJson().getString("author"));
+		Set<String> fleetIds = new HashSet<>();
+		Set<String> variantIds = new HashSet<>();
+		var commanders = List.of(player, player,
+				person("Jane Doe", "player.png", "aggressive", false, true, false, Map.of()),
+				person("玩家", "player.png", "aggressive", false, true, false, Map.of()));
+		for (var commander : commanders) {
+			String playerName = commander.getNameString();
+			long before = System.currentTimeMillis() / 1000L;
+			BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, commander, selected, activeVariant.getApi());
+			long after = System.currentTimeMillis() / 1000L;
+			assertTrue(fleetIds.add(snapshot.getId()));
+			assertEquals(snapshot.getId(), snapshot.getFolderName());
+			for (var variant : snapshot.getVariants()) {
+				assertTrue(variantIds.add(variant.getId()));
+			}
+			assertTrue(snapshot.getName().startsWith(playerName + "-"));
+			String time = snapshot.getName().substring(playerName.length() + 1);
+			assertTrue(time.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"));
+			long captured = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).parse(time).getTime() / 1000L;
+			assertTrue(captured >= before && captured <= after);
+			assertEquals(playerName, snapshot.getAuthor());
+			assertEquals(snapshot.getName(), snapshot.toJson().getString("name"));
+			assertEquals(playerName, snapshot.toJson().getString("author"));
+		}
 	}
 
 	@ParameterizedTest

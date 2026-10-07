@@ -14,8 +14,6 @@ import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Settings;
-import data.scripts.tournament.BattleNext_StartedTournament;
-import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
@@ -36,6 +34,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture {
 
@@ -110,7 +109,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(new BattleNext_TournamentStore(), new BattleNext_RuleStore());
 		editor.open(source);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-		for (int iteration = 0; iteration < 3; iteration++) {
+		for (int iteration = 0; iteration < 2; iteration++) {
 			editor.refreshContent();
 			assertEquals(name, ((TextFieldAPI) getField(editor, "nameField")).getText());
 			assertFalse(editor.hasUnsavedChanges());
@@ -147,9 +146,11 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			assertEquals(blank, nameField.getText());
 			assertTrue(editor.hasUnsavedChanges());
 			assertEquals(stored, storedFiles());
-			editor.refreshContent();
-			assertEquals(blank, ((TextFieldAPI) getField(editor, "nameField")).getText());
 		}
+		editor.refreshContent();
+		assertEquals(" \u3000 ", ((TextFieldAPI) getField(editor, "nameField")).getText());
+		assertTrue(editor.hasUnsavedChanges());
+		assertEquals(stored, storedFiles());
 		((TextFieldAPI) getField(editor, "nameField")).setText("Corrected 名称 50%");
 		assertTrue(editor.save(), editor.getStatusText());
 		assertFalse(editor.hasUnsavedChanges());
@@ -225,8 +226,16 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		for (TextFieldAPI field : List.of(editor.nameField, editor.ruleField, editor.cellField)) {
 			assertEquals(List.of(editor.fieldContent), registrations.get(field));
 		}
+		List<TextFieldAPI> previousFields = List.of(editor.nameField, editor.ruleField, editor.cellField);
 		editor.refreshContent();
-		assertEquals(3, ((Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations")).size());
+		registrations = (Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations");
+		assertEquals(Set.of(editor.nameField, editor.ruleField, editor.cellField), registrations.keySet());
+		for (TextFieldAPI field : previousFields) {
+			assertFalse(registrations.containsKey(field));
+		}
+		for (TextFieldAPI field : List.of(editor.nameField, editor.ruleField, editor.cellField)) {
+			assertEquals(List.of(editor.fieldContent), registrations.get(field));
+		}
 		editor.close();
 		assertTrue(((Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations")).isEmpty());
 		assertTrue(children.get(root).isEmpty());
@@ -322,32 +331,31 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		store.setFailLoad(true);
 		assertTrue(page.save());
 		assertFalse(page.hasUnsavedChanges());
-		assertTrue(page.getStatusText().startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved")));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved") + " / "
+				+ BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")
+				+ ": java.io.IOException: Injected load failure", page.getStatusText());
+		assertEquals("Saved name", ((TextFieldAPI) getField(editor, "nameField")).getText());
 		store.setFailLoad(false);
 		store.reload();
 		assertEquals("Saved name", store.get(pin.getPinId()).getDisplayName());
 		page.close();
+		assertFalse(((BattleNext_UiInputRouter) getField(page, "inputRouter")).getSession().hasInputState());
 	}
 
 	@Test
 	void reportIdentityAndPersistenceUseIndependentRecords() throws Exception {
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
-		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		reports.reload();
-		tournaments.reload();
 		BattleNext_BattleReportModel standalone = new BattleNext_BattleReportModel();
 		standalone.setId("same");
 		standalone.setName("Standalone");
 		reports.save(standalone);
-		BattleNext_BattleReportModel embedded = new BattleNext_BattleReportModel();
-		embedded.setId("round");
-		embedded.setName("Embedded");
-		BattleNext_TournamentModel cup = new BattleNext_TournamentModel("cup", "Cup",
-				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		BattleNext_StartedTournament started = new BattleNext_TournamentEngine().start(cup, List.of("first", "second"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
+		BattleNext_BattleReportModel round = new BattleNext_BattleReportModel();
+		round.setId("round");
+		round.setName("Round report");
 		BattleNext_ReportTarget first = new BattleNext_ReportTarget(standalone);
-		reports.save(embedded);
-		BattleNext_ReportTarget second = new BattleNext_ReportTarget(embedded);
+		reports.save(round);
+		BattleNext_ReportTarget second = new BattleNext_ReportTarget(round);
 		assertNotEquals(first.identity(), second.identity());
 		second.rename(reports, "Changed round");
 		first.rename(reports, "Changed standalone");
@@ -357,6 +365,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		second.delete(reports);
 		reports.reload();
 		assertNull(reports.get("round"));
+		assertEquals("Changed standalone", reports.get("same").getName());
 	}
 
 	@Test

@@ -36,7 +36,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public void reload() throws IOException, JSONException {
 		BattleNext_Logger.operationStarted(getClass(), "catalog.reload",
-				BattleNext_Logger.fields().put("previous_entries", getAll()).build());
+				() -> BattleNext_Logger.fields().put("previous_entries", getAll()).build());
 		try {
 			Map<String, T> loaded = new LinkedHashMap<>();
 			List<T> all = new ArrayList<>();
@@ -44,7 +44,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			List<LoadError> inputs = new ArrayList<>();
 			for (BattleNext_BaseLoader<T> loader : sources()) {
 				BattleNext_Logger.operationStarted(loader.getClass(), "catalog.source.load",
-						BattleNext_Logger.fields().put("store", getClass()).build());
+						() -> BattleNext_Logger.fields().put("store", getClass()).build());
 				List<T> models;
 				try {
 					models = loader.load();
@@ -55,7 +55,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 					continue;
 				}
 				BattleNext_Logger.operationSucceeded(loader.getClass(), "catalog.source.load",
-						BattleNext_Logger.fields().put("store", getClass()).put("models", models).build());
+						() -> BattleNext_Logger.fields().put("store", getClass()).put("models", models).build());
 				all.addAll(models);
 				failures.addAll(loader.getErrors());
 				inputs.addAll(loader.getInputs());
@@ -82,7 +82,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			replaceEntries(loaded);
 			succeedLoad();
 			BattleNext_Logger.operationSucceeded(getClass(), "catalog.reload",
-					BattleNext_Logger.fields().put("entries", getAll()).build());
+					() -> BattleNext_Logger.fields().put("entries", getAll()).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(getClass(), "catalog.reload",
 					BattleNext_Logger.fields().put("published_entries", getAll()).build(), exception);
@@ -104,7 +104,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			boolean created = !entries.containsKey(model.getId());
 			register(model, saver().save(model));
 			BattleNext_Logger.operationSucceeded(getClass(), "store.save",
-					BattleNext_Logger.fields().put("action", created ? "created" : "updated").put("model", model).build());
+					() -> BattleNext_Logger.fields().put("action", created ? "created" : "updated").put("model", model).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(getClass(), "store.save.rejected", input, exception);

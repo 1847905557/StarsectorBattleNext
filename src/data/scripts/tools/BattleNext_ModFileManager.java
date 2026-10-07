@@ -34,7 +34,7 @@ public class BattleNext_ModFileManager {
 		try {
 			JSONObject result = Global.getSettings().loadJSON(path, modId);
 			BattleNext_Logger.operationSucceeded(source, "file.read",
-					BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("object", result).build());
+					() -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("object", result).build());
 			return result;
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(source, "file.read", input, exception);
@@ -48,7 +48,7 @@ public class BattleNext_ModFileManager {
 		try {
 			JSONArray result = Global.getSettings().loadCSV(path, modId);
 			BattleNext_Logger.operationSucceeded(source, "file.read",
-					BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("rows", result).build());
+					() -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("rows", result).build());
 			return result;
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(source, "file.read", input, exception);
@@ -75,7 +75,7 @@ public class BattleNext_ModFileManager {
 		try {
 			JSONArray result = Global.getSettings().getMergedSpreadsheetData(key, path);
 			BattleNext_Logger.operationSucceeded(source, "resource.batch.load",
-					BattleNext_Logger.fields().put("key", key).put("path", path).put("rows", result).build());
+					() -> BattleNext_Logger.fields().put("key", key).put("path", path).put("rows", result).build());
 			return result;
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(source, "resource.batch.load", input, exception);

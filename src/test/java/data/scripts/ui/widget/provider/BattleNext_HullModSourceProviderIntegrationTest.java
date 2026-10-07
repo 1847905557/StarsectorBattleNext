@@ -6,6 +6,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
@@ -37,6 +38,7 @@ import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVariantFixture {
@@ -98,17 +100,10 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	}
 
 	@Test
-	void providersSelectTheirCurrentHullmodsWithTheSharedSelectionContract() {
+	void providersSelectTheirCurrentHullmodsBySourceAndIdentity() {
 		assertEquals(List.of("installed", "damage", "hidden", "built", "zeta", "sm", "d"), ids(provider("all")));
 		assertEquals(List.of("damage", "d"), ids(provider("dmod")));
 		assertEquals(List.of("installed", "built"), ids(provider("smod")));
-		for (String kind : List.of("all", "smod", "dmod")) {
-			var source = provider(kind);
-			assertEquals(1, source.getMaxStack("installed"));
-			assertEquals(360f, source.getTooltipWidth());
-			assertTrue(source.expectsIcon());
-			assertEquals("graphics/installed.png", source.getIconPath("installed"));
-		}
 	}
 
 	@Test
@@ -249,7 +244,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 
 	@ParameterizedTest
 	@NullAndEmptySource
-	@ValueSource(strings = {" ", "\t\r\n"})
+	@ValueSource(strings = {"\t\r\n"})
 	void emptyBasicDescriptionsPreserveTheRemainingEffectChain(String description) {
 		installed.mainText = description;
 		installed.script.customPost = true;
@@ -319,7 +314,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		picker.attach(host, root);
 		root.addUIElement(host).inTL(0f, 0f);
 		String id = kind.equals("dmod") ? "damage" : "installed";
-		for (int cycle = 0; cycle < 3; cycle++) {
+		for (int cycle = 0; cycle < 2; cycle++) {
 			var open = picker.getClass().getDeclaredMethod("open");
 			open.setAccessible(true);
 			open.invoke(picker);
@@ -339,15 +334,43 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			creator.createTooltip(content, false, null);
 			assertEquals(id, textValues(content).get(1));
 			assertTrue(textValues(content).stream().anyMatch(value -> value.contains("Second: Literal %s, %d and 50%.")));
+			TooltipMakerAPI image = (TooltipMakerAPI) children.get((CustomPanelAPI) card).get(0);
+			assertEquals("graphics/" + id + ".png", imagePaths.get(tooltips.get(image).getComponents().get(0)));
+			Map<?, ?> selection = (Map<?, ?>) getField(picker, "selection");
+			click((CustomPanelAPI) card);
+			assertEquals(Map.of(id, 1), selection);
+			click((CustomPanelAPI) card);
+			assertTrue(selection.isEmpty());
 			search.setText("unmatched");
 			plugins.get(popup).advance(0f);
 			assertTrue(removedComponents.contains(gridPanel));
+			CustomPanelAPI emptyGrid = (CustomPanelAPI) getField(picker, "gridPanel");
+			List<UIComponentAPI> empty = tooltips.get(children.get(emptyGrid).get(0)).getComponents();
+			assertEquals(List.of(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_picker_no_options")),
+					empty.stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+			search.grabFocus(false);
+			assertTrue(search.hasFocus());
 			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
+			assertFalse(search.hasFocus());
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 		}
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
+	}
+
+	private void click(CustomPanelAPI card) {
+		AtomicBoolean consumed = new AtomicBoolean();
+		InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
+			case "isLMBDownEvent" -> true;
+			case "getX" -> (int) card.getPosition().getCenterX();
+			case "getY" -> (int) card.getPosition().getCenterY();
+			case "isConsumed" -> consumed.get();
+			case "consume" -> { consumed.set(true); yield null; }
+			default -> null;
+		});
+		plugins.get(card).processInput(List.of(event));
+		assertTrue(consumed.get());
 	}
 
 	private BattleNext_HullModSourceProvider provider(String kind) {

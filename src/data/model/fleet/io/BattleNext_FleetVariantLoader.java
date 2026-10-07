@@ -69,7 +69,7 @@ public class BattleNext_FleetVariantLoader {
 				}
 			}
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
-					BattleNext_Logger.fields().put("fleet", fleet).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).build());
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_FleetVariantLoader.class, "fleet.variants.load", input, exception);
 			throw exception;

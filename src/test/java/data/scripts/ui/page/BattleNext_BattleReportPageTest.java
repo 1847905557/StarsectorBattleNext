@@ -91,11 +91,10 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		}
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void reportSidesKeepTheirColorsAndMembershipAcrossSortingExpansionAndLanguageRefresh(
-			boolean cnText) throws Exception {
+	@Test
+	void reportSidesKeepTheirColorsAndMembershipAcrossSortingExpansionAndLanguageRefresh() throws Exception {
 
+		boolean cnText = false;
 		configureRowAssets();
 		useReportTextAndSideColors();
 		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);

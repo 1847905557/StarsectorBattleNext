@@ -3,12 +3,15 @@ package data.test.fixture;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.validator.postprocessors.Java17PostProcessor;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.MemoryTypeSolver;
+import com.github.javaparser.utils.LineSeparator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,26 +32,42 @@ public class BattleNext_TestSourceIndex {
 		MemoryTypeSolver declarations = new MemoryTypeSolver();
 		solver.add(declarations);
 		solver.add(new ClassLoaderTypeSolver(getClass().getClassLoader()));
-		JavaParser syntaxParser = new JavaParser(new ParserConfiguration()
+		JavaSymbolSolver resolver = new JavaSymbolSolver(solver);
+		ParserConfiguration compiledConfiguration = new ParserConfiguration()
 				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
 				.setAttributeComments(false)
+				.setDetectOriginalLineSeparator(false)
+				.setCharacterEncoding(StandardCharsets.UTF_8);
+		compiledConfiguration.getProcessors().clear();
+		Java17PostProcessor compiledPostProcessor = new Java17PostProcessor();
+		JavaParser compiledParser = new JavaParser(compiledConfiguration);
+		JavaParser rulesParser = new JavaParser(new ParserConfiguration()
+				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
+				.setAttributeComments(false)
+				.setDetectOriginalLineSeparator(false)
 				.setStoreTokens(false)
 				.setCharacterEncoding(StandardCharsets.UTF_8));
-		JavaParser runtimeParser = new JavaParser(new ParserConfiguration()
-				.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)
-				.setAttributeComments(false)
-				.setCharacterEncoding(StandardCharsets.UTF_8)
-				.setSymbolResolver(new JavaSymbolSolver(solver)));
 		Map<Path, CompilationUnit> parsed = new LinkedHashMap<>();
 		for (Path root : new Path[]{Path.of("src"), Path.of("tools/checks")}) {
 			try (var paths = Files.walk(root)) {
 				for (Path path : paths.filter(file -> file.toString().endsWith(".java")).sorted().toList()) {
-					JavaParser parser = path.startsWith(Path.of("src/data")) ? runtimeParser : syntaxParser;
-					var result = parser.parse(path);
+					boolean runtime = path.startsWith(Path.of("src/data"));
+					boolean compiled = path.startsWith(Path.of("src"))
+							&& (!path.startsWith(Path.of("src/test")) || path.startsWith(Path.of("src/test/java")));
+					compiledConfiguration.setStoreTokens(runtime);
+					JavaParser parser = compiled ? compiledParser : rulesParser;
+					String sourceText = Files.readString(path, StandardCharsets.UTF_8);
+					var result = parser.parse(sourceText);
+					if (compiled) {
+						compiledPostProcessor.postProcess(result, compiledConfiguration);
+					}
 					if (!result.isSuccessful()) throw new IOException("Invalid Java source " + path + ": " + result.getProblems());
 					CompilationUnit unit = result.getResult().orElseThrow();
+					unit.setStorage(path, StandardCharsets.UTF_8);
+					unit.setData(Node.LINE_SEPARATOR_KEY, LineSeparator.detect(sourceText));
 					parsed.put(path, unit);
-					if (!path.startsWith(Path.of("src/data"))) continue;
+					if (!runtime) continue;
+					unit.setData(Node.SYMBOL_RESOLVER_KEY, resolver);
 					for (TypeDeclaration<?> type : unit.findAll(TypeDeclaration.class)) {
 						if (type.getFullyQualifiedName().isEmpty()) continue;
 						declarations.addDeclaration(type.getFullyQualifiedName().orElseThrow(),

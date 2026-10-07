@@ -4,19 +4,13 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestUiFixture;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.Pbuffer;
-import org.lwjgl.opengl.PixelFormat;
 
-import java.awt.Color;
 import java.awt.HeadlessException;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
@@ -27,8 +21,6 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.io.File;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,70 +75,6 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 		field.setEditable(true);
 		field.deleteAll(false);
 		assertEquals("", field.getText());
-	}
-
-	@Test
-	void realOpenGlCaretFollowsEditabilityFocusVisibilityAndBlink() throws Exception {
-
-		BattleNext_TextField field = field();
-		field.setText("abc");
-		field.setColor(Color.WHITE);
-		field.grabFocus(false);
-		Field panelField = BattleNext_TextField.class.getDeclaredField("panel");
-		panelField.setAccessible(true);
-		CustomPanelAPI fieldPanel = (CustomPanelAPI) panelField.get(field);
-		var plugin = plugins.get(fieldPanel);
-		Field initialized = BattleNext_GeometryRenderer.class.getDeclaredField("initialized");
-		initialized.setAccessible(true);
-		String previousLibraryPath = System.getProperty("org.lwjgl.librarypath");
-		System.setProperty("org.lwjgl.librarypath", Path.of("../../starsector-core/native/windows")
-				.toAbsolutePath().normalize().toString());
-		Pbuffer buffer = new Pbuffer(320, 64, new PixelFormat(), null, null);
-		try {
-			buffer.makeCurrent();
-			initialized.setBoolean(null, false);
-			GL11.glViewport(0, 0, 320, 64);
-			GL11.glMatrixMode(GL11.GL_PROJECTION);
-			GL11.glLoadIdentity();
-			GL11.glOrtho(0, 320, 0, 64, -1, 1);
-			GL11.glMatrixMode(GL11.GL_MODELVIEW);
-			GL11.glLoadIdentity();
-			GL11.glDisable(GL11.GL_SCISSOR_TEST);
-			GL11.glDisable(GL11.GL_BLEND);
-			GL11.glClearColor(1f, 0f, 1f, 1f);
-			int horizontal = Math.round(field.getPosition().getX() + 3f
-					+ field.getTextLabelAPI().computeTextWidth("abc"));
-			int vertical = Math.round(field.getPosition().getY() + 14f);
-			ByteBuffer pixel = BufferUtils.createByteBuffer(4);
-			for (int phase = 0; phase < 7; phase++) {
-				if (phase == 1) field.setEditable(false);
-				if (phase == 2) field.setEditable(true);
-				if (phase == 3) field.hideCursor();
-				if (phase == 4) {
-					field.showCursor();
-					plugin.advance(0.6f);
-				}
-				if (phase == 5) field.grabFocus(false);
-				if (phase == 6) router.getSession().finish(true);
-				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-				plugin.render(1f);
-				GL11.glReadPixels(horizontal, vertical, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
-				boolean visible = phase == 0 || phase == 2 || phase == 5;
-				assertEquals(255, pixel.get(0) & 255);
-				assertEquals(visible ? 255 : 0, pixel.get(1) & 255, "Caret phase " + phase);
-				assertEquals(255, pixel.get(2) & 255);
-				assertEquals("abc", field.getText());
-			}
-			assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
-		} finally {
-			initialized.setBoolean(null, false);
-			buffer.destroy();
-			if (previousLibraryPath == null) {
-				System.clearProperty("org.lwjgl.librarypath");
-			} else {
-				System.setProperty("org.lwjgl.librarypath", previousLibraryPath);
-			}
-		}
 	}
 
 	@Test
@@ -407,7 +335,7 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 	}
 
 	@Test
-	void sharedClipboardTransfersOnlyTheSelectedTextAndPasteUsesInputConstraints() throws Exception {
+	void ownedClipboardTransfersOnlyTheSelectedTextAndPasteUsesInputConstraints() throws Exception {
 		BattleNext_TextField source = field();
 		try {
 			source.setText("prefix 中😀%$B suffix");

@@ -83,7 +83,7 @@ public class BattleNext_StartedTournamentStore {
 		if (!sharedIdentity && BattleNext_EntryId.isValidPathSegment(selected.id())) {
 			BattleNext_ModFileManager.delete(pendingRoundPath(selected.id()));
 		}
-		BattleNext_Logger.info(getClass(), "tournament.instance.deleted", BattleNext_Logger.fields().put("instance_id", selected.id()).put("index", selected.index()).build());
+		BattleNext_Logger.info(getClass(), "tournament.instance.deleted", () -> BattleNext_Logger.fields().put("instance_id", selected.id()).put("index", selected.index()).build());
 	}
 
 	private void commit(BattleNext_StartedTournament updated, String selection) throws IOException, JSONException {
@@ -109,7 +109,7 @@ public class BattleNext_StartedTournamentStore {
 		current.put("activeTournamentId", nextActive);
 		write(current);
 		BattleNext_Logger.info(getClass(), "tournament.instances.committed",
-				BattleNext_Logger.fields().put("instance_id", updated == null ? "" : updated.getId()).put("active_id", nextActive).build());
+				() -> BattleNext_Logger.fields().put("instance_id", updated == null ? "" : updated.getId()).put("active_id", nextActive).build());
 	}
 
 	private void write(JSONObject next) throws IOException, JSONException {

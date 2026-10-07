@@ -12,6 +12,10 @@ import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.page.BattleNext_TournamentPage;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
+import data.scripts.ui.BattleNext_UiManager;
+import data.scripts.ui.widget.BattleNext_StatusBar;
+import com.fs.starfarer.api.ui.LabelAPI;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
@@ -82,8 +86,16 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertFalse(campaignMonitor.isDone());
 		assertTrue(campaignMonitor.runWhilePaused());
 		Runnable advance = campaign ? () -> campaignMonitor.advance(0f) : () -> combatMonitor.advance(0f, List.of());
+		var manager = new BattleNext_UiManager(() -> {});
+		manager.attach(panel(1400f, 900f, manager));
+		manager.open();
 		BattleNext_SimulationTask task = completedTaskThroughService("Saved simulation");
 		advance.run();
+		manager.advance(0f);
+		var status = (BattleNext_StatusBar) getField(manager, "statusBar");
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), task.getRequest().id()),
+				((LabelAPI) getField(status, "statusLabel")).getText());
+		manager.buttonPressed("close");
 		assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
 		assertTrue(task.isRetained());
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
@@ -99,6 +111,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		BattleNext_SimulationTask discarded = completedTaskThroughService("Not retained");
 		advance.run();
 		assertFalse(discarded.isRetained());
+		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
 		assertTrue(reports.getAll().isEmpty());
 	}
@@ -155,7 +168,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals(expectedResult, task.getResult());
 		assertEquals(List.of(task), service.getFailedImports());
 		assertTrue(task.getImportError().contains("Injected report read failure"));
-		assertFalse(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
 		assertEquals(existingJson, reports.get("existing").toJson().toString());
 		assertNull(reports.get(request.id()));
@@ -173,11 +186,11 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals(100000000L, task.getResult().executionNanos());
 		assertEquals(600L, task.getResult().steps());
 		assertEquals(1024L, task.getResult().peakHeapBytes());
-		assertTrue(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals(request.id(), BattleNext_BattleSignals.consumePendingResult());
 		task.retryImport();
 		BattleNext_SimulatorService.advance();
 		assertEquals(expectedResult, task.getResult());
-		assertFalse(BattleNext_BattleSignals.consumePendingResult());
+		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 	}
 
 	private BattleNext_SimulationTask completedTaskThroughService(String name) throws Exception {
@@ -197,9 +210,11 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 				Socket socket = listener.accept();
 				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
 			client.setSoTimeout(100);
-			socket.setSoTimeout(100);
+			socket.setSoTimeout(10);
 			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());
 			BattleNext_SimulationTask task = service.submit(request);
+			client.setTcpNoDelay(true);
+			socket.setTcpNoDelay(true);
 			BattleNext_SimulationRequest round = nextRequest(peer);
 			task.pause();
 			JSONObject cancellation = peer.receive();
@@ -221,7 +236,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 				Socket socket = listener.accept();
 				BattleNext_SimulatorProtocol peer = new BattleNext_SimulatorProtocol(socket, "session")) {
 			client.setSoTimeout(100);
-			socket.setSoTimeout(100);
+			socket.setSoTimeout(10);
 			client.setTcpNoDelay(true);
 			socket.setTcpNoDelay(true);
 			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), new OwnedProcess());

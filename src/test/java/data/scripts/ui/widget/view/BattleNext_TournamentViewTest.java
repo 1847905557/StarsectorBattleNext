@@ -22,30 +22,23 @@ import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
 import data.test.fixture.BattleNext_TestTextCatalog;
+import data.test.fixture.BattleNext_TestTournamentViewFixture;
+import data.test.fixture.BattleNext_TestTournamentViewFixture.*;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.Pbuffer;
-import org.lwjgl.opengl.PixelFormat;
 
 import java.awt.Color;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;
 
 class BattleNext_TournamentViewTest {
-	private static final Color SEMITRANSPARENT_GRAY = new Color(175, 175, 175, 180);
-
 	private final BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
 	private final Map<BattleNext_TournamentModel, BattleNext_StartedTournament> instances = new HashMap<>();
 	private final Map<BattleNext_TournamentModel, List<String>> participants = new HashMap<>();
@@ -54,24 +47,7 @@ class BattleNext_TournamentViewTest {
 	@BeforeEach
 	void configureSettings() throws Exception {
 		previousSettings = Global.getSettings();
-		Global.setSettings(proxy(SettingsAPI.class, (name, args) -> switch (name) {
-			case "getString" -> BattleNext_TestTextCatalog.lookup(args[0], args[1]);
-			case "getColor" -> switch (args[0].toString()) {
-				case "textGrayColor" -> SEMITRANSPARENT_GRAY;
-				case "standardTextColor" -> Color.WHITE;
-				case "textFriendColor" -> Color.GREEN;
-				case "textEnemyColor" -> Color.RED;
-				case "buttonShortcut" -> Color.YELLOW;
-				default -> Color.CYAN;
-			};
-			case "getScreenScaleMult" -> 1f;
-			case "getFloat" -> 1f;
-			case "getInt" -> 0;
-			case "getBoolean" -> false;
-			case "getScreenWidth", "getScreenHeight" -> 800f;
-			case "getScreenWidthPixels", "getScreenHeightPixels" -> 800f;
-			default -> null;
-		}));
+		Global.setSettings(BattleNext_TestTournamentViewFixture.settings());
 	}
 
 	@AfterEach
@@ -285,8 +261,7 @@ class BattleNext_TournamentViewTest {
 	void selectedTournamentBuildsChartAndSummaryEvenWhenLayoutIsInvalid() throws Exception {
 
 		Harness harness = new Harness();
-		harness.chartBounds.width = 700f;
-		harness.chartBounds.height = 700f;
+		harness.getChartBounds().getApi().setSize(700f, 700f);
 		BattleNext_BattleSelectorPage page = new BattleNext_BattleSelectorPage(() -> {
 
 		}, new BaseCustomUIPanelPlugin());
@@ -319,25 +294,24 @@ class BattleNext_TournamentViewTest {
 		CustomPanelAPI detailHost = harness.detailHost(700f, 700f);
 		String initial = cup.toJson().toString();
 		build.invoke(page, detailHost);
-		assertTrue(harness.paragraphs.contains(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_finished_matches"), 0, 0)));
-		assertFalse(harness.paragraphs.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_select_fleet")));
-		assertTrue(harness.scrollingHostCreated);
-		assertTrue(harness.customChartAdded);
-		assertTrue(harness.reservedChartHeight > 0f);
-		assertTrue(harness.summaryAdded);
-		assertTrue(harness.buttonIds.contains("tournament:create"));
-		assertFalse(harness.buttonIds.contains("tournament:active"));
-		assertFalse(harness.buttons.get(harness.buttonIds.indexOf("tournament:create")).enabled);
-		assertTrue(harness.buttons.get(harness.buttonIds.indexOf("tournament:check")).enabled);
+		assertTrue(harness.getParagraphs().contains(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_finished_matches"), 0, 0)));
+		assertFalse(harness.getParagraphs().contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_select_fleet")));
+		assertTrue(harness.isScrollingHostCreated());
+		assertTrue(harness.isCustomChartAdded());
+		assertTrue(harness.getReservedChartHeight() > 0f);
+		assertTrue(harness.isSummaryAdded());
+		assertTrue(harness.getButtonIds().contains("tournament:create"));
+		assertFalse(harness.getButtonIds().contains("tournament:active"));
+		assertFalse(harness.getButtons().get(harness.getButtonIds().indexOf("tournament:create")).isEnabled());
+		assertTrue(harness.getButtons().get(harness.getButtonIds().indexOf("tournament:check")).isEnabled());
 		assertEquals(initial, cup.toJson().toString());
 		cup.setBracketType(null);
-		harness.chartBounds.width = 700f;
-		harness.chartBounds.height = 700f;
-		harness.paragraphs.clear();
+		harness.getChartBounds().getApi().setSize(700f, 700f);
+		harness.getParagraphs().clear();
 		build.invoke(page, detailHost);
-		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_error"))));
-		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_unknown_bracket"))));
-		assertFalse(harness.paragraphs.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_select_fleet")));
+		assertTrue(harness.getParagraphs().stream().anyMatch(text -> text.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_error"))));
+		assertTrue(harness.getParagraphs().stream().anyMatch(text -> text.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_unknown_bracket"))));
+		assertFalse(harness.getParagraphs().contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_select_fleet")));
 		Field chart = page.getClass().getDeclaredField("tournamentDisplay");
 		chart.setAccessible(true);
 		assertNotNull(chart.get(page));
@@ -381,29 +355,29 @@ class BattleNext_TournamentViewTest {
 		BattleNext_TournamentView chart = view(tournament(4,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1));
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
-		chart.attach(harness.panel, harness.host, harness.viewport.api, router, 700f);
-		assertEquals(700f, harness.chartBounds.width);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), router, 700f);
+		assertEquals(700f, harness.getChartBounds().getWidth());
 		assertEquals(700f * BattleNext_TournamentView.CANVAS_HEIGHT / BattleNext_TournamentView.CANVAS_WIDTH,
-				harness.chartBounds.height);
+				harness.getChartBounds().getHeight());
 		chart.resetZoom();
 		BattleNext_TournamentView.Node node = chart.nodes.get(0);
 		float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
 		Event hover = new Event("move", center[0], center[1], 0);
 		chart.handleInput(List.of(hover.api));
-		assertTrue(harness.target.height > 0f);
-		assertNotNull(harness.tooltip);
-		harness.tooltip.createTooltip(harness.host, false, null);
-		assertTrue(harness.paragraphs.stream().anyMatch(text -> text.contains(node.id)
+		assertTrue(harness.getTarget().getHeight() > 0f);
+		assertNotNull(harness.getTooltip());
+		harness.getTooltip().createTooltip(harness.getHost(), false, null);
+		assertTrue(harness.getParagraphs().stream().anyMatch(text -> text.contains(node.id)
 				&& text.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_chart_predicted"))));
 		chart.zoomAt(300f, 300f, 2);
-		assertEquals(0f, harness.target.height);
+		assertEquals(0f, harness.getTarget().getHeight());
 		Event wheel = new Event("wheel", 400f, 100f, 1);
 		chart.handleInput(List.of(wheel.api));
 		assertTrue(wheel.consumed);
 		Event outside = new Event("wheel", 900f, 220f, 1);
 		chart.handleInput(List.of(outside.api));
 		assertFalse(outside.consumed);
-		Event toolbar = new Event("down", 630f, harness.chartBounds.height - 10f, 0);
+		Event toolbar = new Event("down", 630f, harness.getChartBounds().getHeight() - 10f, 0);
 		chart.handleInput(List.of(toolbar.api));
 		assertFalse(toolbar.consumed);
 		float[] before = chart.project(100f, 100f);
@@ -413,15 +387,15 @@ class BattleNext_TournamentViewTest {
 		chart.handleInput(List.of(down.api, move.api, up.api));
 		assertTrue(down.consumed && move.consumed && up.consumed);
 		assertArrayEquals(new float[]{before[0] + 20f, before[1] + 20f}, chart.project(100f, 100f), 0.001f);
-		harness.buttons.get(1).checked = true;
+		harness.getButtons().get(1).getApi().setChecked(true);
 		chart.advance(0f);
-		assertFalse(harness.buttons.get(1).checked);
+		assertFalse(harness.getButtons().get(1).isChecked());
 		assertEquals(124f * 700f / BattleNext_TournamentView.CANVAS_WIDTH,
 				chart.project(100f, 100f)[0], 0.001f);
 		router.push(new BattleNext_UiInputRouter.Overlay() {
 			@Override
 			public PositionAPI getBounds() {
-				return harness.viewport.api;
+				return harness.getViewport().getApi();
 			}
 
 			@Override
@@ -438,8 +412,8 @@ class BattleNext_TournamentViewTest {
 		chart.handleInput(List.of(blocked.api));
 		assertFalse(blocked.consumed);
 		chart.advance(0f);
-		assertFalse(harness.buttons.get(0).enabled);
-		assertEquals(0f, harness.target.height);
+		assertFalse(harness.getButtons().get(0).isEnabled());
+		assertEquals(0f, harness.getTarget().getHeight());
 	}
 
 	@Test
@@ -448,7 +422,7 @@ class BattleNext_TournamentViewTest {
 		Harness harness = new Harness();
 		BattleNext_TournamentView chart = view(tournament(4,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1));
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 		for (int value : new int[]{-240, -120, -1, 0, 1, 120, 240}) {
 			chart.resetZoom();
 			float[] anchor = chart.project(400f, 200f);
@@ -472,29 +446,29 @@ class BattleNext_TournamentViewTest {
 
 		for (float availableWidth : new float[]{600f, 1000f, 1600f}) {
 			Harness harness = new Harness();
-			harness.viewport.api.setLocation(100f, 80f).setSize(availableWidth, 600f);
-			harness.chartBounds.api.setLocation(100f, 80f);
+			harness.getViewport().getApi().setLocation(100f, 80f).setSize(availableWidth, 600f);
+			harness.getChartBounds().getApi().setLocation(100f, 80f);
 			BattleNext_TournamentView chart = view(tournament(2,
 					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1));
-			chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), availableWidth);
+			chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), availableWidth);
 			float width = Math.min(availableWidth, BattleNext_TournamentView.CANVAS_WIDTH);
-			float left = harness.chartBounds.x - harness.viewport.x;
-			float right = harness.viewport.x + availableWidth - harness.chartBounds.x - width;
+			float left = harness.getChartBounds().getX() - harness.getViewport().getX();
+			float right = harness.getViewport().getX() + availableWidth - harness.getChartBounds().getX() - width;
 
-			assertEquals(width, harness.chartBounds.width);
-			assertEquals(availableWidth, harness.rowBounds.width);
+			assertEquals(width, harness.getChartBounds().getWidth());
+			assertEquals(availableWidth, harness.getRowBounds().getWidth());
 			assertEquals(width * BattleNext_TournamentView.CANVAS_HEIGHT / BattleNext_TournamentView.CANVAS_WIDTH,
-					harness.chartBounds.height, 0.001f);
+					harness.getChartBounds().getHeight(), 0.001f);
 			assertEquals(left, right, 0.001f);
-			assertEquals(80f, harness.chartBounds.y);
-			assertEquals(harness.chartBounds.height + 10f, harness.reservedChartHeight);
+			assertEquals(80f, harness.getChartBounds().getY());
+			assertEquals(harness.getChartBounds().getHeight() + 10f, harness.getReservedChartHeight());
 			BattleNext_TournamentView.Node node = chart.nodes.get(0);
 			float logicalX = node.x + node.width * 0.5f;
 			float logicalY = node.y + node.height * 0.5f;
 			float[] center = chart.project(logicalX, logicalY);
 			chart.handleInput(List.of(new Event("move", center[0], center[1], 0).api));
 			assertSame(node, chart.hitTest(center[0], center[1]));
-			assertTrue(harness.target.height > 0f);
+			assertTrue(harness.getTarget().getHeight() > 0f);
 			Event wheel = new Event("wheel", center[0], center[1], -120);
 			float scale = width / BattleNext_TournamentView.CANVAS_WIDTH;
 			float anchorX = logicalX + ((int) center[0] - center[0]) / scale;
@@ -512,8 +486,8 @@ class BattleNext_TournamentViewTest {
 			assertTrue(down.consumed && move.consumed && up.consumed);
 			assertArrayEquals(new float[]{movedCenter[0] + 20f, movedCenter[1] + 20f},
 					chart.project(logicalX, logicalY), 0.001f);
-			assertEquals(left, harness.chartBounds.x - harness.viewport.x, 0.001f);
-			Event outside = new Event("wheel", harness.chartBounds.x - 1f, center[1], -120);
+			assertEquals(left, harness.getChartBounds().getX() - harness.getViewport().getX(), 0.001f);
+			Event outside = new Event("wheel", harness.getChartBounds().getX() - 1f, center[1], -120);
 			chart.handleInput(List.of(outside.api));
 			assertFalse(outside.consumed);
 		}
@@ -527,7 +501,7 @@ class BattleNext_TournamentViewTest {
 			float availableWidth = scenario[0];
 			int count = scenario[1];
 			Harness harness = new Harness();
-			harness.customChartAdded = true;
+			harness.setCustomChartAdded(true);
 			BattleNext_TournamentModel cup = tournament(count,
 					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3);
 			if (state > 0) {
@@ -555,7 +529,7 @@ class BattleNext_TournamentViewTest {
 
 					});
 			if (state == 0) {
-				display.enableTemplateEditing(harness.panel, new BattleNext_FleetSourceProvider(new BattleNext_FleetStore()),
+				display.enableTemplateEditing(harness.getPanel(), new BattleNext_FleetSourceProvider(new BattleNext_FleetStore()),
 						() -> this.participants.get(cup), (slot, id) -> {});
 			}
 			Field chart = display.getClass().getDeclaredField("chart");
@@ -565,42 +539,42 @@ class BattleNext_TournamentViewTest {
 					CustomPanelAPI.class, TooltipMakerAPI.class, float.class, float.class);
 			build.setAccessible(true);
 			String json = cup.toJson().toString();
-			build.invoke(display, harness.panel, harness.host, availableWidth, width);
-			Harness.TextBlock title = harness.summaryBlocks.get(0);
-			Harness.TextBlock details = harness.summaryBlocks.get(1);
-			Harness.TextBlock participants = harness.summaryBlocks.get(2);
-			Harness.TextBlock fleetTitle = harness.summaryBlocks.get(3);
+			build.invoke(display, harness.getPanel(), harness.getHost(), availableWidth, width);
+			Harness.TextBlock title = harness.getSummaryBlocks().get(0);
+			Harness.TextBlock details = harness.getSummaryBlocks().get(1);
+			Harness.TextBlock participants = harness.getSummaryBlocks().get(2);
+			Harness.TextBlock fleetTitle = harness.getSummaryBlocks().get(3);
 
-			assertEquals(width, harness.summaryBounds.width);
-			assertEquals((availableWidth - width) * 0.5f, harness.summaryBounds.leftPad);
-			assertEquals(0f, title.bounds.leftPad);
-			assertEquals(details.bounds.width, title.bounds.width);
-			assertEquals(participants.bounds.width, fleetTitle.bounds.width);
-			assertEquals(title.bounds.topPad, fleetTitle.bounds.topPad);
-			assertEquals(participants.bounds.leftPad, fleetTitle.bounds.leftPad);
-			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary")), title.titles);
-			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")), fleetTitle.titles);
-			assertEquals(details.bounds.width, participants.bounds.width);
-			assertEquals(10f, participants.bounds.leftPad - details.bounds.width);
-			assertEquals(details.bounds.topPad, participants.bounds.topPad);
-			assertEquals(Math.max(title.height, fleetTitle.height) + 10f, details.bounds.topPad);
-			assertEquals(details.bounds.topPad + Math.max(details.height, participants.height), harness.summaryBounds.height);
-			assertEquals(harness.summaryBounds.height + 10f, harness.contentHeight);
-			assertEquals(count, participants.text.size());
-			assertTrue(participants.text.contains(longName));
-			assertTrue(details.text.stream().anyMatch(value -> value.startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_status") + ":")));
-			assertTrue(details.text.stream().anyMatch(value -> value.startsWith("A detailed warning")));
-			assertEquals(state == 0, harness.buttonIds.contains("tournament:create"));
-			for (TestButton button : harness.buttons) {
-				assertEquals(Math.min(180f, (details.bounds.width - 4f) * 0.5f), button.bounds.width);
-				assertEquals(30f, button.bounds.height);
+			assertEquals(width, harness.getSummaryBounds().getWidth());
+			assertEquals((availableWidth - width) * 0.5f, harness.getSummaryBounds().getLeftPad());
+			assertEquals(0f, title.getBounds().getLeftPad());
+			assertEquals(details.getBounds().getWidth(), title.getBounds().getWidth());
+			assertEquals(participants.getBounds().getWidth(), fleetTitle.getBounds().getWidth());
+			assertEquals(title.getBounds().getTopPad(), fleetTitle.getBounds().getTopPad());
+			assertEquals(participants.getBounds().getLeftPad(), fleetTitle.getBounds().getLeftPad());
+			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary")), title.getTitles());
+			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")), fleetTitle.getTitles());
+			assertEquals(details.getBounds().getWidth(), participants.getBounds().getWidth());
+			assertEquals(10f, participants.getBounds().getLeftPad() - details.getBounds().getWidth());
+			assertEquals(details.getBounds().getTopPad(), participants.getBounds().getTopPad());
+			assertEquals(Math.max(title.getHeight(), fleetTitle.getHeight()) + 10f, details.getBounds().getTopPad());
+			assertEquals(details.getBounds().getTopPad() + Math.max(details.getHeight(), participants.getHeight()), harness.getSummaryBounds().getHeight());
+			assertEquals(harness.getSummaryBounds().getHeight() + 10f, harness.getContentHeight());
+			assertEquals(count, participants.getText().size());
+			assertTrue(participants.getText().contains(longName));
+			assertTrue(details.getText().stream().anyMatch(value -> value.startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_status") + ":")));
+			assertTrue(details.getText().stream().anyMatch(value -> value.startsWith("A detailed warning")));
+			assertEquals(state == 0, harness.getButtonIds().contains("tournament:create"));
+			for (TestButton button : harness.getButtons()) {
+				assertEquals(Math.min(180f, (details.getBounds().getWidth() - 4f) * 0.5f), button.getBounds().getWidth());
+				assertEquals(30f, button.getBounds().getHeight());
 			}
 			if (state == 0) {
-				assertEquals(harness.buttons.get(0).bounds.topPad, harness.buttons.get(1).bounds.topPad);
-				assertEquals(harness.buttons.get(0).bounds.leftPad + harness.buttons.get(0).bounds.width + 4f, harness.buttons.get(1).bounds.leftPad);
+				assertEquals(harness.getButtons().get(0).getBounds().getTopPad(), harness.getButtons().get(1).getBounds().getTopPad());
+				assertEquals(harness.getButtons().get(0).getBounds().getLeftPad() + harness.getButtons().get(0).getBounds().getWidth() + 4f, harness.getButtons().get(1).getBounds().getLeftPad());
 			}
 			if (state == 2) {
-				assertTrue(details.text.stream().anyMatch(value -> value.startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_winner") + ":")));
+				assertTrue(details.getText().stream().anyMatch(value -> value.startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_winner") + ":")));
 			}
 			assertEquals(json, cup.toJson().toString());
 		}
@@ -611,7 +585,7 @@ class BattleNext_TournamentViewTest {
 	void displayRoutesActionsAndReleasesInputOnClose(boolean started) throws Exception {
 
 		Harness harness = new Harness();
-		harness.chartBounds.api.setSize(700f, 700f);
+		harness.getChartBounds().getApi().setSize(700f, 700f);
 		BattleNext_TournamentModel cup = tournament(2,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1);
 		if (started) {
@@ -626,14 +600,14 @@ class BattleNext_TournamentViewTest {
 				started ? "tournament:authorize" : "tournament:start", true, List.of());
 		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(router, cup, instances.get(cup), data, List.of(operation), actions::add);
 		String json = cup.toJson().toString();
-		display.attach(harness.panel);
-		CustomUIPanelPlugin plugin = harness.displayPlugin;
+		display.attach(harness.getPanel());
+		CustomUIPanelPlugin plugin = harness.getDisplayPlugin();
 		String action = started ? "tournament:authorize" : "tournament:start";
 
-		assertTrue(harness.scrollingHostCreated);
-		assertTrue(harness.customChartAdded && harness.summaryAdded);
-		assertTrue(harness.paragraphs.contains("Visible warning"));
-		assertTrue(harness.buttonIds.contains(action));
+		assertTrue(harness.isScrollingHostCreated());
+		assertTrue(harness.isCustomChartAdded() && harness.isSummaryAdded());
+		assertTrue(harness.getParagraphs().contains("Visible warning"));
+		assertTrue(harness.getButtonIds().contains(action));
 		plugin.buttonPressed("unrelated");
 		assertTrue(actions.isEmpty());
 		plugin.buttonPressed(action);
@@ -645,14 +619,14 @@ class BattleNext_TournamentViewTest {
 		float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
 		Event hover = new Event("move", center[0], center[1], 0);
 		display.handleGlobalInput(List.of(hover.api));
-		assertTrue(harness.target.height > 0f);
+		assertTrue(harness.getTarget().getHeight() > 0f);
 		Event down = new Event("down", center[0], center[1], 0);
 		display.handleGlobalInput(List.of(down.api));
 		assertTrue(down.consumed);
 		BattleNext_UiInputRouter.Overlay overlay = new BattleNext_UiInputRouter.Overlay() {
 			@Override
 			public PositionAPI getBounds() {
-				return harness.viewport.api;
+				return harness.getViewport().getApi();
 			}
 
 			@Override
@@ -671,7 +645,7 @@ class BattleNext_TournamentViewTest {
 		Event blocked = new Event("wheel", center[0], center[1], -120);
 		display.handleGlobalInput(List.of(blocked.api));
 		assertFalse(blocked.consumed);
-		assertEquals(0f, harness.target.height);
+		assertEquals(0f, harness.getTarget().getHeight());
 		router.pop(overlay);
 		display.close();
 		assertNull(chartField.get(display));
@@ -695,15 +669,15 @@ class BattleNext_TournamentViewTest {
 		assertEquals(2, data.fleetNames().size());
 		assertEquals(List.of("Warning"), data.warnings());
 		Harness harness = new Harness();
-		harness.chartBounds.api.setSize(700f, 700f);
+		harness.getChartBounds().getApi().setSize(700f, 700f);
 		List<Object> actions = new ArrayList<>();
 		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(),
 				tournament(2, BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1), null, data,
 				List.of(new BattleNext_TournamentDisplay.Action("Start", "tournament:start", false, List.of())), actions::add);
-		display.attach(harness.panel);
-		assertFalse(harness.buttons.get(harness.buttons.size() - 1).enabled);
-		harness.displayPlugin.buttonPressed("tournament:start");
-		harness.displayPlugin.buttonPressed("tournament:authorize");
+		display.attach(harness.getPanel());
+		assertFalse(harness.getButtons().get(harness.getButtons().size() - 1).isEnabled());
+		harness.getDisplayPlugin().buttonPressed("tournament:start");
+		harness.getDisplayPlugin().buttonPressed("tournament:authorize");
 		assertTrue(actions.isEmpty());
 	}
 
@@ -739,351 +713,19 @@ class BattleNext_TournamentViewTest {
 				(instance, method, args) -> callback.apply(method.getName(), args)));
 	}
 
-	private class Bounds {
-		private float x;
-		private float y;
-		private float width;
-		private float height;
-		private Bounds parent;
-		private float leftPad;
-		private float topPad;
-		private final PositionAPI api = proxy(PositionAPI.class, this::call);
-
-		private Object call(String name, Object[] args) {
-			return switch (name) {
-				case "getX" -> x;
-				case "getY" -> y;
-				case "getWidth" -> width;
-				case "getHeight" -> height;
-				case "setLocation" -> {
-					x = (Float) args[0];
-					y = (Float) args[1];
-					yield api;
-				}
-				case "setSize" -> {
-					width = (Float) args[0];
-					height = (Float) args[1];
-					yield api;
-				}
-				case "inTL" -> {
-					leftPad = (Float) args[0];
-					topPad = (Float) args[1];
-					if (parent != null) {
-						x = parent.x + (Float) args[0];
-						y = parent.y + parent.height - height - (Float) args[1];
-					}
-					yield api;
-				}
-				case "inLMid" -> api;
-				default -> null;
-			};
-		}
-	}
-
-	private class TestButton {
-		private boolean checked;
-		private boolean enabled = true;
-		private final Bounds bounds = new Bounds();
-		private final ButtonAPI api = proxy(ButtonAPI.class, (name, args) -> switch (name) {
-			case "getPosition" -> bounds.api;
-			case "isChecked" -> checked;
-			case "setChecked" -> {
-				checked = (Boolean) args[0];
-				yield null;
-			}
-			case "setEnabled" -> {
-				enabled = (Boolean) args[0];
-				yield null;
-			}
-			default -> null;
-		});
-	}
-
-	private class TestLabel {
-		private final Bounds bounds = new Bounds();
-		private String text;
-		private Color color;
-		private Alignment alignment;
-		private final LabelAPI api = proxy(LabelAPI.class, (name, args) -> switch (name) {
-			case "getPosition" -> bounds.api;
-			case "getText" -> text;
-			case "setText" -> {
-				text = (String) args[0];
-				yield null;
-			}
-			case "setColor" -> {
-				color = (Color) args[0];
-				yield null;
-			}
-			case "setAlignment" -> {
-				alignment = (Alignment) args[0];
-				yield null;
-			}
-			case "computeTextWidth" -> textWidth((String) args[0]);
-			default -> null;
-		});
-
-		private float textWidth(String value) {
-			float width = 0f;
-			for (int point : value.codePoints().toArray()) {
-				width += point == '1' ? 4f : 8f;
-			}
-			return width;
-		}
-	}
-
-	private class Harness {
-		private final List<TestLabel> nodeLabels = new ArrayList<>();
-		private boolean shortenNodeText;
-		private final Bounds chartBounds = new Bounds();
-		private final Bounds rowBounds = new Bounds();
-		private final Bounds summaryBounds = new Bounds();
-		private final List<TextBlock> summaryBlocks = new ArrayList<>();
-		private final Bounds viewport = new Bounds();
-		private final Bounds target = new Bounds();
-		private final List<TestButton> buttons = new ArrayList<>();
-		private final List<String> paragraphs = new ArrayList<>();
-		private final List<Object> buttonIds = new ArrayList<>();
-		private boolean scrollingHostCreated;
-		private boolean customChartAdded;
-		private float contentHeight;
-		private float reservedChartHeight;
-		private boolean summaryScope;
-		private boolean summaryAdded;
-		private boolean shrinkChildren;
-		private CustomUIPanelPlugin displayPlugin;
-		private final Bounds hostBounds = new Bounds();
-		private TooltipMakerAPI.TooltipCreator tooltip;
-		private final UIComponentAPI targetApi = proxy(UIComponentAPI.class, (name, args) ->
-				name.equals("getPosition") ? target.api : null);
-		private final TooltipMakerAPI host = proxy(TooltipMakerAPI.class, this::hostCall);
-		private final CustomPanelAPI panel = proxy(CustomPanelAPI.class, this::panelCall);
-		private final CustomPanelAPI row = proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
-			case "getPosition", "addUIElement" -> rowBounds.api;
-			case "getPlugin" -> displayPlugin;
-			case "createUIElement" -> panelCall(name, args);
-			case "createCustomPanel" -> {
-				summaryBounds.api.setSize((Float) args[0], (Float) args[1]);
-				yield this.summary;
-			}
-			case "addComponent" -> {
-				Bounds child = args[0] == panel ? chartBounds : summaryBounds;
-				child.parent = rowBounds;
-				yield child.api;
-			}
-			default -> null;
-		});
-		private final CustomPanelAPI summary = proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
-			case "getPosition" -> summaryBounds.api;
-			case "createUIElement" -> {
-				assertFalse((Boolean) args[2]);
-				TextBlock block = new TextBlock();
-				block.owner = this.summary;
-				block.layoutWidth = (Float) args[0];
-				summaryBlocks.add(block);
-				yield block.api;
-			}
-			case "addUIElement" -> {
-				TextBlock block = summaryBlocks.stream().filter(item -> item.api == args[0]).findFirst().orElseThrow();
-				assertSame(this.summary, block.owner, "The target panel must create its UI element");
-				block.bounds.parent = summaryBounds;
-				yield block.bounds.api;
-			}
-			default -> null;
-		});
-
-		private class TextBlock {
-			private CustomPanelAPI owner;
-			private float layoutWidth;
-			private final Bounds bounds = new Bounds();
-			private final List<String> text = new ArrayList<>();
-			private final List<String> titles = new ArrayList<>();
-			private float height;
-			private final TooltipMakerAPI api = proxy(TooltipMakerAPI.class, (name, args) -> {
-				if (name.equals("getPosition")) return bounds.api;
-				if (name.equals("getHeightSoFar")) return height;
-				if (name.equals("setHeightSoFar")) {
-					height = (Float) args[0];
-					return null;
-				}
-
-				if (name.equals("addTitle") || name.equals("addPara")) {
-					if (name.equals("addTitle")) {
-						titles.add(args[0].toString());
-					}
-					text.add(args[0].toString());
-					height += (name.equals("addPara") ? (Float) args[1] : 0f)
-							+ 18f * Math.max(1, (int) Math.ceil(args[0].toString().length() * 8f / layoutWidth));
-					paragraphs.add(args[0].toString());
-					Bounds label = new Bounds();
-					return proxy(LabelAPI.class, (method, values) -> method.equals("getPosition") ? label.api : null);
-				}
-				if (name.equals("addButton")) {
-					assertTrue((Float) args[6] > 0f && (Float) args[6] <= layoutWidth);
-					height += (Float) args[7] + (Float) args[8];
-				}
-				return hostCall(name, args);
-			});
-		}
-
-		private Harness() {
-			viewport.width = 700f;
-			viewport.height = 380f;
-		}
-
-		private CustomPanelAPI detailHost(float width, float height) {
-			Bounds bounds = new Bounds();
-			bounds.api.setSize(width, height);
-			return proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
-				case "getPosition" -> bounds.api;
-				case "getPlugin" -> new BaseCustomUIPanelPlugin();
-				case "createCustomPanel" -> {
-					chartBounds.api.setSize((Float) args[0], (Float) args[1]);
-					yield panel;
-				}
-				case "addComponent" -> {
-					chartBounds.parent = bounds;
-					yield chartBounds.api;
-				}
-				default -> null;
-			});
-		}
-
-		private Object panelCall(String name, Object[] args) {
-			return switch (name) {
-				case "createCustomPanel" -> {
-					if (args[2] == null) {
-						rowBounds.api.setLocation(chartBounds.x, chartBounds.y).setSize((Float) args[0], (Float) args[1]);
-						yield row;
-					}
-					if (!(args[2] instanceof BattleNext_TournamentView)) {
-						displayPlugin = (CustomUIPanelPlugin) args[2];
-					}
-					chartBounds.width = (Float) args[0];
-					chartBounds.height = (Float) args[1];
-					yield panel;
-				}
-				case "getPosition", "addComponent" -> chartBounds.api;
-				case "getPlugin" -> displayPlugin;
-				case "addUIElement" -> {
-					if (shrinkChildren) {
-						chartBounds.width = 1f;
-						chartBounds.height = 1f;
-					}
-					yield chartBounds.api;
-				}
-				case "createUIElement" -> {
-					if ((Boolean) args[2]) {
-						scrollingHostCreated = true;
-					}
-					yield host;
-				}
-				default -> null;
-			};
-		}
-
-		private Object hostCall(String name, Object[] args) {
-			return switch (name) {
-				case "getExternalScroller" -> proxy(ScrollPanelAPI.class, (method, values) -> method.equals("getYOffset") ? 0f : null);
-				case "getPosition" -> hostBounds.api;
-				case "beginSubTooltip" -> {
-					TextBlock block = new TextBlock();
-					block.bounds.width = (Float) args[0];
-					block.layoutWidth = (Float) args[0];
-					summaryBlocks.add(block);
-					yield block.api;
-				}
-				case "endSubTooltip" -> {
-					summaryScope = false;
-					yield null;
-				}
-				case "getHeightSoFar" -> contentHeight;
-				case "setHeightSoFar" -> {
-					contentHeight = (Float) args[0];
-					yield null;
-				}
-				case "createLabel" -> {
-					TestLabel label = new TestLabel();
-					label.text = (String) args[0];
-					label.color = (Color) args[1];
-					label.bounds.width = (Float) args[2];
-					nodeLabels.add(label);
-					yield label.api;
-				}
-				case "addSectionHeading", "addTitle", "addPara" -> {
-					if (name.equals("addTitle") && args[0].equals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary"))) {
-						assertTrue(summaryScope, "The title must belong to the summary tooltip");
-					}
-					if (name.equals("addPara")) {
-						paragraphs.add(args[0].toString());
-					}
-					Bounds label = new Bounds();
-					yield proxy(LabelAPI.class, (method, values) -> method.equals("getPosition") ? label.api : null);
-				}
-				case "createRect" -> targetApi;
-				case "addCustomDoNotSetPosition" -> {
-					if (args[0] instanceof CustomPanelAPI) {
-						customChartAdded = true;
-						assertTrue(reservedChartHeight > 0f);
-					}
-					yield args[0];
-				}
-				case "addSpacer" -> {
-					reservedChartHeight = (Float) args[0];
-					contentHeight += reservedChartHeight;
-					yield targetApi;
-				}
-				case "addCustom" -> {
-					if (args[0] instanceof CustomPanelAPI custom) {
-						if (summaryBlocks.isEmpty()) {
-							customChartAdded = true;
-							reservedChartHeight = custom.getPosition().getHeight() + (Float) args[1];
-						} else {
-							summaryAdded = true;
-							assertTrue(customChartAdded);
-						}
-						contentHeight += custom.getPosition().getHeight() + (Float) args[1];
-					} else {
-						summaryAdded = true;
-						assertTrue(customChartAdded);
-					}
-					yield args[0];
-				}
-				case "addTooltipTo" -> {
-					tooltip = (TooltipMakerAPI.TooltipCreator) args[0];
-					yield null;
-				}
-				case "shortenString" -> {
-					String value = (String) args[0];
-					if (!shortenNodeText) yield value;
-					int length = Math.max(3, (int) (((Number) args[1]).floatValue() / 8f));
-					yield BattleNext_TournamentView.shorten(value, length);
-				}
-				case "addButton" -> {
-					buttonIds.add(args[1]);
-					TestButton button = new TestButton();
-					button.bounds.api.setSize((Float) args[6], (Float) args[7]);
-					buttons.add(button);
-					yield button.api;
-				}
-				default -> null;
-			};
-		}
-	}
-
 	@Test
 	void chartRestoresCanvasAndReservesSummarySpaceAfterChildLayout() {
 		Harness harness = new Harness();
-		harness.shrinkChildren = true;
+		harness.setShrinkChildren(true);
 		BattleNext_TournamentView chart = view(tournament(2,
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1));
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
-		assertEquals(700f, harness.chartBounds.width);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
+		assertEquals(700f, harness.getChartBounds().getWidth());
 		float height = 700f * BattleNext_TournamentView.CANVAS_HEIGHT / BattleNext_TournamentView.CANVAS_WIDTH;
 
-		assertEquals(height, harness.chartBounds.height);
-		assertTrue(harness.contentHeight >= height + 10f);
-		assertEquals(height + 10f, harness.reservedChartHeight);
+		assertEquals(height, harness.getChartBounds().getHeight());
+		assertTrue(harness.getContentHeight() >= height + 10f);
+		assertEquals(height + 10f, harness.getReservedChartHeight());
 		BattleNext_TournamentView.Node node = chart.nodes.get(0);
 		float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
 		assertTrue(center[0] > 100f && center[0] < 600f);
@@ -1098,65 +740,65 @@ class BattleNext_TournamentViewTest {
 		Map<String, String> names = Map.of("F1", longName, "F2", "Other fleet");
 		BattleNext_TournamentView chart = BattleNext_TournamentView.createView(cup, null, participants.get(cup), names);
 		Harness harness = new Harness();
-		harness.shortenNodeText = true;
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+		harness.setShortenNodeText(true);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 		BattleNext_TournamentView.Node node = node(chart, "W1-1");
-		List<TestLabel> labels = List.copyOf(harness.nodeLabels);
+		List<TestLabel> labels = List.copyOf(harness.getNodeLabels());
 		assertEquals(220f, node.width);
 		assertEquals(66f, node.height);
-		assertEquals("W1-1", labels.get(0).text);
-		assertEquals(BattleNext_UiTheme.MUTED, labels.get(0).color);
-		assertEquals("-", labels.get(1).text);
-		assertEquals("-", labels.get(3).text);
-		assertTrue(labels.get(2).text.endsWith("..."));
-		assertTrue(labels.get(2).text.startsWith("舰队 50%"));
+		assertEquals("W1-1", labels.get(0).getText());
+		assertEquals(BattleNext_UiTheme.MUTED, labels.get(0).getColor());
+		assertEquals("-", labels.get(1).getText());
+		assertEquals("-", labels.get(3).getText());
+		assertTrue(labels.get(2).getText().endsWith("..."));
+		assertTrue(labels.get(2).getText().startsWith("舰队 50%"));
 		assertTrue(chart.tooltipText(node).contains(longName));
-		assertEquals(Alignment.RMID, labels.get(1).alignment);
-		assertEquals(Alignment.RMID, labels.get(3).alignment);
-		assertEquals(6f, labels.get(0).bounds.x);
-		assertEquals(-24f, labels.get(0).bounds.y);
-		assertEquals(-42f, labels.get(1).bounds.y);
-		assertEquals(-60f, labels.get(3).bounds.y);
+		assertEquals(Alignment.RMID, labels.get(1).getAlignment());
+		assertEquals(Alignment.RMID, labels.get(3).getAlignment());
+		assertEquals(6f, labels.get(0).getBounds().getX());
+		assertEquals(-24f, labels.get(0).getBounds().getY());
+		assertEquals(-42f, labels.get(1).getBounds().getY());
+		assertEquals(-60f, labels.get(3).getBounds().getY());
 		for (TestLabel label : labels) {
-			assertEquals(18f, label.bounds.height);
-			assertTrue(label.bounds.x + label.bounds.width <= node.width - 6f);
-			assertFalse(label.text.contains("\n"));
+			assertEquals(18f, label.getBounds().getHeight());
+			assertTrue(label.getBounds().getX() + label.getBounds().getWidth() <= node.width - 6f);
+			assertFalse(label.getText().contains("\n"));
 		}
 		start(cup);
 		chart.zoomAt(90f, 90f, 2);
 		chart.panBy(8f, 12f);
 		BattleNext_TournamentView.ViewState browse = chart.captureState();
 		chart.update(cup, instances.get(cup), participants.get(cup), names);
-		assertEquals(Misc.getHighlightColor(), labels.get(0).color);
-		assertEquals("0", labels.get(1).text);
-		assertEquals("0", labels.get(3).text);
+		assertEquals(Misc.getHighlightColor(), labels.get(0).getColor());
+		assertEquals("0", labels.get(1).getText());
+		assertEquals("0", labels.get(3).getText());
 		engine.recordRound(cup, instances.get(cup), "W1-1", "F1", "");
 		chart.update(cup, instances.get(cup), participants.get(cup), names);
-		assertEquals("0", labels.get(1).text);
-		assertEquals("1", labels.get(3).text);
-		assertEquals("Other fleet", labels.get(2).text);
-		assertTrue(labels.get(4).text.startsWith("舰队 50%"));
+		assertEquals("0", labels.get(1).getText());
+		assertEquals("1", labels.get(3).getText());
+		assertEquals("Other fleet", labels.get(2).getText());
+		assertTrue(labels.get(4).getText().startsWith("舰队 50%"));
 		for (int round = 1; round < 12; round++) {
 			engine.recordRound(cup, instances.get(cup), "W1-1", "F1", "");
 		}
 		chart.update(cup, instances.get(cup), participants.get(cup), names);
-		assertEquals("12", labels.get(1).text);
-		assertEquals("0", labels.get(3).text);
-		assertEquals(12f, labels.get(1).bounds.width);
-		assertEquals(labels.get(1).bounds.width, labels.get(3).bounds.width);
-		assertEquals(24f, labels.get(2).bounds.x);
-		assertEquals(labels.get(2).bounds.x, labels.get(4).bounds.x);
-		assertEquals(BattleNext_UiTheme.TEXT, labels.get(2).color);
+		assertEquals("12", labels.get(1).getText());
+		assertEquals("0", labels.get(3).getText());
+		assertEquals(12f, labels.get(1).getBounds().getWidth());
+		assertEquals(labels.get(1).getBounds().getWidth(), labels.get(3).getBounds().getWidth());
+		assertEquals(24f, labels.get(2).getBounds().getX());
+		assertEquals(labels.get(2).getBounds().getX(), labels.get(4).getBounds().getX());
+		assertEquals(BattleNext_UiTheme.TEXT, labels.get(2).getColor());
 		engine.recordRound(cup, instances.get(cup), "W1-1", "F1", "");
 		chart.update(cup, instances.get(cup), participants.get(cup), names);
-		assertEquals("13", labels.get(1).text);
-		assertEquals(BattleNext_UiTheme.ACCENT, labels.get(0).color);
-		assertEquals(Misc.getPositiveHighlightColor(), labels.get(1).color);
-		assertEquals(Misc.getPositiveHighlightColor(), labels.get(2).color);
-		assertEquals(Misc.getNegativeHighlightColor(), labels.get(3).color);
-		assertEquals(Misc.getNegativeHighlightColor(), labels.get(4).color);
+		assertEquals("13", labels.get(1).getText());
+		assertEquals(BattleNext_UiTheme.ACCENT, labels.get(0).getColor());
+		assertEquals(Misc.getPositiveHighlightColor(), labels.get(1).getColor());
+		assertEquals(Misc.getPositiveHighlightColor(), labels.get(2).getColor());
+		assertEquals(Misc.getNegativeHighlightColor(), labels.get(3).getColor());
+		assertEquals(Misc.getNegativeHighlightColor(), labels.get(4).getColor());
 		assertEquals(browse, chart.captureState());
-		assertEquals(labels, harness.nodeLabels);
+		assertEquals(labels, harness.getNodeLabels());
 		chart.close();
 	}
 
@@ -1166,170 +808,39 @@ class BattleNext_TournamentViewTest {
 		start(cup);
 		BattleNext_TournamentView chart = view(cup);
 		Harness harness = new Harness();
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 		BattleNext_TournamentView.Node waiting = node(chart, "RR-0-2");
 		int waitingIndex = chart.nodes.indexOf(waiting) * 5;
-		assertEquals(BattleNext_UiTheme.TEXT, harness.nodeLabels.get(waitingIndex).color);
+		assertEquals(BattleNext_UiTheme.TEXT, harness.getNodeLabels().get(waitingIndex).getColor());
 		engine.recordRound(cup, instances.get(cup), "RR-0-1", "F1", "");
 		chart.update(cup, instances.get(cup), participants.get(cup), Map.of("F1", "First", "F2", "Second", "F3", "Third"));
 		for (BattleNext_TournamentView.Node cell : chart.nodes.stream().filter(item -> item.id.equals("RR-0-1")).toList()) {
 			int offset = chart.nodes.indexOf(cell) * 5;
 			boolean firstWins = cell.player.fleetId.equals("F1");
-			assertEquals(firstWins ? "1" : "0", harness.nodeLabels.get(offset + 1).text);
-			assertEquals(firstWins ? "0" : "1", harness.nodeLabels.get(offset + 3).text);
-			assertEquals(BattleNext_UiTheme.ACCENT, harness.nodeLabels.get(offset).color);
-			assertEquals(firstWins ? Misc.getPositiveHighlightColor() : Misc.getNegativeHighlightColor(), harness.nodeLabels.get(offset + 2).color);
+			assertEquals(firstWins ? "1" : "0", harness.getNodeLabels().get(offset + 1).getText());
+			assertEquals(firstWins ? "0" : "1", harness.getNodeLabels().get(offset + 3).getText());
+			assertEquals(BattleNext_UiTheme.ACCENT, harness.getNodeLabels().get(offset).getColor());
+			assertEquals(firstWins ? Misc.getPositiveHighlightColor() : Misc.getNegativeHighlightColor(), harness.getNodeLabels().get(offset + 2).getColor());
 		}
 		chart.close();
 		cup = tournament(2, BattleNext_TournamentModel.TournamentBracketType.DOUBLE_ELIMINATION, 1);
 		chart = view(cup);
 		harness = new Harness();
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 		for (String id : List.of("L1-1", "GF_RESET")) {
 			int offset = chart.nodes.indexOf(node(chart, id)) * 5;
-			assertEquals(BattleNext_UiTheme.MUTED, harness.nodeLabels.get(offset).color);
-			assertEquals("-", harness.nodeLabels.get(offset + 1).text);
-			assertEquals("-", harness.nodeLabels.get(offset + 3).text);
+			assertEquals(BattleNext_UiTheme.MUTED, harness.getNodeLabels().get(offset).getColor());
+			assertEquals("-", harness.getNodeLabels().get(offset + 1).getText());
+			assertEquals("-", harness.getNodeLabels().get(offset + 3).getText());
 		}
 		int reset = chart.nodes.indexOf(node(chart, "GF_RESET")) * 5;
-		assertEquals(BattleNext_UiTheme.MUTED, harness.nodeLabels.get(reset + 2).color);
+		assertEquals(BattleNext_UiTheme.MUTED, harness.getNodeLabels().get(reset + 2).getColor());
 		assertTrue(chart.tooltipText(node(chart, "GF_RESET")).contains("Required if"));
 		chart.update(cup, null, participants.get(cup), Map.of("F1", "First"));
 		int error = chart.nodes.indexOf(node(chart, "W1-1")) * 5;
-		assertEquals(Misc.getNegativeHighlightColor(), harness.nodeLabels.get(error).color);
+		assertEquals(Misc.getNegativeHighlightColor(), harness.getNodeLabels().get(error).getColor());
 		assertTrue(chart.tooltipText(node(chart, "W1-1")).contains("Missing fleet"));
 		chart.close();
-	}
-
-	@Test
-	void realOpenGlDrawsVisibleNodeAndRestoresParentClip() throws Exception {
-
-		Path nativePath = Path.of("../../starsector-core/native/windows").toAbsolutePath().normalize();
-		String previousLibraryPath = System.getProperty("org.lwjgl.librarypath");
-		System.setProperty("org.lwjgl.librarypath", nativePath.toString());
-		try {
-			Pbuffer buffer = new Pbuffer(800, 800,
-					new PixelFormat(), null, null);
-			try {
-				buffer.makeCurrent();
-				GL11.glViewport(0, 0, 800, 800);
-				GL11.glMatrixMode(GL11.GL_PROJECTION);
-				GL11.glLoadIdentity();
-				GL11.glOrtho(0, 800, 0, 800, -1, 1);
-				GL11.glMatrixMode(GL11.GL_MODELVIEW);
-				GL11.glLoadIdentity();
-				GL11.glClearColor(1, 0, 1, 1);
-				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-				GL11.glEnable(GL11.GL_SCISSOR_TEST);
-				GL11.glScissor(0, 0, 800, 800);
-				Harness harness = new Harness();
-				BattleNext_TournamentModel cup = tournament(2, BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1);
-				BattleNext_TournamentView chart = view(cup);
-				chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
-				chart.renderBelow(1f);
-				chart.render(1f);
-				IntBuffer clip = BufferUtils.createIntBuffer(16);
-				GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
-				assertEquals(800, clip.get(2));
-				assertEquals(800, clip.get(3));
-				ByteBuffer pixels = BufferUtils.createByteBuffer(800 * 800 * 4);
-				GL11.glReadPixels(0, 0, 800, 800, GL11.GL_RGBA,
-						GL11.GL_UNSIGNED_BYTE, pixels);
-				for (int x : new int[]{0, 1, 2, 100, 699, 700}) {
-					int offset = (100 * 800 + x) * 4;
-					Color expected = x == 0 || x == 1 || x == 699 ? BattleNext_UiTheme.ACCENT
-							: x == 700 ? Color.MAGENTA : Color.BLACK;
-
-					assertEquals(expected.getRed(), pixels.get(offset) & 255, "Frame red at x=" + x);
-					assertEquals(expected.getGreen(), pixels.get(offset + 1) & 255, "Frame green at x=" + x);
-					assertEquals(expected.getBlue(), pixels.get(offset + 2) & 255, "Frame blue at x=" + x);
-				}
-				BattleNext_TournamentView.Node node = chart.nodes.get(0);
-				float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
-				int centerOffset = ((int) center[1] * 800 + (int) center[0]) * 4;
-				assertEquals(0, pixels.get(centerOffset) & 255);
-				assertEquals(0, pixels.get(centerOffset + 1) & 255);
-				assertEquals(0, pixels.get(centerOffset + 2) & 255);
-				int nodePixels = 0;
-				for (int y = 40; y < 340; y++) {
-					for (int x = 100; x < 600; x++) {
-						int offset = (y * 800 + x) * 4;
-						int red = pixels.get(offset) & 255;
-						int green = pixels.get(offset + 1) & 255;
-						int blue = pixels.get(offset + 2) & 255;
-						if (red > 0 && red == green && green == blue) {
-							nodePixels++;
-						}
-					}
-				}
-				assertTrue(nodePixels >= 100, "Visible node outline pixels: " + nodePixels);
-				BattleNext_TournamentView.ViewState camera = chart.captureState();
-				PositionAPI frame = harness.chartBounds.api;
-				float left = frame.getX();
-				float bottom = frame.getY();
-				float right = left + frame.getWidth();
-				float top = bottom + frame.getHeight();
-				for (float[] target : new float[][]{{left + frame.getWidth() * 0.5f, bottom},
-						{left, bottom + frame.getHeight() * 0.5f}, {right, bottom + frame.getHeight() * 0.5f},
-						{left + frame.getWidth() * 0.5f, top - 40f}}) {
-					chart.restoreState(camera);
-					float[] projected = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
-					float scale = frame.getWidth() / BattleNext_TournamentView.CANVAS_WIDTH;
-					chart.panBy((target[0] - projected[0]) / scale, (projected[1] - target[1]) / scale);
-					GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-					chart.renderBelow(1f);
-					chart.render(1f);
-					GL11.glReadPixels(0, 0, 800, 800, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-					for (float[] sample : new float[][]{{left + 1f, bottom + frame.getHeight() * 0.5f},
-							{right - 1f, bottom + frame.getHeight() * 0.5f}, {left + frame.getWidth() * 0.5f, bottom + 1f},
-							{left + frame.getWidth() * 0.5f, top - 1f}}) {
-						int offset = ((int) sample[1] * 800 + (int) sample[0]) * 4;
-						assertEquals(BattleNext_UiTheme.ACCENT.getRed(), pixels.get(offset) & 255, "Frame red after panning");
-						assertEquals(BattleNext_UiTheme.ACCENT.getGreen(), pixels.get(offset + 1) & 255, "Frame green after panning");
-						assertEquals(BattleNext_UiTheme.ACCENT.getBlue(), pixels.get(offset + 2) & 255, "Frame blue after panning");
-					}
-					GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
-					assertEquals(800, clip.get(2));
-					assertEquals(800, clip.get(3));
-				}
-				chart.restoreState(camera);
-				start(cup);
-				for (boolean completed : List.of(false, true)) {
-					if (completed) {
-						engine.recordRound(cup, instances.get(cup), "W1-1", "F1", "");
-					}
-					chart.update(cup, instances.get(cup), participants.get(cup), Map.of("F1", "First", "F2", "Second"));
-					GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-					chart.renderBelow(1f);
-					chart.render(1f);
-					GL11.glReadPixels(0, 0, 800, 800, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-					Color expected = completed ? BattleNext_UiTheme.ACCENT : Misc.getHighlightColor();
-					float[] border = chart.project(node.x + node.width * 0.5f, node.y);
-					boolean found = false;
-					for (int y = (int) border[1] - 3; y <= (int) border[1] + 3; y++) {
-						for (int x = (int) border[0] - 3; x <= (int) border[0] + 3; x++) {
-							int offset = (y * 800 + x) * 4;
-							if ((pixels.get(offset) & 255) == expected.getRed()
-									&& (pixels.get(offset + 1) & 255) == expected.getGreen()
-									&& (pixels.get(offset + 2) & 255) == expected.getBlue()) found = true;
-						}
-					}
-					assertTrue(found, "Native border color for completed=" + completed);
-					GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
-					assertEquals(800, clip.get(2));
-					assertEquals(800, clip.get(3));
-				}
-				assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
-			} finally {
-				buffer.destroy();
-			}
-		} finally {
-			if (previousLibraryPath == null) {
-				System.clearProperty("org.lwjgl.librarypath");
-			} else {
-				System.setProperty("org.lwjgl.librarypath", previousLibraryPath);
-			}
-		}
 	}
 
 	private class Event {
@@ -1365,7 +876,7 @@ class BattleNext_TournamentViewTest {
 		BattleNext_TournamentView chart = view(configuration);
 		List<BattleNext_TournamentView.SlotHit> selected = new ArrayList<>();
 		chart.setEditable(true, selected::add);
-		chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 		List<BattleNext_TournamentView.Node> mirrors = chart.nodes.stream().filter(node -> node.id.equals("RR-0-1")).toList();
 		assertEquals(0, mirrors.get(0).player.seedIndex);
 		assertEquals(1, mirrors.get(1).player.seedIndex);
@@ -1396,7 +907,7 @@ class BattleNext_TournamentViewTest {
 			Harness harness = new Harness();
 			BattleNext_TournamentView chart = view(configuration);
 			chart.setEditable(true, hit -> {});
-			chart.attach(harness.panel, harness.host, harness.viewport.api, new BattleNext_UiInputRouter(), 700f);
+			chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), new BattleNext_UiInputRouter(), 700f);
 			Set<Integer> slots = new HashSet<>();
 			for (BattleNext_TournamentView.Node node : chart.nodes) {
 				if (node.id.isEmpty()) continue;

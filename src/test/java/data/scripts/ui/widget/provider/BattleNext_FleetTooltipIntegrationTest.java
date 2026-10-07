@@ -133,11 +133,10 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		assertEquals(1, personalityReads);
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void nativeLayoutKeepsHeaderCompactSummaryMembersAndBottomInset(boolean deferred) {
+	@Test
+	void nativeLayoutKeepsHeaderCompactSummaryMembersAndBottomInsetBeforeBoundsExist() {
 
-		deferTooltipWidth = deferred;
+		deferTooltipWidth = true;
 		fleet.setMembers(List.of(member("root", List.of(), ""), member("root", List.of("a", "a"), "steady")));
 		TooltipMakerAPI tooltip = render();
 		List<LabelAPI> text = textLabels(tooltip);

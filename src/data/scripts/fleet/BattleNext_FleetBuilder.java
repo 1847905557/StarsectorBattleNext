@@ -44,7 +44,7 @@ public class BattleNext_FleetBuilder {
 			}
 		}
 		BattleNext_Logger.info(BattleNext_FleetBuilder.class, "fleet.assembly.completed",
-				BattleNext_Logger.fields().put("definition", definition).put("commander", commander).put("members", members).put("errors", errors).build());
+				() -> BattleNext_Logger.fields().put("definition", definition).put("commander", commander).put("members", members).put("errors", errors).build());
 		return new BattleNext_AssembledFleet(definition, commander, members, errors);
 	}
 

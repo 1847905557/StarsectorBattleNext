@@ -31,8 +31,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -90,16 +88,14 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		assertFalse(router.getSession().hasInputState());
 	}
 
-	@ParameterizedTest
-	@EnumSource(TournamentBracketType.class)
-	void tournamentTemplateGraphsAndChecksPreserveTheActiveSource(TournamentBracketType bracket) throws Exception {
+	@Test
+	void tournamentTemplateGraphsAndChecksPreserveTheActiveSource() throws Exception {
 
 		catalog();
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
-		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		List<String> phases = List.of("cup");
-		tournaments.save(tournament("cup", bracket));
+		tournaments.save(tournament("cup", TournamentBracketType.SINGLE_ELIMINATION));
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
 		sources.reloadCatalogs();

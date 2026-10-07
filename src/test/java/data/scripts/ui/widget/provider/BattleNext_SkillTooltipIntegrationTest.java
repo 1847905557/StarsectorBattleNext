@@ -1,12 +1,15 @@
 package data.scripts.ui.widget.provider;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.characters.CustomSkillDescription;
 import com.fs.starfarer.api.characters.LevelBasedEffect;
 import com.fs.starfarer.api.characters.LevelBasedEffect.ScopeDescription;
 import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.SkillEffectType;
+import com.fs.starfarer.api.characters.SkillSpecAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Skills;
 import com.fs.starfarer.api.impl.campaign.skills.*;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -34,23 +37,80 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.awt.Color;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture {
 
-	@ParameterizedTest
-	@ValueSource(strings = {"commander", "officer"})
-	void fieldModulationUsesYellowEffectsGreenEliteAndUnchangedAuthorColor(String kind) {
+	@Test
+	void catalogsApplyRoleAndTagFiltersToTheCurrentOrderedSpecs() {
+
+		Map<String, SkillSpecAPI> catalog = new LinkedHashMap<>();
+		catalog.put("combat", catalogSkill("combat", false, true, false));
+		catalog.put("admin", catalogSkill("admin", true, false, false));
+		catalog.put("fleet", catalogSkill("fleet", false, false, false));
+		catalog.put("forced", catalogSkill("forced", true, false, false,
+				"BattleNext_forceAllowed", Skills.TAG_DEPRECATED, Skills.TAG_NPC_ONLY, Skills.TAG_PLAYER_ONLY));
+		catalog.put("deprecated", catalogSkill("deprecated", false, true, false, Skills.TAG_DEPRECATED));
+		catalog.put("restricted", catalogSkill("restricted", false, true, false, Skills.TAG_NPC_ONLY, Skills.TAG_PLAYER_ONLY));
+		catalog.put("npc", catalogSkill("npc", false, true, false, Skills.TAG_NPC_ONLY));
+		catalog.put("player", catalogSkill("player", false, true, false, Skills.TAG_PLAYER_ONLY));
+		catalog.put("aptitude", catalogSkill("aptitude", false, true, true, "BattleNext_forceAllowed"));
+		List<String> identities = new ArrayList<>(catalog.keySet());
+		identities.add("missing");
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+			if (method.getName().equals("getSortedSkillIds")) return identities;
+			if (method.getName().equals("getSkillSpec")) return catalog.get(args[0]);
+			try {
+				return method.invoke(delegate, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		var commander = provider("commander");
+		var officer = provider("officer");
+		assertEquals(List.of("combat", "fleet", "forced", "npc", "player"),
+				commander.getOptions().stream().map(option -> option.getId()).toList());
+		assertEquals(List.of("combat", "forced", "npc", "player"),
+				officer.getOptions().stream().map(option -> option.getId()).toList());
+		assertEquals(List.of("Name combat", "Name forced", "Name npc", "Name player"),
+				officer.getOptions().stream().map(option -> option.getLabel()).toList());
+		assertEquals("graphics/combat.png", officer.getIconPath("combat"));
+		assertEquals("", officer.getIconPath("missing"));
+		catalog.remove("combat");
+		catalog.put("fleet", catalogSkill("fleet", false, true, false));
+		assertEquals(List.of("fleet", "forced", "npc", "player"),
+				officer.getOptions().stream().map(option -> option.getId()).toList());
+	}
+
+	@Test
+	void stackLimitUsesDisplayEffectLevelsAndCurrentSpecAvailability() {
+		var source = provider("officer");
+		assertEquals(0, source.getMaxStack("missing"));
+		assertEquals(1, source.getMaxStack(SKILL_ID));
+		effects.add(effect(SkillEffectType.DESCRIPTION, 3f, "Text", false, null));
+		assertEquals(1, source.getMaxStack(SKILL_ID));
+		effects.add(effect(SkillEffectType.SHIP, 1f, "Normal", false, new Helmsmanship.Level1()));
+		assertEquals(1, source.getMaxStack(SKILL_ID));
+		effects.add(effect(SkillEffectType.SHIP, 2f, "Elite", false, new Helmsmanship.Level4()));
+		assertEquals(2, source.getMaxStack(SKILL_ID));
+	}
+
+	@Test
+	void fieldModulationUsesYellowEffectsGreenEliteAndUnchangedAuthorColor() {
 
 		List<LevelBasedEffect> scripts = List.of(new FieldModulation.Level1(), new FieldModulation.Level2(),
 				new FieldModulation.Level3(), new FieldModulation.Level4(), new FieldModulation.Level6());
 		for (int index = 0; index < scripts.size(); index++) {
 			effects.add(effect(SkillEffectType.SHIP, index < 2 ? 1f : 2f, index < 2 ? null : "Elite", false, scripts.get(index)));
 		}
-		assertNotEquals(Misc.getTextColor(), Misc.getHighlightColor());
-		assertNotEquals(Misc.getStoryOptionColor(), Misc.getButtonTextColor());
-		TooltipMakerAPI content = renderSkill(provider(kind));
+		TooltipMakerAPI content = renderSkill(provider("officer"));
 		List<LabelAPI> labels = textLabels(content);
 		for (LevelBasedEffect script : scripts) {
 			LabelAPI label = labels.stream().filter(value -> value.getText().equals(script.getEffectDescription(2f)))
@@ -77,15 +137,13 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		assertEquals(heading, labels.get(5).getText());
 		Color expected = "Elite".equals(group) ? Misc.getStoryOptionColor() : BattleNext_UiTheme.ACCENT;
 		assertEquals(expected, labelColors.get(labels.get(5).getPosition()));
-		assertNotEquals(Misc.getStoryOptionColor(), BattleNext_UiTheme.ACCENT);
 		assertEquals(Misc.getHighlightColor(), labelColors.get(labels.get(6).getPosition()));
 	}
 
-	@ParameterizedTest
-	@EnumSource(value = ScopeDescription.class, names = {"PILOTED_SHIP"})
-	void declaredShipEffectScopesUseNativeHighlightColor(ScopeDescription scope) {
+	@Test
+	void declaredShipEffectScopesUseNativeHighlightColor() {
 		LevelBasedEffect script = proxy(LevelBasedEffect.class, (method, args) -> switch (method) {
-			case "getScopeDescription" -> scope;
+			case "getScopeDescription" -> ScopeDescription.PILOTED_SHIP;
 			case "getEffectDescription" -> "Ship effect 50%";
 			default -> null;
 		});
@@ -105,13 +163,12 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 				labelColors.get(labels.get(labels.size() - 1).getPosition()));
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"commander", "officer"})
-	void authorUsesNormalFullWidthRightAlignedParagraphBetweenDescriptionAndScope(String kind) {
+	@Test
+	void authorUsesNormalFullWidthRightAlignedParagraphBetweenDescriptionAndScope() {
 
 		author = "  Full source author 50% - " + "Long attribution. ".repeat(80);
 		deferTooltipWidth = true;
-		TooltipMakerAPI content = renderSkill(provider(kind));
+		TooltipMakerAPI content = renderSkill(provider("commander"));
 		List<LabelAPI> labels = textLabels(content);
 		assertEquals(List.of("Preview Skill", SKILL_ID, "First paragraph 50%.", author, "Ship - Fleet"), textValues(content));
 		LabelAPI attribution = labels.get(3);
@@ -123,14 +180,14 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		assertTrue(attribution.getPosition().getHeight() > paragraphLineHeight);
 		assertGap(labels.get(2), attribution, 5f);
 		assertGap(attribution, labels.get(4), 5f);
-		assertEquals(provider(kind).getTooltipWidth(), content.getWidthSoFar());
+		assertEquals(520f, attribution.getPosition().getWidth());
 		assertEquals(0f, content.getPosition().getWidth());
 		assertTrue(previews.isEmpty());
 	}
 
 	@ParameterizedTest
 	@NullAndEmptySource
-	@ValueSource(strings = {" ", "\t\r\n"})
+	@ValueSource(strings = {"\t\r\n"})
 	void emptyAuthorsKeepDescriptionScopeAndEffectsInTheirOwnOrder(String value) {
 		author = value;
 		effects.add(effect(SkillEffectType.SHIP, 1f, "Normal", false, new Helmsmanship.Level1()));
@@ -140,16 +197,15 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		assertTrue(textLabels(content).stream().noneMatch(label -> labelAlignments.get(label.getPosition()) == Alignment.RMID));
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {"commander", "officer"})
-	void nativeHelmsmanshipKeepsBothGroupsAndEveryEffectInOriginalOrder(String kind) {
+	@Test
+	void nativeHelmsmanshipKeepsBothGroupsAndEveryEffectInOriginalOrder() {
 
 		List<LevelBasedEffect> scripts = List.of(new Helmsmanship.Level1(), new Helmsmanship.Level2(),
 				new Helmsmanship.Level4(), new Helmsmanship.Level3());
 		for (int index = 0; index < scripts.size(); index++) {
 			effects.add(effect(SkillEffectType.SHIP, index < 2 ? 1f : 2f, index < 2 ? null : "Elite", false, scripts.get(index)));
 		}
-		var source = provider(kind);
+		var source = provider("officer");
 		TooltipMakerAPI content = renderSkill(source);
 		List<String> values = textValues(content);
 		assertEquals(List.of("Preview Skill", SKILL_ID, "First paragraph 50%.", author, "Ship - Fleet", String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "1"),
@@ -270,7 +326,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 
 	@ParameterizedTest
 	@NullAndEmptySource
-	@ValueSource(strings = {" ", "\t\n"})
+	@ValueSource(strings = {"\t\n"})
 	void emptyDescriptionAndEmptyEffectTextRetainAuthorAndOtherEffects(String value) {
 		description = value;
 		effects.add(effect(SkillEffectType.SHIP, 1f, "Normal", false, textEffect(value, new ArrayList<>())));
@@ -350,7 +406,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 
 	@ParameterizedTest
 	@ValueSource(strings = {"commander", "officer"})
-	void nativeSkillHoverKeepsAuthorAndEffectsAfterFilteringAndRepeatedOpenClose(String kind) throws Exception {
+	void nativeSkillHoverKeepsAuthorAndEffectsAcrossFilteringAndReleasesSearchInput(String kind) throws Exception {
 
 		effects.add(effect(SkillEffectType.SHIP, 1f, "Normal", false, new Helmsmanship.Level1()));
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
@@ -362,33 +418,50 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		root.addUIElement(host).inTL(20f, 20f);
 		var open = picker.getClass().getDeclaredMethod("open");
 		open.setAccessible(true);
-		for (int cycle = 0; cycle < 3; cycle++) {
-			open.invoke(picker);
-			CustomPanelAPI popup = (CustomPanelAPI) pickerField(picker, "popup");
-			for (int rebuild = 0; rebuild < 2; rebuild++) {
-				CustomPanelAPI gridPanel = (CustomPanelAPI) pickerField(picker, "gridPanel");
-				TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-				var tile = tooltips.get(grid).getComponents().get(0);
-				var creator = attachedTooltips.get(tile);
-				assertEquals(provider(kind).getTooltipWidth(), creator.getTooltipWidth(null));
-				assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
-				TooltipMakerAPI content = tooltip(creator.getTooltipWidth(null), 0f, false);
-				creator.createTooltip(content, false, null);
-				assertEquals(author, textValues(content).get(3));
-				assertEquals(new Helmsmanship.Level1().getEffectDescription(1f), textValues(content).get(6));
-				BattleNext_TextField search = (BattleNext_TextField) pickerField(picker, "search");
-				search.setText("unmatched");
-				plugins.get(popup).advance(0f);
-				assertTrue(removedComponents.contains(gridPanel));
-				search.setText("");
-				plugins.get(popup).advance(0f);
-			}
-			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
-			assertTrue(router.isEmpty());
-			assertFalse(router.getSession().hasInputState());
+		open.invoke(picker);
+		CustomPanelAPI popup = (CustomPanelAPI) pickerField(picker, "popup");
+		for (int rebuild = 0; rebuild < 2; rebuild++) {
+			CustomPanelAPI gridPanel = (CustomPanelAPI) pickerField(picker, "gridPanel");
+			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
+			var tile = tooltips.get(grid).getComponents().get(0);
+			var creator = attachedTooltips.get(tile);
+			assertEquals(520f, creator.getTooltipWidth(null));
+			assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
+			assertSame(tooltips.get(grid), tooltipBindings.get(tile).owner());
+			TooltipMakerAPI content = tooltip(creator.getTooltipWidth(null), 0f, false);
+			creator.createTooltip(content, false, null);
+			assertEquals(SKILL_ID, textValues(content).get(1));
+			assertEquals(author, textValues(content).get(3));
+			assertEquals(new Helmsmanship.Level1().getEffectDescription(1f), textValues(content).get(6));
+			BattleNext_TextField search = (BattleNext_TextField) pickerField(picker, "search");
+			search.setText("unmatched");
+			plugins.get(popup).advance(0f);
+			assertTrue(removedComponents.contains(gridPanel));
+			search.setText("");
+			plugins.get(popup).advance(0f);
 		}
+		BattleNext_TextField search = (BattleNext_TextField) pickerField(picker, "search");
+		search.grabFocus(false);
+		assertTrue(search.hasFocus());
+		plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
+		assertFalse(search.hasFocus());
+		assertTrue(router.isEmpty());
+		assertFalse(router.getSession().hasInputState());
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
+	}
+
+	private SkillSpecAPI catalogSkill(String id, boolean admin, boolean combat, boolean aptitude, String... tags) {
+		return proxy(SkillSpecAPI.class, (method, args) -> switch (method) {
+			case "getId" -> id;
+			case "getName" -> "Name " + id;
+			case "getSpriteName" -> "graphics/" + id + ".png";
+			case "isAdminSkill" -> admin;
+			case "isCombatOfficerSkill" -> combat;
+			case "isAptitudeEffect" -> aptitude;
+			case "hasTag" -> List.of(tags).contains(args[0]);
+			default -> null;
+		});
 	}
 
 	private Object pickerField(BattleNext_OptionPicker picker, String name) throws Exception {

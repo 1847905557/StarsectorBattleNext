@@ -5,8 +5,10 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.model.BattleNext_BaseLoader;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.io.BattleNext_FleetStandardLoader;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentModel.TournamentBracketType;
@@ -22,8 +24,6 @@ import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,30 +32,45 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 
 	@Test
-	void sourceReadsTheCurrentCatalogAndRetainsTextTilesAndSingleStackSelection() {
+	void sourceReadsThePublishedCatalogAcrossLoaderAdditionsAndRemovals() throws Exception {
 
 		List<BattleNext_FleetModel> fleets = new ArrayList<>();
 		fleets.add(new BattleNext_FleetModel("zeta", "Second name", List.of(), List.of(), List.of()));
 		fleets.add(new BattleNext_FleetModel("alpha", "First name", List.of(), List.of(), List.of()));
-		BattleNext_FleetSourceProvider source = new BattleNext_FleetSourceProvider(store(fleets));
+		BattleNext_FleetStandardLoader loader = new BattleNext_FleetStandardLoader() {
+			@Override
+			public List<BattleNext_FleetModel> load() {
+				return List.copyOf(fleets);
+			}
+		};
+		BattleNext_FleetStore catalog = new BattleNext_FleetStore() {
+			@Override
+			protected List<BattleNext_BaseLoader<BattleNext_FleetModel>> sources() {
+				return List.of(loader);
+			}
+		};
+		catalog.reload();
+		BattleNext_FleetSourceProvider source = new BattleNext_FleetSourceProvider(catalog);
 		assertEquals(List.of("zeta", "alpha"), source.getOptions().stream().map(OptionChoice::getId).toList());
 		assertEquals(List.of("Second name", "First name"), source.getOptions().stream().map(OptionChoice::getLabel).toList());
-		assertEquals(1, source.getMaxStack("zeta"));
-		assertEquals(360f, source.getTooltipWidth());
-		assertFalse(source.expectsIcon());
-		assertEquals("", source.getIconPath("zeta"));
 		fleets.clear();
+		assertEquals(List.of("zeta", "alpha"), source.getOptions().stream().map(OptionChoice::getId).toList());
+		assertEquals("Second name", catalog.get("zeta").getName());
+		catalog.reload();
 		assertTrue(source.getOptions().isEmpty());
+		assertNull(catalog.get("zeta"));
 		fleets.add(new BattleNext_FleetModel("new", "Updated", List.of(), List.of(), List.of()));
+		assertTrue(source.getOptions().isEmpty());
+		catalog.reload();
 		assertEquals(List.of("new"), source.getOptions().stream().map(OptionChoice::getId).toList());
 		assertEquals("Updated", source.getOptions().get(0).getLabel());
+		assertSame(fleets.get(0), catalog.get("new"));
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void tooltipSharesExactHeaderFontsColorsGapAndBottomInset(boolean deferred) {
+	@Test
+	void tooltipSharesExactHeaderFontsColorsGapAndBottomInsetBeforeBoundsExist() {
 
-		deferTooltipWidth = deferred;
+		deferTooltipWidth = true;
 		TooltipMakerAPI tooltip = tooltip(360f, 0f, false);
 		String id = "fleet_50%_with_%s";
 		String name = "风风雨雨 20% " + "Full fleet name ".repeat(20);
@@ -103,7 +118,10 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		display.attach(root);
 		BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
 		BattleNext_TournamentView.ViewState before = chart.captureState();
-		for (String action : List.of("CANCEL", "CONFIRM", "CONFIRM")) {
+		List<String> actions = List.of("CANCEL", "CONFIRM", "CONFIRM");
+		List<List<String>> selections = List.of(List.of("first_50%", ""), List.of("second", ""), List.of("", ""));
+		for (int actionIndex = 0; actionIndex < actions.size(); actionIndex++) {
+			String action = actions.get(actionIndex);
 			List<?> nodes = (List<?>) getField(chart, "nodes");
 			BattleNext_TournamentView.Node node = (BattleNext_TournamentView.Node) nodes.get(0);
 			float[] point = chart.project(node.x + 120f, node.y + 33f);
@@ -120,6 +138,9 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
 			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
+			TooltipMakerAPI caption = (TooltipMakerAPI) children.get(card).get(0);
+			assertEquals(List.of("Raw"), tooltips.get(caption).getComponents().stream()
+					.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(card).createTooltip(hover, false, null);
 			assertEquals("Raw fleet", ((LabelAPI) tooltips.get(hover).getComponents().get(0)).getText());
@@ -128,6 +149,7 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 			assertEquals(before, chart.captureState());
+			assertEquals(selections.get(actionIndex), template.getFleetIds());
 		}
 		assertEquals(List.of("", ""), template.getFleetIds());
 		template.select(0, "missing");

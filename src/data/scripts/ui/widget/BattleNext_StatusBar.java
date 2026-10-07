@@ -18,7 +18,7 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	private float textWidth;
 	private String error = "";
 	private String activeTournamentId = "";
-	private boolean pendingResult;
+	private String reportId = "";
 	private final float width;
 	private final float height;
 
@@ -36,10 +36,15 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 		content.setHeightSoFar(height);
 	}
 
-	public void update(String error, String activeTournamentId, boolean pendingResult) {
+	public void update(String error, String activeTournamentId, String reportId) {
 		this.error = error;
 		this.activeTournamentId = activeTournamentId;
-		this.pendingResult = pendingResult;
+		this.reportId = reportId;
+		refreshText();
+	}
+
+	public void reportSaved(String reportId) {
+		this.reportId = reportId;
 		refreshText();
 	}
 
@@ -48,10 +53,10 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 		StringBuilder text = new StringBuilder();
 		if (!error.isEmpty()) {
 			text.append(error);
+		} else if (!reportId.isEmpty()) {
+			text.append(managementStrings.format("report_updated", reportId));
 		} else if (!activeTournamentId.isEmpty()) {
-			text.append(managementStrings.get("active_tournament")).append(": ").append(activeTournamentId);
-		} else if (pendingResult) {
-			text.append(managementStrings.get("report_updated"));
+			text.append(managementStrings.format("active_tournament", activeTournamentId));
 		} else {
 			text.append(strings.get("ready"));
 		}

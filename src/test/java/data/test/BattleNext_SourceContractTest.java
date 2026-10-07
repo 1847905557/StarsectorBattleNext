@@ -30,6 +30,7 @@ class BattleNext_SourceContractTest {
 
 	private static BattleNext_TestI18nSource source;
 	private static List<BattleNext_TestI18nSource.Read> reads;
+	private static final Pattern FORMAT = Pattern.compile("%(?:\\d+\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?([a-zA-Z%])");
 	private final JavaParser parser = new JavaParser(new ParserConfiguration()
 			.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17).setCharacterEncoding(StandardCharsets.UTF_8));
 	private final Pattern qualifiedType = Pattern.compile("[a-z_][\\w]*(?:\\.[a-z_][\\w]*)*\\.[A-Z][\\w]*(?:\\.[\\w]+)*");
@@ -198,6 +199,17 @@ class BattleNext_SourceContractTest {
 	}
 
 	@Test
+	void testClipboardOperationsUseOwnedClipboardInputs() throws Exception {
+		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			if (!entry.getKey().startsWith(Path.of("src/test/java"))) continue;
+			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
+				assertFalse(Set.of("getSystemClipboard", "getSystemSelection").contains(call.getNameAsString()),
+						() -> "Test clipboard operations require an owned in-memory clipboard: " + entry.getKey() + ": " + call);
+			}
+		}
+	}
+
+	@Test
 	void testTextLookupsKeepLanguageSelectionInsideTheCatalog() throws Exception {
 		List<String> failures = new ArrayList<>();
 		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
@@ -250,25 +262,25 @@ class BattleNext_SourceContractTest {
 
 		for (BattleNext_TestI18nSource.Read read : reads) {
 			if (read.arguments().isEmpty()) continue;
+			Object[] values = new Object[read.arguments().size()];
+			for (int index = 0; index < values.length; index++) {
+				String type = read.arguments().get(index).calculateResolvedType().describe();
+				values[index] = switch (type) {
+					case "byte", "short", "int", "long", "java.lang.Byte", "java.lang.Short",
+							"java.lang.Integer", "java.lang.Long" -> 1;
+					case "float", "double", "java.lang.Float", "java.lang.Double" -> 1.25f;
+					case "boolean", "java.lang.Boolean" -> true;
+					case "char", "java.lang.Character" -> 'A';
+					case "java.lang.String" -> "value";
+					default -> throw new AssertionError("Unsupported format argument type: " + type);
+				};
+			}
 			for (String category : List.of(read.key().category(), read.key().category() + "_CN")) {
 				String pattern = BattleNext_TestTextCatalog.entries().get(new TextKey(category, read.key().id()));
-				List<String> conversions = Pattern.compile("%(?:\\d+\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?([a-zA-Z%])")
+				List<String> conversions = FORMAT
 						.matcher(pattern).results().map(match -> match.group(1))
 						.filter(conversion -> !conversion.equals("%") && !conversion.equals("n")).toList();
 				assertEquals(conversions.size(), read.arguments().size(), read.key().toString());
-				Object[] values = new Object[read.arguments().size()];
-				for (int index = 0; index < values.length; index++) {
-					String type = read.arguments().get(index).calculateResolvedType().describe();
-					values[index] = switch (type) {
-						case "byte", "short", "int", "long", "java.lang.Byte", "java.lang.Short",
-								"java.lang.Integer", "java.lang.Long" -> 1;
-						case "float", "double", "java.lang.Float", "java.lang.Double" -> 1.25f;
-						case "boolean", "java.lang.Boolean" -> true;
-						case "char", "java.lang.Character" -> 'A';
-						case "java.lang.String" -> "value";
-						default -> throw new AssertionError("Unsupported format argument type: " + type);
-					};
-				}
 				assertDoesNotThrow(() -> String.format(Locale.ROOT, pattern, values), read.key().toString());
 			}
 		}
@@ -280,7 +292,16 @@ class BattleNext_SourceContractTest {
 			if (qualifiedType.matcher(type.getNameWithScope()).matches()) references.add(type.getNameWithScope());
 		}
 		for (FieldAccessExpr expression : unit.findAll(FieldAccessExpr.class)) {
-			if (qualifiedType.matcher(expression.toString()).matches()) references.add(expression.toString());
+			Deque<String> names = new ArrayDeque<>();
+			Expression scope = expression;
+			while (scope instanceof FieldAccessExpr access) {
+				names.addFirst(access.getNameAsString());
+				scope = access.getScope();
+			}
+			if (!scope.isNameExpr()) continue;
+			names.addFirst(scope.asNameExpr().getNameAsString());
+			String name = String.join(".", names);
+			if (qualifiedType.matcher(name).matches()) references.add(name);
 		}
 		for (AnnotationExpr annotation : unit.findAll(AnnotationExpr.class)) {
 			if (qualifiedType.matcher(annotation.getNameAsString()).matches()) references.add(annotation.getNameAsString());

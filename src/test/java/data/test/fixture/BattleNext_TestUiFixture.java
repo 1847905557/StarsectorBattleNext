@@ -209,9 +209,14 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		protected UIComponentAPI append(UIComponentAPI component, float pad) {
 			assertFalse(mounted, "Contents must be complete before mounting");
 			geometry.get(component.getPosition()).parent = position;
-			float left = previous == null ? 5f : previous.getPosition().getX() - position.getX();
-			float top = previous == null ? pad
-					: position.getY() + position.getHeight() - previous.getPosition().getY() + pad;
+			float left = 5f;
+			float top = pad;
+			if (previous != null) {
+				Bounds bounds = geometry.get(previous.getPosition());
+				Bounds owner = geometry.get(position);
+				left = bounds.left + (bounds.middleX ? (owner.width - bounds.width) * 0.5f : 0f);
+				top += bounds.middleY ? (owner.height + bounds.height) * 0.5f : bounds.top + bounds.height;
+			}
 			component.getPosition().inTL(left, top);
 			usedHeight += pad + component.getPosition().getHeight();
 			components.add(component);
