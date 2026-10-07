@@ -12,12 +12,14 @@ import org.lwjgl.input.Keyboard;
 import java.awt.Color;
 import java.awt.HeadlessException;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * TextFieldAPI implementation with a clipped viewport and an editable caret.
@@ -54,6 +56,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private final float height;
 	private final TooltipMakerAPI[] viewports;
 	private final Consumer<String> soundSink;
+	private Supplier<Clipboard> clipboardSupplier;
 
 	private String text = "";
 	private int cursor;
@@ -130,6 +133,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		this.height = height;
 		this.viewports = viewports;
 		this.soundSink = id -> Global.getSoundPlayer().playUISound(id, 1f, 1f);
+		this.clipboardSupplier = () -> Toolkit.getDefaultToolkit().getSystemClipboard();
 		this.textColor = Misc.getButtonTextColor();
 	}
 
@@ -246,13 +250,13 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		notifyChanged();
 	}
 
-	private void copySelection() {
-		if (!hasSelection()) return;
+	private boolean copySelection() {
 		try {
-			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
+			clipboardSupplier.get().setContents(
 					new StringSelection(text.substring(selectionStart(), selectionEnd())), null);
-		} catch (IllegalStateException ignored) {
-			// The game may temporarily own the clipboard. Editing remains usable.
+			return true;
+		} catch (IllegalStateException | HeadlessException ignored) {
+			return false;
 		}
 	}
 
@@ -293,7 +297,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	private String readClipboard() {
 		try {
-			Object value = Toolkit.getDefaultToolkit().getSystemClipboard()
+			Object value = clipboardSupplier.get()
 					.getData(DataFlavor.stringFlavor);
 			return value instanceof String ? (String) value : null;
 		} catch (IllegalStateException | HeadlessException | UnsupportedFlavorException | IOException ignored) {
@@ -311,12 +315,16 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 				cursor = text.length();
 				refreshVisual();
 			} else if (!event.isAltDown() && key == Keyboard.KEY_C) {
-				copySelection();
+				if (hasSelection() && !copySelection()) {
+					playEditSound(false);
+				}
 			} else if (editable && !event.isAltDown() && key == Keyboard.KEY_X) {
-				copySelection();
 				if (hasSelection()) {
-					deleteSelection();
-					playEditSound(true);
+					boolean copied = copySelection();
+					if (copied) {
+						deleteSelection();
+					}
+					playEditSound(copied);
 				}
 			} else if (editable && !event.isAltDown() && key == Keyboard.KEY_V && handleCtrlV) {
 				pasteClipboard();
