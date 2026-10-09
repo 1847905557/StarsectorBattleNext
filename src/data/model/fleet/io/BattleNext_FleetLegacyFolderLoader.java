@@ -27,7 +27,7 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 			String number = segments[2].replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = directory + "/player" + number + "_fleet.csv";
 			if (!paths.contains(fleetPath)) {
-				reject(path, -1, "ab_player" + number, "", new IOException("Missing fleet members source: " + fleetPath));
+				reject(path, -1, number, "", new IOException("Missing fleet members source: " + fleetPath));
 				continue;
 			}
 			try {
@@ -36,7 +36,7 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 				BattleNext_FleetVariantLoader.load(fleet, paths);
 				result.add(fleet);
 			} catch (IOException | JSONException | IllegalArgumentException exception) {
-				reject(path, -1, "ab_player" + number, "", exception);
+				reject(path, -1, number, "", exception);
 			}
 		}
 		return finishLoad(result);

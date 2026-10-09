@@ -80,7 +80,9 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			assertFalse(field.isEditable());
 			assertFalse(field.appendCharIfPossible('X', false));
 		}
-		assertEquals(FIRST_ID, fields.get(List.of(entries.get(0).getId(), "player")).getText());
+		assertEquals(FIRST_ID, display.getRows().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
+		assertNull(openQuickBattleFleet(display, 0, BattleNext_QuickBattleDisplay.Column.PLAYER));
+		assertTrue(router.isEmpty());
 		assertTrue(sources.quickBattleErrors(entries.get(2)).contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_invalid_enemy_fleet")));
 		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_raw_row_status"), ((LabelAPI) getField(display.getRows().get(3), "statusLabel")).getText());
 		widget.close();
@@ -162,8 +164,8 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		int reads = dataReads.size();
 		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 		Map<List<String>, BattleNext_TextField> fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
-		BattleNext_TextField field = fields.get(List.of(sources.getQuickBattleStore().getAll().get(0).getId(), "player"));
-		assertTrue(field.captureEditState().scroll() > 0f);
+		display.getContent().getExternalScroller().setYOffset(40f);
+		assertTrue(display.getContent().getExternalScroller().getYOffset() > 0f);
 		BattleNext_QuickBattleDisplay.ViewState state = display.captureState();
 		select(widget, "cup");
 		select(widget, "");
@@ -182,7 +184,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		widget.attach(root);
 		display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 		fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
-		assertEquals("second", fields.get(List.of(sources.getQuickBattleStore().getAll().get(0).getId(), "player")).getText());
+		assertEquals("second", display.getRows().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
 		select(widget, "cup");
 		widget.close();
 		tournaments.reload();

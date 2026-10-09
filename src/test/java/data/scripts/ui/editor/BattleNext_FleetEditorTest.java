@@ -1,14 +1,20 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -16,12 +22,94 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationTargetException;
 
 class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
+
+	@Test
+	void addMemberButtonSelectsUpTo64CopiesAndCommitsOnlyOnConfirmation() throws Exception {
+
+		ShipVariantAPI variant = source().getApi();
+		registeredVariants.put("parent_variant", variant);
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+					if (method.getName().equals("getAllVariantIds")) return List.of("parent_variant");
+					try {
+						return method.invoke(delegate, args);
+					} catch (InvocationTargetException exception) {
+						throw exception.getCause();
+					}
+				}));
+		var editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		editor.open(null, false);
+		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_add_member"), buttonLabels.get("add_member"));
+		editor.buttonPressed("add_member");
+		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		assertTrue(draft.getMembers().isEmpty());
+		var picker = (BattleNext_OptionPicker) getField(editor, "memberPicker");
+		for (int index = 0; index < 64; index++) {
+			clickPickerOption(picker, "parent_variant");
+		}
+		assertEquals(Map.of("parent_variant", 64), getField(picker, "selection"));
+		clickPickerOption(picker, "parent_variant");
+		assertEquals(Map.of(), getField(picker, "selection"));
+		((CustomPanelAPI) getField(picker, "popup")).getPlugin().buttonPressed(buttonIds.get("CANCEL"));
+		assertTrue(draft.getMembers().isEmpty());
+		addFleetMembers(editor, Collections.nCopies(64, "parent_variant"));
+		assertEquals(64, draft.getMembers().size());
+		assertTrue(draft.getMembers().stream().allMatch(member -> member.getVariantId().equals("parent_variant")));
+		Set<BattleNext_MemberModel> members = Collections.newSetFromMap(new IdentityHashMap<>());
+		members.addAll(draft.getMembers());
+		assertEquals(64, members.size());
+		editor.close();
+		assertTrue(((BattleNext_UiInputRouter) getField(editor, "inputRouter")).isEmpty());
+	}
+
+	@Test
+	void addMemberButtonAppendsMixedVariantsPreservesDraftAndSavesPinnedCopies() throws Exception {
+
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		var pins = new BattleNext_PinnedVariantStore();
+		pins.reload();
+		var source = source().getApi();
+		registeredVariants.put("parent_variant", source);
+		registeredVariants.put("child_variant", source.getModuleVariant("module"));
+		var pin = pins.saveVariant("Pinned ship", source);
+		var editor = new BattleNext_FleetEditor(store);
+		editor.open(null, false);
+		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
+		((TextFieldAPI) getField(editor, "idField")).setText("batch_fleet");
+		((TextFieldAPI) getField(editor, "nameField")).setText("Batch fleet");
+		addFleetMembers(editor, List.of("parent_variant"));
+		List<?> fields = (List<?>) getField(editor, "memberFields");
+		((TextFieldAPI) getField(fields.get(0), "nameField")).setText("Existing ship");
+		((TextFieldAPI) getField(fields.get(0), "ordersField")).setText("existing_order");
+		addFleetMembers(editor, List.of("child_variant", "child_variant", "pinned:" + pin.getPinId(), "pinned:" + pin.getPinId()));
+		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		assertEquals(5, draft.getMembers().size());
+		assertEquals("Existing ship", draft.getMembers().get(0).getName());
+		assertEquals("existing_order", draft.getMembers().get(0).getOrders());
+		assertTrue(editor.save(), editor.getStatusText());
+		store.reload();
+		var saved = store.get("batch_fleet");
+		assertEquals(2, saved.getMembers().stream().filter(member -> member.getVariantId().equals("child_variant")).count());
+		assertEquals(2, saved.getMembers().stream().filter(member -> member.getVariantId().equals(pin.getPinId())).count());
+		assertEquals("Existing ship", saved.getMembers().get(0).getName());
+		assertEquals("existing_order", saved.getMembers().get(0).getOrders());
+		assertEquals("child_variant", saved.getVariant("child_variant").build().getHullVariantId());
+		assertEquals(7, saved.getVariant(pin.getPinId()).build().getModuleVariant("module").getNumFluxVents());
+		editor.close();
+	}
 
 	@ParameterizedTest
 	@CsvSource({"0,false", "1,false", "0,true", "1,true"})
@@ -35,7 +123,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		editor.setOverlayHost(root);
 		attachEditor(editor, root);
 		for (int index = 0; index < 3; index++) {
-			editor.buttonPressed("add_member");
+			addFleetMembers(editor, List.of("parent_variant"));
 		}
 		List<?> fields = (List<?>) getField(editor, "memberFields");
 		List<String> names = List.of("first", "second", "third");
@@ -69,7 +157,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		editor.setInputRouter(router);
 		editor.setOverlayHost(root);
 		attachEditor(editor, root);
-		editor.buttonPressed("add_member");
+		addFleetMembers(editor, List.of("parent_variant"));
 		TooltipMakerAPI metadata = (TooltipMakerAPI) getField(getField(editor, "idField"), "host");
 		assertFieldFlow(metadata, 1, Set.of(5));
 		List<BattleNext_OptionField> pickers = optionFields(editor).subList(1, optionFields(editor).size());
@@ -158,7 +246,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		editor.setOverlayHost(root);
 		attachEditor(editor, root);
 		((TextFieldAPI) getField(editor, "idField")).setText("draft_id");
-		editor.buttonPressed("add_member");
+		addFleetMembers(editor, List.of("parent_variant"));
 		float usableWidth = 1000f - BattleNext_PageLayout.EDITOR_COLUMN_GAP;
 		float metaWidth = (float) Math.floor(usableWidth * BattleNext_PageLayout.EDITOR_LEFT_COLUMN_SHARE);
 		BattleNext_OptionField skills = optionFields(editor).get(0);

@@ -12,6 +12,19 @@ import java.util.List;
 class BattleNext_FleetStandardLoaderTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
+	void numericFleetIdentityBelongsToTheLegacyNamespace() throws Exception {
+		standard("reserved", "007", "parent_variant");
+		standard("available", "fleet_007", "parent_variant");
+		var loader = new BattleNext_FleetStandardLoader();
+		assertEquals(List.of("fleet_007"), loader.load().stream().map(fleet -> fleet.getId()).toList());
+		assertEquals(1, loader.getErrors().size());
+		var error = loader.getErrors().get(0);
+		assertEquals("007", error.id());
+		assertEquals("tournament/reserved/fleet_data.json", error.path());
+		assertTrue(error.diagnostic().contains("Numeric fleet IDs are reserved for legacy fleets: 007"));
+	}
+
+	@Test
 	void nativeJsonLoadsFleetAndLocalModulesWithMixedRegisteredMembers() throws Exception {
 
 		standard("standard", "standard", "local_parent", "parent_variant");

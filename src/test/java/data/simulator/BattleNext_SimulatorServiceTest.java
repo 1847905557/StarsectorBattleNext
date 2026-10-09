@@ -141,7 +141,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			rows.get(1).getPlugin().buttonPressed(action);
 			assertEquals("IllegalStateException: Simulator service is closed", browser.getStatusError());
 			assertEquals("", browser.getSelectedId());
-			assertEquals("alpha", display.getRows().get(1).getField(BattleNext_QuickBattleDisplay.Column.PLAYER).getText());
+			assertEquals("alpha", display.getRows().get(1).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
 			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
 			widget.close();
 			assertFalse(router.getSession().hasInputState());

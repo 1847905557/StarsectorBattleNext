@@ -23,15 +23,15 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 		standard("managed", "managed", "parent_variant");
 		var store = new BattleNext_FleetStore();
 		store.reload();
-		assertFalse(store.isManaged("ab_player1"));
+		assertFalse(store.isManaged("1"));
 		assertTrue(store.isManaged("managed"));
-		assertThrows(IllegalStateException.class, () -> store.delete("ab_player1"));
+		assertThrows(IllegalStateException.class, () -> store.delete("1"));
 		assertTrue(Files.exists(directory.resolve("tournament/player1_data.csv")));
 		store.delete("managed");
 		assertFalse(Files.exists(directory.resolve("tournament/managed")));
 		store.reload();
 		assertEquals(1, store.getAll().size());
-		assertEquals("ab_player1", store.getAll().get(0).getId());
+		assertEquals("1", store.getAll().get(0).getId());
 	}
 
 	@Test
@@ -48,13 +48,13 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		standard("standard", "ab_player1", "parent_variant");
+		standard("standard", "1", "parent_variant");
 		standard("healthy", "healthy", "parent_variant");
 		store.reload();
 		assertTrue(store.isLoaded());
 		assertEquals(1, store.getAll().size());
 		assertNotNull(store.get("healthy"));
-		assertNull(store.get("ab_player1"));
+		assertNull(store.get("1"));
 		assertEquals(2, store.getErrors().size());
 		assertEquals(Set.of("tournament/player1_data.csv", "tournament/standard/fleet_data.json"),
 				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
@@ -68,7 +68,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 		store.reload();
 		assertTrue(store.getAll().isEmpty());
 		assertEquals(2, store.getErrors().size());
-		assertTrue(store.getErrors().stream().allMatch(error -> error.id().equals("ab_player01")));
+		assertTrue(store.getErrors().stream().allMatch(error -> error.id().equals("01")));
 		assertEquals(Set.of("tournament/player01_data.csv", "tournament/package/player01_data.csv"),
 				store.getErrors().stream().map(error -> error.path()).collect(Collectors.toSet()));
 	}
@@ -80,8 +80,8 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		assertEquals(2, store.getAll().size());
-		assertNotNull(store.get("ab_player01"));
-		assertNotNull(store.get("ab_player1"));
+		assertNotNull(store.get("01"));
+		assertNotNull(store.get("1"));
 	}
 
 	@Test
@@ -118,7 +118,7 @@ class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 		}
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		var source = store.get("ab_player1");
+		var source = store.get("1");
 		BattleNext_FleetModel copy = new BattleNext_FleetModel();
 		copy.fromJson(source.toJson());
 		copy.setFolderName(source.getFolderName());

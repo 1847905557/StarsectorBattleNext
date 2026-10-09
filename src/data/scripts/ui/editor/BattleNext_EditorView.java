@@ -157,6 +157,12 @@ public abstract class BattleNext_EditorView {
 		return picker;
 	}
 
+	protected final BattleNext_OptionPicker createPicker(BattleNext_OptionPicker.OptionChoiceSource source,
+			BattleNext_OptionPicker.OptionSelectionMode mode, Supplier<List<String>> initialSelection,
+			Consumer<List<String>> onConfirmed) {
+		return own(new BattleNext_OptionPicker(inputRouter, overlayHost, source, mode, initialSelection, onConfirmed));
+	}
+
 	protected final ButtonAPI createCheckbox(Object key, TooltipMakerAPI fieldContent, UIRect fieldArea,
 			String label, Object action, boolean selected, boolean editable) {
 		ButtonAPI enabledCheckbox = fieldContent.addCheckbox(fieldArea.getWidth(),

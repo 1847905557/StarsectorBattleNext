@@ -22,7 +22,7 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		variant("中文目录", "local_child", "child", 17, null);
 		registeredVariants.put("local_child", selectedVariant.getModules().get("module"));
 		var fleets = new BattleNext_FleetLegacyFolderLoader().load();
-		assertEquals(List.of("ab_player02", "ab_player1"), fleets.stream().map(fleet -> fleet.getId()).toList());
+		assertEquals(List.of("02", "1"), fleets.stream().map(fleet -> fleet.getId()).toList());
 		var fleet = fleets.get(1);
 		assertEquals("中文目录", fleet.getFolderName());
 		assertEquals("tournament/中文目录/player1_data.csv", fleet.getSourcePath());
@@ -45,7 +45,7 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		csvFleet("standard", "5", "1,parent_variant,,,,,,\n");
 		standard("standard", "standard_id", "parent_variant");
 		write("tournament/incomplete/player6_data.csv", "name,author,skills,tags\nTeam,,,\n");
-		assertEquals(List.of("ab_player2"), new BattleNext_FleetLegacyFolderLoader().load().stream().map(fleet -> fleet.getId()).toList());
+		assertEquals(List.of("2"), new BattleNext_FleetLegacyFolderLoader().load().stream().map(fleet -> fleet.getId()).toList());
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		assertEquals(3, store.getAll().size());
@@ -64,8 +64,8 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		for (int iteration = 0; iteration < 2; iteration++) {
 			store.reload();
-			assertEquals(11, store.get("ab_player1").getVariant("parent_local").build().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
-			assertEquals(22, store.get("ab_player2").getVariant("parent_local").build().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
+			assertEquals(11, store.get("1").getVariant("parent_local").build().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
+			assertEquals(22, store.get("2").getVariant("parent_local").build().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
 		}
 	}
 

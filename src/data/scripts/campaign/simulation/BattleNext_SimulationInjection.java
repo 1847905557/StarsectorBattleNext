@@ -150,7 +150,7 @@ public class BattleNext_SimulationInjection {
 			Object button = invoke(list, "getButtonForMember", member);
 			Object logic = invoke(button, "getLogic");
 			Class<?> mode = type("com.fs.starfarer.ui.int$o");
-			Object both = MethodHandles.publicLookup().findStaticGetter(mode, "BOTH", mode).invoke();
+			Object both = MethodHandles.publicLookup().findStaticGetter(mode, "String", mode).invoke();
 			invoke(logic, "o00000", both);
 		}
 	}

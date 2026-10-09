@@ -3,7 +3,6 @@ package data.model.quickbattle.io;
 import data.model.BattleNext_BaseSaver;
 import data.model.BattleNext_LoadSource;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
-import data.scripts.tools.BattleNext_CsvLine;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
 
@@ -17,7 +16,6 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 	public static final String STANDARD_PATH = "tournament/quick_battle.csv";
 	public static final String LEGACY_PATH = "tournament/PvP_matches.csv";
 	private static final String HEADER = "player,enemy,map,size";
-	private static final String LEGACY_PREFIX = "ab_player";
 
 	private final Supplier<List<BattleNext_QuickBattleModel>> entries;
 
@@ -75,7 +73,7 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 			if (!targetPath.equals(sourcePath(model))) {
 				continue;
 			}
-			text.append(sourceLine(model, targetPath.equals(LEGACY_PATH))).append('\n');
+			text.append(model.toSourceLine()).append('\n');
 		}
 		BattleNext_ModFileManager.writeText(path, text.toString());
 	}
@@ -84,18 +82,4 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 		return isLegacy(model) ? LEGACY_PATH : STANDARD_PATH;
 	}
 
-	private String sourceLine(BattleNext_QuickBattleModel model, boolean legacy) {
-		if (model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-			return model.getRawContent().isEmpty() ? "#" : model.getRawContent();
-		}
-		String player = legacy ? stripLegacyPrefix(model.getPlayer()) : model.getPlayer();
-		String enemy = legacy ? stripLegacyPrefix(model.getEnemy()) : model.getEnemy();
-		String line = BattleNext_CsvLine.escape(player) + "," + BattleNext_CsvLine.escape(enemy)
-				+ "," + model.getMap() + "," + model.getMapScale();
-		return model.isEnabled() ? line : "# " + line;
-	}
-
-	private String stripLegacyPrefix(String value) {
-		return value.startsWith(LEGACY_PREFIX) ? value.substring(LEGACY_PREFIX.length()) : value;
-	}
 }

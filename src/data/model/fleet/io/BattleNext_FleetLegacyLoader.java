@@ -30,7 +30,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = LEGACY_FOLDER + "/player" + number + "_fleet.csv";
 			if (!paths.contains(fleetPath)) {
-				reject(dataPath, -1, "ab_player" + number, "", new IOException("Missing fleet members source: " + fleetPath));
+				reject(dataPath, -1, number, "", new IOException("Missing fleet members source: " + fleetPath));
 				BattleNext_Logger.warn(BattleNext_FleetLegacyLoader.class, "fleet.legacy.incomplete",
 				BattleNext_Logger.fields().put("metadata_path", dataPath).put("missing_members_path", fleetPath).put("number", number).build());
 				continue;
@@ -38,7 +38,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 			try {
 				result.add(readFleet(number, dataPath, fleetPath));
 			} catch (IOException | JSONException | IllegalArgumentException exception) {
-				reject(dataPath, -1, "ab_player" + number, "", exception);
+				reject(dataPath, -1, number, "", exception);
 			}
 		}
 		return finishLoad(result);
@@ -60,7 +60,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 				JSONArray dataRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, dataPath, MOD_ID);
 				JSONObject data = metadata(dataRows, dataPath);
 				JSONArray fleetRows = BattleNext_ModFileManager.readCsv(BattleNext_FleetLegacyLoader.class, fleetPath, MOD_ID);
-				recordInput(dataPath, -1, "ab_player" + number, new JSONObject().put("metadata", dataRows).put("members", fleetRows).toString());
+				recordInput(dataPath, -1, number, new JSONObject().put("metadata", dataRows).put("members", fleetRows).toString());
 				List<BattleNext_MemberModel> members = new ArrayList<>();
 				List<String> errors = new ArrayList<>();
 				for (int index = 0; index < fleetRows.length(); index++) {
@@ -76,7 +76,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 						BattleNext_Logger.warn(getClass(), "fleet.member.item.rejected", BattleNext_Logger.fields().put("diagnostic", diagnostic).build(), exception);
 					}
 				}
-				BattleNext_FleetModel result = new BattleNext_FleetModel("ab_player" + number, data.optString("name").trim(),
+				BattleNext_FleetModel result = new BattleNext_FleetModel(number, data.optString("name").trim(),
 						splitValues(data.optString("skills")), splitValues(data.optString("tags")), members);
 				result.setFolderName("legacy_" + number);
 				result.setAuthor(data.optString("author").trim());

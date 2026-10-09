@@ -3,6 +3,8 @@ package data.scripts.ui.editor;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.BattleNext_LoadSource;
@@ -17,6 +19,7 @@ import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.provider.*;
 import org.json.JSONException;
 
@@ -28,6 +31,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
 	private final BattleNext_FleetStore store;
 	private final BattleNext_VariantSourceProvider variantSource = new BattleNext_VariantSourceProvider();
+	private final BattleNext_FleetMemberProvider memberSource = new BattleNext_FleetMemberProvider();
 	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
@@ -45,6 +49,8 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private BattleNext_FleetModel draft;
 	private BattleNext_FleetModel baseline;
 	private boolean baselineClone;
+	private BattleNext_OptionPicker memberPicker;
+	private ButtonAPI addMemberButton;
 
 	private static final class FleetMemberEditorFields {
 		private TextFieldAPI variantField;
@@ -100,7 +106,23 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			addMember(index, draft.getMembers().get(index), rowsContent, columnWidth);
 		}
-		createButton(rowsContent, columnWidth, fleetStrings.get("add_member"), "add_member");
+		addMemberButton = createButton(rowsContent, columnWidth, fleetStrings.get("add_member"), "add_member");
+		memberPicker = createPicker(memberSource, BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addMembers);
+	}
+
+	private void addMembers(List<String> ids) {
+		if (ids.isEmpty()) return;
+		if (!captureDraft(false)) return;
+		List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
+		for (String id : ids) {
+			BattleNext_MemberModel member = new BattleNext_MemberModel();
+			member.setVariantId(id);
+			members.add(member);
+			memberKeys.add(new Object());
+			expandedMembers.add(members.size() - 1);
+		}
+		draft.setMembers(members);
+		refreshStructure();
 	}
 
 	private void addMember(int index, BattleNext_MemberModel member, TooltipMakerAPI rowsContent, float columnWidth) {
@@ -200,13 +222,10 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		if ("save".equals(buttonId)) {
 			save();
 		} else if ("add_member".equals(buttonId)) {
-			if (!captureDraft(false)) return;
-			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
-			members.add(new BattleNext_MemberModel());
-			memberKeys.add(new Object());
-			draft.setMembers(members);
-			expandedMembers.add(members.size() - 1);
-			refreshStructure();
+			memberPicker.openAt(panel, () -> {
+				PositionAPI position = addMemberButton.getPosition();
+				return new BattleNext_OptionPicker.Anchor(position.getX(), position.getY(), position.getWidth(), position.getHeight());
+			});
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("remove_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("remove_member:".length()));
 			if (!captureDraft(false)) return;

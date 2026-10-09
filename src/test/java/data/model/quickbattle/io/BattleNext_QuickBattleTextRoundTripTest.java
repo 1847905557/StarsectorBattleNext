@@ -22,12 +22,12 @@ class BattleNext_QuickBattleTextRoundTripTest extends BattleNext_TestFleetIoFixt
 		store.reload();
 		assertEquals(8, store.getAll().size());
 		var numbered = store.get("pvp-legacy-0");
-		assertEquals("ab_player01", numbered.getPlayer());
-		assertEquals("ab_player02", numbered.getEnemy());
+		assertEquals("01", numbered.getPlayer());
+		assertEquals("02", numbered.getEnemy());
 		assertEquals(numbered.getPlayer(), store.get("pvp-legacy-1").getPlayer());
 		assertEquals(BattleNext_LoadSource.LEGACY, numbered.getSourceType());
 		assertEquals("tournament/PvP_matches.csv", numbered.getSourcePath());
-		assertEquals("ab_player03", store.get("pvp-legacy-2").getPlayer());
+		assertEquals("03", store.get("pvp-legacy-2").getPlayer());
 		assertFalse(store.get("pvp-legacy-2").isEnabled());
 		store.save(numbered);
 		var standard = store.get("quick-standard-0");
@@ -41,7 +41,7 @@ class BattleNext_QuickBattleTextRoundTripTest extends BattleNext_TestFleetIoFixt
 		assertEquals(8, store.getAll().size());
 		assertEquals("# note", store.get("quick-standard-2").getRawContent());
 		assertFalse(store.get("quick-standard-3").isEnabled());
-		assertEquals("ab_player01", store.get("pvp-legacy-0").getPlayer());
+		assertEquals("01", store.get("pvp-legacy-0").getPlayer());
 		assertTrue(dataReads.isEmpty());
 	}
 }

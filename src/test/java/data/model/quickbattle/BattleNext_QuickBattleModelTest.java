@@ -62,8 +62,8 @@ class BattleNext_QuickBattleModelTest {
 		row.setSourceType(BattleNext_LoadSource.LEGACY);
 		row.setSourcePath("PvP.csv");
 		var copy = row.copy();
-		assertEquals("ab_player01", copy.getPlayer());
-		assertEquals("ab_player02", copy.getEnemy());
+		assertEquals("01", copy.getPlayer());
+		assertEquals("02", copy.getEnemy());
 		assertEquals(QuickBattleRowType.COMMENT_BATTLE, copy.getRowType());
 		assertEquals(3, copy.getMap());
 		assertEquals(2f, copy.getMapScale());
@@ -74,7 +74,7 @@ class BattleNext_QuickBattleModelTest {
 		assertTrue(copy.usesLegacyIds());
 		copy.setPlayer("changed");
 		copy.setEnabled(true);
-		assertEquals("ab_player01", row.getPlayer());
+		assertEquals("01", row.getPlayer());
 		assertFalse(row.isEnabled());
 	}
 
@@ -98,10 +98,10 @@ class BattleNext_QuickBattleModelTest {
 		var row = BattleNext_QuickBattleModel.parseLine("# note", true);
 		row.promoteRaw("01,02,3,1");
 		assertEquals(QuickBattleRowType.BATTLE, row.getRowType());
-		assertEquals("ab_player01", row.getPlayer());
+		assertEquals("01", row.getPlayer());
 		assertFalse(row.isEnabled());
 		row.setEnabled(true);
-		assertEquals("ab_player01,ab_player02,3,1.0", row.toSourceLine());
+		assertEquals("01,02,3,1.0", row.toSourceLine());
 		row.promoteRaw("### note");
 		assertEquals(QuickBattleRowType.RAW, row.getRowType());
 		assertEquals("# note", row.toSourceLine());

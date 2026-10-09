@@ -47,7 +47,6 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		BattleNext_QuickBattleModel model = new BattleNext_QuickBattleModel("", "", -1, 1f);
 		try {
 			model.fromCsvLine(BattleNext_CsvLine.parse(candidate));
-			if (legacy) model.convertLegacyIds();
 			model.rowType = commented ? QuickBattleRowType.COMMENT_BATTLE : QuickBattleRowType.BATTLE;
 			model.enabled = !commented;
 			model.legacyIds = legacy;
@@ -68,11 +67,6 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 			trimmed = trimmed.substring(1).trim();
 		}
 		return trimmed.isEmpty() ? "#" : "# " + trimmed;
-	}
-
-	private void convertLegacyIds() {
-		player = "ab_player" + player;
-		enemy = "ab_player" + enemy;
 	}
 
 	public BattleNext_QuickBattleModel copy() {

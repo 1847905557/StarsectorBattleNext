@@ -157,7 +157,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 					row -> new BattleNext_QuickBattleDisplay.Action(simulatorStrings.get("simulate"), "simulator:quick:" + row.getModel().getId(),
 							sources.quickBattleErrors(row.getModel()).isEmpty()), this::submitQuickBattle);
 			quickBattleDisplay = new BattleNext_QuickBattleDisplay(inputRouter, sources.getQuickBattleStore().getAll(), presentation,
-					entry -> entry.getId(), row -> sources.quickBattleErrors(row.getModel()));
+					entry -> entry.getId(), row -> sources.quickBattleErrors(row.getModel()), sources.getFleetStore(), overlayHost);
 			quickBattleDisplay.attach(bodyPanel);
 			if (browser.getQuickBattleState() != null) {
 				quickBattleDisplay.restoreState(browser.getQuickBattleState());

@@ -1,13 +1,16 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
+import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -29,9 +32,11 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		}
 	}
 
-	public record ViewState(float scroll, Map<Object, BattleNext_TextField.EditState> fields, Map<Object, Boolean> enabled) {
+	public record ViewState(float scroll, Map<Object, BattleNext_TextField.EditState> fields,
+			Map<Object, Map<Column, String>> fleets, Map<Object, Boolean> enabled) {
 		public ViewState {
 			fields = Map.copyOf(fields);
+			fleets = Map.copyOf(fleets);
 			enabled = Map.copyOf(enabled);
 		}
 	}
@@ -40,8 +45,9 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		private final int index;
 		private final Object key;
 		private BattleNext_QuickBattleModel model;
-		private BattleNext_TextField playerField;
-		private BattleNext_TextField enemyField;
+		private final Map<Column, String> fleets = new EnumMap<>(Column.class);
+		private final Map<Column, LabelAPI> fleetLabels = new EnumMap<>(Column.class);
+		private final Map<Column, BattleNext_OptionField> fleetFields = new EnumMap<>(Column.class);
 		private BattleNext_TextField mapField;
 		private BattleNext_TextField mapScaleField;
 		private BattleNext_TextField rawField;
@@ -53,6 +59,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			this.index = index;
 			this.key = key;
 			this.model = model;
+			fleets.put(Column.PLAYER, model.getPlayer());
+			fleets.put(Column.ENEMY, model.getEnemy());
 		}
 
 		public int getIndex() {
@@ -69,12 +77,15 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 		public BattleNext_TextField getField(Column column) {
 			return switch (column) {
-				case PLAYER -> playerField;
-				case ENEMY -> enemyField;
 				case MAP -> mapField;
 				case SCALE -> mapScaleField;
 				default -> throw new IllegalArgumentException("Column does not contain an input: " + column);
 			};
+		}
+
+		public String getFleetId(Column column) {
+			BattleNext_OptionField field = fleetFields.get(column);
+			return field == null ? fleets.get(column) : field.getField().getText().trim();
 		}
 
 		public BattleNext_TextField getRawField() {
@@ -94,6 +105,9 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	private final Presentation presentation;
 	private final Function<BattleNext_QuickBattleModel, Object> identity;
 	private final Function<Row, List<String>> validation;
+	private final BattleNext_FleetStore fleetStore;
+	private final BattleNext_FleetSourceProvider fleetSource;
+	private final CustomPanelAPI overlayHost;
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final Map<Object, BattleNext_TextField> fields = new LinkedHashMap<>();
@@ -101,12 +115,16 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	private BattleNext_TableWidget tableWidget;
 
 	public BattleNext_QuickBattleDisplay(BattleNext_UiInputRouter inputRouter, List<BattleNext_QuickBattleModel> entries,
-			Presentation presentation, Function<BattleNext_QuickBattleModel, Object> identity, Function<Row, List<String>> validation) {
+			Presentation presentation, Function<BattleNext_QuickBattleModel, Object> identity, Function<Row, List<String>> validation,
+			BattleNext_FleetStore fleetStore, CustomPanelAPI overlayHost) {
 		super(inputRouter);
 		this.entries = List.copyOf(entries);
 		this.presentation = presentation;
 		this.identity = identity;
 		this.validation = validation;
+		this.fleetStore = fleetStore;
+		this.fleetSource = new BattleNext_FleetSourceProvider(fleetStore);
+		this.overlayHost = overlayHost;
 	}
 
 	@Override
@@ -156,8 +174,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			row.rawField = addField(row, "raw", rowPanel, new UIRect(first.getX(), 0f,
 					last.getX() + last.getWidth() - first.getX(), BattleNext_PageLayout.TABLE_ROW_HEIGHT), entry.getRawContent(), content);
 		} else {
-			row.playerField = addField(row, "player", rowPanel, columns.get(Column.PLAYER), entry.getPlayer(), content);
-			row.enemyField = addField(row, "enemy", rowPanel, columns.get(Column.ENEMY), entry.getEnemy(), content);
+			addFleetCell(row, Column.PLAYER, rowPanel, columns.get(Column.PLAYER), content);
+			addFleetCell(row, Column.ENEMY, rowPanel, columns.get(Column.ENEMY), content);
 			row.mapField = addField(row, "map", rowPanel, columns.get(Column.MAP), Integer.toString(entry.getMap()), content);
 			row.mapScaleField = addField(row, "scale", rowPanel, columns.get(Column.SCALE), Float.toString(entry.getMapScale()), content);
 		}
@@ -198,6 +216,47 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		rows.add(row);
 	}
 
+	private void addFleetCell(Row row, Column column, CustomPanelAPI owner, UIRect cell, TooltipMakerAPI viewport) {
+
+		String fleetId = row.getFleetId(column);
+		BaseTooltipCreator preview = new BaseTooltipCreator() {
+			@Override
+			public float getTooltipWidth(Object ignored) {
+				return fleetSource.getTooltipWidth();
+			}
+
+			@Override
+			public void createTooltip(TooltipMakerAPI target, boolean expanded, Object ignored) {
+				String id = row.getFleetId(column);
+				if (id.isEmpty()) {
+					target.addPara(strings.get("unavailable"), 0f);
+					return;
+				}
+				var selectedFleet = fleetStore.get(id);
+				fleetSource.createTooltip(target, new BattleNext_OptionPicker.OptionChoice(id, selectedFleet == null ? id : selectedFleet.getName()));
+			}
+		};
+		if (presentation.editable()) {
+			UIRect bounds = BattleNext_PageLayout.editorFieldCell(cell);
+			TooltipMakerAPI content = owner.createUIElement(bounds.getWidth(), bounds.getHeight(), false);
+			BattleNext_OptionField option = new BattleNext_OptionField(inputRouter, overlayHost, bounds.getWidth(),
+					fleetSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, viewport);
+			option.attach(content, owner);
+			BattleNext_TextField field = (BattleNext_TextField) option.getField();
+			field.setText(fleetId);
+			field.setMaxChars(-1);
+			content.getPrev().getPosition().inTL(0f, 0f);
+			content.addTooltipTo(preview, content.getPrev(), TooltipMakerAPI.TooltipLocation.RIGHT, true);
+			content.setHeightSoFar(bounds.getHeight());
+			owner.addUIElement(content).inTL(bounds.getX(), bounds.getY());
+			row.fleetFields.put(column, option);
+			fields.put(List.of(row.key, column.name()), field);
+			return;
+		}
+		row.fleetLabels.put(column, BattleNext_PageLayout.cellLabel(owner, cell, fleetId, true,
+				preview, TooltipMakerAPI.TooltipLocation.RIGHT, true));
+	}
+
 	private BattleNext_TextField addField(Row row, String role, CustomPanelAPI rowPanel,
 			UIRect cell, String value, TooltipMakerAPI viewport) {
 		BattleNext_TextField field = BattleNext_PageLayout.cellTextField(inputRouter, rowPanel, cell, value, presentation.editable(), viewport);
@@ -215,16 +274,23 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	public ViewState captureState() {
 		Map<Object, Boolean> enabled = new LinkedHashMap<>();
+		Map<Object, Map<Column, String>> fleets = new LinkedHashMap<>();
 		for (Row row : rows) {
+			if (row.rawField == null) {
+				fleets.put(row.key, Map.of(Column.PLAYER, row.getFleetId(Column.PLAYER), Column.ENEMY, row.getFleetId(Column.ENEMY)));
+			}
 			if (row.enabledCheckbox == null) continue;
 			enabled.put(row.key, row.isEnabled());
 		}
-		return new ViewState(getContent().getExternalScroller().getYOffset(), inputRouter.getSession().captureFields(fields), enabled);
+		return new ViewState(getContent().getExternalScroller().getYOffset(), inputRouter.getSession().captureFields(fields), fleets, enabled);
 	}
 
 	public void restoreState(ViewState state) {
 		inputRouter.getSession().restoreFields(fields, state.fields(), presentation.editable());
 		for (Row row : rows) {
+			if (presentation.editable() && row.rawField == null && state.fleets().containsKey(row.key)) {
+				row.fleets.putAll(state.fleets().get(row.key));
+			}
 			if (row.enabledCheckbox == null || !state.enabled().containsKey(row.key)) continue;
 			row.setEnabled(state.enabled().get(row.key));
 		}
@@ -259,7 +325,32 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	}
 
 	@Override
+	protected void clearOverlays() {
+		for (Row row : rows) {
+			for (BattleNext_OptionField field : row.fleetFields.values()) {
+				field.closeOverlays();
+			}
+		}
+	}
+
+	@Override
+	protected boolean handleWidgetInput(List<InputEventAPI> events) {
+		for (Row row : rows) {
+			for (BattleNext_OptionField field : row.fleetFields.values()) {
+				if (field.handleGlobalInput(events)) return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
 	protected void clearContent() {
+		for (Row row : rows) {
+			for (BattleNext_OptionField field : row.fleetFields.values()) {
+				fields.values().remove(field.getField());
+				field.close();
+			}
+		}
 		for (BattleNext_TextField field : fields.values()) {
 			field.close();
 		}

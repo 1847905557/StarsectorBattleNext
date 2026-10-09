@@ -2,6 +2,8 @@ package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
+import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
@@ -11,11 +13,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 class BattleNext_QuickBattleDisplayTest extends BattleNext_TestPageFixture {
 
 	@Test
-	void callerColumnSharesDetermineInputAndActionGeometryAndRemainStableAfterInputMutation() {
+	void callerColumnSharesDetermineInputAndActionGeometryAndRemainStableAfterInputMutation() throws Exception {
 
 		deferTooltipWidth = true;
 		List<Column> columns = new ArrayList<>(List.of(Column.PLAYER, Column.ENEMY, Column.MAP,
@@ -32,19 +35,21 @@ class BattleNext_QuickBattleDisplayTest extends BattleNext_TestPageFixture {
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(200f, 180f, new BaseCustomUIPanelPlugin());
 		BattleNext_QuickBattleDisplay display = new BattleNext_QuickBattleDisplay(router, List.of(normal, raw), presentation,
-				entry -> entry.getId(), row -> row.getRawField() == null ? List.of() : List.of("Raw row"));
+				entry -> entry.getId(), row -> row.getRawField() == null ? List.of() : List.of("Raw row"), new BattleNext_FleetStore(), root);
 		display.attach(root);
-		BattleNext_TextField player = display.getRows().get(0).getField(Column.PLAYER);
-		BattleNext_TextField enemy = display.getRows().get(0).getField(Column.ENEMY);
-		assertEquals(8f, player.getPosition().getWidth());
-		assertEquals(8f, enemy.getPosition().getWidth());
+		var fleetLabels = (Map<Column, LabelAPI>) getField(display.getRows().get(0), "fleetLabels");
+		LabelAPI player = fleetLabels.get(Column.PLAYER);
+		LabelAPI enemy = fleetLabels.get(Column.ENEMY);
+		assertEquals(16f, player.getPosition().getWidth());
+		assertEquals(16f, enemy.getPosition().getWidth());
 		assertEquals(28f, enemy.getPosition().getX() - player.getPosition().getX());
 		assertEquals(52f, buttonPositions.get("simulate:0").getWidth());
 		assertEquals(92f, display.getRows().get(1).getRawField().getPosition().getWidth());
 		assertEquals("first", player.getText());
 		assertEquals("second", enemy.getText());
 		assertEquals("# note", display.getRows().get(1).getRawField().getText());
-		assertFalse(player.isEditable());
+		assertNull(openQuickBattleFleet(display, 0, Column.PLAYER));
+		assertTrue(router.isEmpty());
 		assertTrue(buttons.get("simulate:0").get());
 		assertFalse(buttons.get("simulate:1").get());
 		display.close();

@@ -24,6 +24,7 @@ import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.scripts.ui.page.*;
 import data.scripts.ui.widget.BattleNext_TableWidget;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import data.simulator.BattleNext_SimulatorWidget;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
@@ -319,7 +320,8 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.buttonPressed("add");
 		Object editor = getField(page, "quickBattleEditor");
 		Object row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
-		((TextFieldAPI) getField(row, "playerField")).setText("Draft fleet");
+		((BattleNext_FleetStore) getField(editor, "fleetStore")).save(new BattleNext_FleetModel("draft_fleet", "Draft fleet", List.of(), List.of(), List.of()));
+		selectQuickBattleFleet((BattleNext_QuickBattleDisplay) getField(editor, "display"), 0, BattleNext_QuickBattleDisplay.Column.PLAYER, "draft_fleet");
 		((TextFieldAPI) getField(row, "mapField")).setText("Unfinished number");
 		String snapshot = ((BattleNext_EditorView) editor).serializeState();
 		assertTrue(page.hasUnsavedChanges());

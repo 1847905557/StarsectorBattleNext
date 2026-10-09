@@ -361,7 +361,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 				fleetEditor.setInputRouter(router);
 				fleetEditor.setOverlayHost(root);
 				attachEditor(fleetEditor, root);
-				fleetEditor.buttonPressed("add_member");
+				addFleetMembers(fleetEditor, List.of("parent_variant"));
 			}
 			if (kind.equals("commander")) {
 				field = optionFields(fleetEditor).get(0);

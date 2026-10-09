@@ -1,17 +1,22 @@
 package data.test.fixture;
 
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
 import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,8 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -37,6 +45,89 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	protected List<BattleNext_OptionField> optionFields(BattleNext_EditorView editor) throws Exception {
 		return ((List<?>) getField(editor, "tooltipWidgets")).stream()
 				.filter(BattleNext_OptionField.class::isInstance).map(BattleNext_OptionField.class::cast).toList();
+	}
+
+	protected void addFleetMembers(BattleNext_FleetEditor editor, List<String> ids) throws Exception {
+
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+					if (method.getName().equals("getAllVariantIds")) return ids.stream().filter(id -> !id.startsWith("pinned:")).distinct().toList();
+					if (method.getName().equals("getVariant") && ids.contains(args[0]) && registeredVariants.get(args[0]) == null) return source().getApi();
+					try {
+						return method.invoke(delegate, args);
+					} catch (InvocationTargetException exception) {
+						throw exception.getCause();
+					}
+				}));
+		try {
+			editor.buttonPressed("add_member");
+			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "memberPicker");
+			for (String id : ids) {
+				clickPickerOption(picker, id);
+			}
+			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			popup.getPlugin().buttonPressed(buttonIds.get("CONFIRM"));
+		} finally {
+			Global.setSettings(delegate);
+		}
+	}
+
+	protected void clickPickerOption(BattleNext_OptionPicker picker, String id) throws Exception {
+		CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
+		TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
+		for (UIComponentAPI component : tooltips.get(content).getComponents()) {
+			if (!(component instanceof CustomPanelAPI tile)) continue;
+			var option = (BattleNext_OptionPicker.OptionChoice) getField(tile.getPlugin(), "option");
+			if (!option.getId().equals(id)) continue;
+			PositionAPI bounds = tile.getPosition();
+			InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
+				case "isLMBDownEvent" -> true;
+				case "isConsumed" -> false;
+				case "getX" -> (int) (bounds.getX() + bounds.getWidth() * 0.5f);
+				case "getY" -> (int) (bounds.getY() + bounds.getHeight() * 0.5f);
+				default -> null;
+			});
+			tile.getPlugin().processInput(List.of(event));
+			return;
+		}
+		throw new AssertionError("Picker option missing: " + id);
+	}
+
+	protected BattleNext_OptionPicker openQuickBattleFleet(BattleNext_QuickBattleDisplay display, int index,
+			BattleNext_QuickBattleDisplay.Column column) throws Exception {
+		var row = display.getRows().get(index);
+		BattleNext_OptionField field = ((Map<BattleNext_QuickBattleDisplay.Column, BattleNext_OptionField>) getField(row, "fleetFields")).get(column);
+		if (field == null) return null;
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(field, "picker");
+		((CustomPanelAPI) getField(picker, "row")).getPlugin().buttonPressed(buttonIds.get("TOGGLE"));
+		return picker;
+	}
+
+	protected void selectQuickBattleFleet(BattleNext_QuickBattleDisplay display, int index,
+			BattleNext_QuickBattleDisplay.Column column, String id) throws Exception {
+		BattleNext_OptionPicker picker = openQuickBattleFleet(display, index, column);
+		if (!id.isEmpty()) {
+			CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
+			TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
+			for (UIComponentAPI component : tooltips.get(content).getComponents()) {
+				if (!(component instanceof CustomPanelAPI tile)) continue;
+				var option = (BattleNext_OptionPicker.OptionChoice) getField(tile.getPlugin(), "option");
+				if (!option.getId().equals(id)) continue;
+				PositionAPI bounds = tile.getPosition();
+				InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
+					case "isLMBDownEvent" -> true;
+					case "isConsumed" -> false;
+					case "getX" -> (int) (bounds.getX() + bounds.getWidth() * 0.5f);
+					case "getY" -> (int) (bounds.getY() + bounds.getHeight() * 0.5f);
+					default -> null;
+				});
+				tile.getPlugin().processInput(List.of(event));
+				break;
+			}
+		}
+		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+		popup.getPlugin().buttonPressed(buttonIds.get("CONFIRM"));
 	}
 
 	protected void assertTablePickerAlignment(BattleNext_TableWidget table, BattleNext_OptionPicker picker) throws Exception {

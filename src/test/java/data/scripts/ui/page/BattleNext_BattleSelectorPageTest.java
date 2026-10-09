@@ -2,6 +2,7 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import data.scripts.ui.widget.BattleNext_BattleSourceField;
 import data.scripts.ui.widget.BattleNext_DropdownField;
 import data.test.fixture.BattleNext_TestPageFixture;
@@ -27,7 +28,7 @@ class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 		assertEquals(30f, row.getPosition().getHeight());
 
 		CustomPanelAPI buttonRow = (CustomPanelAPI) getField(dropdown, "row");
-		plugins.get(buttonRow).buttonPressed(buttonIds.get("TOGGLE"));
+		plugins.get(buttonRow).buttonPressed(((ButtonAPI) getField(dropdown, "button")).getCustomData());
 		CustomPanelAPI popup = (CustomPanelAPI) getField(dropdown, "popup");
 		assertSame(owner.getPosition(), geometry.get(popup.getPosition()).getParent());
 		assertEquals(row.getPosition().getX(), popup.getPosition().getX(), 0.01f);

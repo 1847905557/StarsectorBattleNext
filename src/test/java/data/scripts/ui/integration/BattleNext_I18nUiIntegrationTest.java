@@ -25,6 +25,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 
@@ -49,7 +50,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		editor.setInputRouter(router);
 		editor.setOverlayHost(root);
 		attachEditor(editor, root);
-		editor.buttonPressed("add_member");
+		addFleetMembers(editor, List.of("parent_variant"));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_commander_skills")));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_officer_skills")));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_officer_personality")));

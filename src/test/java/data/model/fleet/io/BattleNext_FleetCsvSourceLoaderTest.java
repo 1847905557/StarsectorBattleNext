@@ -20,7 +20,7 @@ class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture 
 				+ ",,,,,,,\nparent_variant,First,9,\"gunnery,gunnery\",reckless,portrait.png,engage;,tag\n"
 				+ "child_variant,Second,1,,steady,,,\n");
 		var fleet = new BattleNext_FleetLegacyLoader().load().get(0);
-		assertEquals("ab_player01", fleet.getId());
+		assertEquals("01", fleet.getId());
 		assertEquals("legacy_01", fleet.getFolderName());
 		assertEquals("队伍,名称", fleet.getName());
 		assertEquals("作者", fleet.getAuthor());
@@ -50,6 +50,6 @@ class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture 
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		csvFleet("nested", "2", "1,parent_variant,,,,,,\n");
 		write("tournament/player3_data.csv", "name,author,skills,tags\nTeam,,,\n");
-		assertEquals(List.of("ab_player1"), new BattleNext_FleetLegacyLoader().load().stream().map(fleet -> fleet.getId()).toList());
+		assertEquals(List.of("1"), new BattleNext_FleetLegacyLoader().load().stream().map(fleet -> fleet.getId()).toList());
 	}
 }

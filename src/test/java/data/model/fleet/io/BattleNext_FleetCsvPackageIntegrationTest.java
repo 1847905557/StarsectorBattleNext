@@ -23,7 +23,7 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 		int memberCount = 3;
 		String folder = "中文舰队包";
 		String number = "41";
-		String id = "ab_player" + number;
+		String id = number;
 		String name = "测试,舰队";
 		String author = "测试作者";
 		List<String> skills = List.of("fleet_skill", "fleet_skill", "support_skill");
@@ -105,7 +105,7 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n" + numberedBattles.stream()
 				.map(pair -> String.join(",", pair) + ",8,1").reduce((left, right) -> left + "\n" + right).orElseThrow() + "\n");
 		List<List<String>> expectedBattles = new ArrayList<>(quickBattles);
-		expectedBattles.addAll(numberedBattles.stream().map(pair -> pair.stream().map(value -> "ab_player" + value).toList()).toList());
+		expectedBattles.addAll(numberedBattles);
 		var provider = new BattleNext_BattleSourceProvider();
 		var matches = provider.load();
 		assertTrue(provider.getWarnings().isEmpty(), provider.getWarnings().toString());

@@ -24,7 +24,7 @@ class BattleNext_FleetCsvExportIntegrationTest extends BattleNext_TestFleetIoFix
 		var root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		page.setOverlayHost(root);
 		page.attach(root);
-		page.buttonPressed("fleet:ab_player01");
+		page.buttonPressed("fleet:01");
 		BattleNext_FleetEditor editor = (BattleNext_FleetEditor) getField(page, "editor");
 		assertFalse(page.hasUnsavedChanges());
 		assertFalse(page.save());

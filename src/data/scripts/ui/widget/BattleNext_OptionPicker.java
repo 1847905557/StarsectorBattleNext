@@ -97,10 +97,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float TILE_CHECK_MIDDLE_Y = 46f;
 	private static final float TILE_CHECK_END_X = 60f;
 	private static final float TILE_CHECK_END_Y = 59f;
-	private static final float TILE_COUNT_PIP_RIGHT_INSET = 10f;
-	private static final float TILE_COUNT_PIP_TOP_INSET = 4f;
-	private static final float TILE_COUNT_PIP_SPACING = 7f;
-	private static final float TILE_COUNT_PIP_SIZE = 5f;
+	private static final float TILE_COUNT_RIGHT_INSET = 5f;
+	private static final float TILE_COUNT_BOTTOM_INSET = 4f;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.PANEL;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
@@ -356,6 +354,16 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				OptionPickerTilePlugin tilePlugin = new OptionPickerTilePlugin(option);
 				CustomPanelAPI tile = gridPanel.createCustomPanel(TILE_SIZE, TILE_SIZE, tilePlugin);
 				addIcon(tile, option, tilePlugin);
+				TooltipMakerAPI badge = tile.createUIElement(TILE_SIZE - TILE_COUNT_RIGHT_INSET, 0f, false);
+				badge.setParaSmallInsignia();
+				int count = selection.getOrDefault(option.id, 0);
+				tilePlugin.countLabel = badge.addPara(count > 1 ? "x" + count : "", CHECK_COLOR, 0f);
+				tilePlugin.countLabel.setAlignment(Alignment.RMID);
+				float badgeHeight = tilePlugin.countLabel.getPosition().getHeight();
+				tilePlugin.countLabel.getPosition().setSize(TILE_SIZE - TILE_COUNT_RIGHT_INSET, badgeHeight);
+				tilePlugin.countLabel.getPosition().inTL(0f, 0f);
+				badge.setHeightSoFar(badgeHeight);
+				tile.addUIElement(badge).inBL(0f, TILE_COUNT_BOTTOM_INSET);
 				grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP),
 						POPUP_INSET + index / columns * (TILE_SIZE + TILE_GAP));
 				grid.addTooltipTo(new BaseTooltipCreator() {
@@ -600,6 +608,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		private final OptionChoice option;
 		private PositionAPI position;
 		private boolean missingIcon;
+		private LabelAPI countLabel;
 
 		private OptionPickerTilePlugin(OptionChoice option) {
 			this.option = option;
@@ -614,6 +623,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		public void renderBelow(float alphaMult) {
 			BattleNext_GeometryRenderer.fillRect(position,
 					selection.getOrDefault(option.id, 0) > 0 ? TILE_SELECTED : TILE_NORMAL, alphaMult);
+		}
+
+		@Override
+		public void advance(float amount) {
+			int count = selection.getOrDefault(option.id, 0);
+			countLabel.setText(count > 1 ? "x" + count : "");
 		}
 
 		@Override
@@ -640,15 +655,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 					position.getX() + TILE_CHECK_MIDDLE_X, position.getY() + TILE_CHECK_MIDDLE_Y,
 					position.getX() + TILE_CHECK_END_X, position.getY() + TILE_CHECK_END_Y
 			}, CHECK_COLOR, alphaMult, 1f);
-			if (count > 1) {
-				for (int index = 0; index < count - 1; index++) {
-					float pipX = position.getX() + TILE_SIZE - TILE_COUNT_PIP_RIGHT_INSET
-							- index * TILE_COUNT_PIP_SPACING;
-					float pipY = position.getY() + TILE_COUNT_PIP_TOP_INSET;
-					BattleNext_GeometryRenderer.fillRect(pipX, pipY,
-							TILE_COUNT_PIP_SIZE, TILE_COUNT_PIP_SIZE, CHECK_COLOR, alphaMult);
-				}
-			}
 		}
 
 		@Override

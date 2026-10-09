@@ -46,6 +46,9 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("fleet", fleet).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.commit", input);
 		try {
+			if (!BattleNext_EntryId.isValidPathSegment(fleet.getId())) {
+				throw new IOException("Invalid fleet ID: " + fleet.getId());
+			}
 			if (!BattleNext_EntryId.isValidPathSegment(fleet.getFolderName())) {
 				throw new IOException("Invalid fleet folder name: " + fleet.getFolderName());
 			}
@@ -54,10 +57,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			String path = directory + "/" + DATA_FILE;
 			if (fleet.getSourceType() == BattleNext_LoadSource.LEGACY) {
 				String source = fleet.getSourcePath().replace('\\', '/');
-				String file = source.substring(source.lastIndexOf('/') + 1);
-				String number = file.replaceAll("^player(\\d+)_data\\.csv$", "$1");
-				if (fleet.getId().equals("ab_player" + number)
-						|| directory.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
+				if (directory.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
 					throw new IOException("Legacy fleet requires a new ID and target directory: " + source);
 				}
 			}

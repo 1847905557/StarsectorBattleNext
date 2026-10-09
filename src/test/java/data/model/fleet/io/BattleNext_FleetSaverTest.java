@@ -18,6 +18,17 @@ import java.util.Map;
 class BattleNext_FleetSaverTest {
 
 	@Test
+	void numericSaveIdentityIsRejectedBeforeWritingTheTarget() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/exported/fleet_data.json", "persisted fleet");
+		BattleNext_FleetModel fleet = fleet("99", "exported", "current");
+		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
+		assertEquals("Invalid fleet ID: 99", failure.getMessage());
+		assertEquals(List.of("tournament/exported/fleet_data.json"), files.list("tournament/exported", true));
+		assertEquals("persisted fleet", files.text("tournament/exported/fleet_data.json"));
+	}
+
+	@Test
 	void saveCreatesCompleteBackupAndPreservesOtherFiles() throws Exception {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
@@ -182,7 +193,7 @@ class BattleNext_FleetSaverTest {
 		files.put("tournament/package/player01_data.csv", "metadata");
 		files.put("tournament/package/player01_fleet.csv", "members");
 		files.put("tournament/package/source.variant", "source variant");
-		BattleNext_FleetModel fleet = fleet("ab_player01", "exported", "current");
+		BattleNext_FleetModel fleet = fleet("01", "exported", "current");
 		fleet.setSourceType(BattleNext_LoadSource.LEGACY);
 		fleet.setSourcePath("tournament/package/player01_data.csv");
 		BattleNext_FleetSaver saver = new BattleNext_FleetSaver(files);

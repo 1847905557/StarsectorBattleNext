@@ -381,6 +381,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					AtomicBoolean checked = new AtomicBoolean();
 					boolean checkbox = "addCheckbox".equals(method);
 					String id = String.valueOf(args[checkbox ? 3 : 1]);
+					Object action = args[checkbox ? 3 : 1];
 					buttons.put(id, enabled);
 					buttonLabels.put(id, (String) args[checkbox ? 2 : 0]);
 					buttonIds.put(id, args[checkbox ? 3 : 1]);
@@ -401,7 +402,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 						if ("isEnabled".equals(name)) return enabled.get();
 						if ("setText".equals(name)) buttonLabels.put(id, (String) values[0]);
 						if ("getText".equals(name)) return buttonLabels.get(id);
-						if ("getCustomData".equals(name)) return buttonIds.get(id);
+						if ("getCustomData".equals(name)) return action;
 						if ("getPosition".equals(name)) return buttonPosition;
 						return null;
 					});
