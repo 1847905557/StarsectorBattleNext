@@ -368,7 +368,7 @@
 		"BattleNext_settings_info_log": "Enable info log",
 		"BattleNext_settings_invalid_number": "Enter a valid nonnegative limit or count and positive time multipliers",
 		"BattleNext_settings_report_keep_count": "Reports to keep",
-		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in Mission Battle"
+		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in AI Battles Next"
 	},
 	"Settings_CN": {
 		"BattleNext_settings_battle_time_limit": "战斗时间上限 (秒)",
@@ -381,7 +381,7 @@
 		"BattleNext_settings_info_log": "启用 INFO 日志",
 		"BattleNext_settings_invalid_number": "请输入有效的非负上限或数量，以及正数时间倍率",
 		"BattleNext_settings_report_keep_count": "保留作战记录数量",
-		"BattleNext_settings_rtt_in_battle": "在任务战斗中启用 RTT 控制"
+		"BattleNext_settings_rtt_in_battle": "在 AI Battles Next 战斗中启用 RTT 控制"
 	},
 	"Simulator": {
 		"BattleNext_simulator_cleaning": "cleaning up",
