@@ -72,8 +72,8 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		}
 		JSONArray rows = new JSONArray();
 		for (List<String> fields : sourceRows) {
-			rows.put(new JSONObject().put("id", fields.get(0)).put("type", fields.get(1))
-					.put("script", fields.get(2)).put("desc", fields.get(3)));
+			rows.put(new JSONObject().put("id", fields.get(0)).put("name", fields.get(1)).put("type", fields.get(2))
+					.put("script", fields.get(3)).put("desc", fields.get(4)));
 		}
 		return rows;
 	}

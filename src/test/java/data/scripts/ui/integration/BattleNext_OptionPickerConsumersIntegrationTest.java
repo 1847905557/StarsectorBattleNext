@@ -69,7 +69,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		previousRestrictions = getField(registry, "entries");
 		previousScriptFactory = getField(registry, "scriptFactory");
 		previousLoadErrors = getField(registry, "loadErrors");
-		registry.load(new JSONArray().put(new JSONObject().put("id", "limit").put("type", "number")
+		registry.load(new JSONArray().put(new JSONObject().put("id", "limit").put("name", "Fleet limit").put("type", "number")
 				.put("script", "restriction").put("desc", "Fleet limit 20%")),
 				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
 		var original = source().getApi();
@@ -178,7 +178,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 				List.of("tournament", "360", "Fleet name", "fleet_id"),
 				List.of("smod", "360", "Hullmod ordinary", "ordinary"),
 				List.of("dmod", "360", "Hullmod damaged", "damaged"),
-				List.of("restriction", "360", "Fleet limit 20%", "limit"));
+				List.of("restriction", "360", "Fleet limit", "limit"));
 		for (List<String> consumer : consumers) {
 			assertConsumer(root, router, consumer.get(0), Integer.parseInt(consumer.get(1)), consumer.get(2), consumer.get(3));
 		}
@@ -209,7 +209,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		creator.createTooltip(content, false, null);
 		List<UIComponentAPI> components = tooltips.get(content).getComponents();
 		assertEquals(title, ((LabelAPI) components.get(0)).getText());
-		assertEquals(id, ((LabelAPI) components.get(1)).getText());
+		assertEquals(kind.equals("restriction") ? id + "  [number]" : id, ((LabelAPI) components.get(1)).getText());
 		assertEquals("small-insignia", labelFonts.get(components.get(1).getPosition()));
 		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(components.get(1).getPosition()));
 		if (kind.equals("variant")) {
@@ -239,7 +239,17 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0", ((LabelAPI) components.get(3)).getText());
 			assertEquals(8f, components.get(5).getPosition().getHeight());
 		} else if (kind.equals("restriction")) {
-			assertEquals(2, components.size());
+			assertEquals(List.of("Fleet limit", "limit  [number]", "Fleet limit 20%"),
+					components.stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+			assertEquals("small-orbitron", labelFonts.get(components.get(0).getPosition()));
+			assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(components.get(0).getPosition()));
+			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
+			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
+			assertEquals(5f, components.get(0).getPosition().getY() - components.get(1).getPosition().getY()
+					- components.get(1).getPosition().getHeight());
+			assertEquals(8f, components.get(1).getPosition().getY() - components.get(2).getPosition().getY()
+					- components.get(2).getPosition().getHeight());
+			assertEquals(8f, components.get(3).getPosition().getHeight());
 		} else {
 			assertEquals(PARAGRAPH, ((LabelAPI) components.get(2)).getText());
 			assertEquals("default", labelFonts.get(components.get(2).getPosition()));

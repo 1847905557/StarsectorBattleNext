@@ -1,23 +1,23 @@
-id,type,script,desc
-fleetMaxShips,number,data.restriction.numeric.FleetMaxShips,Maximum ships
-fleetMaxDp,number,data.restriction.numeric.FleetMaxDp,Maximum deployment points
-fleetMaxSameHull,number,data.restriction.numeric.FleetMaxSameHull,Maximum ships of one hull
-fleetHullSizeLimitFrigate,number,data.restriction.numeric.FleetHullSizeLimitFrigate,Maximum frigates
-fleetHullSizeLimitDestroyer,number,data.restriction.numeric.FleetHullSizeLimitDestroyer,Maximum destroyers
-fleetHullSizeLimitCruiser,number,data.restriction.numeric.FleetHullSizeLimitCruiser,Maximum cruisers
-fleetHullSizeLimitCapitalShip,number,data.restriction.numeric.FleetHullSizeLimitCapitalShip,Maximum capital ships
-refitMaxDecks,number,data.restriction.numeric.RefitMaxDecks,Maximum fitted fighter wings
-refitSmods,number,data.restriction.numeric.RefitSmods,Maximum S-mods
-officerMaxCount,number,data.restriction.numeric.OfficerMaxCount,Maximum officers
-officerMaxLevel,number,data.restriction.numeric.OfficerMaxLevel,Maximum skills per officer
-officerMaxElite,number,data.restriction.numeric.OfficerMaxElite,Maximum elite skills per officer
-fleetSkillMaxCount,number,data.restriction.numeric.FleetSkillMaxCount,Maximum fleet skills
-filterAllowMods,list,data.restriction.filter.FilterAllowMods,Allowed source mods
-filterBlackWeapon,list,data.restriction.filter.FilterBlackWeapon,Blocked weapons
-filterWhiteWeapon,list,data.restriction.filter.FilterWhiteWeapon,Allowed weapons
-filterBlackWing,list,data.restriction.filter.FilterBlackWing,Blocked fighter wings
-filterWhiteWing,list,data.restriction.filter.FilterWhiteWing,Allowed fighter wings
-filterBlackHullmod,list,data.restriction.filter.FilterBlackHullmod,Blocked hullmods
-filterWhiteHullmod,list,data.restriction.filter.FilterWhiteHullmod,Allowed hullmods
-filterBlackHull,list,data.restriction.filter.FilterBlackHull,Blocked hulls
-filterWhiteHull,list,data.restriction.filter.FilterWhiteHull,Allowed hulls
+id,name,type,script,desc
+fleetMaxShips,Ship limit,number,data.restriction.numeric.FleetMaxShips,Limits the total number of ship entries in the fleet definition. Each entry counts once and the configured value is the inclusive upper limit.
+fleetMaxDp,DP limit,number,data.restriction.numeric.FleetMaxDp,Limits the combined deployment point cost of all assembled fleet members. Their individual deployment costs are summed and compared with the configured upper limit.
+fleetMaxSameHull,Same hull limit,number,data.restriction.numeric.FleetMaxSameHull,Limits the number of ships sharing the same hull ID. Each hull ID is checked separately; different loadouts of that hull share the same allowance.
+fleetHullSizeLimitFrigate,Frigate limit,number,data.restriction.numeric.FleetHullSizeLimitFrigate,Limits the total number of frigates in the assembled fleet. Each member whose hull size is FRIGATE counts once toward the configured upper limit.
+fleetHullSizeLimitDestroyer,Destroyer limit,number,data.restriction.numeric.FleetHullSizeLimitDestroyer,Limits the total number of destroyers in the assembled fleet. Each member whose hull size is DESTROYER counts once toward the configured upper limit.
+fleetHullSizeLimitCruiser,Cruiser limit,number,data.restriction.numeric.FleetHullSizeLimitCruiser,Limits the total number of cruisers in the assembled fleet. Each member whose hull size is CRUISER counts once toward the configured upper limit.
+fleetHullSizeLimitCapitalShip,Capital ship limit,number,data.restriction.numeric.FleetHullSizeLimitCapitalShip,Limits the total number of capital ships in the assembled fleet. Each member whose hull size is CAPITAL_SHIP counts once toward the configured upper limit.
+refitMaxDecks,Fighter wing limit,number,data.restriction.numeric.RefitMaxDecks,Limits the total number of fighter wing entries across all assembled ship variants. Each installed wing counts once toward the fleet-wide allowance.
+refitSmods,S-mod limit,number,data.restriction.numeric.RefitSmods,Limits the total number of S-mods across the assembled fleet including enhanced built-in hullmods. Each distinct S-mod counts once per ship; the same S-mod on several ships counts once for each ship.
+officerMaxCount,Officer limit,number,data.restriction.numeric.OfficerMaxCount,Limits the number of fleet members assigned officer skills. Each member with at least one configured officer skill counts as one officer.
+officerMaxLevel,Officer skill limit,number,data.restriction.numeric.OfficerMaxLevel,Limits the number of distinct configured skills per officer. Each officer is checked separately and repeated entries for an elite skill count as one skill.
+officerMaxElite,Elite skill limit,number,data.restriction.numeric.OfficerMaxElite,Limits the number of elite skills per officer. A skill ID appearing more than once in that officer's configured skill list counts as one elite skill; each officer is checked separately.
+fleetSkillMaxCount,Fleet skill limit,number,data.restriction.numeric.FleetSkillMaxCount,Limits the number of distinct skills configured for the fleet commander. Each different skill ID counts once toward the fleet-wide upper limit.
+filterAllowMods,Allowed mods,list,data.restriction.filter.FilterAllowMods,"Restricts ship hulls and refittable weapons, fighter wings and hullmods to the listed source mod IDs. Use vanilla for base-game content. Every checked item requires a known source matching a listed ID."
+filterBlackWeapon,Weapon blacklist,list,data.restriction.filter.FilterBlackWeapon,Blocks weapons whose IDs appear in the list. Applies to weapons fitted in refittable slots across the assembled fleet; each matching weapon is reported as a violation.
+filterWhiteWeapon,Weapon whitelist,list,data.restriction.filter.FilterWhiteWeapon,Restricts weapons fitted in refittable slots to the listed weapon IDs. Every checked weapon requires an exact listed ID; an empty list permits zero refittable weapons.
+filterBlackWing,Fighter wing blacklist,list,data.restriction.filter.FilterBlackWing,Blocks fighter wings whose IDs appear in the list. Applies to refittable wings across the assembled fleet; each matching wing is reported as a violation.
+filterWhiteWing,Fighter wing whitelist,list,data.restriction.filter.FilterWhiteWing,Restricts refittable fighter wings to the listed wing IDs. Every checked wing requires an exact listed ID; an empty list permits zero refittable wings.
+filterBlackHullmod,Hullmod blacklist,list,data.restriction.filter.FilterBlackHullmod,Blocks refittable hullmods whose IDs appear in the list including S-mods made from those hullmods. Each matching hullmod on each assembled ship is reported as a violation.
+filterWhiteHullmod,Hullmod whitelist,list,data.restriction.filter.FilterWhiteHullmod,Restricts refittable hullmods to the listed hullmod IDs including S-mods made from those hullmods. Every checked hullmod requires an exact listed ID; an empty list permits zero refittable hullmods.
+filterBlackHull,Hull blacklist,list,data.restriction.filter.FilterBlackHull,Blocks ships whose hull IDs appear in the list. Each assembled ship is checked by its exact hull ID and all loadouts of a listed hull are affected.
+filterWhiteHull,Hull whitelist,list,data.restriction.filter.FilterWhiteHull,Restricts ships to the listed hull IDs. Each assembled ship requires an exact listed hull ID; all loadouts of an allowed hull qualify and an empty list permits zero ships.

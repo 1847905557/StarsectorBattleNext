@@ -12,8 +12,10 @@ import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
+import data.scripts.ui.widget.provider.BattleNext_RestrictionSourceProvider;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -22,13 +24,10 @@ import java.util.*;
 public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	private static final float[] COLUMN_SHARES = {0.3f, 0.34f, 0.16f, 0.2f};
-	private static final int DESCRIPTION_COLUMN = 0;
+	private static final int NAME_COLUMN = 0;
 	private static final int VALUE_COLUMN = 1;
 	private static final int ENABLED_COLUMN = 2;
 	private static final int ACTIONS_COLUMN = 3;
-
-	private static final float RESTRICTION_TOOLTIP_WIDTH = 320f;
-	private static final float RESTRICTION_TOOLTIP_META_GAP = 5f;
 
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 	private final BattleNext_RuleStore store;
@@ -44,55 +43,20 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	private static class RestrictionTooltip extends BaseTooltipCreator {
 
-		private final String id;
-		private final String type;
-		private final String description;
+		private final BattleNext_EquipmentTooltip.Content content;
 
-		private RestrictionTooltip(String id, String type, String description) {
-			this.id = id;
-			this.type = type;
-			this.description = description;
+		private RestrictionTooltip(BattleNext_EquipmentTooltip.Content content) {
+			this.content = content;
 		}
 
 		@Override
 		public float getTooltipWidth(Object ignored) {
-			return RESTRICTION_TOOLTIP_WIDTH;
+			return BattleNext_EquipmentTooltip.WIDTH;
 		}
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
-			tooltip.addPara(description, 0f);
-			tooltip.addPara(id + "  [" + type + "]", RESTRICTION_TOOLTIP_META_GAP);
-		}
-	}
-
-	private class RestrictionChoiceSource implements BattleNext_OptionPicker.OptionChoiceSource {
-
-		@Override
-		public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
-			List<BattleNext_OptionPicker.OptionChoice> options = new ArrayList<>();
-			for (BattleNext_RestrictionSpec spec : BattleNext_RestrictionRegistry.getInstance().getAll()) {
-				if (draft.getRestriction(spec.getId()) == null) {
-					options.add(new BattleNext_OptionPicker.OptionChoice(spec.getId(), spec.getDescription()));
-				}
-			}
-			return options;
-		}
-
-		@Override
-		public int getMaxStack(String id) {
-			return 1;
-		}
-
-		@Override
-		public String getIconPath(String id) {
-			return null;
-		}
-
-		@Override
-		public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-			tooltip.addTitle(option.getLabel());
-			BattleNext_PageLayout.addMutedIdLine(tooltip, option.getId(), 0f);
+			BattleNext_EquipmentTooltip.render(tooltip, content);
 		}
 	}
 
@@ -124,7 +88,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 					draft.getRestrictions().size(),
 					(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, rowsContent),
 					(rowWidth, content) -> restrictionPicker = createPicker(panel, content, rowWidth,
-							ruleStrings.get("add_restriction"), new RestrictionChoiceSource(),
+							ruleStrings.get("add_restriction"), new BattleNext_RestrictionSourceProvider(() -> draft),
 							BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addRestrictions, content, rowsContent));
 		});
 	}
@@ -133,12 +97,14 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 			TooltipMakerAPI rowsContent, TooltipMakerAPI restrictionsContent) {
 		BattleNext_RuleRestriction restriction = draft.getRestrictions().get(index);
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
-		String description = spec == null ? ruleStrings.get("missing_restriction") : spec.getDescription();
+		String name = spec == null ? ruleStrings.get("missing_restriction") : spec.getName();
+		BattleNext_EquipmentTooltip.Content tooltip = new BattleNext_EquipmentTooltip.Content(name,
+				restriction.getId() + "  [" + restriction.getType() + "]", spec == null ? "" : spec.getDescription(), List.of());
 		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
 		new UIRect(0f, 0f, rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBorder(rowPanel,
 				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
-		createTextCell(rowPanel, cells[DESCRIPTION_COLUMN], description, false,
-				new RestrictionTooltip(restriction.getId(), restriction.getType(), description), TooltipMakerAPI.TooltipLocation.RIGHT, false);
+		createTextCell(rowPanel, cells[NAME_COLUMN], name, false,
+				new RestrictionTooltip(tooltip), TooltipMakerAPI.TooltipLocation.RIGHT, false);
 		if (spec == null) {
 			createTextCell(rowPanel, cells[VALUE_COLUMN], displayValue(restriction), false, null, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 		} else {

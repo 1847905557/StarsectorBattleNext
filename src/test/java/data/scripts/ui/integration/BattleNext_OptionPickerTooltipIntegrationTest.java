@@ -69,7 +69,10 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		assertEquals("Short paragraph.", textValues(content).get(2));
 		assertTrue(content.getHeightSoFar() < 240f);
 		if (kind.equals("image")) assertTrue(imagePaths.containsValue(icon));
-		if (kind.equals("text")) assertTrue(labels.contains("Nam"));
+		if (kind.equals("text")) {
+			TooltipMakerAPI caption = (TooltipMakerAPI) children.get((CustomPanelAPI) target).get(0);
+			assertEquals(List.of("Name 0"), textValues(caption));
+		}
 		picker.close();
 	}
 

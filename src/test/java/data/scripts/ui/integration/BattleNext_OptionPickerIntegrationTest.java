@@ -59,6 +59,15 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		for (int cycle = 0; cycle < 2; cycle++) {
 			press(picker, "row", "TOGGLE");
 			assertSearchGridAlignment(picker);
+			CustomPanelAPI initialGrid = (CustomPanelAPI) getField(picker, "gridPanel");
+			TooltipMakerAPI initialContent = (TooltipMakerAPI) children.get(initialGrid).get(0);
+			CustomPanelAPI firstTile = (CustomPanelAPI) tooltips.get(initialContent).getComponents().get(0);
+			TooltipMakerAPI textHost = (TooltipMakerAPI) children.get(firstTile).get(0);
+			LabelAPI text = (LabelAPI) tooltips.get(textHost).getComponents().get(0);
+			assertEquals("Option 0", text.getText());
+			assertEquals(60f, text.getPosition().getWidth());
+			assertEquals(firstTile.getPosition().getCenterX(), text.getPosition().getCenterX(), 0.001f);
+			assertEquals(firstTile.getPosition().getCenterY(), text.getPosition().getCenterY(), 0.001f);
 			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 			float fieldX = search.getPosition().getX();
 			float fieldWidth = search.getPosition().getWidth();

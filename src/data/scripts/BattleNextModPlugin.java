@@ -112,10 +112,14 @@ public class BattleNextModPlugin extends BaseModPlugin {
 
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.registries.reload", input);
-		BattleNext_OrderRegistry.loadFromSettings();
-		BattleNext_RestrictionRegistry.loadFromSettings();
+		reloadCsvRegistry();
 		BattleNext_SimulatorService.resourcesReloaded();
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "application.registries.reload",
 				BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
+	}
+
+	public static void reloadCsvRegistry() {
+		BattleNext_OrderRegistry.loadFromSettings();
+		BattleNext_RestrictionRegistry.loadFromSettings();
 	}
 }

@@ -64,8 +64,8 @@ class BattleNext_RulesCheckTest {
 		for (String line : Files.readAllLines(Path.of(BattleNext_RestrictionRegistry.PATH), StandardCharsets.UTF_8)) {
 			if (line.isBlank() || line.stripLeading().startsWith("#") || line.startsWith("id,")) continue;
 			List<String> fields = BattleNext_CsvLine.parse(line);
-			rows.put(new JSONObject().put("id", fields.get(0)).put("type", fields.get(1))
-					.put("script", fields.get(2)).put("desc", fields.get(3)));
+			rows.put(new JSONObject().put("id", fields.get(0)).put("name", fields.get(1)).put("type", fields.get(2))
+					.put("script", fields.get(3)).put("desc", fields.get(4)));
 		}
 		return rows;
 	}
@@ -85,7 +85,7 @@ class BattleNext_RulesCheckTest {
 				while (names.contains(id)) {
 					id += "Extra";
 				}
-				inputs.add(new JSONObject().put("id", id).put("type", "number")
+				inputs.add(new JSONObject().put("id", id).put("name", id).put("type", "number")
 						.put("script", ExampleRestriction.class.getName()).put("desc", "Fixture extension"));
 			} else if (change.equals("removed")) {
 				inputs = new ArrayList<>(inputs.stream().skip(1).toList());
@@ -102,6 +102,7 @@ class BattleNext_RulesCheckTest {
 			for (JSONObject input : inputs) {
 				BattleNext_RestrictionSpec entry = registry.get(input.getString("id").trim());
 				assertTrue(ids.add(entry.getId()), entry.getId());
+				assertEquals(input.getString("name").trim(), entry.getName());
 				assertEquals(input.getString("type").trim(), entry.getType());
 				assertEquals(input.getString("script").trim(), entry.getScript());
 				assertEquals(input.getString("desc").trim(), entry.getDescription());
@@ -122,10 +123,10 @@ class BattleNext_RulesCheckTest {
 	@Test
 	void invalidRestrictionsPublishDiagnosticsAndRejectAllConflictingRows() throws Exception {
 		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
-		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "extensionA")
+		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "extensionA").put("name", "extensionA")
 				.put("type", "number").put("script", ExampleRestriction.class.getName()).put("desc", "A"));
 		registry.load(valid, name -> new ExampleRestriction());
-		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "extensionA")
+		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "extensionA").put("name", "extensionA")
 				.put("type", "list").put("script", String.class.getName()).put("desc", "Wrong"));
 		registry.load(wrongInterface, name -> "wrong");
 		assertTrue(registry.getAll().isEmpty());
@@ -141,7 +142,7 @@ class BattleNext_RulesCheckTest {
 	@Test
 	void externalListRestrictionUsesItsOwnScript() throws Exception {
 		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
-		JSONArray rows = new JSONArray().put(new JSONObject().put("id", "extensionList")
+		JSONArray rows = new JSONArray().put(new JSONObject().put("id", "extensionList").put("name", "extensionList")
 				.put("type", "list").put("script", ExampleListRestriction.class.getName()).put("desc", "List"));
 		registry.load(rows, name -> new ExampleListRestriction());
 		BattleNext_RuleModel rule = new BattleNext_RuleModel("rule", "Rule");
@@ -167,9 +168,9 @@ class BattleNext_RulesCheckTest {
 	@Test
 	void mergedRegistrationValidatesScriptsAndDispatchesInRuleOrder() throws Exception {
 		JSONArray rows = new JSONArray();
-		rows.put(new JSONObject().put("id", "extensionA").put("type", "number")
+		rows.put(new JSONObject().put("id", "extensionA").put("name", "extensionA").put("type", "number")
 				.put("script", ExampleRestriction.class.getName()).put("desc", "Extension A"));
-		rows.put(new JSONObject().put("id", "extensionB").put("type", "number")
+		rows.put(new JSONObject().put("id", "extensionB").put("name", "extensionB").put("type", "number")
 				.put("script", ExampleRestriction.class.getName()).put("desc", "Extension B"));
 		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		registry.load(rows, name -> new ExampleRestriction());
@@ -180,7 +181,7 @@ class BattleNext_RulesCheckTest {
 		BattleNext_FleetModel fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), List.of());
 		BattleNext_AssembledFleet assembledFleet = new BattleNext_AssembledFleet(fleet, null, List.of(), List.of());
 		assertEquals(List.of("fleet extensionB 2.0", "fleet extensionA 1.0"), check.validateFleet(assembledFleet, rule));
-		rows.put(new JSONObject().put("id", "bad").put("type", "number")
+		rows.put(new JSONObject().put("id", "bad").put("name", "bad").put("type", "number")
 				.put("script", String.class.getName()).put("desc", "Bad"));
 		registry.load(rows, name -> name.equals(String.class.getName()) ? "wrong" : new ExampleRestriction());
 		assertEquals("bad", registry.getLoadErrors().get(0).id());

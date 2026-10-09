@@ -1,0 +1,41 @@
+id,name,type,script,desc
+
+# 一条指令由一个 starter / 多个可选 filter / 一个 picker / 多个可选 suffix 组成，仅 starter 和 picker 是必要的。
+# 一条指令状如 assault.distance(3000).targetHp(4000).nearest.priority(5)
+# starter 位于最前方，指定指令的类型，不可传入参数
+# filter 位于 starter 后，用于筛选目标，链式调用，可以连写，用括号传入参数
+# picker 位于所有 filter 后，用于选出唯一的一个目标，不可传入参数
+# suffix 位于 picker 后，用于设定一些特殊参数，链式调用，可以连写，用括号传入参数
+# 多条指令用多行分割，或用 ; 分割
+# 指令按语句顺序尝试，首个成功下达的指令生效；全部尝试失败时恢复自主行动
+# 舰队模式不为 default_ai 且不为 full_assault 时才启用指令
+
+assault,突袭,starter,data.order.starter.AssaultStarter,下达 突袭 指令，目标群体为敌方占据的点位与中立点位。
+avoid,回避,starter,data.order.starter.AvoidStarter,下达 回避 指令，目标群体为敌方舰船。
+capture,占领,starter,data.order.starter.CaptureStarter,下达 占领 指令，目标群体为敌方占据的点位与中立点位。
+control,控制,starter,data.order.starter.ControlStarter,下达 控制 指令，目标群体为友方占据的点位。
+defend,防御,starter,data.order.starter.DefendStarter,下达 防御 指令，目标群体为友方占据的点位。
+eliminate,歼灭,starter,data.order.starter.EliminateStarter,下达 歼灭 指令，目标群体为敌方舰船。
+engage,进攻,starter,data.order.starter.EngageStarter,下达 进攻 指令，目标群体为敌方舰船。
+escort,护送,starter,data.order.starter.EscortStarter,下达 护送 指令，目标群体为友方舰船。
+fighter,战机攻击,starter,data.order.starter.FighterStrikeStarter,下达 战机攻击 指令，目标群体为敌方舰船。
+harass,骚扰,starter,data.order.starter.HarassStarter,下达 骚扰 指令，目标群体为敌方舰船。
+retreat,撤退,starter,data.order.starter.RetreatStarter,下达 撤退 指令，目标为自身。
+clean,取消指令,starter,data.order.starter.CleanStarter,取消指令，目标为自身。
+
+distance,距离,filter,data.order.filter.DistanceFilter,"对任何目标群体进行筛选，参数为 distance(最大距离) 或 distance(最小距离, 最大距离)。符合距离要求的目标会被选中。"
+hullsize,船体等级,filter,data.order.filter.HullSizeFilter,"对舰船目标群体进行筛选，参数为 hullsize(船体等级)，具体等级包括 frigate/destroyer/cruiser/capital，可写入多个等级形成并集。smallest/largest 分别取限定等级范围内的最小与最大等级，同时写入时保留两端；独立使用极值时采用全体候选范围。"
+hulltype,船体类型,filter,data.order.filter.HullTypeFilter,"对舰船目标群体进行筛选，参数为 hulltype(船体类型)，可用的船体等级包括 any/phase/carrier，可写入多个舰船类型复合筛选。符合其中任一舰船等级要求的目标会被选中。"
+selfFlux,自身幅能,filter,data.order.filter.SelfFluxFilter,"对自身情况进行筛选，参数为 selfFlux(最大幅能) 或 selfFlux(最小幅能, 最大幅能)，直接填入的数字会作为数字，若加百分号则会作为百分比处理。自身幅能符合要求时执行后续过程，否则不执行后续过程。"
+selfHp,自身结构,filter,data.order.filter.SelfHpFilter,"对自身情况进行筛选，参数为 selfHp(最大结构) 或 selfHp(最小结构, 最大结构)，直接填入的数字会作为数字，若加百分号则会作为百分比处理。自身结构符合要求时执行后续过程，否则不执行后续过程。"
+targetFlux,目标幅能,filter,data.order.filter.TargetFluxFilter,"对舰船目标群体进行筛选，参数为 targetFlux(最大幅能) 或 targetFlux(最小幅能, 最大幅能)，直接填入的数字会作为数字，若加百分号则会作为百分比处理。全部目标按实际幅能筛选，包括过载舰船。"
+targetHp,目标结构,filter,data.order.filter.TargetHpFilter,"对舰船目标群体进行筛选，参数为 targetHp(最大结构) 或 targetHp(最小结构, 最大结构)，直接填入的数字会作为数字，若加百分号则会作为百分比处理。符合结构要求的目标会被选中。"
+targetSpeed,目标航速,filter,data.order.filter.TargetSpeedFilter,"对舰船目标群体的最高航速进行筛选，参数为 targetSpeed(最大速度) 或 targetSpeed(最小速度, 最大速度)，self 表示自身最高航速。符合速度范围的目标会被选中。"
+
+nearest,最近目标,picker,data.order.picker.NearestPicker,"从目标群体中选出最近的一个作为指令目标。"
+spread,分散目标,picker,data.order.picker.SpreadPicker,"保持自身独占且仍在候选范围内的同类目标，否则优先选出实际执行者数为零的最近目标，再采用最近目标。"
+concentrate,集中目标,picker,data.order.picker.ConcentratePicker,"优先选出已有同类任务实际执行者的最近目标，再采用最近目标。"
+random,随机目标,picker,data.order.picker.RandomPicker,"从目标群体中随机选出一个作为指令目标，建议为 以自身为目标的 starter 使用。"
+
+priority,优先级,suffix,data.order.suffix.PrioritySuffix,"指定覆盖优先级，参数为 priority(优先级)，取有限数值，默认值为 0。同目标同类任务的有效优先级取当前参与者请求的最大值；异类任务采用严格更高的优先级接替。外部指派保持其所有权。"
+persist,保持目标,suffix,data.order.suffix.PersistSuffix,"在本条指令连续成功执行期间保持有效且满足筛选的目标；切换指令或任务所有权变化后重新选择。"

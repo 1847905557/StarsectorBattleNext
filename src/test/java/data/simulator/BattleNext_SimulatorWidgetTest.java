@@ -322,7 +322,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		Object entries = getField(registry, "entries");
 		Object factory = getField(registry, "scriptFactory");
 		try {
-			registry.load(new JSONArray().put(new JSONObject().put("id", "limit").put("type", "number")
+			registry.load(new JSONArray().put(new JSONObject().put("id", "limit").put("name", "limit").put("type", "number")
 					.put("script", "fixture").put("desc", "Fleet limit")),
 					name -> (BattleNext_RestrictionScript) (fleet, restriction) -> {
 						if (restriction.getValue() == 2) throw new IllegalStateException("Evaluation failed");

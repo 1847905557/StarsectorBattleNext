@@ -5,6 +5,9 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
+import data.order.BattleNext_OrderRegistry;
+import data.restriction.BattleNext_RestrictionRegistry;
+import data.scripts.BattleNextModPlugin;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_TextField;
@@ -12,6 +15,7 @@ import data.simulator.BattleNext_SimulatorWidget;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,6 +26,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -29,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	private final AtomicReference<JSONObject> savedSettings = new AtomicReference<>();
 	private boolean failSettingsWrite;
+	private final List<String> csvReads = new ArrayList<>();
 
 	@Test
 	void infoLogCheckboxFollowsGraphicsAndPersistsThroughSaveRefreshDiscardAndReopen() throws Exception {
@@ -180,6 +187,9 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		page.attach(root);
 		Object editor = getField(page, "editor");
 		ButtonAPI checkbox = (ButtonAPI) getField(editor, "cnTextCheckbox");
+		BattleNextModPlugin.reloadCsvRegistry();
+		assertCsvLanguage(initial);
+		csvReads.clear();
 		assertEquals(initial, checkbox.isChecked());
 		assertLanguageLabel(checkbox, initial);
 		assertEquals(buttonPositions.get("fullGraphicEffect").getX(), checkbox.getPosition().getX());
@@ -194,6 +204,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
 		assertFalse(page.hasUnsavedChanges());
 		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(!initial);
+		assertTrue(csvReads.isEmpty());
 		BattleNext_TextField field = (BattleNext_TextField) getField(editor, "battleTimeLimitField");
 		field.restoreEditState(new BattleNext_TextField.EditState("700.50", 4, 1, 0f, "500.0", true));
 		BattleNext_TextField.EditState input = field.captureEditState();
@@ -203,6 +214,9 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		float offset = scroller.getYOffset();
 		assertTrue(offset > 0f);
 		assertTrue(page.save(), page.getStatusText());
+		assertCsvLanguage(!initial);
+		assertEquals(List.of(!initial ? "data/config/BattleNext_orders_CN.csv" : "data/config/BattleNext_orders.csv",
+				!initial ? "data/config/BattleNext_restrictions_CN.csv" : "data/config/BattleNext_restrictions.csv"), csvReads);
 		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
 		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), !initial);
@@ -211,11 +225,15 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(offset, ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller().getYOffset());
 		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), page.getStatusText());
 		assertFalse(page.hasUnsavedChanges());
+		csvReads.clear();
+		assertTrue(page.save());
+		assertTrue(csvReads.isEmpty());
 		page.attach(root);
 		assertEquals(!initial, ((ButtonAPI) getField(editor, "cnTextCheckbox")).isChecked());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), !initial);
 		((ButtonAPI) getField(editor, "cnTextCheckbox")).setChecked(initial);
 		assertTrue(page.save());
+		assertCsvLanguage(initial);
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
 		page.close();
 		assertTrue(children.get(root).isEmpty());
@@ -233,6 +251,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		BattleNext_TextField field = (BattleNext_TextField) getField(editor, "battleTimeLimitField");
 		field.setText("pending");
 		assertFalse(page.save());
+		assertTrue(csvReads.isEmpty());
 		assertEquals("pending", field.getText());
 		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
@@ -240,6 +259,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		var input = field.captureEditState();
 		failSettingsWrite = true;
 		assertFalse(page.save());
+		assertTrue(csvReads.isEmpty());
 		assertEquals(initial, savedSettings.get().getBoolean("cnText"));
 		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
 		assertEquals(input, field.captureEditState());
@@ -256,6 +276,14 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 			if (method.getName().equals("getString")) return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			if (method.getName().equals("getBoolean") && args[0].equals("showCNTranslationCredits")) return vanillaDefault;
 			if (method.getName().equals("readJSONFromCommon")) return savedSettings.get();
+			if (method.getName().equals("getMergedSpreadsheetData")) {
+				String path = (String) args[1];
+				csvReads.add(path);
+				return readCsv(Path.of(path));
+			}
+			if (method.getName().equals("getInstanceOfScript")) {
+				return Class.forName((String) args[0]).getDeclaredConstructor().newInstance();
+			}
 			if (method.getName().equals("writeJSONToCommon")) {
 				if (failSettingsWrite) throw new IOException("Injected settings write failure");
 				savedSettings.set(new JSONObject(((JSONObject) args[1]).toString()));
@@ -267,6 +295,27 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 				throw exception.getCause();
 			}
 		}));
+	}
+
+	private void assertCsvLanguage(boolean chinese) throws Exception {
+		JSONArray orders = readCsv(Path.of(chinese ? "data/config/BattleNext_orders_CN.csv" : "data/config/BattleNext_orders.csv"));
+		JSONArray restrictions = readCsv(Path.of(chinese ? "data/config/BattleNext_restrictions_CN.csv" : "data/config/BattleNext_restrictions.csv"));
+		assertTrue(BattleNext_OrderRegistry.getInstance().getLoadErrors().isEmpty());
+		assertTrue(BattleNext_RestrictionRegistry.getInstance().getLoadErrors().isEmpty());
+		assertEquals(orders.length(), BattleNext_OrderRegistry.getInstance().getAll().size());
+		assertEquals(restrictions.length(), BattleNext_RestrictionRegistry.getInstance().getAll().size());
+		for (int index = 0; index < orders.length(); index++) {
+			JSONObject row = orders.getJSONObject(index);
+			var spec = BattleNext_OrderRegistry.getInstance().get(row.getString("id"));
+			assertEquals(row.getString("name"), spec.getName());
+			assertEquals(row.getString("desc"), spec.getDescription());
+		}
+		for (int index = 0; index < restrictions.length(); index++) {
+			JSONObject row = restrictions.getJSONObject(index);
+			var spec = BattleNext_RestrictionRegistry.getInstance().get(row.getString("id"));
+			assertEquals(row.getString("name"), spec.getName());
+			assertEquals(row.getString("desc"), spec.getDescription());
+		}
 	}
 
 	private void assertLanguageLabel(ButtonAPI checkbox, boolean enabled) {

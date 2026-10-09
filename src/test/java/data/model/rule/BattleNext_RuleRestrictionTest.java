@@ -32,7 +32,7 @@ class BattleNext_RuleRestrictionTest {
 		entries = entryField.get(registry);
 		factory = factoryField.get(registry);
 		loadErrors = errorsField.get(registry);
-		var row = new JSONObject().put("id", "testRegisteredNumber").put("type", "number")
+		var row = new JSONObject().put("id", "testRegisteredNumber").put("name", "testRegisteredNumber").put("type", "number")
 				.put("script", "data.restriction.numeric.FleetMaxShips").put("desc", "Test");
 		registry.load(new JSONArray().put(row), name -> new FleetMaxShips());
 	}

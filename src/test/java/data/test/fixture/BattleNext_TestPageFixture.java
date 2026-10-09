@@ -9,6 +9,8 @@ import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantSaver;
+import data.order.BattleNext_OrderRegistry;
+import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_FleetEditor;
@@ -21,6 +23,8 @@ import data.scripts.ui.widget.BattleNext_TableWidget;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,11 +35,37 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
+
+	private final Map<Object, Map<Field, Object>> registryState = new LinkedHashMap<>();
+
+	@BeforeEach
+	void captureCsvRegistries() throws Exception {
+		for (Object registry : List.of(BattleNext_OrderRegistry.getInstance(), BattleNext_RestrictionRegistry.getInstance())) {
+			Map<Field, Object> state = new LinkedHashMap<>();
+			for (String name : List.of("entries", "scriptFactory", "loadErrors")) {
+				Field field = registry.getClass().getDeclaredField(name);
+				field.setAccessible(true);
+				state.put(field, field.get(registry));
+			}
+			registryState.put(registry, state);
+		}
+	}
+
+	@AfterEach
+	void restoreCsvRegistries() throws Exception {
+		for (var entry : registryState.entrySet()) {
+			for (var field : entry.getValue().entrySet()) {
+				field.getKey().set(entry.getKey(), field.getValue());
+			}
+		}
+		registryState.clear();
+	}
 
 	protected void attachEditor(BattleNext_EditorView editor, CustomPanelAPI host) {
 		editor.setOverlayHost(host);

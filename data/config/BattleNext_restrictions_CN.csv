@@ -1,0 +1,23 @@
+id,name,type,script,desc
+fleetMaxShips,舰船数量上限,number,data.restriction.numeric.FleetMaxShips,限制舰队定义中的舰船条目总数。每个条目计为一艘，配置值为允许的最大数量。
+fleetMaxDp,部署点上限,number,data.restriction.numeric.FleetMaxDp,限制组装后整个舰队的部署点总量。将所有舰队成员的部署点消耗相加，与配置的上限比较。
+fleetMaxSameHull,同型舰数量上限,number,data.restriction.numeric.FleetMaxSameHull,限制具有相同船体 ID 的舰船数量。每种船体 ID 分别检查，同一船体的不同装配共用该数量额度。
+fleetHullSizeLimitFrigate,护卫舰数量上限,number,data.restriction.numeric.FleetHullSizeLimitFrigate,限制组装后舰队中的护卫舰总数。船体等级为 FRIGATE 的成员每艘计一次，配置值为允许的最大数量。
+fleetHullSizeLimitDestroyer,驱逐舰数量上限,number,data.restriction.numeric.FleetHullSizeLimitDestroyer,限制组装后舰队中的驱逐舰总数。船体等级为 DESTROYER 的成员每艘计一次，配置值为允许的最大数量。
+fleetHullSizeLimitCruiser,巡洋舰数量上限,number,data.restriction.numeric.FleetHullSizeLimitCruiser,限制组装后舰队中的巡洋舰总数。船体等级为 CRUISER 的成员每艘计一次，配置值为允许的最大数量。
+fleetHullSizeLimitCapitalShip,主力舰数量上限,number,data.restriction.numeric.FleetHullSizeLimitCapitalShip,限制组装后舰队中的主力舰总数。船体等级为 CAPITAL_SHIP 的成员每艘计一次，配置值为允许的最大数量。
+refitMaxDecks,战机联队数量上限,number,data.restriction.numeric.RefitMaxDecks,限制组装后所有舰船装配中的战机联队条目总数。每个已安装的联队计一次，共用整个舰队的数量额度。
+refitSmods,S-mod 数量上限,number,data.restriction.numeric.RefitSmods,限制组装后整个舰队的 S-mod 总数，包括经过强化的内置船体插件。每艘舰船上的同一 S-mod 计一次；多艘舰船使用同一 S-mod 时按舰船分别累计。
+officerMaxCount,军官数量上限,number,data.restriction.numeric.OfficerMaxCount,限制配置了军官技能的舰队成员数量。每个配置了至少一项军官技能的成员计为一名军官。
+officerMaxLevel,军官技能数量上限,number,data.restriction.numeric.OfficerMaxLevel,限制每名军官配置的不同技能数量。各军官分别检查，精英技能的重复条目合计为一项技能。
+officerMaxElite,精英技能数量上限,number,data.restriction.numeric.OfficerMaxElite,限制每名军官的精英技能数量。同一军官的技能列表中出现多次的技能 ID 计为一项精英技能，各军官分别检查。
+fleetSkillMaxCount,舰队技能数量上限,number,data.restriction.numeric.FleetSkillMaxCount,限制为舰队指挥官配置的不同技能数量。每种技能 ID 计一次，共用整个舰队的技能数量上限。
+filterAllowMods,模组白名单,list,data.restriction.filter.FilterAllowMods,将舰船船体以及可改装的武器、战机联队和船体插件限定为所列模组 ID 的内容。原版内容使用 vanilla。每个受检查项目都需要具有明确来源，且来源与所列 ID 匹配。
+filterBlackWeapon,武器黑名单,list,data.restriction.filter.FilterBlackWeapon,禁用列表中所列 ID 的武器。检查组装后整个舰队的可改装槽位中安装的武器，每件匹配的武器都会被标记为违规。
+filterWhiteWeapon,武器白名单,list,data.restriction.filter.FilterWhiteWeapon,将可改装槽位中安装的武器限定为所列武器 ID。每件受检查武器都需要与列表中的 ID 完全匹配；列表为空时，允许的可改装武器数量为零。
+filterBlackWing,战机联队黑名单,list,data.restriction.filter.FilterBlackWing,禁用列表中所列 ID 的战机联队。检查组装后整个舰队的可改装联队，每个匹配的联队都会被标记为违规。
+filterWhiteWing,战机联队白名单,list,data.restriction.filter.FilterWhiteWing,将可改装的战机联队限定为所列联队 ID。每个受检查联队都需要与列表中的 ID 完全匹配；列表为空时，允许的可改装联队数量为零。
+filterBlackHullmod,船体插件黑名单,list,data.restriction.filter.FilterBlackHullmod,禁用列表中所列 ID 的可改装船体插件，包括由这些插件制成的 S-mod。每艘组装后舰船上的匹配插件都会被标记为违规。
+filterWhiteHullmod,船体插件白名单,list,data.restriction.filter.FilterWhiteHullmod,将可改装的船体插件限定为所列插件 ID，包括由这些插件制成的 S-mod。每个受检查插件都需要与列表中的 ID 完全匹配；列表为空时，允许的可改装插件数量为零。
+filterBlackHull,船体黑名单,list,data.restriction.filter.FilterBlackHull,禁用列表中所列船体 ID 的舰船。按每艘组装后舰船的完整船体 ID 检查，所列船体的所有装配均受此限制。
+filterWhiteHull,船体白名单,list,data.restriction.filter.FilterWhiteHull,将舰船限定为所列船体 ID。每艘组装后舰船都需要与列表中的船体 ID 完全匹配；获准船体的所有装配均符合要求，列表为空时允许的舰船数量为零。

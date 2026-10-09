@@ -20,13 +20,13 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 	void mergedRowsPopulateRegistryAndRejectBadTypes() throws Exception {
 		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
 		JSONArray rows = new JSONArray();
-		rows.put(new JSONObject().put("id", "custom").put("type", "starter")
+		rows.put(new JSONObject().put("id", "custom").put("name", "custom").put("type", "starter")
 				.put("script", "data.order.starter.AssaultStarter").put("desc", "Custom starter"));
 		registry.load(rows, BattleNext_OrderRegistryTest::instantiate);
 		assertEquals("Custom starter", registry.get("custom").getDescription());
 		assertEquals(List.of(registry.get("custom")), registry.getByType("starter"));
 		assertNotSame(registry.create("custom"), registry.create("custom"));
-		rows.put(new JSONObject().put("id", "broken").put("type", "unknown")
+		rows.put(new JSONObject().put("id", "broken").put("name", "broken").put("type", "unknown")
 				.put("script", "Example").put("desc", "Broken"));
 		registry.load(rows, BattleNext_OrderRegistryTest::instantiate);
 		assertEquals("broken", registry.getLoadErrors().get(0).id());
@@ -38,7 +38,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 	void registeredOrdersFollowInputRowsAcrossCatalogChanges() throws Exception {
 
 		List<String> lines = Files.readAllLines(Path.of(BattleNext_OrderRegistry.PATH), StandardCharsets.UTF_8);
-		assertEquals(List.of("id", "type", "script", "desc"), BattleNext_CsvLine.parse(lines.get(0)));
+		assertEquals(List.of("id", "name", "type", "script", "desc"), BattleNext_CsvLine.parse(lines.get(0)));
 		JSONArray current = csvRows();
 		for (String change : List.of("current", "added", "removed", "reversed", "empty")) {
 			List<JSONObject> inputs = new ArrayList<>();
@@ -67,6 +67,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 			for (JSONObject input : inputs) {
 				BattleNext_OrderSpec spec = registry.get(input.getString("id").trim());
 				assertTrue(ids.add(spec.getId()), spec.getId());
+				assertEquals(input.getString("name").trim(), spec.getName());
 				assertEquals(input.getString("type").trim(), spec.getType());
 				assertEquals(input.getString("script").trim(), spec.getScript());
 				assertEquals(input.getString("desc").trim(), spec.getDescription());
@@ -81,10 +82,10 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 	@Test
 	void invalidRegistrationPublishesDiagnosticsAndRejectsAllConflictingRows() throws Exception {
 		BattleNext_OrderRegistry registry = new BattleNext_OrderRegistry();
-		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "assault")
+		JSONArray valid = new JSONArray().put(new JSONObject().put("id", "assault").put("name", "assault")
 				.put("type", "starter").put("script", "data.order.starter.AssaultStarter").put("desc", "Assault"));
 		registry.load(valid, BattleNext_OrderRegistryTest::instantiate);
-		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "assault")
+		JSONArray wrongInterface = new JSONArray().put(new JSONObject().put("id", "assault").put("name", "assault")
 				.put("type", "filter").put("script", "data.order.starter.AssaultStarter").put("desc", "Wrong"));
 		registry.load(wrongInterface, BattleNext_OrderRegistryTest::instantiate);
 		assertTrue(registry.getAll().isEmpty());
@@ -146,7 +147,7 @@ class BattleNext_OrderRegistryTest extends BattleNext_TestOrderFixture {
 	}
 
 	private JSONObject row(String id, String type, String script) throws Exception {
-		return new JSONObject().put("id", id).put("type", type).put("script", script).put("desc", id);
+		return new JSONObject().put("id", id).put("name", id).put("type", type).put("script", script).put("desc", id);
 	}
 
 }

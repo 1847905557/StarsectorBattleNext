@@ -135,11 +135,11 @@ class BattleNext_OrderThreadIntegrationTest extends BattleNext_TestOrderFixture 
 	void runtimeFailureReportsOnceAndDisablesOnlyItsOriginalStatement() throws Exception {
 
 		var rows = new JSONArray()
-				.put(new JSONObject().put("id", "engage").put("type", "starter")
+				.put(new JSONObject().put("id", "engage").put("name", "engage").put("type", "starter")
 						.put("script", "data.order.starter.EngageStarter").put("desc", "Engage"))
-				.put(new JSONObject().put("id", "nearest").put("type", "picker")
+				.put(new JSONObject().put("id", "nearest").put("name", "nearest").put("type", "picker")
 						.put("script", "data.order.picker.NearestPicker").put("desc", "Nearest"));
-		rows.put(new JSONObject().put("id", "fail").put("type", "filter")
+		rows.put(new JSONObject().put("id", "fail").put("name", "fail").put("type", "filter")
 				.put("script", "fail_script").put("desc", "Failure"));
 		AtomicInteger calls = new AtomicInteger();
 		var registry = new BattleNext_OrderRegistry();

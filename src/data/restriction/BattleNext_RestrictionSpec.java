@@ -3,12 +3,14 @@ package data.restriction;
 public class BattleNext_RestrictionSpec {
 
 	private final String id;
+	private final String name;
 	private final String type;
 	private final String script;
 	private final String description;
 
-	public BattleNext_RestrictionSpec(String id, String type, String script, String description) {
+	public BattleNext_RestrictionSpec(String id, String name, String type, String script, String description) {
 		this.id = id;
+		this.name = name;
 		this.type = type;
 		this.script = script;
 		this.description = description;
@@ -16,6 +18,10 @@ public class BattleNext_RestrictionSpec {
 
 	public String getId() {
 		return id;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 	public String getType() {

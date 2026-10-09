@@ -43,8 +43,8 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		previousFactory = getField(registry, "scriptFactory");
 		previousLoadErrors = getField(registry, "loadErrors");
 		registry.load(new JSONArray()
-				.put(new JSONObject().put("id", "limit").put("type", "number").put("script", "limit_script").put("desc", "Fleet limit 50%"))
-				.put(new JSONObject().put("id", "items").put("type", "list").put("script", "items_script").put("desc", "Equipment list")),
+				.put(new JSONObject().put("id", "limit").put("name", "limit").put("type", "number").put("script", "limit_script").put("desc", "Fleet limit 50%"))
+				.put(new JSONObject().put("id", "items").put("name", "items").put("type", "list").put("script", "items_script").put("desc", "Equipment list")),
 				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
 	}
 

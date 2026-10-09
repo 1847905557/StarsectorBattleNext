@@ -3,6 +3,7 @@ package data.scripts.ui.editor;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
@@ -11,8 +12,10 @@ import data.model.rule.BattleNext_RuleStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
+import data.scripts.ui.widget.provider.BattleNext_RestrictionSourceProvider;
 import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONArray;
@@ -42,8 +45,8 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		previousFactory = getField(registry, "scriptFactory");
 		previousLoadErrors = getField(registry, "loadErrors");
 		registry.load(new JSONArray()
-				.put(new JSONObject().put("id", "limitNumber").put("type", "number").put("script", "number").put("desc", "Number limit"))
-				.put(new JSONObject().put("id", "limitList").put("type", "list").put("script", "list").put("desc", "Item limit")),
+				.put(new JSONObject().put("id", "limitNumber").put("name", "Ship limit").put("type", "number").put("script", "number").put("desc", "Number limit"))
+				.put(new JSONObject().put("id", "limitList").put("name", "Equipment filter").put("type", "list").put("script", "list").put("desc", "Item limit")),
 				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
 	}
 
@@ -59,6 +62,37 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		Field loadErrors = registry.getClass().getDeclaredField("loadErrors");
 		loadErrors.setAccessible(true);
 		loadErrors.set(registry, previousLoadErrors);
+	}
+
+	@Test
+	void restrictionChoicesShowNamesAndDescriptionsAndFollowCurrentDraft() throws Exception {
+
+		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
+		editor.open(null);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
+		BattleNext_RestrictionSourceProvider source = (BattleNext_RestrictionSourceProvider) getField(picker, "source");
+		List<BattleNext_OptionPicker.OptionChoice> options = source.getOptions();
+		assertEquals(List.of("limitNumber", "limitList"), options.stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		assertEquals(List.of("Ship limit", "Equipment filter"), options.stream().map(BattleNext_OptionPicker.OptionChoice::getLabel).toList());
+		List<List<String>> expected = List.of(List.of("Ship limit", "limitNumber  [number]", "Number limit"),
+				List.of("Equipment filter", "limitList  [list]", "Item limit"));
+		for (int index = 0; index < options.size(); index++) {
+			TooltipMakerAPI tooltip = tooltip(source.getTooltipWidth(), 0f, false);
+			source.createTooltip(tooltip, options.get(index));
+			assertEquals(expected.get(index), tooltips.get(tooltip).getComponents().stream()
+					.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+		}
+		confirmRestrictions(editor, List.of("limitNumber"));
+		assertEquals(List.of("limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		assertRestrictionRow(editor, "Ship limit", expected.get(0));
+		editor.buttonPressed("rule:remove:0");
+		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		confirmRestrictions(editor, List.of("limitList"));
+		assertRestrictionRow(editor, "Equipment filter", expected.get(1));
+		editor.discard();
+		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		editor.close();
 	}
 
 	@Test
@@ -153,13 +187,31 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		editor.open(source);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(((Map<?, ?>) getField(editor, "valueFields")).isEmpty());
+		String missing = BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_missing_restriction");
+		assertRestrictionRow(editor, missing, List.of(missing, "lateLimit  [number]"));
 		BattleNext_RestrictionRegistry.getInstance().load(new JSONArray().put(new JSONObject()
-				.put("id", "lateLimit").put("type", "number").put("script", "late").put("desc", "Late limit")),
+				.put("id", "lateLimit").put("name", "lateLimit").put("type", "number").put("script", "late").put("desc", "Late limit")),
 				name -> (BattleNext_RestrictionScript) (fleet, value) -> List.of());
 		editor.refreshContent();
 		assertEquals("9.0", ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("lateLimit").getText());
+		assertRestrictionRow(editor, "lateLimit", List.of("lateLimit", "lateLimit  [number]", "Late limit"));
 		assertTrue(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("lateLimit").isChecked());
 		assertFalse(editor.hasUnsavedChanges());
+	}
+
+	private void assertRestrictionRow(BattleNext_RuleEditor editor, String name, List<String> expected) throws Exception {
+		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+		CustomPanelAPI row = (CustomPanelAPI) tooltips.get(table.getContent()).getComponents().get(0);
+		LabelAPI label = children.get(row).stream().filter(TooltipMakerAPI.class::isInstance)
+				.map(TooltipMakerAPI.class::cast).flatMap(cell -> tooltips.get(cell).getComponents().stream())
+				.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).findFirst().orElseThrow();
+		assertEquals(name, label.getText());
+		TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(label);
+		assertEquals(BattleNext_EquipmentTooltip.WIDTH, creator.getTooltipWidth(null));
+		TooltipMakerAPI tooltip = tooltip(creator.getTooltipWidth(null), 0f, false);
+		creator.createTooltip(tooltip, false, null);
+		assertEquals(expected, tooltips.get(tooltip).getComponents().stream()
+				.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 	}
 
 	private void confirmRestrictions(BattleNext_RuleEditor editor, List<String> ids) throws Exception {

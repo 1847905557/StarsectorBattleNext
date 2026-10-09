@@ -3,6 +3,7 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.scripts.BattleNextModPlugin;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -117,6 +118,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		boolean result = editor.save();
 		setStatus(editor.getStatusText());
 		if (result && cnText != BattleNext_Settings.isCnTextEnabled()) {
+			BattleNextModPlugin.reloadCsvRegistry();
 			createContents();
 		}
 		return result;

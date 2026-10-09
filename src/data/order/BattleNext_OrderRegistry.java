@@ -5,6 +5,7 @@ import data.model.BattleNext_BaseLoader.LoadError;
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
+import data.scripts.tools.BattleNext_Settings;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,6 +20,7 @@ import java.util.function.Function;
 public class BattleNext_OrderRegistry {
 
 	public static final String PATH = "data/config/BattleNext_orders.csv";
+	public static final String CN_PATH = "data/config/BattleNext_orders_CN.csv";
 	private static final BattleNext_OrderRegistry INSTANCE = new BattleNext_OrderRegistry();
 
 	private static final List<String> TYPES = List.of("starter", "filter", "picker", "suffix");
@@ -33,13 +35,14 @@ public class BattleNext_OrderRegistry {
 	}
 
 	public static void loadFromSettings() {
+		String path = BattleNext_Settings.isCnTextEnabled() ? CN_PATH : PATH;
 		try {
-			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_OrderRegistry.class, "id", PATH);
+			JSONArray rows = BattleNext_ModFileManager.readMergedCsv(BattleNext_OrderRegistry.class, "id", path);
 			INSTANCE.load(rows, name -> Global.getSettings().getInstanceOfScript(name));
 		} catch (IOException | JSONException exception) {
-			BattleNext_Logger.warn(BattleNext_OrderRegistry.class, "registry.source.unavailable", BattleNext_Logger.fields().put("path", PATH).build(), exception);
+			BattleNext_Logger.warn(BattleNext_OrderRegistry.class, "registry.source.unavailable", BattleNext_Logger.fields().put("path", path).build(), exception);
 			INSTANCE.load(new JSONArray(), name -> Global.getSettings().getInstanceOfScript(name));
-			INSTANCE.loadErrors = List.of(new LoadError(PATH, -1, "", "", exception.toString()));
+			INSTANCE.loadErrors = List.of(new LoadError(path, -1, "", "", exception.toString()));
 		}
 	}
 
@@ -61,6 +64,7 @@ public class BattleNext_OrderRegistry {
 			try {
 				JSONObject row = rows.getJSONObject(index);
 				id = row.getString("id").trim();
+				String name = row.getString("name").trim();
 				String type = row.getString("type").trim();
 				String script = row.getString("script").trim();
 				String description = row.getString("desc").trim();
@@ -74,7 +78,7 @@ public class BattleNext_OrderRegistry {
 					errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
 					continue;
 				}
-				parsed.put(id, new BattleNext_OrderSpec(id, type, script, description));
+				parsed.put(id, new BattleNext_OrderSpec(id, name, type, script, description));
 			} catch (JSONException | IllegalArgumentException exception) {
 				errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
 			}

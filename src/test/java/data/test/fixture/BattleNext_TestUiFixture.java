@@ -312,6 +312,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					yield label;
 				}
 				case "getPrev" -> previous;
+				case "computeStringWidth" -> ((String) args[0]).codePointCount(0, ((String) args[0]).length()) * 7f;
 				case "addImage" -> {
 					PositionAPI image = position((Float) args[1], (Float) args[2]);
 					UIComponentAPI component = proxy(UIComponentAPI.class,

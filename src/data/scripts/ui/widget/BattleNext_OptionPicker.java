@@ -8,7 +8,6 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
-import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -87,9 +86,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float SEARCH_LABEL_WIDTH = 80f;
 	private static final float TILE_CONTENT_INSET = 2f;
 	private static final float TILE_ICON_SIZE = 60f;
-	private static final float TILE_LABEL_TRUNCATION_WIDTH = 54f;
-	private static final int TILE_LABEL_MAX_CHARACTERS_EN = 3;
-	private static final int TILE_LABEL_MAX_CHARACTERS_ZH = 4;
+	private static final float TILE_LABEL_WIDTH = TILE_SIZE - TILE_CONTENT_INSET * 2f;
+	private static final int TILE_LABEL_MAX_LINES = 3;
 	private static final float TILE_SELECTION_OUTLINE_INSET = 1f;
 	private static final float TILE_CHECK_START_X = 46f;
 	private static final float TILE_CHECK_START_Y = 51f;
@@ -410,24 +408,58 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		}
 		TooltipMakerAPI fallback = tile.createUIElement(TILE_ICON_SIZE, TILE_ICON_SIZE, false);
 		fallback.setParaSmallInsignia();
-		String text = tileLabel(option.label, fallback::computeStringWidth);
-		LabelAPI label = fallback.addPara(text, 0f);
+		fallback.setTextWidthOverride(TILE_LABEL_WIDTH);
+		LabelAPI label = fallback.addPara("", 0f);
+		String text = tileLabel(option.label, label::computeTextWidth);
+		float labelWidth = TILE_LABEL_WIDTH;
+		for (String line : text.split("\\n", -1)) {
+			labelWidth = Math.max(labelWidth, label.computeTextWidth(line));
+		}
+		fallback.setTextWidthOverride(labelWidth);
+		label.setText(text);
+		label.autoSizeToWidth(labelWidth);
 		label.setAlignment(Alignment.MID);
 		float labelHeight = label.getPosition().getHeight();
-		label.getPosition().setSize(TILE_ICON_SIZE, labelHeight);
-		label.getPosition().inTL(0f, (TILE_ICON_SIZE - labelHeight) * 0.5f);
+		label.getPosition().setSize(labelWidth, labelHeight);
+		label.getPosition().inTL((TILE_ICON_SIZE - labelWidth) * 0.5f,
+				(TILE_ICON_SIZE - labelHeight) * 0.5f);
 		tile.addUIElement(fallback).inTL(TILE_CONTENT_INSET, TILE_CONTENT_INSET);
 	}
 
 	static String tileLabel(String value, ToDoubleFunction<String> widthOf) {
+
 		String normalized = value.strip().replaceAll("\\s+", " ");
-		int maxCharacters = BattleNext_Settings.isCnTextEnabled() ? TILE_LABEL_MAX_CHARACTERS_ZH : TILE_LABEL_MAX_CHARACTERS_EN;
-		int characters = Math.min(maxCharacters, normalized.codePointCount(0, normalized.length()));
-		String result = normalized.substring(0, normalized.offsetByCodePoints(0, characters));
-		while (!result.isEmpty() && widthOf.applyAsDouble(result) > TILE_LABEL_TRUNCATION_WIDTH) {
-			result = result.substring(0, result.offsetByCodePoints(result.length(), -1));
+		boolean words = normalized.indexOf(' ') >= 0;
+		List<String> tokens = words
+				? Arrays.asList(normalized.split(" "))
+				: normalized.codePoints().mapToObj(codePoint -> new String(Character.toChars(codePoint))).toList();
+		List<String> lines = new ArrayList<>();
+		String line = "";
+		int index = 0;
+		while (index < tokens.size() && lines.size() < TILE_LABEL_MAX_LINES) {
+			String token = tokens.get(index);
+			String separator = line.isEmpty() || !words ? "" : " ";
+			String candidate = line + separator + token;
+			if (!line.isEmpty() && widthOf.applyAsDouble(candidate) > TILE_LABEL_WIDTH) {
+				lines.add(line);
+				line = "";
+				continue;
+			}
+			line = candidate;
+			index++;
 		}
-		return result;
+		if (!line.isEmpty() && lines.size() < TILE_LABEL_MAX_LINES) {
+			lines.add(line);
+		}
+		if (index < tokens.size()) {
+			int last = lines.size() - 1;
+			line = lines.get(last);
+			while (!line.isEmpty() && widthOf.applyAsDouble(line + "...") > TILE_LABEL_WIDTH) {
+				line = line.substring(0, line.offsetByCodePoints(line.length(), -1));
+			}
+			lines.set(last, line + "...");
+		}
+		return String.join("\n", lines);
 	}
 
 	private void confirm() {
