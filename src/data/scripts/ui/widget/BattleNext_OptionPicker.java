@@ -8,6 +8,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -87,7 +88,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float TILE_CONTENT_INSET = 2f;
 	private static final float TILE_ICON_SIZE = 60f;
 	private static final float TILE_LABEL_TRUNCATION_WIDTH = 54f;
-	private static final int TILE_LABEL_MAX_CHARACTERS = 3;
+	private static final int TILE_LABEL_MAX_CHARACTERS_EN = 3;
+	private static final int TILE_LABEL_MAX_CHARACTERS_ZH = 4;
 	private static final float TILE_SELECTION_OUTLINE_INSET = 1f;
 	private static final float TILE_CHECK_START_X = 46f;
 	private static final float TILE_CHECK_START_Y = 51f;
@@ -411,7 +413,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 	static String tileLabel(String value, ToDoubleFunction<String> widthOf) {
 		String normalized = value.strip().replaceAll("\\s+", " ");
-		int characters = Math.min(TILE_LABEL_MAX_CHARACTERS, normalized.codePointCount(0, normalized.length()));
+		int maxCharacters = BattleNext_Settings.isCnTextEnabled() ? TILE_LABEL_MAX_CHARACTERS_ZH : TILE_LABEL_MAX_CHARACTERS_EN;
+		int characters = Math.min(maxCharacters, normalized.codePointCount(0, normalized.length()));
 		String result = normalized.substring(0, normalized.offsetByCodePoints(0, characters));
 		while (!result.isEmpty() && widthOf.applyAsDouble(result) > TILE_LABEL_TRUNCATION_WIDTH) {
 			result = result.substring(0, result.offsetByCodePoints(result.length(), -1));

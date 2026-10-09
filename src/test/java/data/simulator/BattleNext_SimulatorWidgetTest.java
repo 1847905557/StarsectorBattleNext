@@ -71,7 +71,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		for (int index = 0; index < entries.size(); index++) {
 			String action = "simulator:quick:" + entries.get(index).getId();
 			assertEquals(List.of(true, true, false, false, true).get(index), buttons.get(action).get());
-			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate"), buttonLabels.get(action));
+			assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_simulate"), buttonLabels.get(action));
 		}
 		assertEquals(before, storedFiles());
 		Map<List<String>, BattleNext_TextField> fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
@@ -118,7 +118,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			assertTrue(chart.errors().isEmpty(), chart.errors().toString());
 			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary")));
 			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")));
-			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:" + phase));
+			assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_simulate_tournament"), buttonLabels.get("simulator:tournament:" + phase));
 			assertTrue(buttons.get("simulator:tournament:" + phase).get());
 			assertTrue(buttons.get("simulator:check:" + phase).get());
 			assertEquals(buttonPositions.get("simulator:tournament:" + phase).getY(), buttonPositions.get("simulator:check:" + phase).getY());
@@ -260,14 +260,14 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		manager.buttonPressed("settings_save");
 		assertTrue(saved.get().getBoolean("cnText"));
 		assertFalse(page.hasUnsavedChanges());
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
+		assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
 		manager.buttonPressed(fleets);
 		manager.buttonPressed(settings);
 		assertSame(page, getField(manager, "settingsPage"));
 		assertEquals("cup", browser.getSelectedId());
 		assertEquals("1.5", ((BattleNext_TextField) getField(getField(page, "editor"), "defaultTimeMultField")).getText());
 		assertEquals(List.of(FIRST_ID, "second"), browser.template(tournaments.get("cup")).getFleetIds());
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
+		assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
 		tournaments.reload();
 		instances.reload();
 		assertEquals(active.getId(), instances.getActiveId());

@@ -1,4 +1,4 @@
-package data.scripts.campaign;
+package data.scripts.campaign.luna;
 
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.characters.PersonAPI;

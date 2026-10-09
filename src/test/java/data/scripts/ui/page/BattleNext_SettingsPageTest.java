@@ -120,8 +120,8 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI simulatorContent = (CustomPanelAPI) children.get(simulator.getPanel()).get(0);
 		List<LabelAPI> warnings = children.get(simulatorContent).stream().filter(TooltipMakerAPI.class::isInstance)
 				.flatMap(child -> tooltips.get(child).getComponents().stream()).filter(LabelAPI.class::isInstance)
-				.map(LabelAPI.class::cast).filter(label -> label.getText().equals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_warning"))
-						|| label.getText().equals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_warned"))).toList();
+				.map(LabelAPI.class::cast).filter(label -> label.getText().equals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_warning"))
+						|| label.getText().equals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_warned"))).toList();
 		assertEquals(2, warnings.size());
 		PositionAPI description = warnings.get(0).getPosition();
 		PositionAPI emphasized = warnings.get(1).getPosition();

@@ -277,9 +277,9 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		Object settings = tab("SETTINGS");
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
-		String category = "Settings";
+		String category = "Simulator";
 		ButtonAPI enable = simulatorButtons(page).get(0);
-		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_simulator_enable"), enable.getText());
+		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_simulator_enable"), enable.getText());
 		assertSimulatorHeading(page, initial);
 		assertFalse(page.hasUnsavedChanges());
 		String stored = savedSettings.get().toString();
@@ -287,7 +287,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(manager, "confirmationDialog");
 		CustomPanelAPI popup = (CustomPanelAPI) getField(dialog, "confirmation");
 		assertSame(root.getPosition(), geometry.get(popup.getPosition()).getParent());
-		assertTrue(labels.contains(BattleNext_TestTextCatalog.text(category, "BattleNext_settings_simulator_confirm_message")));
+		assertTrue(labels.contains(BattleNext_TestTextCatalog.text(category, "BattleNext_simulator_confirm_message")));
 		manager.buttonPressed(tab("FLEETS"));
 		assertEquals(settings, getField(manager, "currentPage"));
 		assertTrue(dialog.isActive());
@@ -341,7 +341,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		assertNotSame(page, reopened);
 		assertEquals(1, simulatorButtons(reopened).size());
-		assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_enable"),
+		assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_enable"),
 				simulatorButtons(reopened).get(0).getText());
 		assertSame(service, instance.get(null));
 		manager.buttonPressed("close");
@@ -361,7 +361,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	private void assertSimulatorHeading(BattleNext_SettingsPage page, boolean cnText) throws Exception {
 		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
 		CustomPanelAPI content = (CustomPanelAPI) children.get(widget.getPanel()).get(0);
-		String title = BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_simulator_heading");
+		String title = BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_heading");
 		LabelAPI heading = children.get(content).stream().filter(TooltipMakerAPI.class::isInstance)
 				.flatMap(child -> tooltips.get(child).getComponents().stream()).filter(LabelAPI.class::isInstance)
 				.map(LabelAPI.class::cast).filter(label -> title.equals(label.getText())).findFirst().orElseThrow();

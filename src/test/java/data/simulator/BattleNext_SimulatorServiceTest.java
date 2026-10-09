@@ -99,13 +99,13 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			}
 			widget.refreshStatus();
 			LabelAPI status = (LabelAPI) getField(widget, "statusLabel");
-			assertTrue(status.getText().contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_running")));
+			assertTrue(status.getText().contains(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_running")));
 			TooltipMakerAPI statusContent = (TooltipMakerAPI) getField(widget, "statusContent");
 			assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT, statusContent.getHeightSoFar());
 			TooltipMakerAPI details = root.createUIElement(480f, 0f, false);
 			attachedTooltips.get(status).createTooltip(details, false, null);
 			assertTrue(labels.stream().anyMatch(text -> text.contains(first.id())));
-			assertTrue(labels.stream().anyMatch(text -> text.contains(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_map"), 2, 2, 2f))));
+			assertTrue(labels.stream().anyMatch(text -> text.contains(String.format(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_map"), 2, 2, 2f))));
 			widget.close();
 			assertTrue(Files.exists(runtime));
 			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
@@ -131,7 +131,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			assertEquals("Saved Match simulation", reports.get(first.id()).getName());
 			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
 			widget.attach(root);
-			assertTrue(((LabelAPI) getField(widget, "statusLabel")).getText().contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_simulator_finished")));
+			assertTrue(((LabelAPI) getField(widget, "statusLabel")).getText().contains(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_finished")));
 			status = (LabelAPI) getField(widget, "statusLabel");
 			attachedTooltips.get(status).createTooltip(root.createUIElement(480f, 0f, false), false, null);
 			assertTrue(labels.stream().anyMatch(text -> text.contains("Injected simulation failure")));

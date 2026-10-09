@@ -38,8 +38,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 	private final BattleNext_SimulatorBrowser browser;
 	private final BattleNext_BattleSourceProvider sources;
 	private final CustomPanelAPI overlayHost;
-	private final BattleNext_I18nSection settingsStrings = BattleNext_I18nSection.getInstance("Settings", "BattleNext_settings_");
-	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection simulatorStrings = BattleNext_I18nSection.getInstance("Simulator", "BattleNext_simulator_");
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private BattleNext_BattleSourceField sourceField;
@@ -75,7 +74,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		new UIRect(0f, 0f, areaWidth, areaHeight).addBorder(contentPanel,
 				Misc.getNegativeHighlightColor(), BattleNext_PageLayout.MANAGEMENT_REGION_BORDER_THICKNESS);
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.HEADER_HEIGHT),
-				contentPanel, settingsStrings.get("simulator_heading"), Misc.getNegativeHighlightColor());
+				contentPanel, simulatorStrings.get("heading"), Misc.getNegativeHighlightColor());
 		if (unlocked.getAsBoolean()) {
 			UIRect footer = new UIRect(BattleNext_PageLayout.PAGE_CONTENT_INSET,
 					areaHeight - BattleNext_PageLayout.PAGE_CONTENT_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
@@ -124,12 +123,12 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		TooltipMakerAPI warning = contentPanel.createUIElement(textWidth, 0f, false);
 		BattleNext_UiTheme.configure(warning);
 		warning.setTextWidthOverride(textWidth);
-		LabelAPI description = warning.addPara(settingsStrings.get("simulator_warning"), BattleNext_UiTheme.TEXT, 0f);
+		LabelAPI description = warning.addPara(simulatorStrings.get("warning"), BattleNext_UiTheme.TEXT, 0f);
 		description.autoSizeToWidth(textWidth);
 		description.setAlignment(Alignment.MID);
 		description.getPosition().inTL(0f, 0f);
 		warning.setHeightSoFar(description.getPosition().getHeight());
-		LabelAPI emphasized = warning.addPara(settingsStrings.get("simulator_warned"), Misc.getNegativeHighlightColor(), 12f);
+		LabelAPI emphasized = warning.addPara(simulatorStrings.get("warned"), Misc.getNegativeHighlightColor(), 12f);
 		emphasized.autoSizeToWidth(textWidth);
 		emphasized.setAlignment(Alignment.MID);
 		emphasized.getPosition().inTL(0f, description.getPosition().getHeight() + 12f);
@@ -139,7 +138,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		contentPanel.addUIElement(warning).inTL(BattleNext_PageLayout.PAGE_CONTENT_INSET, top);
 		BattleNext_PageLayout.fixedButton(contentPanel,
 				new UIRect((areaWidth - buttonWidth) * 0.5f, top + textHeight + 12f, buttonWidth, buttonHeight),
-				settingsStrings.get("simulator_enable"), "simulator_enable", CutStyle.ALL, true);
+				simulatorStrings.get("enable"), "simulator_enable", CutStyle.ALL, true);
 	}
 
 	private void selectSource(String id) {
@@ -155,7 +154,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			BattleNext_QuickBattleDisplay.Presentation presentation = new BattleNext_QuickBattleDisplay.Presentation(
 					List.of(Column.PLAYER, Column.ENEMY, Column.MAP, Column.SCALE, Column.STATUS, Column.ACTIONS),
 					List.of(0.3f, 0.3f, 0.05f, 0.1f, 0.15f, 0.1f), false,
-					row -> new BattleNext_QuickBattleDisplay.Action(battleStrings.get("simulate"), "simulator:quick:" + row.getModel().getId(),
+					row -> new BattleNext_QuickBattleDisplay.Action(simulatorStrings.get("simulate"), "simulator:quick:" + row.getModel().getId(),
 							sources.quickBattleErrors(row.getModel()).isEmpty()), this::submitQuickBattle);
 			quickBattleDisplay = new BattleNext_QuickBattleDisplay(inputRouter, sources.getQuickBattleStore().getAll(), presentation,
 					entry -> entry.getId(), row -> sources.quickBattleErrors(row.getModel()));
@@ -221,14 +220,14 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		List<BattleNext_TournamentDisplay.Action> actions = new ArrayList<>();
 		BattleNext_TournamentModel source = sources.getTournamentStore().get(browser.getSelectedId());
 		List<String> reasons = source == null ? List.of(tournamentStrings.get("missing_detail") + " " + browser.getSelectedId()) : sources.getCatalogErrors();
-		actions.add(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulate_tournament"),
+		actions.add(new BattleNext_TournamentDisplay.Action(simulatorStrings.get("simulate_tournament"),
 				"simulator:tournament:" + browser.getSelectedId(), reasons.isEmpty(), reasons, "simulate"));
 		actions.add(new BattleNext_TournamentDisplay.Action(tournamentStrings.get("check_fleets"),
 				"simulator:check:" + browser.getSelectedId(), source != null, List.of(), "simulate"));
 		if (task == null || task.getState() == BattleNext_SimulationTask.State.FINISHED) return actions;
 		String role = task.getState() == BattleNext_SimulationTask.State.IMPORT_FAILED ? "retry_save"
 				: task.getState() == BattleNext_SimulationTask.State.PAUSED ? "resume" : "pause";
-		actions.add(new BattleNext_TournamentDisplay.Action(battleStrings.get("simulator_" + role),
+		actions.add(new BattleNext_TournamentDisplay.Action(simulatorStrings.get(role),
 				"simulator:" + role + ":" + task.getRequest().id(), true, List.of()));
 		return actions;
 	}
@@ -345,7 +344,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		displayedStatus = current;
 		displayedError = error;
 		String label = current.current() == null ? "—" : current.current().label();
-		String summary = battleStrings.format("simulator_status", battleStrings.get("simulator_" + current.phase().name().toLowerCase(Locale.ROOT)), label, current.queued());
+		String summary = simulatorStrings.format("status", simulatorStrings.get(current.phase().name().toLowerCase(Locale.ROOT)), label, current.queued());
 		statusLabel.setText(statusContent.shortenString(error.isEmpty() ? summary : error, statusContent.getWidthSoFar()));
 	}
 
@@ -353,8 +352,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 
 		BattleNext_UiTheme.configure(tooltip);
 		Status status = BattleNext_SimulatorService.status();
-		tooltip.addTitle(settingsStrings.get("simulator_heading"));
-		tooltip.addPara(battleStrings.format("simulator_status", battleStrings.get("simulator_" + status.phase().name().toLowerCase(Locale.ROOT)),
+		tooltip.addTitle(simulatorStrings.get("heading"));
+		tooltip.addPara(simulatorStrings.format("status", simulatorStrings.get(status.phase().name().toLowerCase(Locale.ROOT)),
 				status.current() == null ? "—" : status.current().label(), status.queued()), 5f);
 		if (!browser.getStatusError().isEmpty()) {
 			tooltip.addPara(browser.getStatusError(), 5f);
@@ -364,7 +363,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			tooltip.addPara(request.id() + " - " + request.label(), 5f);
 			if (request.kind() == BattleNext_SimulationRequest.Kind.MATCH) {
 				try {
-					tooltip.addPara(battleStrings.format("simulator_map", request.source().getJSONObject("match").getInt("map"),
+					tooltip.addPara(simulatorStrings.format("map", request.source().getJSONObject("match").getInt("map"),
 							request.source().getInt("actualMap"), request.source().getJSONObject("match").getDouble("mapScale")), 5f);
 				} catch (JSONException exception) {
 					throw new IllegalStateException("Invalid simulation map snapshot: " + request.id(), exception);
@@ -375,9 +374,9 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			try {
 				BattleNext_SimulationResult result = status.result();
 				String details = !result.startedTournamentJson().isEmpty()
-						? battleStrings.format("simulator_tournament_result", result.simulationSeconds(), result.executionNanos() / 1000000000d)
+						? simulatorStrings.format("tournament_result", result.simulationSeconds(), result.executionNanos() / 1000000000d)
 						: !result.reportJson().isEmpty()
-						? battleStrings.format("simulator_result", result.report().getWinner(), result.simulationSeconds(),
+						? simulatorStrings.format("result", result.report().getWinner(), result.simulationSeconds(),
 								result.executionNanos() / 1000000000d, result.report().getName()) : result.diagnostic();
 				String outcome = result.outcome() == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED
 						? tournamentStrings.get("round_draw") : result.outcome().name();

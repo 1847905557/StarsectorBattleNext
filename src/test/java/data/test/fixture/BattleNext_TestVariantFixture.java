@@ -3,7 +3,7 @@ package data.test.fixture;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
-import data.scripts.campaign.BattleNext_LunaPinnedVariantPanel;
+import data.scripts.campaign.luna.BattleNext_LunaPinnedVariantPanel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import org.json.JSONArray;

@@ -34,6 +34,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	private final BattleNext_TournamentStore store;
 	private final BattleNext_RuleStore ruleStore;
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+	private final BattleNext_I18nSection simulatorStrings = BattleNext_I18nSection.getInstance("Simulator", "BattleNext_simulator_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
 	private TooltipMakerAPI metadataContent;
@@ -181,7 +182,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(instance.getId());
 			instanceVersions.put(instance.getId(), task == null ? -1L : task.getVersion());
 			String phase = task == null ? tournamentStrings.get(instance.isCompleted() ? "status_completed" : "status_in_progress")
-					: battleStrings.get("simulator_" + task.getState().name().toLowerCase(Locale.ROOT));
+					: simulatorStrings.get(task.getState().name().toLowerCase(Locale.ROOT));
 			if (task != null && task.isDeletionRequested()) {
 				phase = tournamentStrings.get("instance_deleting");
 			}
@@ -210,7 +211,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 				}
 				if (task != null) {
 					var metrics = task.getMetrics();
-					details.addPara(tournamentStrings.format("instance_metrics", metrics.simulationSeconds(), metrics.executionNanos() / 1000000000d,
+					details.addPara(simulatorStrings.format("instance_metrics", metrics.simulationSeconds(), metrics.executionNanos() / 1000000000d,
 							metrics.steps(), metrics.peakHeapBytes() / 1048576d), 5f);
 					for (var result : task.getRoundResults()) {
 						if (result.diagnostic().isEmpty()) continue;
