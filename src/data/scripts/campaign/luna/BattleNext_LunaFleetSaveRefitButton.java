@@ -94,7 +94,7 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 
 	@Override
 	public float getPanelHeight(FleetMemberAPI member, ShipVariantAPI variant) {
-		return Math.min(300f, Global.getSettings().getScreenHeight() * 0.8f);
+		return Math.min(400f, Global.getSettings().getScreenHeight() * 0.8f);
 	}
 
 	@Override

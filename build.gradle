@@ -124,6 +124,14 @@ tasks.register("simulatorBenchmark", JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 }
 
+tasks.register("lunaFleetSaveSmoke", JavaExec) {
+	group = "verification"
+	description = "Verifies fleet snapshot rows, native scrolling, and rendering in an isolated game."
+	dependsOn "jar", "compileTestJava"
+	mainClass = "data.scripts.campaign.luna.BattleNext_LunaFleetSaveSmoke"
+	classpath = sourceSets.test.runtimeClasspath
+}
+
 tasks.register("distZip", Zip) {
 	group = "distribution"
 	description = "Builds a distributable mod archive under dist."

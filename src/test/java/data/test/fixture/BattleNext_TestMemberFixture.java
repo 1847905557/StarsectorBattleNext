@@ -46,6 +46,13 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 				return person;
 			}
 			if ("createFleetMember".equals(method.getName())) return member("", (ShipVariantAPI) args[1], null, false);
+			if ("getSkillSpec".equals(method.getName())) {
+				return proxy(SkillSpecAPI.class, (name, values) -> switch (name) {
+					case "getId" -> args[0];
+					case "getName" -> "Skill " + args[0];
+					default -> null;
+				});
+			}
 			try {
 				return method.invoke(previous, args);
 			} catch (InvocationTargetException exception) {
@@ -98,7 +105,10 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 			case "isDefault" -> defaultPerson;
 			case "isPlayer" -> playerPerson;
 			case "isAICore" -> aiCore;
-			case "getPersonalityAPI" -> proxy(PersonalityAPI.class, (key, values) -> "getId".equals(key) ? behavior[0] : null);
+			case "getPersonalityAPI" -> proxy(PersonalityAPI.class, (key, values) -> switch (key) {
+				case "getId", "getDisplayName" -> behavior[0];
+				default -> null;
+			});
 			case "setPersonality" -> { behavior[0] = (String) args[0]; yield null; }
 			default -> null;
 		});

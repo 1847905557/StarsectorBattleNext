@@ -82,7 +82,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 	@Test
 	void panelDimensionsRespectScreenLimits() {
 		assertEquals(560f, button.getPanelWidth(null, null));
-		assertEquals(300f, button.getPanelHeight(null, null));
+		assertEquals(400f, button.getPanelHeight(null, null));
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> switch (method) {
 			case "getScreenWidth" -> 500f;
 			case "getScreenHeight" -> 250f;
