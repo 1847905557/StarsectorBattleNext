@@ -1,6 +1,7 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import org.boxutil.backends.reflect.BUtil_RefMethod;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -11,7 +12,12 @@ public record BattleNext_SpriteSpec(float width, float height, float centerX, fl
 		try {
 			Class<?> spriteType = Class.forName("com.fs.starfarer.loading.specs.Q", false, hull.getClass().getClassLoader());
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-			Object spec = lookup.findVirtual(hull.getClass(), "getSpriteSpec", MethodType.methodType(spriteType)).invoke(hull);
+			Object spec = null;
+			for (Object method : hull.getClass().getMethods()) {
+				if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals("getSpriteSpec")) continue;
+				spec = BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, hull);
+				break;
+			}
 			MethodType scalar = MethodType.methodType(float.class);
 			return new BattleNext_SpriteSpec(
 					(float) lookup.findVirtual(spriteType, "null", scalar).invoke(spec),

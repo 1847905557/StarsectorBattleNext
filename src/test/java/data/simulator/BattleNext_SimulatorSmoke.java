@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 public class BattleNext_SimulatorSmoke {
 
 	public static void main(String[] arguments) throws Exception {
+		BattleNext_DeploymentOpeningSmoke.run();
 		runSession("smoke", List.of(), 0);
 	}
 

@@ -4,6 +4,8 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.MutableStat;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +15,7 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.InputImplementation;
 import org.lwjgl.opengl.PixelFormat;
 
+import java.awt.Color;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
@@ -37,6 +40,8 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		assertTrue(output.contains("Simulator native handles bound"), output);
 		assertTrue(output.contains("Simulator mouse isolation verified"), output);
 		assertTrue(output.contains("Simulator script sandbox verified"), output);
+		assertTrue(output.contains("Native deployment limit injection verified"), output);
+		assertTrue(output.contains("Application context bindings verified"), output);
 	}
 
 	private String runProbe(Class<?> probe) throws Exception {
@@ -46,6 +51,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		classpath.add(Path.of(Probe.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
 		try (var paths = Files.list(core)) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(Path::toString).toList());
+		}
+		try (var paths = Files.walk(Path.of("../BoxUtil/jars"))) {
+			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(path -> path.toAbsolutePath().toString()).toList());
 		}
 		Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin/java.exe").toString(), "-Xverify:none", "-cp",
 				String.join(System.getProperty("path.separator"), classpath), "-Djava.library.path=" + core.resolve("native/windows"), probe.getName()).redirectErrorStream(true).start();
@@ -127,10 +135,14 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SandboxProbe.class.getClassLoader(), new Class<?>[]{SettingsAPI.class},
 					(instance, method, values) -> switch (method.getName()) {
 						case "getModManager" -> manager;
-						case "getBoolean" -> false;
+						case "getBoolean", "isInGame" -> false;
+						case "getFloat" -> 0f;
+						case "getInt" -> 0;
+						case "getColor" -> Color.WHITE;
 						default -> null;
 					}));
-			JSONObject nativeSettings = new JSONObject().put("devMode", false);
+			JSONObject nativeSettings = new JSONObject().put("devMode", false).put("baseMaxAdmins", 2)
+					.put("baseMaxOutposts", 2).put("startingCommandPoints", 5).put("baseNumOfficers", 8);
 			Map<Field, Object> previousNativeSettings = new LinkedHashMap<>();
 			for (var field : Class.forName("com.fs.starfarer.settings.StarfarerSettings").getDeclaredFields()) {
 				if (field.getType() != JSONObject.class || !Modifier.isStatic(field.getModifiers())) continue;
@@ -152,6 +164,8 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				verifyProtocol(loader);
 				Class<?> nativeType = loader.loadClass("data.simulator.BattleNext_SimulatorNative");
 				nativeType.getConstructor(ClassLoader.class).newInstance(loader);
+				verifyApplicationContext(loader);
+				verifyDeploymentLimit(loader);
 				verifyService(loader, root);
 				System.out.println("Simulator script sandbox verified");
 			} finally {
@@ -170,6 +184,44 @@ class BattleNext_SimulatorNativeIntegrationTest {
 					}
 				}
 			}
+		}
+
+		private static void verifyApplicationContext(ClassLoader loader) throws Exception {
+			Class<?> driver = Class.forName("com.fs.state.AppDriver");
+			Object instance = driver.getMethod("getInstance").invoke(null);
+			Class<?> context = loader.loadClass("data.scripts.tools.BattleNext_AppContext");
+			if (context.getMethod("currentState").invoke(null) != driver.getMethod("getCurrentState").invoke(instance)) {
+				throw new AssertionError("Application context must expose the current native state");
+			}
+			if (context.getMethod("session").invoke(null) != driver.getMethod("getSession").invoke(instance)) {
+				throw new AssertionError("Application context must expose the native session owner");
+			}
+			System.out.println("Application context bindings verified");
+		}
+
+		private static void verifyDeploymentLimit(ClassLoader loader) throws Exception {
+
+			Class<?> type = Class.forName("com.fs.starfarer.combat.CombatFleetManager");
+			Class<?> injection = loader.loadClass("data.scripts.plugin.BattleNext_DeploymentLimitInjection");
+			for (int side : new int[]{0, 1}) {
+				CombatFleetManagerAPI manager = (CombatFleetManagerAPI) type.getConstructor(int.class).newInstance(side);
+				injection.getMethod("install", CombatFleetManagerAPI.class, int.class).invoke(null, manager, 80);
+				for (int strength : new int[]{80, 240, 160}) {
+					manager.setMaxStrength(strength);
+					if (manager.getMaxStrength() != 80) throw new AssertionError("Native setter must synchronously retain 80 DP for side " + side);
+				}
+				MutableStat points = (MutableStat) type.getMethod("getMaxFleetPoints").invoke(manager);
+				manager.modifyFlatMax("objective", 20);
+				manager.modifyPercentMax("skill", 50f);
+				if (points.getBaseValue() != 80f || manager.getMaxStrength() != 140) throw new AssertionError("Native point modifiers must remain effective");
+				manager.unmodifyMax();
+				if (manager.getMaxStrength() != 80) throw new AssertionError("Native modifier release must return to 80 DP");
+				manager.setMaxStrength(240);
+				if (type.getMethod("getMaxFleetPoints").invoke(manager) == points || manager.getMaxStrength() != 80) {
+					throw new AssertionError("Injection must follow the current native stat after replacement");
+				}
+			}
+			System.out.println("Native deployment limit injection verified");
 		}
 
 		private static void verifyStorage(ClassLoader loader, Path root) throws Exception {
@@ -240,7 +292,8 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		@Override
 		protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 			synchronized (getClassLoadingLock(name)) {
-				if (!name.startsWith("data.simulator.")) return super.loadClass(name, resolve);
+				if (!name.startsWith("data.simulator.") && !Set.of("data.scripts.tools.BattleNext_AppContext",
+						"data.scripts.plugin.BattleNext_DeploymentLimitInjection").contains(name)) return super.loadClass(name, resolve);
 				Class<?> type = findLoadedClass(name);
 				if (type == null) {
 					type = findClass(name);

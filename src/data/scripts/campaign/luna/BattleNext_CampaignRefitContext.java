@@ -3,8 +3,9 @@ package data.scripts.campaign.luna;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.campaign.CampaignState;
-import com.fs.state.AppDriver;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.GameState;
+import data.scripts.tools.BattleNext_AppContext;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
 
 import java.util.List;
@@ -13,8 +14,8 @@ public record BattleNext_CampaignRefitContext(UIPanelAPI host, Object refitPanel
 		FleetMemberAPI member, ShipVariantAPI variant) {
 
 	static BattleNext_CampaignRefitContext current() throws Throwable {
-		Object state = AppDriver.getInstance().getCurrentState();
-		if (!(state instanceof CampaignState)) throw new IllegalStateException("Campaign refit is not active");
+		Object state = BattleNext_AppContext.currentState();
+		if (Global.getCurrentState() != GameState.CAMPAIGN) throw new IllegalStateException("Campaign refit is not active");
 		Object dialog = invoke(state, "getEncounterDialog");
 		Object core = dialog == null ? invoke(state, "getCore") : invoke(dialog, "getCoreUI");
 		return from(core, dialog == null ? (UIPanelAPI) core : (UIPanelAPI) dialog);

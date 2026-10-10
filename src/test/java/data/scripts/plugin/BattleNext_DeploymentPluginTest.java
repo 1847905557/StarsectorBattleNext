@@ -6,7 +6,7 @@ import com.fs.starfarer.api.combat.AdmiralAIPlugin;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.mission.FleetSide;
-import data.test.fixture.BattleNext_TestGameFixture;
+import data.test.fixture.BattleNext_TestDeploymentFixture;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BattleNext_DeploymentPluginTest extends BattleNext_TestGameFixture {
+class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 
 	@Test
 	void positiveLimitKeepsOriginalAdmiralsAndClearsBothPlayerTaskManagersBeforeCombat() {
@@ -47,7 +47,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestGameFixture {
 			calls.add("enemy:" + method);
 			return null;
 		});
-		CombatFleetManagerAPI player = proxy(CombatFleetManagerAPI.class, (method, args) -> switch (method) {
+		FleetManager player = deploymentManager((method, args) -> switch (method) {
 			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> { assertEquals(true, args[0]); retreatSettings.add("force:player"); yield null; }
 			case "getAdmiralAI" -> playerAi;
 			case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (name, values) -> {
@@ -64,7 +64,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestGameFixture {
 			case "setAdmiralAI", "spawnFleetMember" -> throw new AssertionError(method);
 			default -> null;
 		});
-		CombatFleetManagerAPI enemy = proxy(CombatFleetManagerAPI.class, (method, args) -> switch (method) {
+		FleetManager enemy = deploymentManager((method, args) -> switch (method) {
 			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> { assertEquals(true, args[0]); retreatSettings.add("force:enemy"); yield null; }
 			case "getAdmiralAI" -> enemyAi;
 			case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (name, values) -> {
@@ -93,6 +93,15 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestGameFixture {
 		assertTrue(alliedTasks.isEmpty());
 		assertSame(playerAi, player.getAdmiralAI());
 		assertSame(enemyAi, enemy.getAdmiralAI());
+		player.setMaxStrength(240);
+		enemy.setMaxStrength(160);
+		assertEquals(10, player.getMaxStrength());
+		assertEquals(10, enemy.getMaxStrength());
+		player.getMaxFleetPoints().modifyFlat("objective", 20f);
+		player.getMaxFleetPoints().modifyPercent("skill", 50f);
+		assertEquals(35, player.getMaxStrength());
+		player.setMaxStrength(240);
+		assertEquals(10, player.getMaxStrength());
 	}
 
 	@ParameterizedTest

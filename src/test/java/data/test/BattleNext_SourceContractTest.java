@@ -29,6 +29,17 @@ import java.util.regex.Pattern;
 class BattleNext_SourceContractTest {
 
 	@Test
+	void repositoryImportsKeepGameInternalsBehindRuntimeBindings() throws Exception {
+		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			for (var declaration : entry.getValue().getImports()) {
+				String name = declaration.getNameAsString();
+				if (!name.startsWith("com.fs.")) continue;
+				assertTrue(name.startsWith("com.fs.starfarer.api."), entry.getKey() + ": " + name);
+			}
+		}
+	}
+
+	@Test
 	void missionFleetsUseVanillaAdmiralsAndDeploymentKeepsTheirInstances() throws Exception {
 		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data"))) continue;

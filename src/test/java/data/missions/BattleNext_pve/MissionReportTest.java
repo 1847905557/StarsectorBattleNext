@@ -20,6 +20,8 @@ import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.test.fixture.BattleNext_TestMissionFixture;
+import data.test.fixture.BattleNext_TestDeploymentFixture.FleetManager;
+import com.fs.starfarer.api.combat.MutableStat;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -86,7 +88,8 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 			CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
 				case "getContext" -> new BattleCreationContext(null, null, null, null);
 				case "setMaxFleetPoints" -> caps.put((FleetSide) args[0], (Integer) args[1]);
-				case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+				case "getFleetManager" -> proxy(FleetManager.class, (name, values) -> switch (name) {
+					case "getMaxFleetPoints" -> new MutableStat(100f);
 					case "getAdmiralAI" -> proxy(AdmiralAIPlugin.class, (key, input) -> null);
 					case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (key, input) -> null);
 					case "getReservesCopy" -> List.of();

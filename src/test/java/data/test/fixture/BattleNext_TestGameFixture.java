@@ -15,7 +15,6 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
-import com.fs.starfarer.loading.specs.Q;
 import data.scripts.tools.BattleNext_CsvLine;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
@@ -255,7 +254,7 @@ public class BattleNext_TestGameFixture {
 	}
 
 	protected ShipHullSpecAPI hull(String id, String name, List<String> slots) {
-		Q spriteSpec = new Q("graphics/" + id + ".png", spriteWidth, spriteHeight,
+		Object spriteSpec = createSpriteSpec("graphics/" + id + ".png", spriteWidth, spriteHeight,
 				spriteWidth * 0.5f, spriteHeight * 0.5f, 0f, null);
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, args) -> switch (method) {
 			case "getHullId" -> id;
@@ -460,14 +459,24 @@ public class BattleNext_TestGameFixture {
 	}
 
 	public interface HullSpriteSpec {
-		Q getSpriteSpec();
+		Object getSpriteSpec();
+	}
+
+	protected static Object createSpriteSpec(String path, float width, float height, float centerX, float centerY, float radius, Object bounds) {
+		try {
+			return Class.forName("com.fs.starfarer.loading.specs.Q").getConstructor(String.class, float.class, float.class,
+					float.class, float.class, float.class, Class.forName("com.fs.starfarer.combat.E.o0OO"))
+					.newInstance(path, width, height, centerX, centerY, radius, bounds);
+		} catch (ReflectiveOperationException exception) {
+			throw new IllegalStateException("Unable to create loaded sprite spec", exception);
+		}
 	}
 
 	protected static <T> T proxy(Class<T> type, Handler handler) {
 
 		Class<?>[] interfaces = type == LabelAPI.class ? new Class<?>[]{type, UIComponentAPI.class}
 				: type == ShipHullSpecAPI.class ? new Class<?>[]{type, HullSpriteSpec.class} : new Class<?>[]{type};
-		Q spriteSpec = type == ShipHullSpecAPI.class ? new Q("", 120f, 120f, 60f, 60f, 0f, null) : null;
+		Object spriteSpec = type == ShipHullSpecAPI.class ? createSpriteSpec("", 120f, 120f, 60f, 60f, 0f, null) : null;
 		return type.cast(Proxy.newProxyInstance(type.getClassLoader(), interfaces, (instance, method, args) -> {
 			if ("equals".equals(method.getName())) return instance == args[0];
 			if ("hashCode".equals(method.getName())) return System.identityHashCode(instance);

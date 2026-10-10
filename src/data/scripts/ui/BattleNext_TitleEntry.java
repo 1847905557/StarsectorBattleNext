@@ -12,9 +12,9 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.state.AppDriver;
 import data.missions.BattleNext_MissionRestrictedUnlock;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.tools.BattleNext_AppContext;
 import data.simulator.BattleNext_SimulatorWorker;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.backends.reflect.BUtil_RefMethod;
@@ -311,7 +311,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			configurationPlugin.open();
 			nextPanel = configurationPanel;
 		}
-		titleModal.open(screenPanel, AppDriver.getInstance().getCurrentState());
+		titleModal.open(screenPanel, BattleNext_AppContext.currentState());
 		screenPanel.addComponent(nextPanel);
 		screenPanel.bringComponentToTop(nextPanel);
 		displayedPanel = nextPanel;
@@ -484,7 +484,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				BattleNext_Logger.fields().put("reflection_valid", BUtil_RefMethod.VALID).build());
 				return null;
 			}
-			Object state = AppDriver.getInstance().getCurrentState();
+			Object state = BattleNext_AppContext.currentState();
 			for (Object method : state.getClass().getMethods()) {
 				if (!BUtil_RefMethod.java_lang_reflect_Method_getName(method).equals("getScreenPanel")) continue;
 

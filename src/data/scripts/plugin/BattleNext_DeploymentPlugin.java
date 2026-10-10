@@ -43,9 +43,13 @@ public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 
 		for (FleetSide side : FleetSide.values()) {
 
-			engine.setMaxFleetPoints(side, deploymentPointLimit > 0 ? deploymentPointLimit : 999);
-
 			CombatFleetManagerAPI manager = engine.getFleetManager(side);
+			if (deploymentPointLimit > 0) {
+				manager.setMaxStrength(deploymentPointLimit);
+				BattleNext_DeploymentLimitInjection.install(manager, deploymentPointLimit);
+			}
+
+			engine.setMaxFleetPoints(side, deploymentPointLimit > 0 ? deploymentPointLimit : 999);
 			manager.setCanForceShipsToEngageWhenBattleClearlyLost(true);
 			manager.getTaskManager(false).setPreventFullRetreat(true);
 

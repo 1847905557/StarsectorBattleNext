@@ -25,6 +25,9 @@ class BattleNext_SpriteSpecObfIntegrationTest {
 		try (var paths = Files.list(core)) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).sorted().map(Path::toString).toList());
 		}
+		try (var paths = Files.walk(Path.of("../BoxUtil/jars"))) {
+			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(path -> path.toAbsolutePath().toString()).toList());
+		}
 		String java = Path.of(System.getProperty("java.home"), "bin", "java.exe").toString();
 		Process process = new ProcessBuilder(java, "-Xverify:none", "-cp", String.join(File.pathSeparator, classpath),
 				Probe.class.getName()).redirectErrorStream(true).start();

@@ -17,7 +17,6 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.util.Misc;
-import com.fs.starfarer.loading.specs.Q;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -86,7 +85,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		ShipHullSpecAPI hull = previewHull("root", Map.of(
 				"first", previewSlot("first", mount, new Vector2f(-2f, 35f), 45f),
 				"second", previewSlot("second", mount, new Vector2f(148f, -25f), 0f)), Map.of(), null, false);
-		spriteSpecs.put("root", new Q("graphics/root.png", 140f, 280f, 70f, 115f, 220f, null));
+		spriteSpecs.put("root", createSpriteSpec("graphics/root.png", 140f, 280f, 70f, 115f, 220f, null));
 		previewWeapon("gun", false, List.of(), List.of());
 		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root",
 				Map.of("first", "gun", "second", "gun")), hull, Global.getSettings());
@@ -110,7 +109,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 				previewSlot("module", "module", new Vector2f(50f, 0f), 90f)), Map.of(), null, false);
 		previewHull("child", Map.of("gun", previewSlot("gun", "turret", new Vector2f(10f, 0f), 0f)),
 				Map.of(), new Vector2f(5f, 0f), false);
-		spriteSpecs.put("child", new Q("graphics/child.png", 80f, 100f, 19f, 77f, 0f, null));
+		spriteSpecs.put("child", createSpriteSpec("graphics/child.png", 80f, 100f, 19f, 77f, 0f, null));
 		previewWeapon("gun", false, List.of(), List.of());
 		JSONObject json = previewJson("draft", "root", Map.of()).put("modules",
 				new JSONObject().put("module", previewJson("child_variant", "child", Map.of("gun", "gun"))));
@@ -125,7 +124,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		assertEquals(0f, spriteCenters.get(gun)[1] - spriteCenters.get(child)[1], 0.001f);
 		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
 		assertEquals(90f, spriteRenderTransforms.get(child)[0]);
-		spriteSpecs.put("child", new Q("graphics/child.png", 140f, 180f, 61f, 83f, 0f, null));
+		spriteSpecs.put("child", createSpriteSpec("graphics/child.png", 140f, 180f, 61f, 83f, 0f, null));
 		renderPreview(preview, 1000f, 1000f);
 		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
 		BattleNext_VariantPreview refreshed = new BattleNext_VariantPreview(json, hull, Global.getSettings());
@@ -138,7 +137,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		ShipHullSpecAPI hull = previewHull("root", Map.of("gun",
 				previewSlot("gun", "hardpoint", new Vector2f(10f, 20f), -90f)), Map.of(), null, false);
 		previewWeapon("gun", true, List.of(new Vector2f(3f, 7f)), List.of(60f));
-		spriteSpecs.put("gun_missile", new Q("graphics/gun_missile.png", 18f, 26f, 4f, 8f, 0f, null));
+		spriteSpecs.put("gun_missile", createSpriteSpec("graphics/gun_missile.png", 18f, 26f, 4f, 8f, 0f, null));
 		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root", Map.of("gun", "gun")), hull, Global.getSettings());
 		renderPreview(preview, 1000f, 1000f);
 		int body = renderIndex("graphics/gun_hardpoint.png", 0);
@@ -268,8 +267,8 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		ShipHullSpecAPI hull = previewHull("root", Map.of("gun",
 				previewSlot("gun", "hardpoint", new Vector2f(100f, -70f), 37f)), Map.of(), null, false);
 		previewWeapon("gun", true, List.of(new Vector2f(20f, 10f)), List.of(45f));
-		spriteSpecs.put("root", new Q("graphics/root.png", 80f, 100f, 19f, 77f, 0f, null));
-		spriteSpecs.put("gun_missile", new Q("graphics/gun_missile.png", 10f, 14f, 3f, 4f, 0f, null));
+		spriteSpecs.put("root", createSpriteSpec("graphics/root.png", 80f, 100f, 19f, 77f, 0f, null));
+		spriteSpecs.put("gun_missile", createSpriteSpec("graphics/gun_missile.png", 10f, 14f, 3f, 4f, 0f, null));
 		BattleNext_VariantPreview preview = new BattleNext_VariantPreview(previewJson("draft", "root", Map.of("gun", "gun")),
 				hull, Global.getSettings());
 		renderPreview(preview, width, height);
@@ -480,7 +479,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		Variant variant = source();
 		variant.getApi().addMod("installed");
 		installConsumerHullmod();
-		Q hullSprite = ((HullSpriteSpec) variant.getApi().getHullSpec()).getSpriteSpec();
+		Object hullSprite = ((HullSpriteSpec) variant.getApi().getHullSpec()).getSpriteSpec();
 		hullSprite.getClass().getMethod("o00000", float.class, float.class).invoke(hullSprite, 31f, 83f);
 		previewWeapon("laser", false, List.of(), List.of());
 		BattleNext_VariantDetails details;

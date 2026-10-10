@@ -3,7 +3,7 @@ package data.simulator;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
-import com.fs.state.AppDriver;
+import data.scripts.tools.BattleNext_AppContext;
 import org.boxutil.config.BoxConfigs;
 import org.dark.shaders.util.GraphicsLibSettings;
 import org.dark.shaders.util.ShaderLib;
@@ -92,7 +92,7 @@ public class BattleNext_SimulatorNative {
 	}
 
 	public void submitMission(MissionDefinitionAPI mission) throws Throwable {
-		missionAccepted.invoke(AppDriver.getInstance().getCurrentState(), mission);
+		missionAccepted.invoke(BattleNext_AppContext.currentState(), mission);
 	}
 
 	public void prepareDeployment(CombatEngineAPI engine, boolean limitedDeployment) throws Throwable {
@@ -109,8 +109,8 @@ public class BattleNext_SimulatorNative {
 
 	public void finish(CombatEngineAPI engine) throws Throwable {
 		endProcessing.invoke(engine);
-		AppDriver.getInstance().getSession().remove("missionPlayed");
-		AppDriver.getInstance().getSession().remove("missionResults");
+		BattleNext_AppContext.session().remove("missionPlayed");
+		BattleNext_AppContext.session().remove("missionResults");
 		resultGetter.invoke(engine);
 		CombatUIAPI ui = engine.getCombatUI();
 		returnToTitle.invoke(ui, "Title Screen State");
@@ -118,7 +118,7 @@ public class BattleNext_SimulatorNative {
 	}
 
 	public void exit() throws Throwable {
-		Object title = AppDriver.getInstance().getCurrentState();
+		Object title = BattleNext_AppContext.currentState();
 		exitState.invoke(title, "AppDriver.EXIT_STATE");
 		forceOut.invoke(faderGetter.invoke(title));
 	}

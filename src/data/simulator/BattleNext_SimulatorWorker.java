@@ -1,6 +1,5 @@
 package data.simulator;
 
-import com.fs.starfarer.StarfarerLauncher;
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
@@ -21,6 +20,8 @@ import org.lwjgl.opengl.GL13;
 
 import java.net.InetAddress;
 import java.net.Socket;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 
 public class BattleNext_SimulatorWorker {
 
@@ -57,7 +58,11 @@ public class BattleNext_SimulatorWorker {
 		receiver.setDaemon(true);
 		receiver.start();
 		try {
-			StarfarerLauncher.main(new String[0]);
+			Class<?> launcher = Class.forName("com.fs.starfarer.StarfarerLauncher", false, BattleNext_SimulatorWorker.class.getClassLoader());
+			MethodHandles.publicLookup().findStatic(launcher, "main", MethodType.methodType(void.class, String[].class))
+					.invoke((Object) new String[0]);
+		} catch (Throwable exception) {
+			throw new IllegalStateException("Unable to run simulator launcher", exception);
 		} finally {
 			if (mouse != null) {
 				mouse.cleanup();
