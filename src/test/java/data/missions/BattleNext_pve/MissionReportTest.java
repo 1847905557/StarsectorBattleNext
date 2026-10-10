@@ -88,6 +88,9 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 				.filter(plugin -> plugin instanceof BattleNext_BattleResultRecorder).map(plugin -> (BattleNext_BattleResultRecorder) plugin).findFirst().orElseThrow();
 		scorekeeper.init(combat.getApi());
 		scorekeeper.advance(0.1f, List.of());
+		assertFalse(scorekeeper.isFrozen());
+		combat.destroySide(FleetSide.ENEMY, 24f);
+		scorekeeper.advance(0.1f, List.of());
 		assertTrue(scorekeeper.isFrozen());
 		recorder.init(combat.getApi());
 		recorder.advance(0.1f, List.of());

@@ -18,20 +18,74 @@ import java.util.stream.Collectors;
 class BattleNext_FleetStoreTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
-	void managedDeletionReleasesItsDirectoryAndNumberedCsvDeletionPreservesTheSource() throws Exception {
+	void rootNumberedCsvDeletionRemovesItsPairAndManagedDeletionReleasesItsDirectory() throws Exception {
+		csvFleet("", "01", "1,parent_variant,,,,,,\n");
 		csvFleet("", "1", "1,parent_variant,,,,,,\n");
 		standard("managed", "managed", "parent_variant");
 		var store = new BattleNext_FleetStore();
+		assertFalse(store.canDelete("01"));
 		store.reload();
-		assertFalse(store.isManaged("1"));
+		assertFalse(store.isManaged("01"));
 		assertTrue(store.isManaged("managed"));
-		assertThrows(IllegalStateException.class, () -> store.delete("1"));
+		assertTrue(store.canDelete("01"));
+		byte[] other = Files.readAllBytes(directory.resolve("tournament/player1_data.csv"));
+		store.delete("01");
+		assertNull(store.get("01"));
+		assertFalse(store.canDelete("01"));
+		assertFalse(Files.exists(directory.resolve("tournament/player01_data.csv")));
+		assertFalse(Files.exists(directory.resolve("tournament/player01_fleet.csv")));
+		assertArrayEquals(other, Files.readAllBytes(directory.resolve("tournament/player1_data.csv")));
 		assertTrue(Files.exists(directory.resolve("tournament/player1_data.csv")));
 		store.delete("managed");
 		assertFalse(Files.exists(directory.resolve("tournament/managed")));
 		store.reload();
 		assertEquals(1, store.getAll().size());
 		assertEquals("1", store.getAll().get(0).getId());
+	}
+
+	@Test
+	void singleNumberedCsvFleetDeletionReleasesItsPackage() throws Exception {
+		csvFleet("package", "01", "1,parent_variant,,,,,,\n");
+		variant("package", "local", "parent", 3, null);
+		write("tournament/package/说明.txt", "说明\n");
+		write("tournament/package/backup/history.txt", "备份\n");
+		csvFleet("other", "2", "1,parent_variant,,,,,,\n");
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		assertTrue(store.canDelete("01"));
+		store.delete("01");
+		assertFalse(Files.exists(directory.resolve("tournament/package")));
+		assertNotNull(store.get("2"));
+		store.reload();
+		assertNull(store.get("01"));
+		assertNotNull(store.get("2"));
+	}
+
+	@Test
+	void sharedNumberedCsvDirectoryDeletionPreservesOtherFleetsAndPackageContents() throws Exception {
+		csvFleet("shared", "01", "1,parent_variant,,,,,,\n");
+		csvFleet("shared", "1", "1,parent_variant,,,,,,\n");
+		variant("shared", "local", "parent", 3, null);
+		write("tournament/shared/说明.txt", "说明\n");
+		write("tournament/shared/backup/history.txt", "备份\n");
+		Map<Path, byte[]> retained = new LinkedHashMap<>();
+		try (var files = Files.walk(directory.resolve("tournament/shared"))) {
+			for (Path path : files.filter(Files::isRegularFile).toList()) {
+				if (path.getFileName().toString().startsWith("player01_")) continue;
+				retained.put(path, Files.readAllBytes(path));
+			}
+		}
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		store.delete("01");
+		assertFalse(Files.exists(directory.resolve("tournament/shared/player01_data.csv")));
+		assertFalse(Files.exists(directory.resolve("tournament/shared/player01_fleet.csv")));
+		for (var entry : retained.entrySet()) {
+			assertArrayEquals(entry.getValue(), Files.readAllBytes(entry.getKey()));
+		}
+		store.reload();
+		assertNull(store.get("01"));
+		assertNotNull(store.get("1"));
 	}
 
 	@Test

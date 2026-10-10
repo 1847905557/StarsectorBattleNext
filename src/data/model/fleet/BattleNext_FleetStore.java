@@ -70,6 +70,20 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	}
 
 	@Override
+	protected boolean isDeletable(BattleNext_FleetModel model) {
+		return model != null;
+	}
+
+	public boolean canDelete(String id) {
+		return isLoaded() && isDeletable(get(id));
+	}
+
+	public List<String> deletionPaths(String id) throws IOException {
+		requireLoaded();
+		return saver.deletionPaths(get(id));
+	}
+
+	@Override
 	public void saveEdited(BattleNext_FleetModel model, String sourceId) throws IOException, JSONException {
 		for (BattleNext_FleetModel existing : getAll()) {
 			if (!existing.getId().equals(sourceId) && BattleNext_EntryId.sameFileName(model.getFolderName(), existing.getFolderName())) {

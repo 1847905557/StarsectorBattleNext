@@ -122,7 +122,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	@Override
 	protected boolean canDelete() {
-		return store.isLoaded() && store.isManaged(selectedId);
+		return store.canDelete(selectedId);
 	}
 
 	@Override
@@ -154,10 +154,13 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 			});
 		} else if ("save".equals(buttonId)) {
 			save();
-		} else if ("delete".equals(buttonId) && !selectedId.isEmpty() && store.isLoaded()) {
+		} else if ("delete".equals(buttonId) && store.canDelete(selectedId)) {
 			BattleNext_FleetModel selected = store.get(selectedId);
-			if (selected != null && store.isManaged(selected.getId())) {
-				deletion.accept(selected.getName(), () -> {
+			try {
+				List<String> paths = store.deletionPaths(selected.getId());
+				String description = selected.getName() + "\n" + fleetStrings.format(
+						paths.size() == 1 ? "delete_directory" : "delete_files", String.join("\n", paths));
+				deletion.accept(description, () -> {
 					try {
 						store.delete(selected.getId());
 						selectedId = "";
@@ -168,6 +171,8 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 						setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 					}
 				});
+			} catch (IOException | RuntimeException exception) {
+				setStatus(strings.get("save_failed") + ": " + exception.getMessage());
 			}
 		} else if ("back".equals(buttonId)) {
 			if (draftOpen) navigation.accept(() -> { selectedId = ""; draftOpen = false; refreshContent(); });

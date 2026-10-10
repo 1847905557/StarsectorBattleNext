@@ -3,6 +3,7 @@ package data.order;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
+import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.combat.CombatAssignmentType;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -42,7 +43,10 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 				case "doesVariantExist" -> true;
 				case "getVariant" -> proxy(ShipVariantAPI.class, (name, values) -> name.equals("getHullSpec")
 						? proxy(ShipHullSpecAPI.class, (hullMethod, hullArguments) -> hullMethod.equals("getHullName") ? "Variant hull" : null) : null);
-				case "createPerson" -> proxy(PersonAPI.class, (name, values) -> null);
+				case "createPerson" -> {
+					MutableCharacterStatsAPI stats = proxy(MutableCharacterStatsAPI.class, (name, values) -> null);
+					yield proxy(PersonAPI.class, (name, values) -> name.equals("getStats") ? stats : null);
+				}
 				case "createFleetMember" -> {
 					ShipState ship = deployed.get(next.getAndIncrement());
 					RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (name, values) -> name.equals("getMaxCR") ? 1f : null);
@@ -78,6 +82,7 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 		MissionDefinitionAPI api = proxy(MissionDefinitionAPI.class, (method, args) -> switch (method) {
 			case "addFleetMember" -> { added.add((FleetMemberAPI) args[1]); yield null; }
 			case "initFleet" -> { defaultAi.add((Boolean) args[3]); yield null; }
+			case "getDefaultCommander" -> Global.getSettings().createPerson();
 			default -> null;
 		});
 		builder.addToMission(api, FleetSide.PLAYER, playerFleet, playerDefinition.getName());

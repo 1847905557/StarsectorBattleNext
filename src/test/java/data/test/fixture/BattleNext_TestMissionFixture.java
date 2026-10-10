@@ -195,6 +195,8 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 	public class CombatState {
 		private final List<String> notices = new ArrayList<>();
 		private final CombatEngineAPI api;
+		private final Set<FleetSide> aliveSides = EnumSet.allOf(FleetSide.class);
+		private float elapsed;
 
 		public CombatState(MissionState mission) {
 			List<ShipAPI> ships = new ArrayList<>();
@@ -203,8 +205,8 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 					ships.add(proxy(ShipAPI.class, (method, args) -> switch (method) {
 						case "getFleetMember" -> member;
 						case "getOwner" -> side.ordinal();
-						case "isAlive" -> side == FleetSide.PLAYER;
-						case "getHullLevel" -> side == FleetSide.PLAYER ? 0.75f : 0f;
+						case "isAlive" -> aliveSides.contains(side);
+						case "getHullLevel" -> aliveSides.contains(side) ? 0.75f : 0f;
 						default -> null;
 					}));
 				}
@@ -216,7 +218,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 			});
 			api = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
 				case "getShips" -> ships;
-				case "getTotalElapsedTime" -> 24f;
+				case "getTotalElapsedTime" -> elapsed;
 				case "getCustomData" -> custom;
 				case "getListenerManager" -> proxy(CombatListenerManagerAPI.class, (name, values) -> null);
 				case "getCombatUI" -> ui;
@@ -230,6 +232,11 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 
 		public List<String> getNotices() {
 			return notices;
+		}
+
+		public void destroySide(FleetSide side, float elapsed) {
+			aliveSides.remove(side);
+			this.elapsed = elapsed;
 		}
 	}
 

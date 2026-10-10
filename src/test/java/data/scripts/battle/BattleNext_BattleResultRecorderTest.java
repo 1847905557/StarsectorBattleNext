@@ -14,7 +14,7 @@ import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
-import data.test.fixture.BattleNext_TestGameFixture;
+import data.test.fixture.BattleNext_TestMemberFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-class BattleNext_BattleResultRecorderTest extends BattleNext_TestGameFixture {
+class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 
 	private final List<String> notices = new ArrayList<>();
 

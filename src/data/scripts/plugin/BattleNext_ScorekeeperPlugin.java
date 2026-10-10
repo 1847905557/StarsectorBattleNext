@@ -51,7 +51,9 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || frozenReport != null) return;
 		refreshShips();
-		if (!battleStarted && hasActiveShip()) {
+		if (engine.isPaused()) return;
+		if (!battleStarted) {
+			if (!isReadyToStart()) return;
 			battleStarted = true;
 			BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.started",
 				BattleNext_Logger.fields().put("ships", engine.getShips()).build());
@@ -131,11 +133,11 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		}
 	}
 
-	private boolean hasActiveShip() {
+	private boolean isReadyToStart() {
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
-			if (tracked.ship != null && tracked.ship.isAlive() && !tracked.ship.isFighter()) return true;
+			if (!tracked.member.isFighterWing() && tracked.ship == null) return false;
 		}
-		return false;
+		return hasAliveShips(FleetSide.PLAYER) && hasAliveShips(FleetSide.ENEMY);
 	}
 
 	private String determineWinner() {

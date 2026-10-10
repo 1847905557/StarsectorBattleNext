@@ -135,6 +135,9 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		CombatState combat = new CombatState(mission);
 		scorekeeper.init(combat.getApi());
 		scorekeeper.advance(0.1f, List.of());
+		assertFalse(scorekeeper.isFrozen());
+		combat.destroySide(FleetSide.ENEMY, 24f);
+		scorekeeper.advance(0.1f, List.of());
 		var report = scorekeeper.getFrozenReport();
 		report.setId(request.id());
 		report.setName("Complete local fleet report");

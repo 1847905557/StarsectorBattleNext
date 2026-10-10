@@ -48,10 +48,6 @@ public class BattleNext_FleetBuilder {
 		return new BattleNext_AssembledFleet(definition, commander, members, errors);
 	}
 
-	public BattleNext_AssembledFleet rebuild(BattleNext_AssembledFleet currentFleet, BattleNext_FleetModel definition) {
-		return build(definition);
-	}
-
 	public void addToMission(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet fleet, String tagline) {
 		api.initFleet(side, "", FleetGoal.ATTACK, fleet.getDefinition().getTags().contains("default_ai"), 1);
 		api.setFleetTagline(side, tagline);

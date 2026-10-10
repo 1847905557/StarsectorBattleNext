@@ -140,7 +140,8 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	private void showConfirmation() {
 		if (confirmation != null) return;
 		float width = Math.min(DIALOG_MAX_WIDTH, parent.getPosition().getWidth() - DIALOG_PARENT_WIDTH_RESERVE);
-		confirmation = ownPanel(parent, parent.createCustomPanel(width, DIALOG_HEIGHT, new ConfirmationDialogPlugin(width)));
+		ConfirmationDialogPlugin plugin = new ConfirmationDialogPlugin();
+		confirmation = ownPanel(parent, parent.createCustomPanel(width, DIALOG_HEIGHT, plugin));
 		UIRect dialogRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_MESSAGE_TOP,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_MESSAGE_HEIGHT);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
@@ -150,8 +151,15 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		if (!request.description().isEmpty()) {
 			dialog.addPara(request.description(), DIALOG_MESSAGE_GAP);
 		}
+		float extraHeight = Math.max(0f, dialog.getHeightSoFar() - DIALOG_MESSAGE_HEIGHT);
+		float height = DIALOG_HEIGHT + extraHeight;
+		confirmation.getPosition().setSize(width, height);
+		plugin.border.setSize(width + DIALOG_BORDER_INSET * 2f, height + DIALOG_BORDER_INSET * 2f);
+		plugin.borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - DIALOG_BORDER_INSET;
+		plugin.borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - DIALOG_BORDER_INSET;
+		dialog.getPosition().setSize(dialogRect.getWidth(), DIALOG_MESSAGE_HEIGHT + extraHeight);
 		dialogRect.addTooltip();
-		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP,
+		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP + extraHeight,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_STATUS_HEIGHT);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
 		confirmationStatus = confirmationStatusContent.addPara("", 0f);
@@ -168,7 +176,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 				+ DIALOG_BUTTON_GAP * (actions.length - 1))) * 0.5f;
 		for (int index = 0; index < actions.length; index++) {
 			BattleNext_PageLayout.fixedButton(confirmation,
-					new UIRect(firstX + index * (buttonWidth + DIALOG_BUTTON_GAP), DIALOG_BUTTON_TOP,
+					new UIRect(firstX + index * (buttonWidth + DIALOG_BUTTON_GAP), DIALOG_BUTTON_TOP + extraHeight,
 							buttonWidth, DIALOG_BUTTON_HEIGHT),
 					labels[index],
 					actions[index], CutStyle.ALL, false);
@@ -217,14 +225,8 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	private class ConfirmationDialogPlugin extends BaseCustomUIPanelPlugin {
 
 		private final UIBorderObject border = new UIBorderObject(false, true);
-		private final float borderX;
-		private final float borderY;
-
-		private ConfirmationDialogPlugin(float width) {
-			border.setSize(width + DIALOG_BORDER_INSET * 2f, DIALOG_HEIGHT + DIALOG_BORDER_INSET * 2f);
-			borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - DIALOG_BORDER_INSET;
-			borderY = (ShaderCore.getScreenHeight() - DIALOG_HEIGHT) * 0.5f - DIALOG_BORDER_INSET;
-		}
+		private float borderX;
+		private float borderY;
 
 		@Override
 		public void renderBelow(float alphaMult) {

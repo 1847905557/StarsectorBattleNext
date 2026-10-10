@@ -138,12 +138,31 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("fleet", fleet).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.delete", input);
 		try {
-			if (!BattleNext_EntryId.isValidPathSegment(fleet.getFolderName())) {
-				throw new IOException("Invalid fleet folder name: " + fleet.getFolderName());
+			List<String> paths = deletionPaths(fleet);
+			if (paths.size() == 1) {
+				files.deleteRecursively(paths.get(0));
+			} else {
+				Map<String, byte[]> original = new LinkedHashMap<>();
+				for (String path : paths) {
+					original.put(path, files.readBytes(path));
+				}
+				try {
+					for (String path : paths) {
+						files.delete(path);
+					}
+				} catch (IOException | RuntimeException exception) {
+					for (var entry : original.entrySet()) {
+						try {
+							files.writeBytes(entry.getKey(), entry.getValue());
+						} catch (IOException | RuntimeException restoreException) {
+							exception.addSuppressed(restoreException);
+						}
+					}
+					throw exception;
+				}
 			}
-			files.deleteRecursively(BASE_ROOT + fleet.getFolderName());
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.delete",
-					() -> BattleNext_Logger.fields().put("fleet", fleet).put("path", BASE_ROOT + fleet.getFolderName()).build());
+					() -> BattleNext_Logger.fields().put("fleet", fleet).put("paths", paths).build());
 		} catch (IOException | RuntimeException exception) {
 			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
 				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.delete.rejected", input, exception);
@@ -152,6 +171,24 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			}
 			throw exception;
 		}
+	}
+
+	public List<String> deletionPaths(BattleNext_FleetModel fleet) throws IOException {
+		String source = fleet.getSourcePath().replace('\\', '/');
+		if (fleet.getSourceType() != BattleNext_LoadSource.LEGACY) {
+			if (!BattleNext_EntryId.isValidPathSegment(fleet.getFolderName())) {
+				throw new IOException("Invalid fleet folder name: " + fleet.getFolderName());
+			}
+			return List.of(source.isEmpty() ? BASE_ROOT + fleet.getFolderName() : source.substring(0, source.lastIndexOf('/')));
+		}
+		String directory = source.substring(0, source.lastIndexOf('/'));
+		if (!directory.equals(BASE_FOLDER)) {
+			List<String> paths = files.list(directory, false);
+			long fleets = paths.stream().filter(path -> path.matches(".*/player\\d+_data\\.csv"))
+					.filter(path -> paths.contains(path.substring(0, path.length() - "_data.csv".length()) + "_fleet.csv")).count();
+			if (fleets == 1) return List.of(directory);
+		}
+		return List.of(source, source.substring(0, source.length() - "_data.csv".length()) + "_fleet.csv");
 	}
 
 	private void createBackup(String sourceDirectory, String targetDirectory) throws IOException {

@@ -24,7 +24,8 @@
 			"BattleNext_shame": "graphics/ui/BattleNext/BattleNext_shame.png",
 			"BattleNext_shameFlash": "graphics/ui/BattleNext/BattleNext_shameFlash.png",
 			"BattleNext_timeout": "graphics/ui/BattleNext/BattleNext_timeout.png",
-			"BattleNext_nameplate": "graphics/ui/BattleNext/BattleNext_nameplate.png"
+			"BattleNext_nameplate": "graphics/ui/BattleNext/BattleNext_nameplate.png",
+			"BattleNext_portrait_generic": "graphics/portraits/portrait_generic.png"
 		}
 	}
 }

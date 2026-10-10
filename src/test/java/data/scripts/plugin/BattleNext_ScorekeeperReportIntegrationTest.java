@@ -25,6 +25,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	private final Map<BattleNext_ScorekeeperPlugin, Map<String, Object>> registrations = new IdentityHashMap<>();
 	private final List<Object> listeners = new ArrayList<>();
 	private final List<Object> removed = new ArrayList<>();
+	private boolean enemyDestroyed;
 
 	@AfterEach
 	void releaseScorekeepers() {
@@ -97,6 +98,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		apply(scorekeeper, player, player, projectile(player, gun, "proj"), damage);
 		apply(scorekeeper, null, player, null, damage);
 
+		scorekeeper.freeze("player");
 		BattleNext_MemberReport report = report(scorekeeper, 0);
 		assertEquals(18d, report.getDamageDealt());
 		assertEquals(18d, report.getDamageTaken());
@@ -278,6 +280,13 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	}
 
 	private BattleNext_MemberReport report(BattleNext_ScorekeeperPlugin scorekeeper, int index) throws Exception {
+		if (!scorekeeper.isFrozen()) {
+			enemyDestroyed = false;
+			scorekeeper.advance(0.1f, List.of());
+			assertFalse(scorekeeper.isFrozen());
+			enemyDestroyed = true;
+			scorekeeper.advance(0.1f, List.of());
+		}
 		scorekeeper.advance(0.1f, List.of());
 		assertTrue(scorekeeper.isFrozen());
 		var frozen = scorekeeper.getFrozenReport();
@@ -309,7 +318,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		ShipAPI ship = proxy(ShipAPI.class, (name, args) -> switch (name) {
 			case "getFleetMember" -> member;
 			case "getOwner" -> member != null && member.getId().equals("enemy") ? 1 : 0;
-			case "isAlive" -> member != null && member.getId().equals("player");
+			case "isAlive" -> member != null && (member.getId().equals("player") || !enemyDestroyed);
 			case "getHullLevel" -> member != null && member.getId().equals("player") ? 0.8f : 0f;
 			case "getHullSpec" -> hull;
 			case "getParamAboutToApplyDamage" -> damageParam[0];

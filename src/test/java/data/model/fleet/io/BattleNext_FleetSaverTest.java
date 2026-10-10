@@ -1,11 +1,15 @@
 package data.model.fleet.io;
 
 import data.model.BattleNext_LoadSource;
+import data.model.BattleNext_BaseLoader;
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +20,58 @@ import java.util.List;
 import java.util.Map;
 
 class BattleNext_FleetSaverTest {
+
+	@ParameterizedTest
+	@ValueSource(strings = {"data", "fleet"})
+	void numberedCsvDeleteFailureRestoresBothFilesAndKeepsThePublishedFleet(String failedFile) throws Exception {
+
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/player01_data.csv", "中文 metadata\n");
+		files.put("tournament/player01_fleet.csv", "中文 members\n");
+		files.put("tournament/player1_data.csv", "other metadata");
+		files.put("tournament/player1_fleet.csv", "other members");
+		BattleNext_FleetModel fleet = fleet("01", "legacy_01", "current");
+		fleet.setSourceType(BattleNext_LoadSource.LEGACY);
+		fleet.setSourcePath("tournament/player01_data.csv");
+		BattleNext_FleetSaver saver = new BattleNext_FleetSaver(files);
+		BattleNext_FleetStore store = new BattleNext_FleetStore() {
+			@Override
+			protected BattleNext_FleetSaver saver() {
+				return saver;
+			}
+
+			@Override
+			protected List<BattleNext_BaseLoader<BattleNext_FleetModel>> sources() {
+				return List.of(new BattleNext_BaseLoader<>() {
+					@Override
+					public List<BattleNext_FleetModel> load() {
+						return List.of(fleet);
+					}
+
+					@Override
+					protected BattleNext_LoadSource source() {
+						return BattleNext_LoadSource.LEGACY;
+					}
+				});
+			}
+		};
+		store.reload();
+		long revision = store.getRevision();
+		files.failDeletePath = "tournament/player01_" + failedFile + ".csv";
+		IOException failure = assertThrows(IOException.class, () -> store.delete("01"));
+		assertEquals("Injected delete failure: " + files.failDeletePath, failure.getMessage());
+		assertSame(fleet, store.get("01"));
+		assertEquals(revision, store.getRevision());
+		assertEquals("中文 metadata\n", files.text("tournament/player01_data.csv"));
+		assertEquals("中文 members\n", files.text("tournament/player01_fleet.csv"));
+		assertEquals("other metadata", files.text("tournament/player1_data.csv"));
+		assertEquals("other members", files.text("tournament/player1_fleet.csv"));
+		files.failDeletePath = null;
+		store.delete("01");
+		assertNull(store.get("01"));
+		assertFalse(files.contains("tournament/player01_data.csv"));
+		assertFalse(files.contains("tournament/player01_fleet.csv"));
+	}
 
 	@Test
 	void numericSaveIdentityIsRejectedBeforeWritingTheTarget() throws Exception {

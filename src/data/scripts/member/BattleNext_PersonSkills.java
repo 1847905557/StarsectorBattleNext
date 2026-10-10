@@ -31,8 +31,15 @@ public class BattleNext_PersonSkills {
 		for (String skill : skills) {
 			counts.put(skill, counts.getOrDefault(skill, 0) + 1);
 		}
+
+		person.getStats().setLevel(0);
 		for (var entry : counts.entrySet()) {
 			person.getStats().setSkillLevel(entry.getKey(), entry.getValue() > 1 ? 2f : 1f);
+			person.getStats().setLevel(person.getStats().getLevel() + 1);
+		}
+
+		if (person.getStats().getLevel() > 0 && person.isDefault()) {
+			person.setPortraitSprite("graphics/portraits/portrait_generic.png");
 		}
 	}
 }

@@ -137,8 +137,8 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 		try {
 			requireLoaded();
 			T model = get(id);
-			if (!isManaged(model)) {
-				throw new IllegalStateException("Entry is not managed: " + id);
+			if (!isDeletable(model)) {
+				throw new IllegalStateException("Entry is not deletable: " + id);
 			}
 			saver().delete(model);
 			removeEntry(id);
@@ -192,6 +192,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	protected boolean isManaged(T model) {
 		return model != null && model.getSourceType() == BattleNext_LoadSource.CREATED;
+	}
+
+	protected boolean isDeletable(T model) {
+		return isManaged(model);
 	}
 
 	protected void loadState() throws IOException, JSONException {
