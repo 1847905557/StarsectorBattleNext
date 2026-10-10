@@ -107,6 +107,7 @@ public class BattleNext_VariantBuilder {
 		variant.setNumFluxVents(json.optInt("fluxVents", 0));
 		variant.setGoalVariant(json.optBoolean("goalVariant", false));
 		variant.setSource(VariantSource.REFIT);
+		variant.setMayAutoAssignWeapons(false);
 		addMods("hullMods", variant::addMod);
 		addMods("permaMods", variant::addPermaMod);
 		addMods("sMods", mod -> variant.addPermaMod(mod, true));
