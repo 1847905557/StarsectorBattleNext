@@ -10,6 +10,7 @@ import data.scripts.plugin.BattleNext_AllShipsStatusPlugin;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_FreeCameraPlugin;
 import data.scripts.plugin.BattleNext_RttPlugin;
+import data.scripts.tools.BattleNext_Settings;
 
 public class MissionDefinition implements MissionDefinitionPlugin {
 
@@ -20,7 +21,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_MissionRestrictedUnlock.getInstance().enable(api);
 
 		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
-		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, false, 999);
+		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 999);
 
 		api.addBriefingItem("TEST");
 		api.setFleetTagline(FleetSide.PLAYER, "1");
@@ -38,7 +39,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		api.initMap(-MAP_HALF_SIZE, MAP_HALF_SIZE, -MAP_HALF_SIZE, MAP_HALF_SIZE);
 
-		api.addPlugin(new BattleNext_DeploymentPlugin());
+		api.addPlugin(new BattleNext_DeploymentPlugin(BattleNext_Settings.getDeploymentPointLimit(), true, false));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
 		api.addPlugin(new BattleNext_AllShipsStatusPlugin());
 		api.addPlugin(new BattleNext_RttPlugin());

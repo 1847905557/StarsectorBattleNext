@@ -102,11 +102,17 @@ public class BattleNext_SimulatorSmoke {
 			List<BattleNext_SimulationConfig.Strategy> strategies = measurements == 0 ? Arrays.asList(BattleNext_SimulationConfig.Strategy.values())
 					: List.of(BattleNext_SimulationConfig.Strategy.AGGRESSIVE);
 			for (BattleNext_SimulationConfig.Strategy strategy : strategies) {
-				for (int iteration = 0; iteration < (measurements == 0 ? 2 : measurements + 1); iteration++) {
-					BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false);
+				for (int iteration = 0; iteration < (measurements == 0 ? 5 : measurements + 1); iteration++) {
+					int deploymentPointLimit = measurements == 0 && iteration >= 2 ? 10 : 0;
+					BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false, deploymentPointLimit);
 					List<String> wolves = List.of("wolf_CS", "wolf_CS", "wolf_CS", "wolf_CS");
-					BattleNext_SimulationRequest request = measurements == 0 && iteration == 1 ? matchRequest(core, config)
+					BattleNext_SimulationRequest request = measurements == 0 && (iteration % 2 == 1 || iteration == 4) ? matchRequest(core, config)
 							: BattleNext_SimulationRequest.fromVariants(wolves, wolves, config);
+					if (measurements == 0 && iteration == 4) {
+						JSONObject source = request.source();
+						source.getJSONObject("player").getJSONObject("definition").put("tags", new JSONArray());
+						request = new BattleNext_SimulationRequest(request.id(), request.kind(), source.toString(), config);
+					}
 					channel.send("REQUEST", request.toJson());
 					JSONObject preparing = await(channel, process, "STATUS", System.nanoTime() + 30000000000L).getJSONObject("payload");
 					if (!preparing.getString("state").equals("PREPARING") || preparing.getDouble("fps") != activeFps) {
@@ -118,13 +124,19 @@ public class BattleNext_SimulatorSmoke {
 					}
 					JSONObject message = await(channel, process, "RESULT", System.nanoTime() + 180000000000L);
 					BattleNext_SimulationResult result = BattleNext_SimulationResult.fromJson(message.getJSONObject("payload"));
-					System.out.println(strategy + " " + request.kind() + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
+					System.out.println(strategy + " " + request.kind() + " DP=" + deploymentPointLimit + ": " + result.outcome() + ", simulated=" + result.simulationSeconds()
 							+ "s, elapsed=" + result.executionNanos() / 1000000000d + "s, steps=" + result.steps()
 							+ ", peakHeap=" + result.peakHeapBytes());
 					if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED) throw new IOException("Smoke simulation did not complete: " + result.diagnostic());
 					if (result.report().getPlayerMembers().size() != wolves.size() || result.report().getEnemyMembers().size() != wolves.size()) throw new IOException("Smoke report member count differs from the constructed input");
 					String expectedHull = new JSONObject(Files.readString(core.resolve("data/variants/wolf/wolf_CS.variant"), StandardCharsets.UTF_8)).getString("hullId");
 					var report = result.report();
+					if (result.simulationSeconds() <= 1f) throw new IOException("Battle settled during deployment");
+					if (deploymentPointLimit > 0 && report.getWinner().equals("draw")) throw new IOException("Limited deployment must resolve a winner");
+					if (deploymentPointLimit > 0 && request.kind() == BattleNext_SimulationRequest.Kind.VARIANTS) {
+						var losers = report.getWinner().equals("player") ? report.getEnemyMembers() : report.getPlayerMembers();
+						if (losers.stream().filter(member -> member.getStatus().equals("destroyed")).count() <= 2) throw new IOException("Losses must include vanilla reinforcements beyond the initial two Wolves");
+					}
 					for (var members : List.of(report.getPlayerMembers(), report.getEnemyMembers())) {
 						for (var member : members) {
 							if (!expectedHull.equals(member.getHullId())) throw new IOException("Smoke report hull identity differs from the constructed variant: " + member.getHullId());
@@ -137,9 +149,25 @@ public class BattleNext_SimulatorSmoke {
 					awaitReady(channel, process, System.nanoTime() + 30000000000L);
 				}
 			}
-			for (String scenario : List.of("unknown", "budget", "execution_budget", "cancel")) {
+			if (measurements == 0) {
+				for (BattleNext_SimulationConfig.Strategy strategy : strategies) {
+					BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 12000f, 500f, 1f, 120f, 32, true, false, 10);
+					var request = BattleNext_SimulationRequest.fromVariants(Collections.nCopies(4, "wolf_CS"), Collections.nCopies(4, "wolf_CS"), config);
+					channel.send("REQUEST", request.toJson());
+					var result = BattleNext_SimulationResult.fromJson(await(channel, process, "RESULT", System.nanoTime() + 180000000000L).getJSONObject("payload"));
+					if (result.outcome() != BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) throw new IOException("Initial deployment probe must exhaust its one-second budget: " + result.diagnostic());
+					for (var members : List.of(result.report().getPlayerMembers(), result.report().getEnemyMembers())) {
+						long alive = members.stream().filter(member -> member.getStatus().equals("alive")).count();
+						long undeployed = members.stream().filter(member -> member.getStatus().equals("undeployed")).count();
+						if (alive < 1 || alive > 2 || alive + undeployed != 4) throw new IOException("10 DP initial deployment must retain reserves for both sides: " + alive + "/" + undeployed);
+					}
+					System.out.println(strategy + " initial 10 DP deployment and reserves verified");
+					awaitReady(channel, process, System.nanoTime() + 30000000000L);
+				}
+			}
+			for (String scenario : List.of("unknown", "budget", "execution_budget", "cancel", "empty_deployment")) {
 				BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
-						12000f, 12000f, 500f, scenario.equals("budget") ? 1f : 3600f, scenario.equals("execution_budget") ? 0.01f : 120f, 32, true, false);
+						12000f, 12000f, 500f, scenario.equals("budget") ? 1f : scenario.equals("empty_deployment") ? 20f : 3600f, scenario.equals("execution_budget") ? 0.01f : 120f, 32, true, false, scenario.equals("empty_deployment") ? 1 : 0);
 				BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of(scenario.equals("unknown") ? "BattleNext_unknown_smoke_variant" : "wolf_CS"), List.of("wolf_CS"), config);
 				channel.send("REQUEST", request.toJson());
 				if (scenario.equals("cancel")) {
@@ -150,11 +178,16 @@ public class BattleNext_SimulatorSmoke {
 						System.nanoTime() + 150000000000L).getJSONObject("payload"));
 				BattleNext_SimulationResult.Outcome expected = switch (scenario) {
 					case "unknown" -> BattleNext_SimulationResult.Outcome.FAILED;
-					case "budget", "execution_budget" -> BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED;
+					case "budget", "execution_budget", "empty_deployment" -> BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED;
 					default -> BattleNext_SimulationResult.Outcome.CANCELLED;
 				};
 				if (result.outcome() != expected) throw new IOException("Smoke terminal outcome: " + scenario + " expected " + expected + ", actual " + result.outcome());
 				if (expected == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED && !result.report().getWinner().equals("draw")) throw new IOException("Budget exhaustion must freeze a draw report");
+				if (scenario.equals("empty_deployment")) {
+					for (var members : List.of(result.report().getPlayerMembers(), result.report().getEnemyMembers())) {
+						if (!members.get(0).getStatus().equals("undeployed")) throw new IOException("One DP must leave both Wolves undeployed");
+					}
+				}
 				System.out.println(scenario + ": " + result.outcome());
 				awaitReady(channel, process, System.nanoTime() + 30000000000L);
 			}

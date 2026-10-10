@@ -49,7 +49,7 @@ public class BattleNext_FleetBuilder {
 	}
 
 	public void addToMission(MissionDefinitionAPI api, FleetSide side, BattleNext_AssembledFleet fleet, String tagline) {
-		api.initFleet(side, "", FleetGoal.ATTACK, fleet.getDefinition().getTags().contains("default_ai"), 1);
+		api.initFleet(side, "", FleetGoal.ATTACK, true, 1);
 		api.setFleetTagline(side, tagline);
 		for (FleetMemberAPI member : fleet.getMembers()) {
 			api.addFleetMember(side, member);

@@ -42,7 +42,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 				throw exception.getCause();
 			}
 		}));
-		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50, 0);
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		var root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
 		editor.open(null, false);

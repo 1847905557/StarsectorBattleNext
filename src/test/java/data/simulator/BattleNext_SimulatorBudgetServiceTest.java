@@ -24,7 +24,7 @@ class BattleNext_SimulatorBudgetServiceTest extends BattleNext_SimulatorServiceF
 			OwnedProcess worker = new OwnedProcess();
 			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), worker);
 			var config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
-					12000f, 12000f, 500f, 3600f, 0.01f, 32, true, false);
+					12000f, 12000f, 500f, 3600f, 0.01f, 32, true, false, 0);
 			var task = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), config));
 			assertEquals(task.getRequest().id(), peer.receive().getJSONObject("payload").getString("id"));
 			peer.send("STATUS", new JSONObject().put("id", task.getRequest().id()).put("state", "RUNNING"));

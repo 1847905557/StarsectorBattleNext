@@ -1,15 +1,16 @@
 package data.scripts.plugin;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
-import com.fs.starfarer.api.combat.CombatEngineLayers;
-import com.fs.starfarer.api.combat.ViewportAPI;
+import com.fs.starfarer.api.characters.PersonAPI;
+import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Personalities;
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.mission.FleetSide;
 import data.scripts.battlesnext.util.BattleNext_BoxBasedUtils;
 import data.scripts.battlesnext.util.BattleNext_FontData;
 import data.scripts.tools.BattleNext_Settings;
+import data.simulator.BattleNext_SimulatorWorker;
 import org.boxutil.BoxUtilModPlugin;
 import org.boxutil.units.standard.entity.SpriteEntity;
 import org.boxutil.util.TransformUtil;
@@ -40,6 +41,7 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 	private float resultTimeoutAlpha;
 	private boolean graphicEnabled;
 	private boolean completed;
+	private boolean timeoutApplied;
 
 	public BattleNext_BattleClockPlugin(float timeLimit, BattleNext_ScorekeeperPlugin scorekeeper) {
 		this.timeLimit = Math.max(0f, timeLimit);
@@ -49,7 +51,7 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void init(CombatEngineAPI engine) {
 		this.engine = engine;
-		graphicEnabled = BattleNext_Settings.isFullGraphicEffect();
+		graphicEnabled = !BattleNext_SimulatorWorker.isWorker() && BattleNext_Settings.isFullGraphicEffect();
 	}
 
 	@Override
@@ -60,22 +62,28 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 			cleanup();
 			return;
 		}
+
+		float elapsed = engine.getTotalElapsedTime(false);
+		if (timeLimit > 0f && !timeoutApplied && elapsed >= timeLimit) {
+			applyTimeout();
+		}
+
 		if (!graphicEnabled) {
-			if (scorekeeper.isFrozen()) {
+			if (scorekeeper != null && scorekeeper.isFrozen()) {
 				cleanup();
 			}
 			return;
 		}
+
 		if (timerText == null) initVisuals();
 
-		float elapsed = engine.getTotalElapsedTime(false);
 		if (resultStart < 0f) {
 			int second = Math.max(0, (int) elapsed);
 			if (second != displayedSecond) {
 				displayedSecond = second;
 				timerText.setText(String.format(Locale.ROOT, "%02d:%02d", second / 60, second % 60));
 			}
-			if (scorekeeper.isFrozen()) {
+			if (scorekeeper != null && scorekeeper.isFrozen()) {
 				resultStart = elapsed;
 				resultTimerAlpha = timerAlpha(elapsed);
 				resultTimeoutAlpha = timeoutAlpha(elapsed);
@@ -112,6 +120,23 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 
 	static Vector2f clockCenter(float screenWidth, float screenHeight) {
 		return new Vector2f(screenWidth * 0.5f, screenHeight - TOP_MARGIN - SPRITE_HEIGHT * 0.5f);
+	}
+
+	private void applyTimeout() {
+		timeoutApplied = true;
+		for (ShipAPI ship : engine.getShips()) {
+			if (!ship.isAlive()) continue;
+			PersonAPI captain = ship.getCaptain();
+			if (captain != null) {
+				captain.setPersonality(Personalities.RECKLESS);
+			}
+		}
+		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(false).setFullAssault(true);
+		engine.getFleetManager(FleetSide.PLAYER).getTaskManager(true).setFullAssault(true);
+		engine.getFleetManager(FleetSide.ENEMY).getTaskManager(false).setFullAssault(true);
+		float mapSize = engine.getMapWidth() * 2f + engine.getMapHeight() * 2f;
+		engine.getFogOfWar(FleetSide.PLAYER.ordinal()).revealAroundPoint(engine, 0f, 0f, mapSize);
+		engine.getFogOfWar(FleetSide.ENEMY.ordinal()).revealAroundPoint(engine, 0f, 0f, mapSize);
 	}
 
 	private void initVisuals() {

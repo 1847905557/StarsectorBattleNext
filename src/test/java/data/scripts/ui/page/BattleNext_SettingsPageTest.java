@@ -147,8 +147,8 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(simulatorBounds.getHeight(), rectangle.getHeight());
 		assertEquals(Misc.getNegativeHighlightColor(), rectangleColors.get(rectangle));
 		assertEquals(2f, rectangleThicknesses.get(rectangle));
-		List<String> names = List.of("battleTimeLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField");
-		List<String> values = List.of("700.5", "pending", "4.5", "75");
+		List<String> names = List.of("battleTimeLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField", "deploymentPointLimitField");
+		List<String> values = List.of("700.5", "pending", "4.5", "75", "-10");
 		assertFalse(page.hasUnsavedChanges());
 		for (int index = 0; index < names.size(); index++) {
 			TextFieldAPI field = (TextFieldAPI) getField(getField(page, "editor"), names.get(index));
@@ -171,7 +171,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertTrue(page.hasUnsavedChanges());
 		assertEquals(1, children.get(root).size());
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(page, "inputRouter");
-		assertEquals(4, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		assertEquals(names.size(), ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		page.close();
 		assertTrue(children.get(root).isEmpty());
 		assertFalse(router.getSession().hasInputState());
@@ -266,6 +266,38 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertTrue(page.hasUnsavedChanges());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
 		page.close();
+	}
+
+	@Test
+	void deploymentLimitValidatesIntegerInputAndPreservesDraftThroughSaveDiscardAndReopen() throws Exception {
+		installSettings(new JSONObject(), false);
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
+		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
+		page.attach(root);
+		try {
+			Object editor = getField(page, "editor");
+			assertEquals("0", ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
+			for (String input : List.of("-5", "0", "120")) {
+				((TextFieldAPI) getField(editor, "deploymentPointLimitField")).setText(input);
+				page.refreshContent();
+				assertEquals(input, ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
+				assertTrue(page.save(), page.getStatusText());
+				assertEquals(Integer.parseInt(input), savedSettings.get().getInt("deploymentPointLimit"));
+				page.attach(root);
+				assertEquals(input, ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
+			}
+			for (String input : List.of("1.5", "pending", "2147483648")) {
+				((TextFieldAPI) getField(editor, "deploymentPointLimitField")).setText(input);
+				assertFalse(page.save());
+				assertEquals(input, ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
+				assertEquals(120, savedSettings.get().getInt("deploymentPointLimit"));
+			}
+			page.discard();
+			assertEquals("120", ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
+			assertFalse(page.hasUnsavedChanges());
+		} finally {
+			page.close();
+		}
 	}
 
 	private void installSettings(JSONObject initial, boolean vanillaDefault) {

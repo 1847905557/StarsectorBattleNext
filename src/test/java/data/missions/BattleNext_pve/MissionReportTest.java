@@ -2,12 +2,18 @@ package data.missions.BattleNext_pve;
 
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionPlugin;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.combat.AdmiralAIPlugin;
+import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
+import com.fs.starfarer.api.combat.BattleCreationContext;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.plugin.BattleNext_RttPlugin;
+import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
@@ -21,6 +27,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
+import java.util.EnumMap;
+import java.util.Map;
 
 class MissionReportTest extends BattleNext_TestMissionFixture {
 
@@ -31,7 +39,8 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		quickBattles("alpha,beta,2,1.5\n");
 		fleetSkills("alpha", List.of("combat", "combat", "fleet"), List.of("full_assault"));
 		fleetSkills("beta", List.of("gunnery", "gunnery", "industry"), List.of("default_ai"));
-		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50);
+		int deploymentPointLimit = rtt ? 120 : -5;
+		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50, deploymentPointLimit);
 		var tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
 		var tournament = new BattleNext_TournamentModel();
@@ -54,10 +63,9 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		for (MissionState mission : List.of(pvp, pve)) {
 			assertEquals(2f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("combat"));
 			assertEquals(1f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("fleet"));
-			assertFalse(mission.getDefaultAi().get(FleetSide.PLAYER));
+			assertTrue(mission.getDefaultAi().get(FleetSide.PLAYER));
 			assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
-			assertEquals(123f, getField(mission.getPlugins().get(1), "timeLimit"));
-			assertEquals(123f, getField(mission.getPlugins().get(3), "timeLimit"));
+			assertEquals(123f, getField(mission.getPlugins().get(2), "timeLimit"));
 			for (FleetSide side : FleetSide.values()) {
 				assertTrue(mission.getEvents().indexOf("init:" + side) < mission.getEvents().indexOf("member:" + side));
 				assertTrue(mission.getEvents().lastIndexOf("member:" + side) < mission.getEvents().indexOf("commander:" + side));
@@ -68,6 +76,28 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		assertEquals(2f, pve.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("combat"));
 		assertEquals("mod_faction patrol", getField(pve.getPlugins().get(pve.getPlugins().size() - 1), "enemyName"));
 		assertSame(generatedFleets.get(0).getMembers().get(0), pve.getMembers().get(FleetSide.ENEMY).get(0));
+		var lab = new MissionState();
+		MissionDefinitionPlugin labDefinition = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_lab.MissionDefinition")
+				.getDeclaredConstructor().newInstance();
+		labDefinition.defineMission(lab.getApi());
+		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50, 200);
+		for (MissionState mission : List.of(pvp, pve, lab)) {
+			Map<FleetSide, Integer> caps = new EnumMap<>(FleetSide.class);
+			CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
+				case "getContext" -> new BattleCreationContext(null, null, null, null);
+				case "setMaxFleetPoints" -> caps.put((FleetSide) args[0], (Integer) args[1]);
+				case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+					case "getAdmiralAI" -> proxy(AdmiralAIPlugin.class, (key, input) -> null);
+					case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (key, input) -> null);
+					case "getReservesCopy" -> List.of();
+					default -> null;
+				});
+				default -> null;
+			});
+			mission.getPlugins().stream().filter(BattleNext_DeploymentPlugin.class::isInstance).findFirst().orElseThrow().init(engine);
+			int expected = deploymentPointLimit > 0 ? deploymentPointLimit : 999;
+			assertEquals(Map.of(FleetSide.PLAYER, expected, FleetSide.ENEMY, expected), caps);
+		}
 	}
 
 	@ParameterizedTest
@@ -78,7 +108,7 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		write(BattleNext_StartedTournamentStore.PATH, "{\"formatVersion\":1,\"activeTournamentId\":\"missing\",\"instances\":[]}");
 		var meta = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		byte[] original = Files.readAllBytes(meta);
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount, 0);
 		var mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		var combat = new CombatState(mission);

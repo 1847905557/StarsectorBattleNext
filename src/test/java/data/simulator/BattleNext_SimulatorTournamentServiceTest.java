@@ -9,6 +9,7 @@ import data.scripts.battle.BattleNext_BattleValidation;
 import data.scripts.tournament.BattleNext_StartedTournament;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.page.BattleNext_BattleReportPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.view.BattleNext_TournamentView;
@@ -71,6 +72,7 @@ class BattleNext_SimulatorTournamentServiceTest extends BattleNext_SimulatorServ
 	@Test
 	void tournamentFifoPauseAndResumeKeepRoundIdentityMapAndUseCurrentAssets() throws Exception {
 		quickBattles("alpha,beta,-1,1\n");
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 80);
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
@@ -104,8 +106,11 @@ class BattleNext_SimulatorTournamentServiceTest extends BattleNext_SimulatorServ
 			chart.panBy(8f, 12f);
 			BattleNext_TournamentDisplay.ViewState browseState = display.captureState();
 			BattleNext_SimulationRequest first = nextRequest(peer);
+			assertEquals(80, first.config().deploymentPointLimit());
+			BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 160);
 			completeRound(peer, first, "player");
 			BattleNext_SimulationRequest second = nextRequest(peer);
+			assertEquals(80, second.config().deploymentPointLimit());
 			widget.refreshStatus();
 			assertSame(display, getField(widget, "tournamentDisplay"));
 			assertSame(chart, getField(display, "chart"));
@@ -124,6 +129,7 @@ class BattleNext_SimulatorTournamentServiceTest extends BattleNext_SimulatorServ
 			sources.getFleetStore().save(sources.getFleetStore().get("beta"));
 			task.resume();
 			BattleNext_SimulationRequest resumed = nextRequest(peer);
+			assertEquals(80, resumed.config().deploymentPointLimit());
 			assertEquals(second.id(), resumed.id());
 			assertEquals(map, resumed.source().getInt("actualMap"));
 			assertEquals("Changed before resume", resumed.source().getJSONObject("player").getJSONObject("definition").getString("name"));

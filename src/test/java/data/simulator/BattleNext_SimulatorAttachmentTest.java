@@ -142,7 +142,7 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 		} finally {
 			BattleNext_MissionRestrictedUnlock.getInstance().forget();
 		}
-		List<String> expected = new ArrayList<>(List.of("fleet:PLAYER:true", "fleet:ENEMY:false", "briefing:TEST", "tagline:PLAYER:1", "tagline:ENEMY:2"));
+		List<String> expected = new ArrayList<>(List.of("fleet:PLAYER:true", "fleet:ENEMY:true", "briefing:TEST", "tagline:PLAYER:1", "tagline:ENEMY:2"));
 		for (FleetSide side : FleetSide.values()) {
 			for (int index = 0; index < 4; index++) {
 				expected.add("ship:" + side + ":wolf_CS");

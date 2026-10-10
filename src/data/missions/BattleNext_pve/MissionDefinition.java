@@ -103,8 +103,10 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_MissionBattleMap.apply(api, map, match.getMapScale());
 
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
-		api.addPlugin(new BattleNext_DeploymentPlugin());
-		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
+		int deploymentPointLimit = BattleNext_Settings.getDeploymentPointLimit();
+		api.addPlugin(new BattleNext_DeploymentPlugin(deploymentPointLimit,
+				BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
+				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));

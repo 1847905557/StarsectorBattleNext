@@ -59,23 +59,37 @@ class BattleNext_SettingsTest {
 	@Test
 	void pvpRttDefaultsOffAndPersistsWhenSaved() {
 		assertFalse(BattleNext_Settings.isRttInBattle());
-		BattleNext_Settings.save(false, true, false, true, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, true, 500f, 1f, 3f, 50, 0);
 		assertTrue(stored.get().optBoolean("rttInBattle"));
 		BattleNext_Settings.load();
 		assertTrue(BattleNext_Settings.isRttInBattle());
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertFalse(stored.get().optBoolean("rttInBattle", true));
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {-7, 0, 120})
+	void deploymentLimitPersistsSignedIntegersAndFailedWritesKeepThePublishedValue(int limit) throws Exception {
+		assertEquals(0, BattleNext_Settings.getDeploymentPointLimit());
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, limit);
+		assertEquals(limit, stored.get().getInt("deploymentPointLimit"));
+		BattleNext_Settings.load();
+		assertEquals(limit, BattleNext_Settings.getDeploymentPointLimit());
+		failWrite = true;
+		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, limit + 1));
+		assertEquals(limit, BattleNext_Settings.getDeploymentPointLimit());
+		assertEquals(limit, stored.get().getInt("deploymentPointLimit"));
 	}
 
 	@Test
 	void infoLogDefaultsOffAndPersistsBothStates() {
 		assertFalse(BattleNext_Settings.isInfoLogEnabled());
-		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50, 0);
 		assertTrue(stored.get().optBoolean("infoLog"));
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
 		BattleNext_Settings.load();
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertFalse(stored.get().optBoolean("infoLog", true));
 		BattleNext_Settings.load();
 		assertFalse(BattleNext_Settings.isInfoLogEnabled());
@@ -83,9 +97,9 @@ class BattleNext_SettingsTest {
 
 	@Test
 	void failedWritePreservesCommittedInfoLogSetting() {
-		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, true, false, 500f, 1f, 3f, 50, 0);
 		failWrite = true;
-		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50));
+		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0));
 		assertTrue(BattleNext_Settings.isInfoLogEnabled());
 		assertTrue(stored.get().optBoolean("infoLog"));
 	}
@@ -104,7 +118,7 @@ class BattleNext_SettingsTest {
 		vanillaCnText = !enabled;
 		BattleNext_Settings.load();
 		assertEquals(!enabled, BattleNext_Settings.isCnTextEnabled());
-		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertEquals(enabled, stored.get().getBoolean("cnText"));
 		vanillaCnReads = 0;
 		BattleNext_Settings.load();
@@ -115,9 +129,9 @@ class BattleNext_SettingsTest {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void failedWritePreservesCommittedLanguage(boolean enabled) {
-		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50, 0);
 		failWrite = true;
-		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(!enabled, true, false, false, 500f, 1f, 3f, 50));
+		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(!enabled, true, false, false, 500f, 1f, 3f, 50, 0));
 		assertEquals(enabled, BattleNext_Settings.isCnTextEnabled());
 		assertEquals(enabled, stored.get().optBoolean("cnText"));
 	}

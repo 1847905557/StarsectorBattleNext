@@ -302,6 +302,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		return switch (status) {
 			case "destroyed" -> "status_destroyed";
 			case "retreated" -> "status_retreated";
+			case "undeployed" -> "status_undeployed";
 			default -> "status_alive";
 		};
 	}

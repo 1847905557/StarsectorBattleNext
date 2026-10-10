@@ -5,11 +5,13 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.*;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.combat.EveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.CrewCompositionAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.mission.FleetSide;
@@ -173,6 +175,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 			case "getCaptain" -> officer;
 			case "getFleetPointCost" -> points;
 			case "getRepairTracker" -> repair;
+			case "getCrewComposition" -> proxy(CrewCompositionAPI.class, (methodName, values) -> null);
 			default -> null;
 		});
 	}
@@ -217,6 +220,12 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 				return null;
 			});
 			api = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
+				case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+					case "getDeployedCopy" -> aliveSides.contains(args[0]) ? mission.getMembers().get(args[0]) : List.of();
+					case "getDestroyedCopy" -> aliveSides.contains(args[0]) ? List.of() : mission.getMembers().get(args[0]);
+					case "getReservesCopy", "getDisabledCopy", "getRetreatedCopy", "getAllEverDeployedCopy" -> List.of();
+					default -> null;
+				});
 				case "getShips" -> ships;
 				case "getTotalElapsedTime" -> elapsed;
 				case "getCustomData" -> custom;

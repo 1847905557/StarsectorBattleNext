@@ -299,7 +299,8 @@
 		"BattleNext_report_source_weapon": "Weapon",
 		"BattleNext_report_status_alive": "Alive",
 		"BattleNext_report_status_destroyed": "Destroyed",
-		"BattleNext_report_status_retreated": "Retreated"
+		"BattleNext_report_status_retreated": "Retreated",
+		"BattleNext_report_status_undeployed": "Undeployed"
 	},
 	"Report_CN": {
 		"BattleNext_report_armor": "装甲伤害",
@@ -329,7 +330,8 @@
 		"BattleNext_report_source_weapon": "武器",
 		"BattleNext_report_status_alive": "存活",
 		"BattleNext_report_status_destroyed": "已摧毁",
-		"BattleNext_report_status_retreated": "已撤退"
+		"BattleNext_report_status_retreated": "已撤退",
+		"BattleNext_report_status_undeployed": "未部署"
 	},
 	"Rule": {
 		"BattleNext_rule_add_restriction": "Add restriction",
@@ -366,11 +368,12 @@
 		"BattleNext_settings_boost_time_mult": "Boost time multiplier",
 		"BattleNext_settings_cn_text": "Enable CN text",
 		"BattleNext_settings_default_time_mult": "Default time multiplier",
+		"BattleNext_settings_deployment_point_limit": "Deployment Point Limit (DP)",
 		"BattleNext_settings_description": "Interface and battle settings.",
 		"BattleNext_settings_full_graphic_effect": "Enable full graphic effects",
 		"BattleNext_settings_heading": "Settings management",
 		"BattleNext_settings_info_log": "Enable info log",
-		"BattleNext_settings_invalid_number": "Enter a valid nonnegative limit or count and positive time multipliers",
+		"BattleNext_settings_invalid_number": "Enter an integer deployment limit, a nonnegative duration or count, and positive time multipliers",
 		"BattleNext_settings_report_keep_count": "Reports to keep",
 		"BattleNext_settings_rtt_in_battle": "Enable RTT controls in AI Battles Next"
 	},
@@ -379,11 +382,12 @@
 		"BattleNext_settings_boost_time_mult": "加速时间倍率",
 		"BattleNext_settings_cn_text": "启用中文文本",
 		"BattleNext_settings_default_time_mult": "默认时间倍率",
+		"BattleNext_settings_deployment_point_limit": "部署点上限 (DP)",
 		"BattleNext_settings_description": "界面与战斗设置。",
 		"BattleNext_settings_full_graphic_effect": "启用完整图形效果",
 		"BattleNext_settings_heading": "设置管理",
 		"BattleNext_settings_info_log": "启用 INFO 日志",
-		"BattleNext_settings_invalid_number": "请输入有效的非负上限或数量，以及正数时间倍率",
+		"BattleNext_settings_invalid_number": "请输入整数部署点上限、非负时长或数量，以及正数时间倍率",
 		"BattleNext_settings_report_keep_count": "保留作战记录数量",
 		"BattleNext_settings_rtt_in_battle": "在 AI Battles Next 战斗中启用 RTT 控制"
 	},

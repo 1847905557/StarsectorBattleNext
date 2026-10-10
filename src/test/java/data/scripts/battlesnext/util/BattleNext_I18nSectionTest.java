@@ -119,7 +119,7 @@ class BattleNext_I18nSectionTest {
 		BattleNext_I18nSection fleet = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 		BattleNext_I18nSection label = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_commander_skills");
 		for (boolean enabled : List.of(true, false, true)) {
-			BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50);
+			BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50, 0);
 			requested.clear();
 			String category = "Fleet";
 			assertSame(fleet, BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_"));
@@ -143,7 +143,7 @@ class BattleNext_I18nSectionTest {
 
 	@Test
 	void chineseLookupsKeepExistingFailureResultsAndSelectedCategory() {
-		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50, 0);
 		List<TextKey> requested = new ArrayList<>();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {

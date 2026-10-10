@@ -49,11 +49,11 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		configureHullmodLabelAssets(selected.getApi().getHullSpec(), colorblind);
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		details.setVariantJson(json);
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
 		Map<String, String> types = Map.of("built", "built_in", "smod", "s_mod", "built_smod", "s_mod", "dmod", "d_mod");
 		for (boolean language : List.of(false, true, false)) {
-			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50, 0);
 			details.refreshContent();
 			List<UIComponentAPI> cards = tooltips.get(lists(details).get("plugins")).getComponents().stream()
 					.filter(CustomPanelAPI.class::isInstance).toList();

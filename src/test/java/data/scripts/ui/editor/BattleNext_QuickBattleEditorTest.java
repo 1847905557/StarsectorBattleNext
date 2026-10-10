@@ -176,7 +176,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 				throw exception.getCause();
 			}
 		}));
-		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50, 0);
 		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		List<BattleNext_QuickBattleModel> entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");

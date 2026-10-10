@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
+import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
@@ -259,6 +260,12 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 				default -> null;
 			});
 			scorekeeper.init(proxy(CombatEngineAPI.class, (name, args) -> switch (name) {
+				case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (method, values) -> switch (method) {
+					case "getDeployedCopy" -> damageParams.keySet().stream().filter(ship -> ship.getFleetMember() != null && ship.getOwner() == ((FleetSide) args[0]).ordinal() && ship.isAlive()).map(ShipAPI::getFleetMember).toList();
+					case "getDestroyedCopy" -> damageParams.keySet().stream().filter(ship -> ship.getFleetMember() != null && ship.getOwner() == ((FleetSide) args[0]).ordinal() && !ship.isAlive()).map(ShipAPI::getFleetMember).toList();
+					case "getReservesCopy", "getDisabledCopy", "getRetreatedCopy", "getAllEverDeployedCopy" -> List.of();
+					default -> null;
+				});
 				case "getCustomData" -> custom;
 				case "getListenerManager" -> manager;
 				case "getShips" -> List.copyOf(damageParams.keySet());

@@ -46,7 +46,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 				throw exception.getCause();
 			}
 		}));
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
@@ -67,7 +67,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_BattleSourceField field = (BattleNext_BattleSourceField) getField(selector, "instanceField");
 		for (boolean language : List.of(false, true, false)) {
 			if (language != BattleNext_Settings.isCnTextEnabled()) {
-				BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+				BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50, 0);
 				selector.refreshContent();
 			}
 			field = (BattleNext_BattleSourceField) getField(selector, "instanceField");
@@ -199,7 +199,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		assertTrue(instances.getAll().isEmpty());
 		assertTrue(instances.getActiveId().isEmpty());
 		var result = getField(selector, "checkResult");
-		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50, 0);
 		selector.refreshContent();
 		assertSame(result, getField(selector, "checkResult"));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_check_passed")));

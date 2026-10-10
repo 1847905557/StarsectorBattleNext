@@ -88,7 +88,7 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 		builder.addToMission(api, FleetSide.PLAYER, playerFleet, playerDefinition.getName());
 		builder.addToMission(api, FleetSide.ENEMY, enemyFleet, enemyDefinition.getName());
 		assertEquals(List.of(player.getMember(), enemy.getMember()), added);
-		assertEquals(List.of(false, false), defaultAi);
+		assertEquals(List.of(true, true), defaultAi);
 		var plugin = new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(playerDefinition.getTags()),
 				BattleNext_FleetOrderBehavior.fromTags(enemyDefinition.getTags()), playerFleet, enemyFleet);
 		plugin.init(world.getEngine());

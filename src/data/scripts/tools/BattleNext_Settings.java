@@ -16,6 +16,7 @@ public class BattleNext_Settings {
 	private static final float DEFAULT_TIME_MULT = 1f;
 	private static final float DEFAULT_BOOST_TIME_MULT = 3f;
 	private static final int DEFAULT_REPORT_KEEP_COUNT = 80;
+	private static final int DEFAULT_DEPLOYMENT_POINT_LIMIT = 0;
 
 	private static JSONObject values;
 
@@ -86,11 +87,16 @@ public class BattleNext_Settings {
 		return values.optInt("reportKeepCount", DEFAULT_REPORT_KEEP_COUNT);
 	}
 
+	public static int getDeploymentPointLimit() {
+		ensureLoaded();
+		return values.optInt("deploymentPointLimit", DEFAULT_DEPLOYMENT_POINT_LIMIT);
+	}
+
 	public static void save(boolean cnText, boolean fullGraphicEffect, boolean infoLog, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
-			float boostTimeMult, int reportKeepCount) {
+			float boostTimeMult, int reportKeepCount, int deploymentPointLimit) {
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("cn_text", cnText).put("full_graphic_effect", fullGraphicEffect)
 				.put("info_log", infoLog).put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
-				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).build();
+				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).put("deployment_point_limit", deploymentPointLimit).build();
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.save", input);
 		try {
 			if (battleTimeLimit < 0f || !Float.isFinite(battleTimeLimit)) throw new IllegalArgumentException("Battle time limit is invalid");
@@ -106,6 +112,7 @@ public class BattleNext_Settings {
 			put(next, "defaultTimeMult", defaultTimeMult);
 			put(next, "boostTimeMult", boostTimeMult);
 			put(next, "reportKeepCount", reportKeepCount);
+			put(next, "deploymentPointLimit", deploymentPointLimit);
 			try {
 				BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.write",
 				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
@@ -157,6 +164,7 @@ public class BattleNext_Settings {
 		put(result, "defaultTimeMult", DEFAULT_TIME_MULT);
 		put(result, "boostTimeMult", DEFAULT_BOOST_TIME_MULT);
 		put(result, "reportKeepCount", DEFAULT_REPORT_KEEP_COUNT);
+		put(result, "deploymentPointLimit", DEFAULT_DEPLOYMENT_POINT_LIMIT);
 		return result;
 	}
 
@@ -167,6 +175,7 @@ public class BattleNext_Settings {
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
 		putIf(values, "infoLog", stored.has("infoLog") ? stored.optBoolean("infoLog") : null);
 		putIf(values, "rttInBattle", stored.has("rttInBattle") ? stored.optBoolean("rttInBattle") : null);
+		putIf(values, "deploymentPointLimit", stored.has("deploymentPointLimit") ? stored.optInt("deploymentPointLimit", DEFAULT_DEPLOYMENT_POINT_LIMIT) : null);
 		putIf(values, "battleTimeLimit", validNumber(stored, "battleTimeLimit", false));
 		putIf(values, "defaultTimeMult", validNumber(stored, "defaultTimeMult", true));
 		putIf(values, "boostTimeMult", validNumber(stored, "boostTimeMult", true));

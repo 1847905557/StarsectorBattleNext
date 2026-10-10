@@ -4,7 +4,6 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
-import com.fs.starfarer.api.mission.FleetSide;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.tools.BattleNext_Logger;
@@ -38,7 +37,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 		this.engine = engine;
 		try {
 			nativeAccess = new BattleNext_SimulatorNative(engine.getClass().getClassLoader());
-			nativeAccess.prepareDeployment(engine);
+			nativeAccess.prepareDeployment(engine, request.config().deploymentPointLimit() > 0);
 			previousSpeed = Global.getSettings().getFloat("combatSpeedMult");
 			previousSteps = Global.getSettings().getFloat("combatStepsPerFrame");
 			Global.getSettings().setFloat("combatSpeedMult", 1f);
@@ -61,9 +60,6 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			if (started == 0L) {
 				started = System.nanoTime();
 				lastMaintenance = started;
-				for (FleetSide side : FleetSide.values()) {
-					engine.getFleetManager(side).getAdmiralAI().preCombat();
-				}
 				BattleNext_SimulatorWorker.status(request.id(), BattleNext_SimulationTask.State.RUNNING);
 			}
 			steps++;

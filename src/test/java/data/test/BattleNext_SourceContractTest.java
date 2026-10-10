@@ -28,6 +28,21 @@ import java.util.regex.Pattern;
 
 class BattleNext_SourceContractTest {
 
+	@Test
+	void missionFleetsUseVanillaAdmiralsAndDeploymentKeepsTheirInstances() throws Exception {
+		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			if (!entry.getKey().startsWith(Path.of("src/data"))) continue;
+			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
+				if (!call.getNameAsString().equals("initFleet")) continue;
+				assertTrue(call.getArgument(3).isBooleanLiteralExpr(), entry.getKey().toString());
+				assertTrue(call.getArgument(3).asBooleanLiteralExpr().getValue(), entry.getKey().toString());
+			}
+			for (ObjectCreationExpr creation : entry.getValue().findAll(ObjectCreationExpr.class)) {
+				assertNotEquals("AdmiralAI", creation.getType().getNameAsString(), entry.getKey().toString());
+			}
+		}
+	}
+
 	private static BattleNext_TestI18nSource source;
 	private static List<BattleNext_TestI18nSource.Read> reads;
 	private static final Pattern FORMAT = Pattern.compile("%(?:\\d+\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?([a-zA-Z%])");

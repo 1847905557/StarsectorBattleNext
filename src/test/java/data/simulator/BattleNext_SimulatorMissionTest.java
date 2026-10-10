@@ -12,7 +12,7 @@ import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
-import data.scripts.plugin.BattleNext_EnvironmentPlugin;
+import data.scripts.plugin.BattleNext_BattleClockPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.test.fixture.BattleNext_TestMissionFixture;
 import org.json.JSONObject;
@@ -30,12 +30,12 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		registeredVariants.put("child_variant", selectedVariant.getModules().get("module"));
 		MissionState mission = new MissionState();
 		BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
-				12000f, 9000f, 500f, 3600f, 120f, 32, true, false);
+				12000f, 9000f, 500f, 3600f, 120f, 32, true, false, 0);
 		BattleNext_SimulatorMission.define(mission.getApi(), BattleNext_SimulationRequest.fromVariants(
 				List.of("parent_variant", "parent_variant"), List.of("child_variant"), config));
 		assertArrayEquals(new float[]{-6000f, 6000f, -4500f, 4500f}, mission.getMap());
 		assertTrue(mission.getDefaultAi().get(FleetSide.PLAYER));
-		assertFalse(mission.getDefaultAi().get(FleetSide.ENEMY));
+		assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
 		var members = mission.getMembers().get(FleetSide.PLAYER);
 		assertEquals(2, members.size());
 		assertNotSame(members.get(0), members.get(1));
@@ -43,7 +43,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		assertEquals(selectedVariant.getApi().getStationModules().keySet(), members.get(0).getVariant().getStationModules().keySet());
 		assertEquals(selectedVariant.getApi().getHullSpec().getHullName(), members.get(0).getShipName());
 		assertNotNull(members.get(0).getCaptain());
-		assertEquals(List.of(BattleNext_DeploymentPlugin.class, BattleNext_EnvironmentPlugin.class, BattleNext_ScorekeeperPlugin.class),
+		assertEquals(List.of(BattleNext_DeploymentPlugin.class, BattleNext_ScorekeeperPlugin.class, BattleNext_BattleClockPlugin.class),
 				mission.getPlugins().stream().map(Object::getClass).toList());
 	}
 
@@ -88,7 +88,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		var entry = sources.getQuickBattleStore().getAll().get(0);
 		BattleNext_Match match = BattleNext_Match.fromQuickBattle(entry);
 		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromMatch(match, sources.getFleetStore(),
-				BattleNext_SimulationConfig.quickBattle(123f));
+				BattleNext_SimulationConfig.quickBattle(123f, 0));
 		assertEquals(BattleNext_SimulationRequest.Kind.MATCH, request.kind());
 		assertEquals(request, BattleNext_SimulationRequest.fromJson(request.toJson()));
 		assertEquals(entry.getSourcePath(), request.source().getString("sourcePath"));
@@ -109,7 +109,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		BattleNext_MissionBattleMap.apply(expectedMap.getApi(), actualMap, 1.5f);
 		assertArrayEquals(expectedMap.getMap(), mission.getMap());
 		assertEquals("Player 中文 50%", mission.getNames().get(FleetSide.PLAYER));
-		assertFalse(mission.getDefaultAi().get(FleetSide.PLAYER));
+		assertTrue(mission.getDefaultAi().get(FleetSide.PLAYER));
 		assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
 		assertEquals(2f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("combat"));
 		assertEquals(1f, mission.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("industry"));
@@ -127,10 +127,10 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		assertEquals(11, module.getJSONObject("modules").getJSONObject("nested").getInt("fluxVents"));
 		assertEquals(List.of("wing"), restored.get(0).getVariant().getFittedWings());
 		assertEquals(11, restored.get(0).getVariant().getModuleVariant("module").getModuleVariant("nested").getNumFluxVents());
-		assertEquals(List.of(BattleNext_DeploymentPlugin.class, BattleNext_EnvironmentPlugin.class,
-				BattleNext_ScorekeeperPlugin.class, BattleNext_FleetOrderBehavior.class), mission.getPlugins().stream().map(Object::getClass).toList());
-		assertEquals(123f, getField(mission.getPlugins().get(1), "timeLimit"));
-		assertSame(scorekeeper, mission.getPlugins().get(2));
+		assertEquals(List.of(BattleNext_DeploymentPlugin.class, BattleNext_ScorekeeperPlugin.class,
+				BattleNext_BattleClockPlugin.class, BattleNext_FleetOrderBehavior.class), mission.getPlugins().stream().map(Object::getClass).toList());
+		assertEquals(123f, getField(mission.getPlugins().get(2), "timeLimit"));
+		assertSame(scorekeeper, mission.getPlugins().get(1));
 		assertEquals(BattleNext_FleetOrderBehavior.FleetOrderMode.FULL_ASSAULT, getField(mission.getPlugins().get(3), "playerMode"));
 		CombatState combat = new CombatState(mission);
 		scorekeeper.init(combat.getApi());

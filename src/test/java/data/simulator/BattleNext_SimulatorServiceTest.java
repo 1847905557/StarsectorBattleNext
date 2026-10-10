@@ -57,7 +57,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 	void quickBattleActionsSubmitIndependentFrozenFifoTasksAndOutliveTheWidget() throws Exception {
 
 		quickBattles("alpha,beta,-1,1.5\n# alpha,beta,2,2\nmissing,beta,0,1\n");
-		BattleNext_Settings.save(false, true, false, false, 123f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 123f, 1f, 3f, 50, 120);
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
 		BattleNext_SimulatorBrowser browser = new BattleNext_SimulatorBrowser();
@@ -90,6 +90,8 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			assertEquals(2, first.source().getInt("actualMap"));
 			assertEquals(2d, first.source().getJSONObject("match").getDouble("mapScale"));
 			assertEquals(123f, first.config().assaultAfterSeconds());
+			assertEquals(120, first.config().deploymentPointLimit());
+			BattleNext_Settings.save(false, true, false, false, 123f, 1f, 3f, 50, 200);
 			assertEquals(3600f, first.config().simulationSeconds());
 			assertEquals(120f, first.config().executionSeconds());
 			peer.send("STATUS", new JSONObject().put("id", first.id()).put("state", "RUNNING"));
@@ -117,6 +119,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			BattleNext_SimulationRequest second = BattleNext_SimulationRequest.fromJson(peer.receive().getJSONObject("payload"));
 			assertNotEquals(first.id(), second.id());
 			assertJsonEquals(first.source(), second.source());
+			assertEquals(120, second.config().deploymentPointLimit());
 			peer.send("RESULT", new BattleNext_SimulationResult(second.id(), BattleNext_SimulationResult.Outcome.FAILED,
 					"", 0f, 0L, 0L, 0L, "Injected simulation failure").toJson());
 			peer.send("READY", new JSONObject());

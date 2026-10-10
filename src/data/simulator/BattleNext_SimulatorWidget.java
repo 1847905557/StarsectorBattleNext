@@ -255,7 +255,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 					return;
 				}
 				task = BattleNext_SimulatorService.getInstance().submit(BattleNext_SimulationRequest.fromTournament(configuration,
-						fleetIds, sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit())));
+						fleetIds, sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit(), BattleNext_Settings.getDeploymentPointLimit())));
 				clearBody();
 				browser.selectInstance(task.getRequest().id());
 				buildBody();
@@ -324,7 +324,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 				return;
 			}
 			BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromMatch(BattleNext_Match.fromQuickBattle(entry),
-					sources.getFleetStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit()));
+					sources.getFleetStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit(), BattleNext_Settings.getDeploymentPointLimit()));
 			BattleNext_SimulatorService.getInstance().submit(request);
 			browser.setStatusError("");
 		} catch (RuntimeException exception) {

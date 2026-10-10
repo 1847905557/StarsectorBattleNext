@@ -28,7 +28,6 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
-	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 
 	private static int quickBattleCurrentIndex = 0;
 
@@ -94,8 +93,10 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		int actualMap = BattleNext_MissionBattleMap.resolve(match.getMap());
 		BattleNext_MissionBattleMap.apply(api, actualMap, match.getMapScale());
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
-		api.addPlugin(new BattleNext_DeploymentPlugin());
-		api.addPlugin(new BattleNext_EnvironmentPlugin(timeLimit));
+		int deploymentPointLimit = BattleNext_Settings.getDeploymentPointLimit();
+		api.addPlugin(new BattleNext_DeploymentPlugin(deploymentPointLimit,
+				BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
+				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
@@ -122,8 +123,8 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	private void showBlocked(MissionDefinitionAPI api, String message, List<String> reasons) {
 		BattleNext_Logger.warn(MissionDefinition.class, "battle.creation.rejected",
 				BattleNext_Logger.fields().put("message", message).put("reasons", reasons).build());
-		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 1);
-		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 1);
+		api.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
+		api.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 999);
 		api.setFleetTagline(FleetSide.PLAYER, message);
 		api.setFleetTagline(FleetSide.ENEMY, message);
 		api.addBriefingItem(message);

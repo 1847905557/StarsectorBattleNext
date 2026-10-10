@@ -53,7 +53,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 	@ValueSource(ints = {0, 1})
 	void frozenReportPersistsOnceAndUsesTheCurrentRetentionBeforeNotifying(int keep) throws Exception {
 
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keep);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keep, 0);
 		FrozenScorekeeper scorekeeper = new FrozenScorekeeper();
 		scorekeeper.report.setId("");
 		scorekeeper.report.setName("");
@@ -86,7 +86,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 	@Test
 	void tournamentReportCommitsItsIdentityAndUsesZeroRetention() throws Exception {
 
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0, 0);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		for (String id : List.of("alpha", "beta")) {
 			var root = directory.resolve("tournament/" + id);
@@ -176,7 +176,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 
 	@Test
 	void tournamentReportFailureKeepsCompletePendingResultAndRetryCommitsItsStableIdentity() throws Exception {
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		for (String id : List.of("alpha", "beta")) {
 			var root = directory.resolve("tournament/" + id);

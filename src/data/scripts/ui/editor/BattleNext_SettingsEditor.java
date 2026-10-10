@@ -21,6 +21,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 	private TextFieldAPI defaultTimeMultField;
 	private TextFieldAPI boostTimeMultField;
 	private TextFieldAPI reportKeepCountField;
+	private TextFieldAPI deploymentPointLimitField;
 
 	public void open() {
 		beginSession();
@@ -41,9 +42,10 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 				? new String[]{Float.toString(BattleNext_Settings.getBattleTimeLimit()),
 						Float.toString(BattleNext_Settings.getDefaultTimeMult()),
 						Float.toString(BattleNext_Settings.getBoostTimeMult()),
-						Integer.toString(BattleNext_Settings.getReportKeepCount())}
+						Integer.toString(BattleNext_Settings.getReportKeepCount()),
+						Integer.toString(BattleNext_Settings.getDeploymentPointLimit())}
 				: new String[]{battleTimeLimitField.getText(), defaultTimeMultField.getText(),
-						boostTimeMultField.getText(), reportKeepCountField.getText()};
+						boostTimeMultField.getText(), reportKeepCountField.getText(), deploymentPointLimitField.getText()};
 		float areaWidth = panel.getPosition().getWidth();
 		TooltipMakerAPI fieldContent = panel.createUIElement(areaWidth, panel.getPosition().getHeight(), true);
 		BattleNext_UiTheme.configure(fieldContent);
@@ -56,6 +58,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		infoLogCheckbox = createCheckbox("logging", fieldContent, fieldArea, settingsStrings.get("info_log"), "infoLog", logging, true);
 		rttInBattleCheckbox = createCheckbox("rtt", fieldContent, fieldArea, settingsStrings.get("rtt_in_battle"), "rttInBattle", rtt, true);
 		battleTimeLimitField = createTextField("battle_time_limit", panel, fieldContent, fieldArea, settingsStrings.get("battle_time_limit"), values[0], true, fieldContent);
+		deploymentPointLimitField = createTextField("deployment_point_limit", panel, fieldContent, fieldArea, settingsStrings.get("deployment_point_limit"), values[4], true, fieldContent);
 		defaultTimeMultField = createTextField("default_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("default_time_mult"), values[1], true, fieldContent);
 		boostTimeMultField = createTextField("boost_time_mult", panel, fieldContent, fieldArea, settingsStrings.get("boost_time_mult"), values[2], true, fieldContent);
 		reportKeepCountField = createTextField("report_keep_count", panel, fieldContent, fieldArea, settingsStrings.get("report_keep_count"), values[3], true, fieldContent);
@@ -90,7 +93,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 	protected String draftState() {
 		if (fullGraphicEffectCheckbox == null) return "";
 		return cnTextCheckbox.isChecked() + "|" + fullGraphicEffectCheckbox.isChecked() + "|" + infoLogCheckbox.isChecked() + "|" + rttInBattleCheckbox.isChecked() + "|" + battleTimeLimitField.getText() + "|"
-				+ defaultTimeMultField.getText() + "|" + boostTimeMultField.getText() + "|" + reportKeepCountField.getText();
+				+ defaultTimeMultField.getText() + "|" + boostTimeMultField.getText() + "|" + reportKeepCountField.getText() + "|" + deploymentPointLimitField.getText();
 	}
 
 	@Override
@@ -100,8 +103,9 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 			float defaultMult = parsePositive(defaultTimeMultField.getText());
 			float boostMult = parsePositive(boostTimeMultField.getText());
 			int keepCount = parseCount(reportKeepCountField.getText());
+			int deploymentPointLimit = Integer.parseInt(deploymentPointLimitField.getText().trim());
 			BattleNext_Settings.save(cnTextCheckbox.isChecked(), fullGraphicEffectCheckbox.isChecked(), infoLogCheckbox.isChecked(), rttInBattleCheckbox.isChecked(),
-					timeLimit, defaultMult, boostMult, keepCount);
+					timeLimit, defaultMult, boostMult, keepCount, deploymentPointLimit);
 			return true;
 		} catch (RuntimeException exception) {
 			statusText = settingsStrings.get("invalid_number") + ": " + exception.getMessage();

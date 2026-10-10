@@ -32,11 +32,13 @@ class BattleNext_SimulatorModelTest {
 	@Test
 	void configurationValidatesExternalBudgetsAndRoundTripsBothStrategies() throws Exception {
 		for (BattleNext_SimulationConfig.Strategy strategy : BattleNext_SimulationConfig.Strategy.values()) {
-			BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 9000f, 500f, 3600f, 120f, 32, true, false);
-			assertEquals(config, BattleNext_SimulationConfig.fromJson(config.toJson()));
+			for (int limit : List.of(-1, 0, 120)) {
+				BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(strategy, 12000f, 9000f, 500f, 3600f, 120f, 32, true, false, limit);
+				assertEquals(config, BattleNext_SimulationConfig.fromJson(config.toJson()));
+			}
 		}
 		assertThrows(IllegalArgumentException.class, () -> new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
-				Float.NaN, 9000f, 500f, 3600f, 120f, 32, true, false));
+				Float.NaN, 9000f, 500f, 3600f, 120f, 32, true, false, 0));
 		assertThrows(IllegalArgumentException.class, () -> BattleNext_SimulationRequest.fromVariants(List.of(), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 	}
 

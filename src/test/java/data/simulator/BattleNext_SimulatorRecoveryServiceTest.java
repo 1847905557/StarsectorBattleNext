@@ -107,7 +107,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		advance.run();
 		reports.reload();
 		assertEquals(List.of(task.getRequest().id()), reports.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
-		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0);
+		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0, 0);
 		BattleNext_SimulationTask discarded = completedTaskThroughService("Not retained");
 		advance.run();
 		assertFalse(discarded.isRetained());

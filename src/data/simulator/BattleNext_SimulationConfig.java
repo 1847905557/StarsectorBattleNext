@@ -5,7 +5,7 @@ import org.json.JSONObject;
 
 public record BattleNext_SimulationConfig(Strategy strategy, float mapWidth, float mapHeight,
 		float assaultAfterSeconds, float simulationSeconds, float executionSeconds,
-		int stepsPerFrame, boolean playerAdmiral, boolean enemyAdmiral) {
+		int stepsPerFrame, boolean playerAdmiral, boolean enemyAdmiral, int deploymentPointLimit) {
 
 	public enum Strategy { AGGRESSIVE, COMPATIBLE }
 
@@ -19,24 +19,24 @@ public record BattleNext_SimulationConfig(Strategy strategy, float mapWidth, flo
 	}
 
 	public static BattleNext_SimulationConfig defaults() {
-		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false);
+		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, 500f, 3600f, 120f, 32, true, false, 0);
 	}
 
-	public static BattleNext_SimulationConfig quickBattle(float assaultAfterSeconds) {
-		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, assaultAfterSeconds, 3600f, 120f, 32, true, false);
+	public static BattleNext_SimulationConfig quickBattle(float assaultAfterSeconds, int deploymentPointLimit) {
+		return new BattleNext_SimulationConfig(Strategy.AGGRESSIVE, 12000f, 12000f, assaultAfterSeconds, 3600f, 120f, 32, true, false, deploymentPointLimit);
 	}
 
 	public JSONObject toJson() throws JSONException {
 		return new JSONObject().put("strategy", strategy.name()).put("mapWidth", mapWidth).put("mapHeight", mapHeight)
 				.put("assaultAfterSeconds", assaultAfterSeconds).put("simulationSeconds", simulationSeconds)
 				.put("executionSeconds", executionSeconds).put("stepsPerFrame", stepsPerFrame)
-				.put("playerAdmiral", playerAdmiral).put("enemyAdmiral", enemyAdmiral);
+				.put("playerAdmiral", playerAdmiral).put("enemyAdmiral", enemyAdmiral).put("deploymentPointLimit", deploymentPointLimit);
 	}
 
 	public static BattleNext_SimulationConfig fromJson(JSONObject json) throws JSONException {
 		return new BattleNext_SimulationConfig(Strategy.valueOf(json.getString("strategy")), (float) json.getDouble("mapWidth"),
 				(float) json.getDouble("mapHeight"), (float) json.getDouble("assaultAfterSeconds"),
 				(float) json.getDouble("simulationSeconds"), (float) json.getDouble("executionSeconds"),
-				json.getInt("stepsPerFrame"), json.getBoolean("playerAdmiral"), json.getBoolean("enemyAdmiral"));
+				json.getInt("stepsPerFrame"), json.getBoolean("playerAdmiral"), json.getBoolean("enemyAdmiral"), json.getInt("deploymentPointLimit"));
 	}
 }

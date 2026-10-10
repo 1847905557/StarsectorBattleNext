@@ -63,4 +63,14 @@ class BattleNext_MemberReportTest {
 		assertEquals(raw.toString(), loaded.toJson().toString());
 	}
 
+	@Test
+	void undeployedStateRoundTripsActualHullAndReadiness() throws Exception {
+		var member = new BattleNext_MemberReport("wolf_CS", "wolf", "Reserve");
+		member.setFinalState(0.6f, 0.4f, "undeployed");
+		var loaded = BattleNext_MemberReport.fromJson(member.toJson());
+		assertEquals("undeployed", loaded.getStatus());
+		assertEquals(0.6f, loaded.getFinalHullFraction());
+		assertEquals(0.4f, loaded.getFinalCr());
+	}
+
 }

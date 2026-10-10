@@ -99,7 +99,7 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		assertEquals("Tournament qualification failed: cup", rejection.getMessage());
 		store.reload();
 		assertTrue(store.getAll().isEmpty());
-		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertEquals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"), checked.messages().get(0));
 		standard("beta", "beta", "child_variant");
 		assertTrue(provider.checkTournament("cup", List.of("alpha", "", "beta", "")).failures().isEmpty());

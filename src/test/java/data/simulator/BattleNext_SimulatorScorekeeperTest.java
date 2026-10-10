@@ -1,18 +1,22 @@
 package data.simulator;
 
 import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.listeners.CombatListenerManagerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
+import com.fs.starfarer.api.fleet.FleetMemberStatusAPI;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.test.fixture.BattleNext_TestGameFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +25,86 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
+
+	@Test
+	void reservesKeepCombatRunningAcrossDeploymentAndLossAndReportTheirActualState() {
+		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, args) -> method.equals("getHullId") ? "wolf" : null);
+		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (method, args) -> switch (method) {
+			case "getHullVariantId" -> "wolf_CS";
+			case "getHullSpec" -> hull;
+			default -> null;
+		});
+		List<FleetMemberAPI> players = new ArrayList<>();
+		List<FleetMemberAPI> enemies = new ArrayList<>();
+		for (List<FleetMemberAPI> members : List.of(players, enemies)) {
+			for (int index = 0; index < 2; index++) {
+				members.add(proxy(FleetMemberAPI.class, (method, args) -> switch (method) {
+					case "getVariant" -> variant;
+					case "getShipName" -> "Wolf";
+					case "getRepairTracker" -> proxy(RepairTrackerAPI.class, (name, values) -> name.equals("getCR") ? 0.4f : null);
+					case "getStatus" -> proxy(FleetMemberStatusAPI.class, (name, values) -> name.equals("getHullFraction") ? 0.6f : null);
+					default -> null;
+				}));
+			}
+		}
+		List<List<FleetMemberAPI>> reserves = List.of(new ArrayList<>(players), new ArrayList<>(enemies));
+		List<List<FleetMemberAPI>> deployed = List.of(new ArrayList<>(), new ArrayList<>());
+		List<List<FleetMemberAPI>> destroyed = List.of(new ArrayList<>(), new ArrayList<>());
+		Map<String, Object> custom = new HashMap<>();
+		List<ShipAPI> ships = new ArrayList<>();
+		boolean[] combatOver = {false};
+		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
+			case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+				case "getReservesCopy" -> reserves.get(((FleetSide) args[0]).ordinal());
+				case "getDeployedCopy" -> deployed.get(((FleetSide) args[0]).ordinal());
+				case "getDestroyedCopy" -> destroyed.get(((FleetSide) args[0]).ordinal());
+				case "getDisabledCopy", "getRetreatedCopy", "getAllEverDeployedCopy" -> List.of();
+				default -> null;
+			});
+			case "getShips" -> ships;
+			case "getListenerManager" -> proxy(CombatListenerManagerAPI.class, (name, values) -> null);
+			case "getCustomData" -> custom;
+			case "getTotalElapsedTime" -> 30f;
+			case "isCombatOver" -> combatOver[0];
+			case "isPaused" -> combatOver[0];
+			case "getWinningSideId" -> 1;
+			default -> null;
+		});
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(players, enemies);
+		scorekeeper.init(engine);
+		try {
+			scorekeeper.advance(0.1f, List.of());
+			assertFalse(scorekeeper.isFrozen());
+			for (int side = 0; side < 2; side++) {
+				FleetMemberAPI member = reserves.get(side).remove(0);
+				deployed.get(side).add(member);
+				int owner = side;
+				ships.add(proxy(ShipAPI.class, (method, args) -> switch (method) {
+					case "getFleetMember" -> member;
+					case "getOwner" -> owner;
+					case "getHullLevel" -> 0.2f;
+					default -> null;
+				}));
+			}
+			scorekeeper.advance(0.1f, List.of());
+			assertFalse(scorekeeper.isFrozen());
+			destroyed.get(0).add(deployed.get(0).remove(0));
+			ships.remove(0);
+			scorekeeper.advance(0.1f, List.of());
+			assertFalse(scorekeeper.isFrozen());
+			combatOver[0] = true;
+			scorekeeper.advance(0.1f, List.of());
+			var report = scorekeeper.getFrozenReport();
+			assertEquals("enemy", report.getWinner());
+			assertEquals("destroyed", report.getPlayerMembers().get(0).getStatus());
+			assertEquals("undeployed", report.getPlayerMembers().get(1).getStatus());
+			assertEquals(0.6f, report.getPlayerMembers().get(1).getFinalHullFraction());
+			assertEquals(0.4f, report.getPlayerMembers().get(1).getFinalCr());
+			assertEquals("alive", report.getEnemyMembers().get(0).getStatus());
+		} finally {
+			scorekeeper.cleanup();
+		}
+	}
 
 	@ParameterizedTest
 	@CsvSource({"0, player", "1, enemy", "0, draw"})
@@ -65,6 +149,12 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			default -> null;
 		});
 		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
+			case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+				case "getDeployedCopy" -> ships.stream().filter(ship -> ship.getOwner() == ((FleetSide) args[0]).ordinal() && ship.isAlive()).map(ShipAPI::getFleetMember).toList();
+				case "getDestroyedCopy" -> ships.stream().filter(ship -> ship.getOwner() == ((FleetSide) args[0]).ordinal() && !ship.isAlive()).map(ShipAPI::getFleetMember).toList();
+				case "getReservesCopy", "getDisabledCopy", "getRetreatedCopy", "getAllEverDeployedCopy" -> List.of();
+				default -> null;
+			});
 			case "getShips" -> ships;
 			case "getTotalElapsedTime" -> elapsed[0];
 			case "isPaused" -> paused[0];
@@ -95,7 +185,6 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			alive[1] = true;
 			alive[2] = true;
 			scorekeeper.advance(0f, List.of());
-			alive[1] = false;
 			paused[0] = false;
 			scorekeeper.advance(0.1f, List.of());
 			assertFalse(scorekeeper.isFrozen());
@@ -172,6 +261,12 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			return null;
 		});
 		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
+			case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
+				case "getDeployedCopy" -> args[0] == FleetSide.PLAYER ? List.of(playerMember) : enemyAlive.get() ? List.of(enemyMember) : List.of();
+				case "getDestroyedCopy" -> args[0] == FleetSide.ENEMY && !enemyAlive.get() ? List.of(enemyMember) : List.of();
+				case "getReservesCopy", "getDisabledCopy", "getRetreatedCopy", "getAllEverDeployedCopy" -> List.of();
+				default -> null;
+			});
 			case "getShips" -> List.of(player, enemy);
 			case "getTotalElapsedTime" -> 10f;
 			case "getListenerManager" -> listeners;

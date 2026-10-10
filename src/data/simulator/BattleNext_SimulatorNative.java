@@ -95,9 +95,9 @@ public class BattleNext_SimulatorNative {
 		missionAccepted.invoke(AppDriver.getInstance().getCurrentState(), mission);
 	}
 
-	public void prepareDeployment(CombatEngineAPI engine) throws Throwable {
+	public void prepareDeployment(CombatEngineAPI engine, boolean limitedDeployment) throws Throwable {
 		deploymentDialog.invoke(engine, false);
-		engine.setDoNotEndCombat(true);
+		engine.setDoNotEndCombat(!limitedDeployment);
 	}
 
 	public void maintainWindowAndSound(CombatEngineAPI engine, float elapsed) throws Throwable {

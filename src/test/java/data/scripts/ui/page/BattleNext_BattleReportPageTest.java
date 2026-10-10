@@ -97,9 +97,9 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		boolean cnText = false;
 		configureRowAssets();
 		useReportTextAndSideColors();
-		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50);
+		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50, 0);
 		String name = "Player Enemy 我方 敌方 50%";
-		BattleNext_MemberReport firstPlayer = reportMember(name, 100d, 300d, 0.75f, 0.7f, "alive");
+		BattleNext_MemberReport firstPlayer = reportMember(name, 100d, 300d, 0.75f, 0.7f, "undeployed");
 		BattleNext_MemberReport secondPlayer = reportMember(name, 200d, 100d, 0.25f, 0.6f, "retreated");
 		BattleNext_MemberReport enemy = reportMember(name, 300d, 200d, 0f, 0.5f, "destroyed");
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
@@ -121,7 +121,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 		assertEquals(2, children.get(reportRows(details).get(0)).size());
 		assertEquals(1, children.get(reportRows(details).get(4)).size());
 		for (boolean language : List.of(!cnText, cnText)) {
-			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50);
+			BattleNext_Settings.save(language, true, false, false, 500f, 1f, 3f, 50, 0);
 			details.refreshContent();
 			assertReportHeaders(details, ordered, playerSides, language);
 			assertEquals(2, children.get(reportRows(details).get(0)).size());

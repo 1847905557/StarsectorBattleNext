@@ -211,7 +211,7 @@ public class BattleNext_MemberReport {
 	}
 
 	private static String normalizeStatus(String value) {
-		if ("destroyed".equals(value) || "retreated".equals(value)) return value;
+		if ("destroyed".equals(value) || "retreated".equals(value) || "undeployed".equals(value)) return value;
 		return "alive";
 	}
 }

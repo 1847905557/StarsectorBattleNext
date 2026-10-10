@@ -3,6 +3,7 @@ package data.scripts.plugin;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEntityAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.listeners.ApplyDamageResultAPI;
 import com.fs.starfarer.api.combat.listeners.DamageListener;
@@ -51,6 +52,10 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 	public void advance(float amount, List<InputEventAPI> events) {
 		if (engine == null || frozenReport != null) return;
 		refreshShips();
+		if (engine.isCombatOver()) {
+			freeze(determineWinner());
+			return;
+		}
 		if (engine.isPaused()) return;
 		if (!battleStarted) {
 			if (!isReadyToStart()) return;
@@ -135,24 +140,40 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	private boolean isReadyToStart() {
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
-			if (!tracked.member.isFighterWing() && tracked.ship == null) return false;
+			if (tracked.member.isFighterWing()) continue;
+			CombatFleetManagerAPI manager = engine.getFleetManager(tracked.playerSide ? FleetSide.PLAYER : FleetSide.ENEMY);
+			if (tracked.ship == null && !manager.getReservesCopy().contains(tracked.member)
+					&& !manager.getDeployedCopy().contains(tracked.member)
+					&& !manager.getDisabledCopy().contains(tracked.member)
+					&& !manager.getDestroyedCopy().contains(tracked.member)
+					&& !manager.getRetreatedCopy().contains(tracked.member)) return false;
 		}
-		return hasAliveShips(FleetSide.PLAYER) && hasAliveShips(FleetSide.ENEMY);
+		return true;
 	}
 
 	private String determineWinner() {
-		boolean playerAlive = hasAliveShips(FleetSide.PLAYER);
-		boolean enemyAlive = hasAliveShips(FleetSide.ENEMY);
-		if (playerAlive && enemyAlive) return null;
-		if (playerAlive) return "player";
-		if (enemyAlive) return "enemy";
+		if (engine.isCombatOver()) {
+			return switch (engine.getWinningSideId()) {
+				case 0 -> "player";
+				case 1 -> "enemy";
+				default -> "draw";
+			};
+		}
+		boolean playerRemaining = hasRemainingShips(FleetSide.PLAYER);
+		boolean enemyRemaining = hasRemainingShips(FleetSide.ENEMY);
+		if (playerRemaining && enemyRemaining) return null;
+		if (playerRemaining) return "player";
+		if (enemyRemaining) return "enemy";
 		return "draw";
 	}
 
-	private boolean hasAliveShips(FleetSide side) {
-		for (ScoreTrackedFleetMember tracked : trackedMembers) {
-			if (tracked.ship != null && tracked.ship.getOwner() == side.ordinal() && tracked.ship.isAlive()
-					&& !tracked.ship.isFighter()) return true;
+	private boolean hasRemainingShips(FleetSide side) {
+		CombatFleetManagerAPI manager = engine.getFleetManager(side);
+		for (FleetMemberAPI member : manager.getReservesCopy()) {
+			if (!member.isFighterWing()) return true;
+		}
+		for (FleetMemberAPI member : manager.getDeployedCopy()) {
+			if (!member.isFighterWing()) return true;
 		}
 		return false;
 	}
@@ -164,7 +185,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		report.setWinner(winner);
 		report.setDurationMillis((long)(engine.getTotalElapsedTime(false) * 1000f));
 		for (ScoreTrackedFleetMember tracked : trackedMembers) {
-			tracked.freeze();
+			tracked.freeze(engine.getFleetManager(tracked.playerSide ? FleetSide.PLAYER : FleetSide.ENEMY));
 			if (tracked.playerSide) {
 				report.addPlayerMember(tracked.report);
 			} else {
@@ -201,15 +222,16 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			this.playerSide = playerSide;
 		}
 
-		private void freeze() {
-			String status = "alive";
-			float hullFraction = 1f;
-			if (ship != null) {
-				hullFraction = ship.getHullLevel();
-				if (!ship.isAlive()) {
-					status = "destroyed";
-				}
-			} else if (everDeployed) {
+		private void freeze(CombatFleetManagerAPI manager) {
+			String status = "undeployed";
+			float hullFraction = ship == null ? member.getStatus().getHullFraction() : ship.getHullLevel();
+			if (manager.getDestroyedCopy().contains(member) || manager.getDisabledCopy().contains(member)) {
+				status = "destroyed";
+			} else if (manager.getRetreatedCopy().contains(member)) {
+				status = "retreated";
+			} else if (manager.getDeployedCopy().contains(member)) {
+				status = "alive";
+			} else if (everDeployed || manager.getAllEverDeployedCopy().stream().anyMatch(deployed -> deployed.getMember() == member)) {
 				status = "retreated";
 			}
 			report.setFinalState(hullFraction, member.getRepairTracker().getCR(), status);

@@ -16,7 +16,7 @@ import data.scripts.member.BattleNext_MemberBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
-import data.scripts.plugin.BattleNext_EnvironmentPlugin;
+import data.scripts.plugin.BattleNext_BattleClockPlugin;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,10 +41,12 @@ public class BattleNext_SimulatorMission {
 			builder.addToMission(api, FleetSide.PLAYER, player, player.getDefinition().getName());
 			builder.addToMission(api, FleetSide.ENEMY, enemy, enemy.getDefinition().getName());
 			BattleNext_MissionBattleMap.apply(api, source.getInt("actualMap"), (float) source.getJSONObject("match").getDouble("mapScale"));
-			api.addPlugin(new BattleNext_DeploymentPlugin());
-			api.addPlugin(new BattleNext_EnvironmentPlugin(request.config().assaultAfterSeconds()));
+			api.addPlugin(new BattleNext_DeploymentPlugin(request.config().deploymentPointLimit(),
+					BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
+					BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
 			BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(player, enemy);
 			api.addPlugin(scorekeeper);
+			api.addPlugin(new BattleNext_BattleClockPlugin(request.config().assaultAfterSeconds(), scorekeeper));
 			api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTags()),
 					BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTags()), player, enemy));
 			return scorekeeper;
@@ -74,18 +76,18 @@ public class BattleNext_SimulatorMission {
 
 	private static BattleNext_ScorekeeperPlugin define(MissionDefinitionAPI api, List<String> player,
 			List<String> enemy, BattleNext_SimulationConfig config) {
-		List<FleetMemberAPI> players = buildSide(api, FleetSide.PLAYER, player, config.playerAdmiral());
-		List<FleetMemberAPI> enemies = buildSide(api, FleetSide.ENEMY, enemy, config.enemyAdmiral());
+		List<FleetMemberAPI> players = buildSide(api, FleetSide.PLAYER, player);
+		List<FleetMemberAPI> enemies = buildSide(api, FleetSide.ENEMY, enemy);
 		api.initMap(-config.mapWidth() * 0.5f, config.mapWidth() * 0.5f, -config.mapHeight() * 0.5f, config.mapHeight() * 0.5f);
-		api.addPlugin(new BattleNext_DeploymentPlugin());
-		api.addPlugin(new BattleNext_EnvironmentPlugin(config.assaultAfterSeconds()));
+		api.addPlugin(new BattleNext_DeploymentPlugin(config.deploymentPointLimit(), config.playerAdmiral(), config.enemyAdmiral()));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(players, enemies);
 		api.addPlugin(scorekeeper);
+		api.addPlugin(new BattleNext_BattleClockPlugin(config.assaultAfterSeconds(), scorekeeper));
 		return scorekeeper;
 	}
 
-	private static List<FleetMemberAPI> buildSide(MissionDefinitionAPI api, FleetSide side, List<String> ids, boolean admiral) {
-		api.initFleet(side, "", FleetGoal.ATTACK, admiral, 999);
+	private static List<FleetMemberAPI> buildSide(MissionDefinitionAPI api, FleetSide side, List<String> ids) {
+		api.initFleet(side, "", FleetGoal.ATTACK, true, 999);
 		api.setFleetTagline(side, String.join(", ", ids));
 		BattleNext_MemberBuilder builder = new BattleNext_MemberBuilder();
 		List<FleetMemberAPI> members = new ArrayList<>();
