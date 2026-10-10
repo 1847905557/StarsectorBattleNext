@@ -54,7 +54,14 @@ public class BattleNext_FleetBuilder {
 		for (FleetMemberAPI member : fleet.getMembers()) {
 			api.addFleetMember(side, member);
 		}
-		BattleNext_PersonSkills.apply(api.getDefaultCommander(side), fleet.getDefinition().getSkills());
+		PersonAPI commander = api.getDefaultCommander(side);
+		BattleNext_PersonSkills.apply(commander, fleet.getDefinition().getSkills());
+		for (FleetMemberAPI member : fleet.getMembers()) {
+			member.setFleetCommanderForStats(commander, null);
+			member.getCrewComposition().addCrew(member.getMinCrew());
+			member.updateStats();
+			member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
+		}
 	}
 
 	private PersonAPI createCommander(BattleNext_FleetModel definition) {
