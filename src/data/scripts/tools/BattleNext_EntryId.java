@@ -8,17 +8,30 @@ public class BattleNext_EntryId {
 	}
 
 	public static boolean isValid(String value) {
-		if (value == null || value.isEmpty() || !value.equals(value.trim()) || value.matches("[0-9]+")) return false;
-		if (value.endsWith(".")) return false;
+		return problem(value) == null;
+	}
+
+	public enum Reason { REQUIRED, NUMERIC, CONTROL, WHITESPACE, CHARACTER, TRAILING_DOT, RESERVED }
+
+	public record Problem(Reason reason, int position, int codePoint) { }
+
+	public static Problem problem(String value) {
+		if (value == null || value.isEmpty()) return new Problem(Reason.REQUIRED, 0, 0);
+		if (value.matches("[0-9]+")) return new Problem(Reason.NUMERIC, 0, 0);
 		for (int index = 0; index < value.length(); index++) {
-			char letter = value.charAt(index);
-			if (letter < 32 || isWhitespace(letter) || "<>:\"/\\|?*".indexOf(letter) >= 0) return false;
+			int letter = value.codePointAt(index);
+			int position = value.codePointCount(0, index) + 1;
+			if (letter < 32) return new Problem(Reason.CONTROL, position, letter);
+			if (isWhitespace(letter)) return new Problem(Reason.WHITESPACE, position, letter);
+			if ("<>:\"/\\|?*".indexOf(letter) >= 0) return new Problem(Reason.CHARACTER, position, letter);
+			index += Character.charCount(letter) - 1;
 		}
+		if (value.endsWith(".")) return new Problem(Reason.TRAILING_DOT, 0, 0);
 		String stem = value.split("\\.", 2)[0].toUpperCase(Locale.ROOT);
-		if (stem.matches("CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]")) return false;
+		if (stem.matches("CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]")) return new Problem(Reason.RESERVED, 0, 0);
 		// Reserves fixed resource directory names.
-		if (isReservedFolder(value)) return false;
-		return true;
+		if (isReservedFolder(value)) return new Problem(Reason.RESERVED, 0, 0);
+		return null;
 	}
 
 	public static String trimWhitespace(String value) {

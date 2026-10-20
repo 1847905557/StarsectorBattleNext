@@ -12,6 +12,7 @@ import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_SettingsEditor;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 import data.simulator.BattleNext_SimulatorBrowser;
 import data.simulator.BattleNext_SimulatorWidget;
 
@@ -70,6 +71,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 				strings.get("save"), "settings_save", CutStyle.ALL, true);
 		TooltipMakerAPI status = panel.createUIElement(footer.getWidth() - width - 10f, footer.getHeight(), false);
 		statusLabel = status.addPara("", 0f);
+		status.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), status.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		panel.addUIElement(status).inTL(footer.getX() + width + 10f, footer.getY());
 	}
 
@@ -118,8 +120,15 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		boolean result = editor.save();
 		setStatus(editor.getStatusText());
 		if (result && cnText != BattleNext_Settings.isCnTextEnabled()) {
-			BattleNextModPlugin.reloadCsvRegistry();
-			createContents();
+			try {
+				BattleNextModPlugin.reloadCsvRegistry();
+				createContents();
+			} catch (RuntimeException exception) {
+				saveErrors.failure(strings.get("load_failed"), managementStrings.get("page_settings"), exception);
+				setStatus(strings.get("saved") + " / " + saveErrors.summary());
+				BattleNext_Logger.warn(getClass(), "settings.display.after_commit.failed",
+						BattleNext_Logger.fields().put("input_state", editor.serializeState()).build(), exception);
+			}
 		}
 		return result;
 	}

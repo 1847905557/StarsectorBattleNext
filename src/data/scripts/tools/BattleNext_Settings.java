@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class BattleNext_Settings {
 
-	private static final String PATH = "AI_Battles_Next/settings.json";
+	public static final String PATH = "AI_Battles_Next/settings.json";
 	private static final boolean DEFAULT_FULL_GRAPHIC_EFFECT = true;
 	private static final boolean DEFAULT_INFO_LOG = false;
 	private static final boolean DEFAULT_RTT_IN_BATTLE = false;

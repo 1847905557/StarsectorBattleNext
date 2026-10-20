@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
 class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	private final AtomicReference<JSONObject> savedSettings = new AtomicReference<>();
@@ -242,6 +243,47 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
+	void numericErrorsAggregateInDisplayOrderWithFullHoverAndClearOnDiscard(boolean language) throws Exception {
+		installSettings(new JSONObject().put("cnText", language), language);
+		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
+		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
+		Object editor = getField(page, "editor");
+		List<String> fields = List.of("battleTimeLimitField", "deploymentPointLimitField", "defaultTimeMultField", "boostTimeMultField", "reportKeepCountField");
+		List<String> keys = List.of("battle_time_limit", "deployment_point_limit", "default_time_mult", "boost_time_mult", "report_keep_count");
+		List<String> inputs = List.of("-1", "1.5", "0", "NaN", "-2");
+		List<String> reasons = List.of(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_nonnegative"),
+				BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_integer"),
+				BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_positive"),
+				BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_positive"),
+				String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_integer_range"), 0, Integer.MAX_VALUE));
+		List<String> expected = new ArrayList<>();
+		for (int index = 0; index < fields.size(); index++) {
+			((TextFieldAPI) getField(editor, fields.get(index))).setText(inputs.get(index));
+			expected.add(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_field_error"),
+					BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_heading"),
+					BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_" + keys.get(index)), inputs.get(index), reasons.get(index)));
+		}
+		assertFalse(page.save());
+		assertEquals(expected, page.getSaveErrors());
+		assertThrows(UnsupportedOperationException.class, () -> page.getSaveErrors().add("change"));
+		String summary = String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 5, expected.get(0));
+		LabelAPI footer = (LabelAPI) getField(page, "statusLabel");
+		assertEquals(summary, footer.getText());
+		TooltipMakerAPI hover = tooltip(480f, 0f, false);
+		attachedTooltips.get(footer).createTooltip(hover, false, null);
+		assertEquals(IntStream.range(0, 5).mapToObj(index -> (index + 1) + ". " + expected.get(index)).toList(),
+				tooltips.get(hover).getComponents().stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+		assertTrue(page.hasUnsavedChanges());
+		assertEquals(new JSONObject().put("cnText", language).toString(), savedSettings.get().toString());
+		page.discard();
+		assertTrue(page.getSaveErrors().isEmpty());
+		assertEquals("", page.getStatusText());
+		assertFalse(page.hasUnsavedChanges());
+		page.close();
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
 	void rejectedSaveKeepsDraftLanguageCommittedTextAndInputState(boolean initial) throws Exception {
 		installSettings(new JSONObject().put("cnText", initial), !initial);
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
@@ -265,6 +307,19 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(input, field.captureEditState());
 		assertTrue(page.hasUnsavedChanges());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
+		assertEquals(1, page.getSaveErrors().size());
+		String failure = page.getSaveErrors().get(0);
+		assertTrue(failure.contains(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_save_failed")));
+		assertTrue(failure.contains(BattleNext_Settings.PATH));
+		assertTrue(failure.contains("Injected settings write failure"));
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1, failure), page.getStatusText());
+		failSettingsWrite = false;
+		assertTrue(page.save(), page.getStatusText());
+		assertEquals(700.5f, BattleNext_Settings.getBattleTimeLimit());
+		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(700.5, savedSettings.get().getDouble("battleTimeLimit"));
+		assertTrue(page.getSaveErrors().isEmpty());
+		assertFalse(page.hasUnsavedChanges());
 		page.close();
 	}
 

@@ -34,6 +34,72 @@ import java.lang.reflect.InvocationTargetException;
 class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
+	void saveReportsFolderAndIdConflictsTogetherAndCanSaveAfterCorrection() throws Exception {
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		store.save(new BattleNext_FleetModel("taken", "Existing", List.of(), List.of(), List.of()));
+		var editor = new BattleNext_FleetEditor(store);
+		editor.open(null, false);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		((TextFieldAPI) getField(editor, "idField")).setText("taken");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("taken");
+		((TextFieldAPI) getField(editor, "nameField")).setText("Copy");
+		assertFalse(editor.save());
+		assertEquals(2, editor.getSaveErrors().size());
+		assertTrue(editor.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_folder_name")));
+		assertTrue(editor.getSaveErrors().get(0).endsWith(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_duplicate_folder")));
+		assertTrue(editor.getSaveErrors().get(1).endsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_duplicate_id")));
+		assertEquals("Existing", store.get("taken").getName());
+		((TextFieldAPI) getField(editor, "idField")).setText("copy");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("copy");
+		assertTrue(editor.save(), editor.getStatusText());
+		assertEquals("Copy", store.get("copy").getName());
+		assertTrue(editor.getSaveErrors().isEmpty());
+		editor.close();
+	}
+
+	@Test
+	void saveCollectsIdentityFolderAndMemberErrorsAndPreservesOrdinaryReferenceWarnings() throws Exception {
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		var fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), List.of(
+				new BattleNext_MemberModel("parent_variant", "Alpha", "", List.of(), "", "", List.of()),
+				new BattleNext_MemberModel("parent_variant", "Beta", "", List.of(), "", "", List.of())));
+		var editor = new BattleNext_FleetEditor(store);
+		editor.open(fleet, false);
+		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
+		editor.buttonPressed("toggle_member:0");
+		editor.buttonPressed("toggle_member:1");
+		((TextFieldAPI) getField(editor, "idField")).setText("123");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("bad?folder");
+		List<?> fields = (List<?>) getField(editor, "memberFields");
+		((TextFieldAPI) getField(fields.get(0), "variantField")).setText("");
+		((TextFieldAPI) getField(fields.get(1), "variantField")).setText("pinned:missing");
+		assertFalse(editor.save());
+		List<String> errors = editor.getSaveErrors();
+		assertEquals(4, errors.size());
+		assertTrue(errors.get(0).contains("123"));
+		assertTrue(errors.get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_id_numeric")));
+		assertTrue(errors.get(1).contains("bad?folder"));
+		assertTrue(errors.get(1).contains("U+003F"));
+		assertTrue(errors.get(2).contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_label") + " 1 / Alpha"));
+		assertTrue(errors.get(3).contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_label") + " 2 / Beta"));
+		assertTrue(errors.get(3).contains("pinned:missing"));
+		assertTrue(store.getAll().isEmpty());
+		assertTrue(editor.hasUnsavedChanges());
+		((TextFieldAPI) getField(editor, "idField")).setText("fleet");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("fleet");
+		for (Object member : fields) {
+			((TextFieldAPI) getField(member, "variantField")).setText("ordinary_missing");
+		}
+		assertTrue(editor.save(), editor.getStatusText());
+		assertTrue(editor.getSaveErrors().isEmpty());
+		store.reload();
+		assertEquals(List.of("ordinary_missing", "ordinary_missing"), store.get("fleet").getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
+		editor.close();
+	}
+
+	@Test
 	void addMemberButtonSelectsUpTo64CopiesAndCommitsOnlyOnConfirmation() throws Exception {
 
 		ShipVariantAPI variant = source().getApi();

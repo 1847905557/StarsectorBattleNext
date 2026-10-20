@@ -176,7 +176,9 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		ShipVariantAPI draft = (ShipVariantAPI) getField(plugin, "draft");
 		name.setText(blank);
 		plugin.buttonPressed("pin_add");
-		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required"), status(plugin));
+		assertEquals(1, plugin.getSaveErrors().size());
+		assertTrue(plugin.getSaveErrors().get(0).endsWith(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
+		assertEquals(plugin.getSaveError(), status(plugin));
 		assertEquals(blank, name.getText());
 		assertTrue(buttons.get("pin_add").get());
 		assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
@@ -188,7 +190,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals("Retry this draft", name.getText());
 		assertSame(draft, getField(plugin, "draft"));
 		assertTrue(buttons.get("pin_add").get());
-		assertTrue(status(plugin).startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed")));
+		assertTrue(plugin.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_save_failed")));
 		store.getWriter().setFail(false);
 		plugin.buttonPressed("pin_add");
 		assertEquals(1, store.getAll().size());
@@ -519,8 +521,10 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failBuild = true, new AtomicBoolean()));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), status(plugin));
-		assertEquals("", plugin.getSaveError());
+		assertEquals(1, plugin.getSaveErrors().size());
+		assertTrue(plugin.getSaveErrors().get(0).contains("Unknown hull"));
+		assertTrue(plugin.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved") + " / " + plugin.getSaveError(), status(plugin));
 		assertEquals(Set.of("ordinary", "sm", "built"), BattleNext_RefitPanelPlugin.sModsOf(current.api));
 		assertNull(details(plugin).getPanel());
 		assertNull(getField(details(plugin), "variantJson"));
@@ -539,8 +543,10 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		plugin.open(member(current), savingRefit(current, () -> failRead.set(true), failRead));
 		invoke(plugin, "selectSMods", List.class, List.of("ordinary", "sm", "built"));
 		assertTrue(plugin.saveCurrentPage());
-		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), status(plugin));
-		assertEquals("", plugin.getSaveError());
+		assertEquals(1, plugin.getSaveErrors().size());
+		assertTrue(plugin.getSaveErrors().get(0).contains("Read failure"));
+		assertTrue(plugin.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")));
+		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved") + " / " + plugin.getSaveError(), status(plugin));
 		assertEquals(Set.of("ordinary", "sm", "built"), getField(plugin, "savedSMods"));
 		assertNull(details(plugin).getPanel());
 		assertTrue(lists(plugin).isEmpty());
@@ -566,7 +572,9 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		dialog.handle("confirm_save");
 		assertTrue(dialog.isActive());
 		assertFalse(closed.get());
-		assertEquals("Commit failure", plugin.getSaveError());
+		assertEquals(1, plugin.getSaveErrors().size());
+		assertTrue(plugin.getSaveErrors().get(0).endsWith("Commit failure"));
+		assertEquals(status(plugin), plugin.getSaveError());
 		assertSame(draft, getField(plugin, "draft"));
 		assertSame(snapshot, getField(details(plugin), "variantJson"));
 		assertEquals(Set.of(0), getField(details(plugin), "expanded"));

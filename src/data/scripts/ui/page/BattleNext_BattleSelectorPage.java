@@ -10,6 +10,7 @@ import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.battle.BattleNext_BattleValidation;
+import data.scripts.battle.BattleNext_BattleValidation.Failure;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
@@ -111,6 +112,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		if (!selectedId.isEmpty()) {
 			CustomPanelAPI instancePanel = instanceRect.createSubPanel(panel, inputOwner).getPanel();
 			instanceField = new BattleNext_BattleSourceField(inputRouter, panel, id -> {
+				saveErrors.clear();
+				loadError = "";
 				checkResult = null;
 				selectedInstanceId = id;
 				selectedInstances.put(selectedId, id);
@@ -170,20 +173,26 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	@Override
 	protected void handlePageAction(Object buttonId) {
 		if ("tournament:check".equals(buttonId) && !selectedId.isEmpty() && selectedInstanceId.isEmpty()) {
+			saveErrors.clear();
 			checkResult = provider.checkTournament(selectedId, template(tournamentStore.get(selectedId)).getFleetIds());
 			loadError = "";
 			updateTournamentDetails();
 		} else if ("tournament:create".equals(buttonId) && !selectedId.isEmpty() && selectedInstanceId.isEmpty()) {
 			createTournament();
 		} else if ("tournament:active".equals(buttonId) && !selectedInstanceId.isEmpty()) {
+			saveErrors.clear();
+			loadError = "";
+			boolean activated = false;
 			try {
 				startedStore.activate(selectedInstanceId);
+				activated = true;
 				refreshContent();
 			} catch (Exception exception) {
-				loadError = strings.get("save_failed");
+				saveErrors.failure(strings.get(activated ? "load_failed" : "save_failed"), selectedInstanceId, exception);
+				loadError = (activated ? strings.get("saved") + " / " : "") + saveErrors.summary();
 				BattleNext_Logger.error(getClass(), "tournament.activation.failed",
 						BattleNext_Logger.fields().put("instance_id", selectedInstanceId).build(), exception);
-				refreshContent();
+				if (!activated) refreshContent();
 			}
 		} else if (selectedId.isEmpty() && quickBattleEditor != null) {
 			quickBattleEditor.buttonPressed(buttonId);
@@ -209,6 +218,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 
 	@Override
 	protected String pageStatus() {
+		if (!saveErrors.isEmpty()) return loadError;
 		if (checkResult != null) return String.join("; ", checkResult.messages());
 		return quickBattleEditor == null ? loadError : quickBattleEditor.getStatusText();
 	}
@@ -259,6 +269,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	}
 
 	public void selectSource(String id) {
+		saveErrors.clear();
+		loadError = "";
 		checkResult = null;
 		selectedId = id;
 		selectInstance();
@@ -304,6 +316,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 				fleetStore, ruleStore, loadError, reasons).withCheckResult(checkResult);
 		List<BattleNext_TournamentDisplay.Action> actions = tournamentActions(tournament, started, reasons);
 		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, started, details, actions, inputOwner::buttonPressed);
+		tournamentDisplay.setSaveErrors(this::getSaveErrors);
 		if (started == null && selectedInstanceId.isEmpty()) {
 			BattleNext_TournamentTemplate template = template(tournament);
 			tournamentDisplay.enableTemplateEditing(overlayHost == null ? panel : overlayHost,
@@ -321,6 +334,8 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	}
 
 	private void createTournament() {
+		saveErrors.clear();
+		boolean saved = false;
 		try {
 			List<String> errors = provider.reloadTournamentCatalog();
 			if (!errors.isEmpty()) throw new IllegalStateException(String.join("; ", errors));
@@ -328,23 +343,34 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			if (source == null) throw new IllegalArgumentException("Missing tournament configuration: " + selectedId);
 			BattleNext_StartedTournament created = tournamentEngine.create(source, template(source).getFleetIds(), BattleNext_StartedTournament.ExecutionKind.MANUAL,
 					startedStore, fleetStore, ruleStore);
+			saved = true;
 			selectedInstanceId = created.getId();
 			selectedInstances.put(selectedId, selectedInstanceId);
 			loadError = tournamentStrings.get("created");
 			checkResult = null;
 		} catch (BattleNext_BattleValidation.Rejection rejection) {
 			checkResult = rejection.getResult();
-			loadError = String.join("; ", checkResult.messages());
+			for (Failure failure : checkResult.failures()) {
+				saveErrors.add(strings.format("operation_error", tournamentStrings.get("create"), failure.subject(), failure.message()));
+			}
+			loadError = saveErrors.summary();
 			BattleNext_Logger.warn(getClass(), "tournament.creation.rejected", BattleNext_Logger.fields().put("tournament_id", selectedId).build(), rejection);
 		} catch (Exception exception) {
-			loadError = strings.get("save_failed");
+			saveErrors.failure(strings.get("save_failed"), selectedId, exception);
+			loadError = saveErrors.summary();
 			BattleNext_Logger.error(getClass(), "tournament.creation.failed", BattleNext_Logger.fields().put("tournament_id", selectedId).build(), exception);
 		}
-		if (checkResult != null) {
-			loadError = "";
-			updateTournamentDetails();
-		} else {
-			refreshContent();
+		try {
+			if (checkResult != null) {
+				updateTournamentDetails();
+			} else {
+				refreshContent();
+			}
+		} catch (RuntimeException exception) {
+			saveErrors.failure(strings.get("load_failed"), selectedId, exception);
+			loadError = (saved ? strings.get("saved") + " / " : "") + saveErrors.summary();
+			BattleNext_Logger.warn(getClass(), "tournament.display.after_create.failed",
+					BattleNext_Logger.fields().put("tournament_id", selectedId).put("saved", saved).build(), exception);
 		}
 	}
 

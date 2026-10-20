@@ -13,6 +13,7 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_FleetModel> {
 
@@ -84,12 +85,14 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	}
 
 	@Override
-	public void saveEdited(BattleNext_FleetModel model, String sourceId) throws IOException, JSONException {
+	public List<EditRejection> editRejections(BattleNext_FleetModel model, String sourceId) {
+		List<EditRejection> rejections = new ArrayList<>();
 		for (BattleNext_FleetModel existing : getAll()) {
 			if (!existing.getId().equals(sourceId) && BattleNext_EntryId.sameFileName(model.getFolderName(), existing.getFolderName())) {
-				throw new EditRejection(EditRejectionReason.DUPLICATE_FOLDER, model.getFolderName());
+				rejections.add(new EditRejection(EditRejectionReason.DUPLICATE_FOLDER, model.getFolderName()));
 			}
 		}
-		super.saveEdited(model, sourceId);
+		rejections.addAll(super.editRejections(model, sourceId));
+		return List.copyOf(rejections);
 	}
 }

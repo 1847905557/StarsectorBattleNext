@@ -9,6 +9,33 @@ import java.util.List;
 class BattleNext_BaseStoreTest {
 
 	@Test
+	void editRejectionsAreReadOnlyAndSaveUsesTheSameSourceAndIdentityRules() throws Exception {
+		MemoryStore store = new MemoryStore();
+		Entry source = new Entry("source");
+		source.setSourceType(BattleNext_LoadSource.STANDARD);
+		source.setSourcePath("external/source.json");
+		store.loaded = List.of(source);
+		store.reload();
+		store.save(new Entry("taken"));
+		long revision = store.getRevision();
+		var unavailable = store.editRejections(new Entry("source"), "source");
+		assertEquals(1, unavailable.size());
+		assertEquals(BattleNext_BaseStore.EditRejectionReason.SOURCE_UNAVAILABLE, unavailable.get(0).getReason());
+		assertEquals("source", unavailable.get(0).getIdentity());
+		assertThrows(UnsupportedOperationException.class, unavailable::clear);
+		var conflicts = store.editRejections(new Entry("taken"), "source");
+		assertEquals(1, conflicts.size());
+		assertEquals(BattleNext_BaseStore.EditRejectionReason.DUPLICATE_ID, conflicts.get(0).getReason());
+		assertEquals(revision, store.getRevision());
+		assertSame(source, store.get("source"));
+		var failure = assertThrows(BattleNext_BaseStore.EditRejection.class, () -> store.saveEdited(new Entry("taken"), "source"));
+		assertEquals(BattleNext_BaseStore.EditRejectionReason.DUPLICATE_ID, failure.getReason());
+		store.saveEdited(new Entry("copy"), "source");
+		assertEquals("saved/copy.json", store.get("copy").getSourcePath());
+		assertSame(source, store.get("source"));
+	}
+
+	@Test
 	void unavailableSourcePublishesAnEmptyCatalogWithItsDiagnostic() throws Exception {
 		MemoryStore store = new MemoryStore();
 		Entry original = new Entry("alpha");

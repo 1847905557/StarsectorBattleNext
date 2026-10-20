@@ -6,6 +6,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 
 import java.util.List;
 
@@ -45,6 +46,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
 			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f);
+			footerStatus.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), footerStatus.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
 			footerStatus.setHeightSoFar(statusRect.getHeight());
 			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
@@ -69,12 +71,21 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 		detailRect.removeLatestSubPanel();
 		detailPanel = detailRect.createSubPanel(panel, panel.getPlugin()).getPanel();
 		if (!isDetailOpen()) {
+			if (!saveErrors.isEmpty() || status.equals(editorView().getStatusText())) {
+				status = "";
+			}
+			saveErrors.clear();
+			editorView().close();
 			UIRect promptRect = BattleNext_PageLayout.managementContentRect(detailRect);
 			TooltipMakerAPI prompt = detailPanel.createUIElement(promptRect.getWidth(), promptRect.getHeight(), false);
 			BattleNext_PageLayout.contentTitle(prompt, promptText(), promptRect.getWidth(), 0f);
 			detailPanel.addUIElement(prompt).inTL(promptRect.getX() - detailRect.getX(),
 					promptRect.getY() - detailRect.getY());
 			return;
+		}
+		if (editorView().getStatusText().isEmpty()) {
+			saveErrors.clear();
+			status = "";
 		}
 		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
 		CustomPanelAPI contentPanel = detailPanel.createCustomPanel(editorRect.getWidth(), editorRect.getHeight(),
@@ -128,7 +139,8 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			reloadSavedData();
 			refreshContent();
 		} catch (Exception exception) {
-			setStatus(strings.get("saved") + " / " + strings.get("load_failed") + ": " + exception);
+			saveErrors.failure(strings.get("load_failed"), pageTitle(), exception);
+			setStatus(strings.get("saved") + " / " + saveErrors.summary());
 			BattleNext_Logger.warn(getClass(), "management.display.after_commit.failed",
 					BattleNext_Logger.fields().put("input_state", inputState).build(), exception);
 		}

@@ -8,6 +8,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.BattleNext_LoadSource;
+import data.model.BattleNext_BaseStore.EditRejectionReason;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -112,7 +113,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
 	private void addMembers(List<String> ids) {
 		if (ids.isEmpty()) return;
-		if (!captureDraft(false)) return;
+		captureDraft(false);
 		List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
 		for (String id : ids) {
 			BattleNext_MemberModel member = new BattleNext_MemberModel();
@@ -231,7 +232,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			});
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("remove_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("remove_member:".length()));
-			if (!captureDraft(false)) return;
+			captureDraft(false);
 			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
 			if (index < 0 || index >= members.size()) return;
 			members.remove(index);
@@ -247,7 +248,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			refreshStructure();
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("copy_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("copy_member:".length()));
-			if (!captureDraft(false)) return;
+			captureDraft(false);
 			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
 			BattleNext_MemberModel member = members.get(index);
 			members.add(index + 1, new BattleNext_MemberModel(member.getVariantId(), member.getName(), member.getPersonality(),
@@ -265,7 +266,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		} else if (buttonId instanceof String action && (action.startsWith("move_member_up:") || action.startsWith("move_member_down:"))) {
 			int index = Integer.parseInt(action.substring(action.lastIndexOf(':') + 1));
 			int target = action.startsWith("move_member_up:") ? index - 1 : index + 1;
-			if (!captureDraft(false)) return;
+			captureDraft(false);
 			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
 			Collections.swap(members, index, target);
 			Collections.swap(memberKeys, index, target);
@@ -279,7 +280,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			refreshStructure();
 		} else if (buttonId instanceof String && ((String) buttonId).startsWith("toggle_member:")) {
 			int index = Integer.parseInt(((String) buttonId).substring("toggle_member:".length()));
-			if (!captureDraft(false)) return;
+			captureDraft(false);
 			if (!expandedMembers.add(index)) expandedMembers.remove(index);
 			refreshStructure();
 		}
@@ -318,14 +319,19 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
-		if (!validateName(nameField.getText(), strings.get("name_required"))) return false;
-		if (!captureDraft(true)) return false;
+		validateName(fleetStrings.get("details_heading") + " / " + getDraftId(), strings.get("name"), nameField.getText(), strings.get("name_required"));
+		captureDraft(true);
 		try {
+			for (var rejection : store.editRejections(draft, baseline == null || baselineClone ? "" : baseline.getId())) {
+				saveErrors.rejection(fleetStrings.get("details_heading"),
+					fleetStrings.get(rejection.getReason() == EditRejectionReason.DUPLICATE_FOLDER ? "folder_name" : "id"), rejection);
+			}
+			if (!saveErrors.isEmpty()) return false;
 			store.saveEdited(draft, baseline == null || baselineClone ? "" : baseline.getId());
 		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_FleetEditor.class, "fleet.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).build(), exception);
-			setStatus(failureStatus(exception));
+			setStatus(failureStatus(draft.getId(), exception));
 			return false;
 		}
 		baseline = copy(draft, false);
@@ -339,14 +345,14 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		captureDraft(false);
 	}
 
-	private boolean captureDraft(boolean validate) {
-		if (idField == null) return true;
+	private void captureDraft(boolean validate) {
+		if (idField == null) return;
 		String fleetId = idField.getText().trim();
 		if (validate && !BattleNext_EntryId.isValidPathSegment(fleetId)) {
 			BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.id.rejected",
 				BattleNext_Logger.fields().put("id", fleetId).put("draft", draft).put("criterion", "Valid path segment").build());
 			setStatus(fleetStrings.get("invalid_id"));
-			return false;
+			saveErrors.id(fleetStrings.get("details_heading"), fleetStrings.get("id"), idField.getText());
 		}
 		String fleetFolderName = folderNameField.getText().trim();
 		if (fleetFolderName.isEmpty()) {
@@ -359,7 +365,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.folder.rejected",
 				BattleNext_Logger.fields().put("folder", fleetFolderName).put("draft", draft).put("criterion", "Valid path segment").build());
 			setStatus(fleetStrings.get("invalid_folder"));
-			return false;
+			saveErrors.id(fleetStrings.get("details_heading"), fleetStrings.get("folder_name"), folderNameField.getText());
 		}
 		draft.setId(fleetId);
 		draft.setFolderName(fleetFolderName);
@@ -372,12 +378,14 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		for (int index = 0; index < draft.getMembers().size(); index++) {
 			FleetMemberEditorFields fields = memberFields.size() > index ? memberFields.get(index) : null;
 			BattleNext_MemberModel existing = draft.getMembers().get(index);
+			String subject = memberStrings.get("label") + " " + (index + 1) + " / "
+					+ value(fields == null ? null : fields.nameField, existing.getName());
 			String variantId = value(fields == null ? null : fields.variantField, existing.getVariantId()).trim();
 			if (validate && variantId.isEmpty()) {
 				BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.member.variant.rejected",
 				BattleNext_Logger.fields().put("fleet", draft).put("member_index", index).put("variant_id", variantId).build());
 				setStatus(variantStrings.get("invalid_reference"));
-				return false;
+				saveErrors.field(subject, variantStrings.get("label"), variantId, strings.get("error_required"));
 			}
 			if (!variantId.isEmpty()) {
 				try {
@@ -391,7 +399,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				} catch (Exception exception) {
 					if (variantId.startsWith(BattleNext_VariantSourceProvider.PINNED_PREFIX) && validate) {
 						setStatus(variantStrings.get("invalid_reference") + ": " + exception.getMessage());
-						return false;
+						saveErrors.failure(subject + " / " + variantStrings.get("label"), variantId, exception);
 					}
 					BattleNext_Logger.warn(BattleNext_FleetEditor.class, "fleet.member.variant.degraded",
 				BattleNext_Logger.fields().put("fleet_id", draft.getId()).put("member_index", index).put("variant_id", variantId).put("validate", validate).build(), exception);
@@ -405,7 +413,6 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 					split(value(fields == null ? null : fields.tagsField, String.join(",", existing.getTags())))));
 		}
 		draft.setMembers(members);
-		return true;
 	}
 
 	@Override

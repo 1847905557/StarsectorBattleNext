@@ -27,6 +27,41 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
+	void saveAggregatesConfigurationFieldsBeforeSubmittingAndRebuildsErrorsOnRetry() throws Exception {
+		var store = new BattleNext_TournamentStore();
+		store.reload();
+		var rules = new BattleNext_RuleStore();
+		rules.reload();
+		var editor = new BattleNext_TournamentEditor(store, rules);
+		editor.open(null);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		for (String field : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "mapField")) {
+			((TextFieldAPI) getField(editor, field)).setText("");
+		}
+		assertFalse(editor.save());
+		assertEquals(5, editor.getSaveErrors().size());
+		List<String> keys = List.of("name", "id", "best_of_count", "max_fleets");
+		for (int index = 0; index < keys.size(); index++) {
+			String category = index == 0 ? "Common" : "Tournament";
+			String prefix = index == 0 ? "BattleNext_common_" : "BattleNext_tournament_";
+			assertTrue(editor.getSaveErrors().get(index).contains(BattleNext_TestTextCatalog.text(category, prefix + keys.get(index))));
+		}
+		assertTrue(editor.getSaveErrors().get(4).contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_number_label")));
+		assertTrue(store.getAll().isEmpty());
+		((TextFieldAPI) getField(editor, "idField")).setText("cup");
+		((TextFieldAPI) getField(editor, "nameField")).setText("Cup");
+		((TextFieldAPI) getField(editor, "bestOfField")).setText("1");
+		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("1");
+		((TextFieldAPI) getField(editor, "mapField")).setText("-1");
+		assertFalse(editor.save());
+		assertEquals(1, editor.getSaveErrors().size());
+		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("2");
+		assertTrue(editor.save(), editor.getStatusText());
+		assertTrue(editor.getSaveErrors().isEmpty());
+		editor.close();
+	}
+
+	@Test
 	void configurationFieldsUseLeftColumnAndPreserveUnfinishedInputsAcrossRefresh() throws Exception {
 		deferTooltipWidth = true;
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();

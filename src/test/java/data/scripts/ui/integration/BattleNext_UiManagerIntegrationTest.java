@@ -254,8 +254,34 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertFalse(((BattleNext_UiInputRouter) getField(manager, "inputRouter")).isEmpty());
 		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_close"),
 				((ButtonAPI) getField(manager, "closeButton")).getText());
+		assertEquals(1, manager.getSaveErrors().size());
+		String error = manager.getSaveErrors().get(0);
+		assertTrue(error.contains(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_save_failed")));
+		assertTrue(error.contains(BattleNext_Settings.PATH));
+		assertTrue(error.contains("Injected settings write failure"));
+		BattleNext_ConfirmationDialog dialog = (BattleNext_ConfirmationDialog) getField(manager, "confirmationDialog");
+		LabelAPI dialogStatus = (LabelAPI) getField(dialog, "confirmationStatus");
+		LabelAPI footer = (LabelAPI) getField(page, "statusLabel");
+		assertEquals(page.getStatusText(), dialogStatus.getText());
+		assertEquals(page.getStatusText(), footer.getText());
+		for (LabelAPI label : List.of(footer, dialogStatus)) {
+			TooltipMakerAPI hover = tooltip(480f, 0f, false);
+			attachedTooltips.get(label).createTooltip(hover, false, null);
+			assertEquals(List.of("1. " + error), tooltips.get(hover).getComponents().stream()
+					.map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+		}
 		manager.buttonPressed("confirm_cancel");
 		assertTrue(page.hasUnsavedChanges());
+		failSettingsWrite = false;
+		manager.buttonPressed(tabs[0]);
+		manager.buttonPressed("confirm_save");
+		assertEquals(tabs[0], getField(manager, "currentPage"));
+		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
+		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
+		assertFalse(page.hasUnsavedChanges());
+		assertTrue(page.getSaveErrors().isEmpty());
+		manager.buttonPressed(settings);
+		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(initial);
 		manager.buttonPressed("close");
 		manager.buttonPressed("confirm_discard");
 		assertNull(getField(manager, "attachedView"));

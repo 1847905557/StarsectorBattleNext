@@ -142,7 +142,10 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			TextFieldAPI nameField = (TextFieldAPI) getField(editor, "nameField");
 			nameField.setText(blank);
 			assertFalse(editor.save());
-			assertEquals(expectedStatus, editor.getStatusText());
+			assertEquals(1, editor.getSaveErrors().size());
+			assertTrue(editor.getSaveErrors().get(0).endsWith(expectedStatus));
+			assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"),
+					1, editor.getSaveErrors().get(0)), editor.getStatusText());
 			assertEquals(blank, nameField.getText());
 			assertTrue(editor.hasUnsavedChanges());
 			assertEquals(stored, storedFiles());
@@ -331,9 +334,12 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		store.setFailLoad(true);
 		assertTrue(page.save());
 		assertFalse(page.hasUnsavedChanges());
+		assertEquals(1, page.getSaveErrors().size());
+		assertTrue(page.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")));
+		assertTrue(page.getSaveErrors().get(0).contains("Injected load failure"));
 		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved") + " / "
-				+ BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed")
-				+ ": java.io.IOException: Injected load failure", page.getStatusText());
+				+ String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"),
+				1, page.getSaveErrors().get(0)), page.getStatusText());
 		assertEquals("Saved name", ((TextFieldAPI) getField(editor, "nameField")).getText());
 		store.setFailLoad(false);
 		store.reload();

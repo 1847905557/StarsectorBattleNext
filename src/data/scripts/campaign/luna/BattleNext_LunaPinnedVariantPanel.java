@@ -17,6 +17,7 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.Color;
@@ -43,6 +44,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	private TextFieldAPI name;
 	private ButtonAPI saveButton;
 	private String status = "";
+	private final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private boolean saved;
 	private boolean closed = true;
 
@@ -125,7 +127,8 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		name = nameWidget;
 		name.setMaxChars(-1);
 		if (!status.isEmpty()) {
-			contents.addPara(status, BattleNext_UiTheme.TEXT, INSET);
+			contents.addPara(saveErrors.isEmpty() ? status : saveErrors.summary(), BattleNext_UiTheme.TEXT, INSET);
+			contents.addTooltipToPrevious(BattleNext_SaveErrors.tooltip(this::getSaveErrors), TooltipMakerAPI.TooltipLocation.ABOVE);
 		}
 		float metadataHeight = Math.min(metadataLimit, contents.getHeightSoFar());
 		metadataPanel.getPosition().setSize(width, metadataHeight);
@@ -164,11 +167,13 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			return;
 		}
 		if (!"pin_save".equals(buttonId) || saved || snapshot == null) return;
+		saveErrors.clear();
 		String displayName = name.getText();
 		if (displayName.isBlank()) {
 			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantPanel.class, "save.name.rejected",
 				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank name").build());
 			status = variantStrings.get("pin_name_required");
+			saveErrors.field(variantStrings.get("pin_add_action"), variantStrings.get("pin_name"), displayName, status);
 			refreshContents(displayName);
 			return;
 		}
@@ -182,6 +187,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			}
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
+			saveErrors.failure(strings.get("save_failed"), "tournament/_pinnedVariants / " + displayName, exception);
 			BattleNext_Logger.error(BattleNext_LunaPinnedVariantPanel.class, "variant.pin.save.failed",
 				BattleNext_Logger.fields().put("snapshot", snapshot).put("display_name", displayName).build(), exception);
 		}
@@ -211,6 +217,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 
 	void close() {
 
+		saveErrors.clear();
 		details.close();
 		inputRouter.clear();
 		if (saveButton != null) {
@@ -234,6 +241,10 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 		saveButton = null;
 		status = "";
 		closed = true;
+	}
+
+	public List<String> getSaveErrors() {
+		return saveErrors.getMessages();
 	}
 
 	private static class FramePlugin extends BaseCustomUIPanelPlugin {

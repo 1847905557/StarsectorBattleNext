@@ -184,7 +184,10 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 			labels.clear();
 			name(display).setText(blank);
 			display.buttonPressed("pin_save");
-			assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
+			assertEquals(1, display.getSaveErrors().size());
+			assertTrue(display.getSaveErrors().get(0).endsWith(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name_required")));
+			assertTrue(labels.contains(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"),
+					1, display.getSaveErrors().get(0))));
 			assertEquals(blank, name(display).getText());
 			assertTrue(buttons.get("pin_save").get());
 			assertTrue(store.getAll().isEmpty());

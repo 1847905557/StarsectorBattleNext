@@ -3,6 +3,7 @@ package data.scripts.ui.editor;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import data.missions.BattleNext_MissionBattleMap;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -328,44 +329,37 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	@Override
 	protected boolean submitDraft() {
 		if (isReadOnly()) return true;
-		if (!validateName(nameField.getText(), strings.get("name_required"))) return false;
-		if (!BattleNext_EntryId.isValidPathSegment(getDraftId()) || BattleNext_StartedTournamentStore.FILE_NAME_WITHOUT_FORMAT.equalsIgnoreCase(getDraftId())) {
-			statusText = tournamentStrings.get("invalid_id");
-			return false;
+		String subject = tournamentStrings.get("editor_title");
+		validateName(subject + " / " + getDraftId(), strings.get("name"), nameField.getText(), strings.get("name_required"));
+		saveErrors.id(subject, tournamentStrings.get("id"), idField.getText());
+		if (BattleNext_StartedTournamentStore.FILE_NAME_WITHOUT_FORMAT.equalsIgnoreCase(getDraftId())) {
+			saveErrors.field(subject, tournamentStrings.get("id"), getDraftId(), strings.get("error_id_reserved"));
 		}
-		if (!store.isLoaded() || !ruleStore.isLoaded()) {
-			statusText = strings.get("load_failed");
-			return false;
+		Integer boCount = saveErrors.integer(subject, tournamentStrings.get("best_of_count"), bestOfField.getText(), 1, Integer.MAX_VALUE);
+		Integer maxFleet = saveErrors.integer(subject, tournamentStrings.get("max_fleets"), maxFleetsField.getText(),
+				BattleNext_TournamentModel.MIN_FLEET_COUNT, BattleNext_TournamentModel.MAX_FLEET_COUNT);
+		Integer map = saveErrors.integer(subject, battleStrings.get("map_number_label"), mapField.getText(),
+				BattleNext_MissionBattleMap.RANDOM_MAP_ID, BattleNext_MissionBattleMap.LAST_MAP_ID);
+		if (bracketGroup.getCheckedValue() == null) {
+			saveErrors.field(subject, tournamentStrings.get("bracket"), "", strings.get("error_choice"));
 		}
-		int boCount;
-		int maxFleet;
-		int map;
-		try {
-			boCount = Integer.parseInt(bestOfField.getText().trim());
-			maxFleet = Integer.parseInt(maxFleetsField.getText().trim());
-			map = Integer.parseInt(mapField.getText().trim());
-		} catch (NumberFormatException exception) {
-			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
-				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).put("criterion", "Integer best-of, fleet limit and map").build(), exception);
-			statusText = tournamentStrings.get("invalid_configuration");
-			return false;
+		if (!store.isLoaded()) {
+			saveErrors.add(strings.get("load_failed") + ": " + store.getLoadError());
 		}
-		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel(getDraftId(), nameField.getText(),
-				(TournamentBracketType) bracketGroup.getCheckedValue(), boCount, maxFleet);
-		configuration.setMapId(map);
-		try {
-			new BattleNext_TournamentEngine().validateConfiguration(configuration);
-		} catch (IllegalArgumentException exception) {
-			statusText = tournamentStrings.get("invalid_configuration");
-			BattleNext_Logger.warn(BattleNext_TournamentEditor.class, "tournament.configuration.rejected",
-					BattleNext_Logger.fields().put("configuration", configuration).put("input_state", serializeState()).build(), exception);
-			return false;
+		if (!ruleStore.isLoaded()) {
+			saveErrors.add(strings.get("load_failed") + ": " + ruleStore.getLoadError());
 		}
 		captureTextFields();
-		draft.setBoCount(boCount);
-		draft.setMaxFleet(maxFleet);
-		draft.setMapId(map);
 		try {
+			if (store.isLoaded()) {
+				for (var rejection : store.editRejections(draft, baseline == null ? "" : baseline.getId())) {
+					saveErrors.rejection(subject, tournamentStrings.get("id"), rejection);
+				}
+			}
+			if (!saveErrors.isEmpty()) return false;
+			draft.setBoCount(boCount);
+			draft.setMaxFleet(maxFleet);
+			draft.setMapId(map);
 			BattleNext_TournamentModel nextBaseline = new BattleNext_TournamentModel();
 			nextBaseline.fromJson(draft.toJson());
 			store.saveEdited(draft, baseline == null ? "" : baseline.getId());
@@ -375,7 +369,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_TournamentEditor.class, "tournament.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);
-			statusText = failureStatus(exception);
+			statusText = failureStatus(draft.getId(), exception);
 			return false;
 		}
 	}

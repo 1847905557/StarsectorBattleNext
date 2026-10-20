@@ -77,21 +77,29 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_tournament_base_template"), getField(options.get(0), "label"));
 			if (language) {
 				selector.buttonPressed("tournament:create");
-				assertEquals(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2), selector.getStatusText());
+				assertEquals(1, selector.getSaveErrors().size());
+				assertTrue(selector.getSaveErrors().get(0).contains("cup"));
+				assertTrue(selector.getSaveErrors().get(0).endsWith(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2)));
 			}
 			assertEquals("", getField(selector, "selectedInstanceId"));
 		}
 		BattleNext_TournamentDisplay templateDisplay = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
 		assertTrue(templateDisplay.isEditable());
 		selector.buttonPressed("tournament:create");
-		assertEquals(String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2), selector.getStatusText());
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1,
+				String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_operation_error"),
+				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "cup",
+				String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2))), selector.getStatusText());
 		instances.reload();
 		assertTrue(instances.getAll().isEmpty());
 		var templates = (Map<String, BattleNext_TournamentTemplate>) getField(selector, "templates");
 		templates.get("cup").select(0, "alpha");
 		templates.get("cup").select(1, "alpha");
 		selector.buttonPressed("tournament:create");
-		assertEquals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"), selector.getStatusText());
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1,
+				String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_operation_error"),
+				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "cup",
+				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"))), selector.getStatusText());
 		instances.reload();
 		assertTrue(instances.getAll().isEmpty());
 		assertEquals(List.of("alpha", "alpha"), templates.get("cup").getFleetIds());

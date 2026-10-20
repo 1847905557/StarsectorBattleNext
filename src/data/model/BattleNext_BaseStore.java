@@ -14,14 +14,20 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public static class EditRejection extends IllegalStateException {
 		private final EditRejectionReason reason;
+		private final String identity;
 
 		public EditRejection(EditRejectionReason reason, String identity) {
 			super(reason.name() + ": " + identity);
 			this.reason = reason;
+			this.identity = identity;
 		}
 
 		public EditRejectionReason getReason() {
 			return reason;
+		}
+
+		public String getIdentity() {
+			return identity;
 		}
 	}
 
@@ -116,18 +122,25 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	}
 
 	public void saveEdited(T model, String sourceId) throws IOException, JSONException {
+		List<EditRejection> rejections = editRejections(model, sourceId);
+		if (!rejections.isEmpty()) throw rejections.get(0);
+		save(model);
+	}
+
+	public List<EditRejection> editRejections(T model, String sourceId) {
 		requireLoaded();
+		List<EditRejection> rejections = new ArrayList<>();
 		for (T existing : getAll()) {
 			if (BattleNext_EntryId.sameFileName(model.getId(), existing.getId()) && !existing.getId().equals(sourceId)) {
-				throw new EditRejection(EditRejectionReason.DUPLICATE_ID, model.getId());
+				rejections.add(new EditRejection(EditRejectionReason.DUPLICATE_ID, model.getId()));
 			}
 		}
 		T source = get(sourceId);
 		if (source != null && BattleNext_EntryId.sameFileName(model.getId(), sourceId)
 				&& !isManaged(source) && source.getSourceType() != BattleNext_LoadSource.CREATED) {
-			throw new EditRejection(EditRejectionReason.SOURCE_UNAVAILABLE, sourceId);
+			rejections.add(new EditRejection(EditRejectionReason.SOURCE_UNAVAILABLE, sourceId));
 		}
-		save(model);
+		return List.copyOf(rejections);
 	}
 
 	public void delete(String id) throws IOException, JSONException {

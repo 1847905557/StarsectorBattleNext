@@ -99,7 +99,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 	@Override
 	protected boolean submitDraft() {
 		if (entry.model() == null || nameField == null || !store.isLoaded()) return false;
-		if (!validateName(nameField.getText(), variantStrings.get("pin_name_required"))) return false;
+		if (!validateName(entry.path(), variantStrings.get("pin_name"), nameField.getText(), variantStrings.get("pin_name_required"))) return false;
 		String next = nameField.getText().trim();
 		try {
 			store.rename(entry.pinId(), next);
@@ -108,6 +108,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 			return true;
 		} catch (Exception exception) {
 			statusText = strings.get("save_failed") + ": " + exception;
+			saveErrors.failure(strings.get("save_failed"), entry.path(), exception);
 			BattleNext_Logger.error(getClass(), "variant.pin.editor.commit.failed",
 					BattleNext_Logger.fields().put("pin_id", entry.pinId()).put("name", next).build(), exception);
 			return false;

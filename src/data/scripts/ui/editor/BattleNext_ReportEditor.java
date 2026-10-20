@@ -63,7 +63,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
-		if (!validateName(nameField.getText(), reportStrings.get("name_required"))) return false;
+		if (!validateName(target.identity(), reportStrings.get("name"), nameField.getText(), reportStrings.get("name_required"))) return false;
 		String next = nameField.getText().trim();
 		try {
 			target.rename(reports, next);
@@ -72,6 +72,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 			return true;
 		} catch (Exception exception) {
 			statusText = strings.get("save_failed") + ": " + exception;
+			saveErrors.failure(strings.get("save_failed"), target.identity(), exception);
 			BattleNext_Logger.error(getClass(), "report.editor.commit.failed",
 					BattleNext_Logger.fields().put("target", target.identity()).put("name", next).build(), exception);
 			return false;

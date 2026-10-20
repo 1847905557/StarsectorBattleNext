@@ -22,6 +22,7 @@ import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 import org.lwjgl.input.Keyboard;
 
 import java.util.*;
@@ -47,6 +48,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	private BattleNext_FleetModel snapshot;
 	private String commanderName = "";
 	private String status = "";
+	private final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private boolean saved;
 	private boolean closed = true;
 
@@ -137,7 +139,8 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			membersContent.addPara(fleetStrings.get("player_save_preview_hint"), BattleNext_ExpandablePanel.ROW_GAP);
 		}
 		if (!status.isEmpty()) {
-			membersContent.addPara(status, INSET);
+			membersContent.addPara(saveErrors.isEmpty() ? status : saveErrors.summary(), INSET);
+			membersContent.addTooltipToPrevious(BattleNext_SaveErrors.tooltip(this::getSaveErrors), TooltipMakerAPI.TooltipLocation.ABOVE);
 		}
 		if (snapshot != null) {
 			for (int index = 0; index < snapshot.getMembers().size(); index++) {
@@ -281,11 +284,13 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			return;
 		}
 		if (!"fleet_capture_save".equals(buttonId) || saved || snapshot == null) return;
+		saveErrors.clear();
 		String displayName = name.getText();
 		if (displayName.trim().isEmpty()) {
 			BattleNext_Logger.warn(BattleNext_LunaFleetSavePanel.class, "save.name.rejected",
 				BattleNext_Logger.fields().put("display_name", displayName).put("criterion", "Nonblank trimmed name").build());
 			status = fleetStrings.get("player_save_name_required");
+			saveErrors.field(fleetStrings.get("player_save_action"), fleetStrings.get("name"), displayName, status);
 			refreshMembers();
 			return;
 		}
@@ -297,6 +302,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			status = fleetStrings.format("player_save_saved", snapshot.getName(), snapshot.getSourcePath());
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
+			saveErrors.failure(strings.get("save_failed"), "tournament/" + snapshot.getFolderName() + "/fleet_data.json", exception);
 			BattleNext_Logger.error(BattleNext_LunaFleetSavePanel.class, "fleet.player.save.failed",
 				BattleNext_Logger.fields().put("fleet", snapshot).put("display_name", displayName).build(), exception);
 		}
@@ -324,6 +330,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	}
 
 	void close() {
+		saveErrors.clear();
 		if (name != null) name.close();
 		inputRouter.clear();
 		if (saveButton != null) saveButton.setEnabled(false);
@@ -339,6 +346,10 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		commanderName = "";
 		status = "";
 		closed = true;
+	}
+
+	public List<String> getSaveErrors() {
+		return saveErrors.getMessages();
 	}
 
 	private class ContentsPlugin extends BaseCustomUIPanelPlugin {

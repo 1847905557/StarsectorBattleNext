@@ -72,6 +72,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private BattleNext_TournamentModel tournament;
 	private BattleNext_StartedTournament started;
 	private Details details;
+	private Supplier<List<String>> saveErrors = List::of;
 	private final Consumer<Object> onAction;
 	private List<Action> actions;
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
@@ -141,6 +142,10 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	public boolean isEditable() {
 		return started == null && templateFleetIds != null;
+	}
+
+	public void setSaveErrors(Supplier<List<String>> source) {
+		saveErrors = source;
 	}
 
 	public ViewState captureState() {
@@ -327,6 +332,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		}
 		if (!details.loadError().isEmpty()) {
 			content.addPara(details.loadError(), WARNING_GAP);
+			content.addTooltipTo(BattleNext_SaveErrors.tooltip(saveErrors), content.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		}
 		for (String error : chart.errors()) {
 			content.addPara(tournamentStrings.get("chart_error") + ": " + error, WARNING_GAP);

@@ -31,6 +31,37 @@ import java.nio.charset.StandardCharsets;
 class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
+	void saveAggregatesAllRowFieldsInRowOrderAndRetainsTheDraft() throws Exception {
+		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
+		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
+		List<BattleNext_QuickBattleModel> entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");
+		entries.clear();
+		entries.add(new BattleNext_QuickBattleModel("", "", -1, 1f));
+		entries.add(new BattleNext_QuickBattleModel("first", "second", -1, 1f));
+		editor.refreshContent();
+		var display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
+		for (var row : display.getRows()) {
+			row.getField(Column.MAP).setText("pending");
+			row.getField(Column.SCALE).setText("0");
+		}
+		String draft = editor.serializeState();
+		assertFalse(editor.save());
+		assertEquals(6, editor.getSaveErrors().size());
+		for (int index = 0; index < 6; index++) {
+			String row = String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_row"), index < 4 ? 1 : 2);
+			assertTrue(editor.getSaveErrors().get(index).startsWith(row + " / "));
+		}
+		assertEquals(draft, editor.serializeState());
+		assertTrue(editor.hasUnsavedChanges());
+		assertEquals(-1, entries.get(0).getMap());
+		assertEquals(1f, entries.get(0).getMapScale());
+		assertEquals(editor.getStatusText(), ((LabelAPI) getField(editor, "statusLabel")).getText());
+		editor.discard();
+		assertTrue(editor.getSaveErrors().isEmpty());
+		editor.close();
+	}
+
+	@Test
 	void fleetSelectionSupportsCancelClearRefreshAndSavedIds() throws Exception {
 
 		SettingsAPI delegate = Global.getSettings();
@@ -186,8 +217,13 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		Object row = ((List<?>) getField(getField(editor, "display"), "rows")).get(0);
 		String category = "Battle";
 		String rowError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map"), BattleNext_MissionBattleMap.LAST_MAP_ID);
-		String saveError = String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_battle_invalid_map_settings"), BattleNext_MissionBattleMap.LAST_MAP_ID);
 		for (String input : List.of(Integer.toString(BattleNext_MissionBattleMap.LAST_MAP_ID + 1), "pending")) {
+			String reason = input.equals("pending") ? BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_integer")
+					: String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_integer_range"), -1, BattleNext_MissionBattleMap.LAST_MAP_ID);
+			String error = String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_field_error"),
+					String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_row"), 1),
+					BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_number_label"), input, reason);
+			String saveError = String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1, error);
 			((TextFieldAPI) getField(row, "mapField")).setText(input);
 			TooltipMakerAPI tooltip = tooltip(360f, 0f, false);
 			attachedTooltips.get(getField(row, "statusLabel")).createTooltip(tooltip, false, null);

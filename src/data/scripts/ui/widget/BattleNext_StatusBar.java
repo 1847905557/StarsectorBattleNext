@@ -17,6 +17,7 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	private LabelAPI statusLabel;
 	private float textWidth;
 	private String error = "";
+	private final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private String activeTournamentId = "";
 	private String reportId = "";
 	private final float width;
@@ -32,11 +33,13 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 		content = host;
 		textWidth = width - STATUS_TEXT_RIGHT_RESERVE;
 		statusLabel = content.addPara(strings.get("ready"), 0f);
+		content.addTooltipTo(BattleNext_SaveErrors.tooltip(saveErrors::getMessages), content.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		statusLabel.getPosition().inTL(0f, STATUS_TEXT_TOP_INSET);
 		content.setHeightSoFar(height);
 	}
 
 	public void update(String error, String activeTournamentId, String reportId) {
+		saveErrors.clear();
 		this.error = error;
 		this.activeTournamentId = activeTournamentId;
 		this.reportId = reportId;
@@ -64,7 +67,15 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	}
 
 	public void showError(String message) {
+		saveErrors.clear();
 		error = message;
+		refreshText();
+	}
+
+	public void showFailure(String operation, String target, Throwable exception) {
+		saveErrors.clear();
+		saveErrors.failure(operation, target, exception);
+		error = saveErrors.summary();
 		refreshText();
 	}
 }

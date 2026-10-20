@@ -66,24 +66,6 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		bindViewport("settings", fieldContent);
 	}
 
-	private float parseNonNegative(String value) {
-		float result = Float.parseFloat(value.trim());
-		if (!Float.isFinite(result) || result < 0f) throw new IllegalArgumentException("Expected a finite nonnegative number: " + value);
-		return result;
-	}
-
-	private float parsePositive(String value) {
-		float result = Float.parseFloat(value.trim());
-		if (!Float.isFinite(result) || result <= 0f) throw new IllegalArgumentException("Expected a finite positive number: " + value);
-		return result;
-	}
-
-	private int parseCount(String value) {
-		int result = Integer.parseInt(value.trim());
-		if (result < 0) throw new IllegalArgumentException("Expected a nonnegative integer: " + value);
-		return result;
-	}
-
 	@Override
 	public void buttonPressed(Object action) {
 
@@ -98,17 +80,19 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
+		String subject = settingsStrings.get("heading");
+		Float timeLimit = saveErrors.number(subject, settingsStrings.get("battle_time_limit"), battleTimeLimitField.getText(), false);
+		Integer deploymentPointLimit = saveErrors.integer(subject, settingsStrings.get("deployment_point_limit"), deploymentPointLimitField.getText(), Integer.MIN_VALUE, Integer.MAX_VALUE);
+		Float defaultMult = saveErrors.number(subject, settingsStrings.get("default_time_mult"), defaultTimeMultField.getText(), true);
+		Float boostMult = saveErrors.number(subject, settingsStrings.get("boost_time_mult"), boostTimeMultField.getText(), true);
+		Integer keepCount = saveErrors.integer(subject, settingsStrings.get("report_keep_count"), reportKeepCountField.getText(), 0, Integer.MAX_VALUE);
+		if (!saveErrors.isEmpty()) return false;
 		try {
-			float timeLimit = parseNonNegative(battleTimeLimitField.getText());
-			float defaultMult = parsePositive(defaultTimeMultField.getText());
-			float boostMult = parsePositive(boostTimeMultField.getText());
-			int keepCount = parseCount(reportKeepCountField.getText());
-			int deploymentPointLimit = Integer.parseInt(deploymentPointLimitField.getText().trim());
 			BattleNext_Settings.save(cnTextCheckbox.isChecked(), fullGraphicEffectCheckbox.isChecked(), infoLogCheckbox.isChecked(), rttInBattleCheckbox.isChecked(),
 					timeLimit, defaultMult, boostMult, keepCount, deploymentPointLimit);
 			return true;
 		} catch (RuntimeException exception) {
-			statusText = settingsStrings.get("invalid_number") + ": " + exception.getMessage();
+			saveErrors.failure(settingsStrings.get("save_failed"), BattleNext_Settings.PATH, exception);
 			return false;
 		}
 	}

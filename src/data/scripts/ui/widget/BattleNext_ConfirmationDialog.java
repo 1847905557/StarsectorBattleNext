@@ -39,6 +39,10 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 
 		String getSaveError();
 
+		default List<String> getSaveErrors() {
+			return List.of(getSaveError());
+		}
+
 		void discardCurrentPage();
 	}
 
@@ -163,6 +167,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_STATUS_HEIGHT);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
 		confirmationStatus = confirmationStatusContent.addPara("", 0f);
+		confirmationStatusContent.addTooltipTo(BattleNext_SaveErrors.tooltip(host::getSaveErrors), confirmationStatusContent.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
 		String[] actions = request.confirmId().isEmpty()

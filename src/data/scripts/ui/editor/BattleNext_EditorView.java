@@ -2,7 +2,6 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
-import data.model.BattleNext_BaseStore.EditRejection;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
@@ -25,6 +24,7 @@ public abstract class BattleNext_EditorView {
 	protected CustomPanelAPI panel;
 	protected CustomPanelAPI overlayHost;
 	protected String statusText = "";
+	protected final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private CustomPanelAPI owner;
 	private String baseline;
 
@@ -313,7 +313,11 @@ public abstract class BattleNext_EditorView {
 	protected abstract String draftState();
 
 	public final String getStatusText() {
-		return statusText;
+		return saveErrors.isEmpty() ? statusText : saveErrors.summary();
+	}
+
+	public final List<String> getSaveErrors() {
+		return saveErrors.getMessages();
 	}
 
 	public final boolean save() {
@@ -321,7 +325,10 @@ public abstract class BattleNext_EditorView {
 	}
 
 	public final boolean serialize() {
+		saveErrors.clear();
+		statusText = "";
 		if (!submitDraft()) return false;
+		saveErrors.clear();
 		baseline = draftState();
 		statusText = strings.get("saved");
 		return true;
@@ -329,23 +336,18 @@ public abstract class BattleNext_EditorView {
 
 	protected abstract boolean submitDraft();
 
-	protected final boolean validateName(String name, String message) {
+	protected final boolean validateName(String subject, String field, String name, String message) {
 		if (!name.isBlank()) return true;
 		statusText = message;
+		saveErrors.field(subject, field, name, message);
 		BattleNext_Logger.warn(getClass(), "editor.name.rejected", BattleNext_Logger.fields()
 				.put("name", name).put("input_state", draftState()).put("criterion", "Nonblank name").build());
 		return false;
 	}
 
-	protected final String failureStatus(Exception exception) {
-		if (exception instanceof EditRejection rejection) {
-			return switch (rejection.getReason()) {
-				case DUPLICATE_ID -> strings.get("duplicate_id") + ": " + exception.getMessage();
-				case SOURCE_UNAVAILABLE -> strings.get("source_unavailable") + ": " + exception.getMessage();
-				case DUPLICATE_FOLDER -> BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_").get("duplicate_folder") + ": " + exception.getMessage();
-			};
-		}
-		return strings.get("save_failed") + ": " + exception.getMessage();
+	protected final String failureStatus(String target, Exception exception) {
+		saveErrors.failure(strings.get("save_failed"), target, exception);
+		return saveErrors.summary();
 	}
 
 	protected void captureDraftInputs() {
@@ -357,6 +359,8 @@ public abstract class BattleNext_EditorView {
 	}
 
 	public final void deserialize() {
+		saveErrors.clear();
+		statusText = "";
 		restoring = true;
 		try {
 			restoreDraft();
@@ -383,6 +387,8 @@ public abstract class BattleNext_EditorView {
 
 	public final void close() {
 		detach();
+		saveErrors.clear();
+		statusText = "";
 		inputs.clear();
 		checked.clear();
 		offsets.clear();

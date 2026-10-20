@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.editor.BattleNext_EditorView;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public abstract class BattleNext_PageView {
 	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	protected String status = "";
 	protected LabelAPI statusLabel;
+	protected final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private CustomPanelAPI owner;
 
 	public final void setInputRouter(BattleNext_UiInputRouter router) {
@@ -62,6 +64,7 @@ public abstract class BattleNext_PageView {
 	}
 
 	public final void close() {
+		saveErrors.clear();
 		clearPageOverlays();
 		if (editorView() != null) editorView().close();
 		inputRouter.clear();
@@ -85,6 +88,7 @@ public abstract class BattleNext_PageView {
 	}
 
 	public final boolean save() {
+		saveErrors.clear();
 		boolean saved = savePage();
 		updatePageControls();
 		updateStatus();
@@ -92,6 +96,8 @@ public abstract class BattleNext_PageView {
 	}
 
 	public final void discard() {
+		saveErrors.clear();
+		status = "";
 		discardPage();
 		updatePageControls();
 		updateStatus();
@@ -99,6 +105,11 @@ public abstract class BattleNext_PageView {
 
 	public final String getStatusText() {
 		return pageStatus();
+	}
+
+	public final List<String> getSaveErrors() {
+		if (!saveErrors.isEmpty()) return saveErrors.getMessages();
+		return editorView() == null ? List.of() : editorView().getSaveErrors();
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {

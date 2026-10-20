@@ -7,6 +7,7 @@ import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_BattleSignals;
+import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.page.*;
@@ -391,7 +392,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			refreshState();
 			return true;
 		} catch (Exception exception) {
-			statusBar.showError(battleStrings.get("source_save_failed") + ": " + exception.getMessage());
+			statusBar.showFailure(battleStrings.get("source_save_failed"), id, exception);
+			BattleNext_Logger.error(getClass(), "battle.source.save.failed", BattleNext_Logger.fields().put("id", id).build(), exception);
 			return false;
 		}
 	}
@@ -428,6 +430,11 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	@Override
 	public String getSaveError() {
 		return activeView().getStatusText();
+	}
+
+	@Override
+	public List<String> getSaveErrors() {
+		return activeView().getSaveErrors();
 	}
 
 	@Override

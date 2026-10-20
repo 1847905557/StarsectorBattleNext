@@ -65,6 +65,39 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@Test
+	void saveAggregatesNameIdAndNumericRestrictionErrorsBeforePersistence() throws Exception {
+		var store = new BattleNext_RuleStore();
+		store.reload();
+		var model = new BattleNext_RuleModel("rule", "Rule");
+		var first = new BattleNext_RuleRestriction("limitNumber", "number");
+		var second = new BattleNext_RuleRestriction("anotherNumber", "number");
+		model.setRestrictions(List.of(first, second));
+		BattleNext_RestrictionRegistry.getInstance().load(new JSONArray()
+				.put(new JSONObject().put("id", "limitNumber").put("name", "First").put("type", "number").put("script", "number").put("desc", "First limit"))
+				.put(new JSONObject().put("id", "anotherNumber").put("name", "Second").put("type", "number").put("script", "number").put("desc", "Second limit")),
+				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
+		var editor = new BattleNext_RuleEditor(store);
+		editor.open(model);
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		((TextFieldAPI) getField(editor, "idField")).setText("bad?id");
+		((TextFieldAPI) getField(editor, "nameField")).setText("");
+		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+		values.get("limitNumber").setText("first-invalid");
+		values.get("anotherNumber").setText("second-invalid");
+		assertFalse(editor.save());
+		assertEquals(4, editor.getSaveErrors().size());
+		assertTrue(editor.getSaveErrors().get(0).contains(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_name_required")));
+		assertTrue(editor.getSaveErrors().get(1).contains("U+003F"));
+		assertTrue(editor.getSaveErrors().get(2).contains("limitNumber = \"first-invalid\""));
+		assertTrue(editor.getSaveErrors().get(3).contains("anotherNumber = \"second-invalid\""));
+		assertTrue(store.getAll().isEmpty());
+		editor.discard();
+		assertTrue(editor.getSaveErrors().isEmpty());
+		assertFalse(editor.hasUnsavedChanges());
+		editor.close();
+	}
+
+	@Test
 	void restrictionChoicesShowNamesAndDescriptionsAndFollowCurrentDraft() throws Exception {
 
 		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());

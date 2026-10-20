@@ -40,6 +40,30 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
 
 	@Test
+	void abandoningAnInvalidDraftClearsErrorsBeforeTheNextEditingSession() throws Exception {
+		var page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
+		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
+		page.buttonPressed("add");
+		Object editor = getField(page, "editor");
+		((TextFieldAPI) getField(editor, "idField")).setText("123");
+		((TextFieldAPI) getField(editor, "folderNameField")).setText("bad?");
+		((TextFieldAPI) getField(editor, "nameField")).setText("");
+		assertFalse(page.save());
+		assertEquals(3, page.getSaveErrors().size());
+		page.buttonPressed("back");
+		assertTrue(page.getSaveErrors().isEmpty());
+		assertEquals("", page.getStatusText());
+		page.buttonPressed("add");
+		assertTrue(page.getSaveErrors().isEmpty());
+		assertEquals("", page.getStatusText());
+		assertFalse(page.save());
+		page.discard();
+		assertTrue(page.getSaveErrors().isEmpty());
+		assertFalse(page.hasUnsavedChanges());
+		page.close();
+	}
+
+	@Test
 	void everyPageBindsShellGeometryAndReleasesItsInputBeforeNavigationAndClose() throws Exception {
 
 		int width = 1400;

@@ -213,13 +213,14 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
-		if (!validateName(nameField.getText(), strings.get("name_required"))) return false;
+		validateName(ruleStrings.get("editor_title") + " / " + idField.getText().trim(), strings.get("name"), nameField.getText(), strings.get("name_required"));
+		saveErrors.id(ruleStrings.get("editor_title"), ruleStrings.get("id"), idField.getText());
 		try {
 			captureInputs(true);
-			if (!BattleNext_EntryId.isValidPathSegment(draft.getId())) {
-				setStatus(ruleStrings.get("invalid_id"));
-				return false;
+			for (var rejection : store.editRejections(draft, baseline == null ? "" : baseline.getId())) {
+				saveErrors.rejection(ruleStrings.get("editor_title"), ruleStrings.get("id"), rejection);
 			}
+			if (!saveErrors.isEmpty()) return false;
 			store.saveEdited(draft, baseline == null ? "" : baseline.getId());
 			baseline = copy(draft);
 			setStatus(strings.get("saved"));
@@ -227,7 +228,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.error(BattleNext_RuleEditor.class, "rule.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);
-			setStatus(failureStatus(exception));
+			setStatus(failureStatus(draft.getId(), exception));
 			return false;
 		}
 	}
@@ -261,7 +262,11 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 			} catch (RuntimeException exception) {
 				BattleNext_Logger.warn(BattleNext_RuleEditor.class, "rule.restriction.input.rejected",
 				BattleNext_Logger.fields().put("rule_id", draft.getId()).put("restriction_id", current.getId()).put("input", input).put("type", current.getType()).put("validate", validate).put("fallback", current).build(), exception);
-				if (validate) throw new IllegalArgumentException(current.getId() + ": " + exception.getMessage(), exception);
+				if (validate) {
+					String reason = "number".equals(current.getType()) ? strings.get("error_nonnegative")
+							: strings.get(List.of(input.split(",", -1)).stream().anyMatch(String::isBlank) ? "error_list_empty" : "error_list_duplicate");
+					saveErrors.field(ruleStrings.get("editor_title") + " / " + draft.getId(), current.getId(), valueFields.get(current.getId()).getText(), reason);
+				}
 				if ("number".equals(current.getType())) {
 					restriction.setValue(current.getValue());
 				} else {

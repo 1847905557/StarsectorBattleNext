@@ -73,7 +73,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 	}
 
 	@Test
-	void invalidTournamentConfigurationUsesTheConfigurationError() throws Exception {
+	void invalidTournamentConfigurationIdentifiesTheFieldInputAndBounds() throws Exception {
 
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		BattleNext_FleetStore fleets = new BattleNext_FleetStore();
@@ -91,7 +91,12 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		((TextFieldAPI) getField(editor, "nameField")).setText("Tournament");
 		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("1");
 		assertFalse(editor.serialize());
-		assertEquals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_invalid_configuration"), editor.getStatusText());
+		String error = String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_field_error"),
+				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_editor_title"),
+				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_max_fleets"), "1",
+				String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_integer_range"), 2, 32));
+		assertEquals(List.of(error), editor.getSaveErrors());
+		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1, error), editor.getStatusText());
 		editor.closeOverlays();
 		router.clear();
 	}

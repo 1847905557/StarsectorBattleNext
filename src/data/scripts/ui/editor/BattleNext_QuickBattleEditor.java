@@ -16,6 +16,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
+import data.scripts.ui.widget.BattleNext_SaveErrors;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Row;
 import org.json.JSONException;
@@ -95,8 +96,9 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		statusContent = panel.createUIElement(statusWidth - STATUS_CONTENT_WIDTH_RESERVE,
 				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		statusLabel = statusContent.addPara(statusContent.shortenString(
-				statusText, statusWidth - STATUS_INITIAL_TEXT_RESERVE),
+				getStatusText(), statusWidth - STATUS_INITIAL_TEXT_RESERVE),
 				0f);
+		statusContent.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), statusContent.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		statusLabel.getPosition().inTL(0f, STATUS_TOP_INSET);
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
 		panel.addUIElement(statusContent).inTL(statusX, footerRect.getY());
@@ -227,14 +229,15 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	@Override
 	protected boolean submitDraft() {
 		if (!fleetStore.isLoaded()) {
-			setStatus(strings.get("load_failed") + ": " + fleetStore.getLoadError());
-			return false;
+			saveErrors.add(strings.get("load_failed") + " / tournament / " + fleetStore.getLoadError());
 		}
 		if (!store.isLoaded()) {
-			setStatus(strings.get("load_failed") + ": " + store.getLoadError());
+			saveErrors.add(strings.get("load_failed") + " / quick battle / " + store.getLoadError());
+		}
+		if (!captureFields()) {
+			setStatus(saveErrors.summary());
 			return false;
 		}
-		if (!captureFields()) return false;
 		try {
 			deleteRemovedEntries();
 			for (BattleNext_QuickBattleModel entry : entries) {
@@ -244,7 +247,8 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.error(BattleNext_QuickBattleEditor.class, "quick_battle.editor.commit.failed",
 				BattleNext_Logger.fields().put("entries", entries).put("input_state", serializeState()).build(), exception);
-			setStatus(strings.get("save_failed") + ": " + exception.getMessage());
+			saveErrors.failure(strings.get("save_failed"), "tournament/quick_battle.csv / tournament/PvP_matches.csv", exception);
+			setStatus(saveErrors.summary());
 			return false;
 		}
 		setStatus(strings.get("saved"));
@@ -267,31 +271,26 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 				parsed.add(model);
 				continue;
 			}
-			try {
-				int map = Integer.parseInt(row.getField(Column.MAP).getText().trim());
-				float mapScale = Float.parseFloat(row.getField(Column.SCALE).getText().trim());
-				if (row.getFleetId(Column.PLAYER).isEmpty() || row.getFleetId(Column.ENEMY).isEmpty()
-						|| map < BattleNext_MissionBattleMap.RANDOM_MAP_ID || map > BattleNext_MissionBattleMap.LAST_MAP_ID || !Float.isFinite(mapScale) || mapScale <= 0f) {
-					BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
-				BattleNext_Logger.fields().put("index", index).put("player", row.getFleetId(Column.PLAYER)).put("enemy", row.getFleetId(Column.ENEMY)).put("map", row.getField(Column.MAP).getText()).put("scale", row.getField(Column.SCALE).getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
-					setStatus(battleStrings.format("invalid_map_settings", BattleNext_MissionBattleMap.LAST_MAP_ID));
-					return false;
+			String subject = strings.format("row", index + 1);
+			for (Column column : List.of(Column.PLAYER, Column.ENEMY)) {
+				if (row.getFleetId(column).isEmpty()) {
+					saveErrors.field(subject, battleStrings.get(column == Column.PLAYER ? "player_fleet_id_label" : "enemy_fleet_id_label"),
+							row.getFleetId(column), strings.get("error_required"));
 				}
-				model.setPlayer(row.getFleetId(Column.PLAYER));
-				model.setEnemy(row.getFleetId(Column.ENEMY));
-				model.setMap(map);
-				model.setMapScale(mapScale);
-				model.setEnabled(row.isEnabled());
-				model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE
-						: model.getRowType());
-				parsed.add(model);
-			} catch (NumberFormatException exception) {
-				BattleNext_Logger.warn(BattleNext_QuickBattleEditor.class, "quick_battle.row.rejected",
-				BattleNext_Logger.fields().put("index", index).put("player", row.getFleetId(Column.PLAYER)).put("enemy", row.getFleetId(Column.ENEMY)).put("map", row.getField(Column.MAP).getText()).put("scale", row.getField(Column.SCALE).getText()).put("criterion", "Nonblank fleet references, supported map and positive finite scale").build());
-				setStatus(battleStrings.format("invalid_map_settings", BattleNext_MissionBattleMap.LAST_MAP_ID));
-				return false;
 			}
+			Integer map = saveErrors.integer(subject, battleStrings.get("map_number_label"), row.getField(Column.MAP).getText(),
+					BattleNext_MissionBattleMap.RANDOM_MAP_ID, BattleNext_MissionBattleMap.LAST_MAP_ID);
+			Float mapScale = saveErrors.number(subject, battleStrings.get("map_scale_label"), row.getField(Column.SCALE).getText(), true);
+			if (map == null || mapScale == null) continue;
+			model.setPlayer(row.getFleetId(Column.PLAYER));
+			model.setEnemy(row.getFleetId(Column.ENEMY));
+			model.setMap(map);
+			model.setMapScale(mapScale);
+			model.setEnabled(row.isEnabled());
+			model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE : model.getRowType());
+			parsed.add(model);
 		}
+		if (!saveErrors.isEmpty()) return false;
 		entries.clear();
 		entries.addAll(parsed);
 		boolean changedShape = false;
