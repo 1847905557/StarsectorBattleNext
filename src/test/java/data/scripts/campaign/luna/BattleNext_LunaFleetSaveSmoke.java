@@ -3,6 +3,7 @@ package data.scripts.campaign.luna;
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.FleetDataAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.characters.FullName;
@@ -17,7 +18,15 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TextFieldAPI;
+import data.model.fleet.BattleNext_FleetModel;
+import data.model.fleet.BattleNext_FleetStore;
+import data.scripts.fleet.BattleNext_VariantBuilder;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
+import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.simulator.BattleNext_SimulatorLaunch;
 import data.simulator.BattleNext_SimulatorNative;
@@ -44,6 +53,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class BattleNext_LunaFleetSaveSmoke {
 
@@ -62,10 +72,12 @@ public class BattleNext_LunaFleetSaveSmoke {
 					BattleNext_LunaFleetSaveSmoke.class.getName(), output.toString()));
 			Process process = BattleNext_SimulatorLaunch.start(command, core);
 			String result = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-			if (process.waitFor() != 0 || !result.contains("Fleet save native scrolling and expansion verified")) {
+			if (process.waitFor() != 0 || !result.contains("Fleet save native scrolling and expansion verified")
+					|| !result.contains("Fleet variant formatting verified")) {
 				throw new AssertionError(result);
 			}
 			System.out.println("Fleet save native scrolling and expansion verified; images=" + output);
+			System.out.println("Fleet variant formatting verified; images=" + output);
 			return;
 		}
 		images = Path.of(arguments[0]);
@@ -114,6 +126,7 @@ public class BattleNext_LunaFleetSaveSmoke {
 		private boolean rendered;
 		private float nameY;
 		private float offset;
+		private FormatPreview formatPreview;
 
 		@Override
 		public void advance(float amount, List<InputEventAPI> events) {
@@ -129,10 +142,19 @@ public class BattleNext_LunaFleetSaveSmoke {
 					display.buttonPressed(1);
 				} else if (stage == 1) {
 					verifyScroll();
-				} else {
+				} else if (stage == 2) {
 					display.close();
 					if (!children(root).isEmpty()) throw new AssertionError("Fleet save root must release its contents");
 					System.out.println("Fleet save native scrolling and expansion verified");
+					formatPreview = new FormatPreview();
+					root = formatPreview.open();
+				} else if (stage == 3) {
+					formatPreview.format();
+				} else if (stage == 4) {
+					formatPreview.confirm();
+				} else {
+					formatPreview.finish();
+					System.out.println("Fleet variant formatting verified");
 					verified = true;
 					Global.getCombatEngine().removePlugin(this);
 					return;
@@ -221,12 +243,101 @@ public class BattleNext_LunaFleetSaveSmoke {
 			try {
 				BattleNext_GeometryRenderer.fillRect(root.getPosition(), Color.BLACK, 1f);
 				root.getClass().getMethod("render", float.class).invoke(root, 1f);
-				capture(images.resolve(List.of("collapsed.png", "expanded.png", "scrolled.png").get(stage)));
+				capture(images.resolve(List.of("collapsed.png", "expanded.png", "scrolled.png",
+						"format-before.png", "format-after.png", "format-confirmation.png").get(stage)));
 				rendered = true;
 			} catch (Throwable exception) {
 				exception.printStackTrace();
 				System.exit(1);
 			}
+		}
+	}
+
+	private static class FormatPreview extends BaseCustomUIPanelPlugin implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
+
+		private final BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		private final BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
+		private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, router);
+		private CustomPanelAPI root;
+		private float scroll;
+
+		private CustomPanelAPI open() throws Exception {
+
+			var fleet = new BattleNext_FleetModel("native_format", "Native format", List.of(), List.of(),
+					List.of(new BattleNext_MemberModel("wolf_CS", "Wolf 1", "", List.of(), "", "", List.of()),
+							new BattleNext_MemberModel("wolf_CS", "Wolf 2", "", List.of(), "", "", List.of()),
+							new BattleNext_MemberModel("lasher_Standard", "Lasher", "", List.of(), "", "", List.of())));
+			fleet.putVariant(BattleNext_VariantBuilder.fromRegistered("wolf_CS"));
+			root = Global.getSettings().createCustom(760f, 560f, this);
+			root.getPosition().setLocation(20f, 20f);
+			BattleNext_UiInputRouter.activate(router);
+			editor.setInputRouter(router);
+			editor.setOverlayHost(root);
+			editor.open(fleet, false);
+			editor.attach(root);
+			editor.buttonPressed("toggle_member:0");
+			if (editor.hasUnsavedChanges()) throw new AssertionError("Native expansion must preserve the clean fleet");
+			var metadata = (TooltipMakerAPI) ((Map<?, ?>) field(editor, "viewports")).get("metadata");
+			metadata.getExternalScroller().setYOffset(Math.max(0f, metadata.getHeightSoFar() - root.getPosition().getHeight()));
+			scroll = metadata.getExternalScroller().getYOffset();
+			confirmation.attach(root);
+			return root;
+		}
+
+		private void format() throws Exception {
+			((TextFieldAPI) field(editor, "variantPrefixField")).setText("bad?");
+			buttonPressed("format_ids");
+			if (editor.getSaveErrors().size() != 1 || editor.hasUnsavedChanges()) throw new AssertionError("Native rejected preview must preserve the fleet");
+			((TextFieldAPI) field(editor, "variantPrefixField")).setText("ctb");
+			buttonPressed("format_ids");
+			var draft = (BattleNext_FleetModel) field(editor, "draft");
+			if (!draft.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList()
+					.equals(List.of("ctb_wolf_1", "ctb_wolf_1", "ctb_lasher_1"))) throw new AssertionError(editor.getStatusText());
+			if (!editor.hasUnsavedChanges()) throw new AssertionError("Native format must dirty the fleet");
+			Object fields = ((List<?>) field(editor, "memberFields")).get(0);
+			if (!((TextFieldAPI) field(fields, "variantField")).getText().equals("ctb_wolf_1")) throw new AssertionError("Native expanded member must display its new ID");
+			if (!draft.getVariant("ctb_wolf_1").build().getHullSpec().getHullId().equals("wolf")) throw new AssertionError("Native formatted variant must build the original hull");
+			var metadata = (TooltipMakerAPI) ((Map<?, ?>) field(editor, "viewports")).get("metadata");
+			if (metadata.getExternalScroller().getYOffset() != scroll) throw new AssertionError("Native formatting must preserve metadata scroll");
+		}
+
+		private void confirm() {
+			confirmation.request(() -> {});
+			if (!confirmation.isActive()) throw new AssertionError("Formatted native fleet must expose save confirmation");
+		}
+
+		private void finish() throws Exception {
+			confirmation.handle("confirm_discard");
+			if (editor.hasUnsavedChanges() || !((TextFieldAPI) field(editor, "variantPrefixField")).getText().isEmpty()) throw new AssertionError("Native discard must restore fleet and clear prefix");
+			confirmation.close();
+			editor.close();
+			if (!children(root).isEmpty()) throw new AssertionError("Native formatting must release editor and confirmation");
+		}
+
+		@Override
+		public void buttonPressed(Object id) {
+			if (confirmation.isActive()) confirmation.handle(id);
+			else editor.buttonPressed(id);
+		}
+
+		@Override
+		public boolean saveCurrentPage() {
+			return editor.save();
+		}
+
+		@Override
+		public String getSaveError() {
+			return editor.getStatusText();
+		}
+
+		@Override
+		public List<String> getSaveErrors() {
+			return editor.getSaveErrors();
+		}
+
+		@Override
+		public void discardCurrentPage() {
+			editor.discard();
 		}
 	}
 
@@ -255,9 +366,14 @@ public class BattleNext_LunaFleetSaveSmoke {
 	}
 
 	private static Object field(Object target, String name) throws Exception {
-		Field field = target.getClass().getDeclaredField(name);
-		field.setAccessible(true);
-		return field.get(target);
+		for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+			for (Field field : type.getDeclaredFields()) {
+				if (!field.getName().equals(name)) continue;
+				field.setAccessible(true);
+				return field.get(target);
+			}
+		}
+		throw new NoSuchFieldException(name);
 	}
 
 	private static List<?> children(Object panel) throws Exception {

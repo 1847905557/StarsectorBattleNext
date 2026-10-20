@@ -164,6 +164,13 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		return List.copyOf(variants.values());
 	}
 
+	public void setVariants(List<BattleNext_VariantBuilder> values) {
+		variants.clear();
+		for (BattleNext_VariantBuilder variant : values) {
+			putVariant(variant);
+		}
+	}
+
 	public boolean hasLocalVariants() {
 		return !variants.isEmpty();
 	}

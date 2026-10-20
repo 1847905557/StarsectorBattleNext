@@ -178,6 +178,10 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 			if (draftOpen) navigation.accept(() -> { selectedId = ""; draftOpen = false; refreshContent(); });
 			else backAction.run();
 		} else if (draftOpen) {
+			if ("format_ids".equals(buttonId)) {
+				saveErrors.clear();
+				status = "";
+			}
 			editor.buttonPressed(buttonId);
 		}
 	}

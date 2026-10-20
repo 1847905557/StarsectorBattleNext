@@ -387,7 +387,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		memberName.setText("compact ship");
 		editor.buttonPressed("toggle_member:0");
 		Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
-		List<String> metadataFields = List.of("idField", "folderNameField", "nameField", "authorField", "descriptionField", "commanderSkillsField", "tagsField");
+		List<String> metadataFields = List.of("idField", "folderNameField", "nameField", "authorField", "descriptionField", "commanderSkillsField", "tagsField", "variantPrefixField");
 		Set<Object> expected = new HashSet<>();
 		for (String name : metadataFields) {
 			expected.add(getField(editor, name));
@@ -454,12 +454,12 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 			assertSame(root, getField(member, "overlayHost"));
 			assertEquals(2, ((TooltipMakerAPI[]) getField(member, "viewports")).length);
 		}
-		assertEquals(14, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		assertEquals(15, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		editor.closeOverlays();
 		assertEquals("draft_id", editor.getDraftId());
 		editor.refreshContent();
 		assertEquals("draft_id", editor.getDraftId());
-		assertEquals(14, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+		assertEquals(15, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertTrue(((List<?>) getField(skills, "ownedPanels")).isEmpty());
 		for (BattleNext_OptionField member : members) {
 			assertTrue(((List<?>) getField(member, "ownedPanels")).isEmpty());

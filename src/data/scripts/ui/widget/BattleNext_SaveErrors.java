@@ -56,6 +56,12 @@ public class BattleNext_SaveErrors {
 		if (position > 0 && !value.isEmpty()) {
 			position += input.codePointCount(0, input.indexOf(value));
 		}
+		id(subject, field, input, new Problem(problem.reason(), position, problem.codePoint()));
+	}
+
+	public void id(String subject, String field, String input, Problem problem) {
+		if (problem == null) return;
+		int position = problem.position();
 		String character = String.format("U+%04X", problem.codePoint());
 		String reason = switch (problem.reason()) {
 			case REQUIRED -> strings.get("error_required");
