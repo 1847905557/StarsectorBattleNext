@@ -3,6 +3,7 @@ package data.test.fixture;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.*;
+import com.fs.starfarer.api.characters.FullName;
 import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.characters.PersonalityAPI;
@@ -41,7 +42,7 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 				return BattleNext_TestTextCatalog.lookup(args[0], args[1]);
 			}
 			if ("createPerson".equals(method.getName())) {
-				PersonAPI person = person("Generated", "", "steady", false, false, false, Map.of());
+				PersonAPI person = person("", "", "steady", false, false, false, Map.of());
 				createdPeople.add(person);
 				return person;
 			}
@@ -82,10 +83,14 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 	protected PersonAPI person(String name, String portrait, String personality, boolean defaultPerson,
 			boolean playerPerson, boolean aiCore, Map<String, Float> initialSkills) {
 
+		FullName[] fullName = {new FullName(name, "", FullName.Gender.ANY)};
 		Map<String, Float> skills = new LinkedHashMap<>(initialSkills);
+		int[] level = {0};
 		String[] sprite = {portrait};
 		String[] behavior = {personality};
 		MutableCharacterStatsAPI stats = proxy(MutableCharacterStatsAPI.class, (method, args) -> switch (method) {
+			case "getLevel" -> level[0];
+			case "setLevel" -> { level[0] = (Integer) args[0]; yield null; }
 			case "getSkillsCopy" -> skills.entrySet().stream().map(entry ->
 					proxy(MutableCharacterStatsAPI.SkillLevelAPI.class, (key, values) -> switch (key) {
 						case "getLevel" -> entry.getValue();
@@ -98,7 +103,9 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 			default -> null;
 		});
 		return proxy(PersonAPI.class, (method, args) -> switch (method) {
-			case "getNameString" -> name;
+			case "getName" -> fullName[0];
+			case "getNameString" -> fullName[0].getFullName();
+			case "setName" -> { fullName[0] = (FullName) args[0]; yield null; }
 			case "getPortraitSprite" -> sprite[0];
 			case "setPortraitSprite" -> { sprite[0] = (String) args[0]; yield null; }
 			case "getStats" -> stats;

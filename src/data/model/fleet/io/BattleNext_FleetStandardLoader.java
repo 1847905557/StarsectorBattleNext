@@ -57,6 +57,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 			fleet.fromJson(json);
 			if (fleet.getId().isEmpty()) throw new IllegalArgumentException("Fleet ID is required");
 			if (fleet.getId().matches("[0-9]+")) throw new IllegalArgumentException("Numeric fleet IDs are reserved for legacy fleets: " + fleet.getId());
+			if (!BattleNext_EntryId.isValidPathSegment(fleet.getId())) throw new IllegalArgumentException("Invalid fleet ID: " + fleet.getId());
 			fleet.setFolderName(folderName);
 			markSource(fleet, path);
 			BattleNext_FleetVariantLoader.load(fleet, paths);

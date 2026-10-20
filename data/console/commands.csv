@@ -1,0 +1,2 @@
+command,class,tags,syntax,help
+BattleNext_ImportFleet,data.console.commands.BattleNext_ImportFleet,"campaign,BattleNext",BattleNext_ImportFleet <id>,Imports a loaded fleet.

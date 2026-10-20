@@ -25,6 +25,16 @@ class BattleNext_FleetStandardLoaderTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	@Test
+	void fleetIdentityRejectsWhitespaceEvenWhenItsFolderIsValid() throws Exception {
+		standard("invalid", "fleet id", "parent_variant");
+		standard("valid", "fleet_id", "parent_variant");
+		var loader = new BattleNext_FleetStandardLoader();
+		assertEquals(List.of("fleet_id"), loader.load().stream().map(fleet -> fleet.getId()).toList());
+		assertEquals(1, loader.getErrors().size());
+		assertTrue(loader.getErrors().get(0).diagnostic().contains("Invalid fleet ID: fleet id"));
+	}
+
+	@Test
 	void nativeJsonLoadsFleetAndLocalModulesWithMixedRegisteredMembers() throws Exception {
 
 		standard("standard", "standard", "local_parent", "parent_variant");
