@@ -366,13 +366,17 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		PositionAPI up = components.get(1).getPosition();
 		PositionAPI down = components.get(2).getPosition();
 		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, heading.getY() - up.getY() - up.getHeight());
-		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, up.getY() - down.getY() - down.getHeight());
+		assertEquals(up.getY(), down.getY());
+		assertEquals(up.getHeight(), down.getHeight());
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, down.getX() - up.getX() - up.getWidth());
 		assertFalse(((ButtonAPI) components.get(1)).isEnabled());
 		assertFalse(((ButtonAPI) components.get(2)).isEnabled());
 		PositionAPI remove = components.get(17).getPosition();
 		PositionAPI copy = components.get(18).getPosition();
 		assertEquals(body.getPosition().getY() + 8f, copy.getY());
-		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, remove.getY() - copy.getY() - copy.getHeight());
+		assertEquals(remove.getY(), copy.getY());
+		assertEquals(remove.getHeight(), copy.getHeight());
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, copy.getX() - remove.getX() - remove.getWidth());
 		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[1];
 		List<UIComponentAPI> memberRows = tooltips.get(viewport).getComponents();
 		assertEquals(memberRows.get(0).getPosition().getHeight() + BattleNext_ExpandablePanel.ROW_GAP

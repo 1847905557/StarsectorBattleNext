@@ -142,8 +142,9 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
 			TooltipMakerAPI fieldContent = bodyPanel.createUIElement(areaWidth, 0f, false);
 			fieldContent.addPara(memberStrings.get("label") + " " + (index + 1), 0f);
-			createButton(fieldContent, areaWidth, fleetStrings.get("move_up"), "move_member_up:" + index).setEnabled(index > 0);
-			createButton(fieldContent, areaWidth, fleetStrings.get("move_down"), "move_member_down:" + index).setEnabled(index + 1 < draft.getMembers().size());
+			createMemberActions(fieldContent, areaWidth,
+					new EditorAction(fleetStrings.get("move_up"), "move_member_up:" + index, index > 0),
+					new EditorAction(fleetStrings.get("move_down"), "move_member_down:" + index, index + 1 < draft.getMembers().size()));
 			Object memberKey = memberKeys.get(index);
 			fields.variantField = createOptionField(List.of(memberKey, "variant"), bodyPanel, fieldContent, fieldArea,
 					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
@@ -162,13 +163,27 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 					memberStrings.get("orders"), member.getOrders(), true, fieldContent, rowsContent);
 			fields.tagsField = createTextField(List.of(memberKey, "tags"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("tags"), String.join(",", member.getTags()), true, fieldContent, rowsContent);
-			createButton(fieldContent, areaWidth, fleetStrings.get("remove_member"), "remove_member:" + index);
-			createButton(fieldContent, areaWidth, fleetStrings.get("copy_member"), "copy_member:" + index);
+			createMemberActions(fieldContent, areaWidth,
+					new EditorAction(fleetStrings.get("remove_member"), "remove_member:" + index, true),
+					new EditorAction(fleetStrings.get("copy_member"), "copy_member:" + index, true));
 			float contentHeight = fieldContent.getHeightSoFar();
 			fieldContent.getPosition().setSize(areaWidth, contentHeight);
 			bodyPanel.getPosition().setSize(columnWidth, contentHeight + MEMBER_DETAIL_INSET * 2f);
 			bodyPanel.addUIElement(fieldContent).inTL(MEMBER_DETAIL_INSET, MEMBER_DETAIL_INSET);
 		});
+	}
+
+	private void createMemberActions(TooltipMakerAPI content, float areaWidth, EditorAction... actions) {
+		float gap = BattleNext_PageLayout.EDITOR_BUTTON_GAP;
+		float buttonWidth = BattleNext_PageLayout.editorButtonWidth((areaWidth - (actions.length - 1) * gap) / actions.length);
+		float top = content.getHeightSoFar() + gap;
+		for (int index = 0; index < actions.length; index++) {
+			EditorAction action = actions[index];
+			ButtonAPI button = createButton(content, buttonWidth, action.label(), action.id());
+			button.getPosition().inTL(index * (buttonWidth + gap), top);
+			button.setEnabled(action.enabled());
+		}
+		content.setHeightSoFar(top + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT);
 	}
 
 	private ShipHullSpecAPI hullSpec(String variantId) {
