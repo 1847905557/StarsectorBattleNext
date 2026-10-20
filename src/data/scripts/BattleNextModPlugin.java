@@ -8,6 +8,7 @@ import data.order.BattleNext_OrderRegistry;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.scripts.campaign.luna.BattleNext_LunaFleetSaveRefitButton;
 import data.scripts.campaign.luna.BattleNext_LunaPinnedVariantRefitButton;
+import data.scripts.report.BattleNext_ProximityDamageAttribution;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
 import data.simulator.BattleNext_SimulatorCampaignMonitor;
@@ -113,6 +114,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.registries.reload", input);
 		reloadCsvRegistry();
+		BattleNext_ProximityDamageAttribution.register();
 		BattleNext_SimulatorService.resourcesReloaded();
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "application.registries.reload",
 				BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());

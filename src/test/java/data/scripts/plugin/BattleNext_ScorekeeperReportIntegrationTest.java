@@ -8,8 +8,11 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
+import com.fs.starfarer.api.loading.ProjectileSpecAPI;
+import com.fs.starfarer.api.loading.ShotBehaviorSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.report.BattleNext_ProximityDamageAttribution;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -250,6 +253,56 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		assertEquals(15d, enemyReport.getTakenBySource().get(0).getEmp());
 	}
 
+	@Test
+	void proximityDamageMergesWeaponInstancesAcrossTargetsAndKeepsFighterWingPriority() throws Exception {
+
+		FleetMemberAPI playerMember = member("player");
+		FleetMemberAPI firstEnemyMember = member("enemy");
+		FleetMemberAPI secondEnemyMember = member("enemy");
+		ShipAPI player = ship(playerMember, false, false, null, null);
+		ShipAPI firstEnemy = ship(firstEnemyMember, false, false, null, null);
+		ShipAPI secondEnemy = ship(secondEnemyMember, false, false, null, null);
+		FighterWingAPI wing = proxy(FighterWingAPI.class, (name, args) -> switch (name) {
+			case "getWingId" -> "talon_wing";
+			case "getSourceShip" -> player;
+			default -> null;
+		});
+		ShipAPI fighter = ship(null, true, false, wing, null);
+		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(
+				List.of(playerMember), List.of(firstEnemyMember, secondEnemyMember));
+		WeaponAPI gun = weapon("devastator", player);
+		apply(scorekeeper, player, firstEnemy, projectile(player, gun, "shared"), damage(1f, 2f, 3f, 4f));
+		DamagingProjectileAPI explosion = projectile(player, null, "explosion");
+		new BattleNext_ProximityDamageAttribution.ExplosionEffect().onExplosion(explosion, projectile(player, gun, "shared"));
+		apply(scorekeeper, player, firstEnemy, explosion, damage(5f, 6f, 7f, 8f));
+		apply(scorekeeper, player, secondEnemy, explosion, damage(2f, 3f, 4f, 5f));
+		DamagingProjectileAPI secondExplosion = projectile(player, null, "explosion");
+		new BattleNext_ProximityDamageAttribution.ExplosionEffect().onExplosion(secondExplosion,
+				projectile(player, weapon("devastator", player), "shared"));
+		apply(scorekeeper, player, firstEnemy, secondExplosion, damage(3f, 4f, 5f, 6f));
+		DamagingProjectileAPI fighterExplosion = projectile(fighter, null, "explosion");
+		new BattleNext_ProximityDamageAttribution.ExplosionEffect().onExplosion(fighterExplosion,
+				projectile(fighter, weapon("fightergun", fighter), "shared"));
+		apply(scorekeeper, fighter, firstEnemy, fighterExplosion, damage(1f, 0f, 0f, 2f));
+
+		BattleNext_MemberReport report = report(scorekeeper, 0);
+		assertEquals(46d, report.getDamageDealt());
+		assertEquals(2, report.getDealtBySource().size());
+		var weapon = report.getDealtBySource().get(0);
+		assertEquals("weapon", weapon.getKind());
+		assertEquals("devastator", weapon.getId());
+		assertEquals(11d, weapon.getHull());
+		assertEquals(15d, weapon.getArmor());
+		assertEquals(19d, weapon.getShields());
+		assertEquals(23d, weapon.getEmp());
+		assertEquals("fighter_wing", report.getDealtBySource().get(1).getKind());
+		assertEquals("talon_wing", report.getDealtBySource().get(1).getId());
+		var enemies = scorekeeper.getFrozenReport().getEnemyMembers();
+		assertEquals(37d, enemies.get(0).getDamageTaken());
+		assertEquals(9d, enemies.get(1).getDamageTaken());
+		assertEquals(5d, enemies.get(1).getTakenBySource().get(0).getEmp());
+	}
+
 	private void apply(BattleNext_ScorekeeperPlugin scorekeeper, Object source, ShipAPI target,
 			Object damageParam, ApplyDamageResultAPI result) {
 		if (!registrations.containsKey(scorekeeper)) {
@@ -350,10 +403,16 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	}
 
 	private DamagingProjectileAPI projectile(ShipAPI ship, WeaponAPI weapon, String spec) {
+		Map<String, Object> custom = new HashMap<>();
+		ShotBehaviorSpecAPI behavior = proxy(ShotBehaviorSpecAPI.class, (name, args) -> null);
+		ProjectileSpecAPI projectileSpec = proxy(ProjectileSpecAPI.class, (name, args) -> name.equals("getBehaviorSpec") ? behavior : null);
 		return proxy(DamagingProjectileAPI.class, (name, args) -> switch (name) {
 			case "getSource" -> ship;
 			case "getWeapon" -> weapon;
 			case "getProjectileSpecId" -> spec;
+			case "getProjectileSpec" -> projectileSpec;
+			case "getCustomData" -> custom;
+			case "setCustomData" -> custom.put((String) args[0], args[1]);
 			default -> null;
 		});
 	}

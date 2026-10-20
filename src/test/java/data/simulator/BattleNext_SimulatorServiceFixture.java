@@ -123,6 +123,7 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 	protected Path attachWorker(BattleNext_SimulatorProtocol channel, Process process) throws Exception {
 		BattleNext_SimulatorStorage storage = (BattleNext_SimulatorStorage) readField("storage");
 		Path runtime = storage.directory(UUID.randomUUID().toString());
+		writeField("workerLogs", runtime);
 		writeField("channel", channel);
 		writeField("process", process);
 		return runtime;

@@ -114,7 +114,7 @@ public class BattleNext_TestGameFixture {
 			case "getScreenWidth" -> 1600f;
 			case "getScreenHeight" -> 900f;
 			case "getInt" -> 1;
-			case "getAllVariantIds", "getAllSkillIds", "getAllFactionSpecs" -> List.of();
+			case "getAllVariantIds", "getAllSkillIds", "getAllFactionSpecs", "getAllWeaponSpecs" -> List.of();
 			case "getMergedSpreadsheetData" -> new JSONArray();
 			case "loadJSON" -> {
 				dataReads.add("loadJSON:" + args[0]);

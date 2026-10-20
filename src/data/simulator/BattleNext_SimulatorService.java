@@ -48,6 +48,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private volatile BattleNext_SimulationTask latest;
 	private volatile BattleNext_SimulatorProtocol channel;
 	private volatile Process process;
+	private Path workerLogs;
 	private volatile long cancellationStarted;
 	private final StringBuilder workerOutput = new StringBuilder();
 	private Thread supervisor;
@@ -445,6 +446,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 		String token = UUID.randomUUID().toString();
 		Path logs = storage.directory(UUID.randomUUID().toString());
+		workerLogs = logs;
 		List<String> launch = new ArrayList<>(command);
 		launch.add("-XX:ErrorFile=" + logs.resolve("hs_err_pid%p.log"));
 		launch.add("-Dcom.fs.starfarer.settings.paths.mods=" + core.getParent().resolve("mods"));
@@ -618,6 +620,15 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		} catch (IOException exception) {
 			BattleNext_Logger.error(getClass(), "simulator.worker.channel.close.failed", BattleNext_Logger.fields().build(), exception);
 		} finally {
+			try {
+				if (workerLogs != null && (process == null || !process.isAlive())) {
+					storage.deleteEmptyDirectory(workerLogs);
+				}
+			} catch (IOException exception) {
+				BattleNext_Logger.warn(getClass(), "simulator.worker.logs.cleanup.failed",
+						BattleNext_Logger.fields().put("path", workerLogs).build(), exception);
+			}
+			workerLogs = null;
 			channel = null;
 			process = null;
 		}

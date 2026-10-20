@@ -29,6 +29,7 @@ public class BattleNext_SimulatorSmoke {
 
 	public static void main(String[] arguments) throws Exception {
 		BattleNext_DeploymentOpeningSmoke.run();
+		BattleNext_ProximityDamageSmoke.run();
 		runSession("smoke", List.of(), 0);
 	}
 
@@ -251,6 +252,7 @@ public class BattleNext_SimulatorSmoke {
 			if (outputReader != null) {
 				outputReader.join();
 			}
+			Files.writeString(logs.resolve("worker-output.log"), workerOutput.toString(), StandardCharsets.UTF_8);
 			try (var paths = Files.walk(logs)) {
 				if (paths.filter(Files::isRegularFile).anyMatch(path -> !path.toString().endsWith(".log"))) {
 					throw new IOException("Worker session contains a non-log file: " + logs);

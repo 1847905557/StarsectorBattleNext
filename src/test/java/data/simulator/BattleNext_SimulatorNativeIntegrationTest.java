@@ -233,6 +233,16 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			if (!Files.isDirectory(directory)) throw new AssertionError("Sandbox log directory creation");
 			List<?> listed = (List<?>) type.getMethod("listFiles", Path.class).invoke(storage, root.resolve("owned"));
 			if (!listed.equals(List.of(directory))) throw new AssertionError("Sandbox directory listing");
+			Path diagnostic = directory.resolve("hs_err_pid1.log");
+			Files.writeString(diagnostic, "Worker crash diagnostic", StandardCharsets.UTF_8);
+			type.getMethod("deleteEmptyDirectory", Path.class).invoke(storage, directory);
+			if (!Files.readString(diagnostic, StandardCharsets.UTF_8).equals("Worker crash diagnostic")) {
+				throw new AssertionError("Sandbox cleanup must retain worker diagnostics");
+			}
+			Path empty = (Path) type.getMethod("directory", String.class).invoke(storage, UUID.randomUUID().toString());
+			type.getMethod("deleteEmptyDirectory", Path.class).invoke(storage, empty);
+			if (Files.exists(empty)) throw new AssertionError("Sandbox cleanup must remove the empty worker directory");
+			if (!Files.isDirectory(directory)) throw new AssertionError("Sandbox cleanup must retain populated worker directories");
 		}
 
 		private static void verifyProtocol(ClassLoader loader) throws Exception {
@@ -276,8 +286,8 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				if (!output.get(service).toString().contains("ClassNotFoundException: data.simulator.BattleNext_SimulatorWorker")) {
 					throw new AssertionError("Expected isolated worker classpath diagnostic in memory");
 				}
-				try (var paths = Files.walk(root.resolve("game/mods/fixture/tournament/_simulations"))) {
-					if (paths.anyMatch(Files::isRegularFile)) throw new AssertionError("Sandbox startup must retain diagnostics in memory");
+				try (var paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations"))) {
+					if (paths.findAny().isPresent()) throw new AssertionError("Sandbox startup failure must release its empty worker directory");
 				}
 			}
 		}

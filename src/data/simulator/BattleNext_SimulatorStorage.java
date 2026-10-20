@@ -13,6 +13,7 @@ public class BattleNext_SimulatorStorage {
 	private final Path root;
 	private final MethodHandle createDirectories;
 	private final MethodHandle list;
+	private final MethodHandle delete;
 
 	public BattleNext_SimulatorStorage(Path root) throws IOException {
 		this.root = root.toAbsolutePath().normalize();
@@ -23,6 +24,7 @@ public class BattleNext_SimulatorStorage {
 			createDirectories = lookup.findStatic(files, "createDirectories", MethodType.methodType(Path.class, Path.class, attributes.arrayType()))
 					.asCollector(attributes.arrayType(), 0);
 			list = lookup.findStatic(files, "list", MethodType.methodType(Stream.class, Path.class));
+			delete = lookup.findStatic(files, "delete", MethodType.methodType(void.class, Path.class));
 		} catch (ReflectiveOperationException exception) {
 			throw new IOException("Unable to bind simulator directory operations", exception);
 		}
@@ -38,6 +40,11 @@ public class BattleNext_SimulatorStorage {
 		try (Stream<Path> paths = (Stream<Path>) invoke(list, directory)) {
 			return paths.sorted().toList();
 		}
+	}
+
+	public void deleteEmptyDirectory(Path directory) throws IOException {
+		if (!listFiles(directory).isEmpty()) return;
+		invoke(delete, directory);
 	}
 
 	private Object invoke(MethodHandle handle, Object... arguments) throws IOException {

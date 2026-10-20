@@ -23,6 +23,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -51,6 +52,9 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 		}
 		assertNull(readField("process"));
 		assertNull(readField("channel"));
+		try (var paths = Files.list(directory.resolve("tournament/_simulations"))) {
+			assertEquals(List.of(), paths.toList());
+		}
 	}
 
 	@Test
@@ -139,6 +143,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			attachedTooltips.get(status).createTooltip(root.createUIElement(480f, 0f, false), false, null);
 			assertTrue(labels.stream().anyMatch(text -> text.contains("Injected simulation failure")));
 			service.close();
+			assertFalse(Files.exists(runtime));
 			display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 			rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
 			rows.get(1).getPlugin().buttonPressed(action);
@@ -168,7 +173,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			client.setSoTimeout(100);
 			socket.setSoTimeout(10);
 			OwnedProcess process = new OwnedProcess();
-			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), process);
+			Path runtime = attachWorker(new BattleNext_SimulatorProtocol(client, "session"), process);
 			client.setTcpNoDelay(true);
 			socket.setTcpNoDelay(true);
 			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
@@ -177,6 +182,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			completeRound(peer, round, "player");
 			awaitTournamentState(task, BattleNext_SimulationTask.State.PAUSED);
 			assertFalse(process.isAlive());
+			assertFalse(Files.exists(runtime));
 			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 			instances.reload();
 			assertEquals(round.id(), task.getStartedTournament().getMatches().get(0).getRounds().get(0).getReportId());
@@ -199,10 +205,14 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			BattleNext_SimulatorProtocol channel = new BattleNext_SimulatorProtocol(client, "session");
 			OwnedProcess process = new OwnedProcess();
 			Path runtime = attachWorker(channel, process);
+			Path diagnostic = runtime.resolve("hs_err_pid1.log");
+			Files.writeString(diagnostic, "Worker crash diagnostic", StandardCharsets.UTF_8);
 			channel.close();
 			service.close();
 			assertFalse(process.isAlive());
 			assertTrue(Files.exists(runtime));
+			assertEquals("Worker crash diagnostic", Files.readString(diagnostic, StandardCharsets.UTF_8));
+			assertNull(readField("workerLogs"));
 			assertNull(readField("process"));
 			assertNull(readField("channel"));
 		}
@@ -227,7 +237,8 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			service.close();
 			assertFalse(supervisor.isAlive());
 			assertFalse(process.isAlive());
-			assertTrue(Files.exists(runtime));
+			assertFalse(Files.exists(runtime));
+			assertNull(readField("workerLogs"));
 			assertEquals("SHUTDOWN", peer.receive().getString("type"));
 			for (BattleNext_SimulationTask task : List.of(active, queued)) {
 				assertEquals(BattleNext_SimulationResult.Outcome.CANCELLED, task.getResult().outcome());

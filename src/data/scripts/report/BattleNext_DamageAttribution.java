@@ -53,13 +53,9 @@ public class BattleNext_DamageAttribution {
 				|| DamageDealtModifier.EMP_SHIP_SYSTEM_PARAM.equals(damageParam)) {
 			return new SourceKey("arc", ARC_SOURCE_ID);
 		}
-		WeaponAPI weapon = weaponOf(damageParam);
-		if (weapon == null) weapon = weaponOf(source);
-		if (weapon != null) {
-			String id = weapon.getSpec() == null ? "" : weapon.getSpec().getWeaponId();
-			if (id == null || id.isEmpty()) id = weapon.getId();
-			return new SourceKey("weapon", idOrUnknown(id));
-		}
+		SourceKey weapon = weaponSource(damageParam);
+		if (weapon == null) weapon = weaponSource(source);
+		if (weapon != null) return weapon;
 		if (damageParam instanceof DamagingProjectileAPI || source instanceof DamagingProjectileAPI
 				|| damageParam instanceof BeamAPI || source instanceof BeamAPI) {
 			return new SourceKey("damage_type", result.getType() == null ? "unknown" : result.getType().name());
@@ -70,10 +66,20 @@ public class BattleNext_DamageAttribution {
 		return new SourceKey("damage_type", result.getType() == null ? "unknown" : result.getType().name());
 	}
 
-	private static WeaponAPI weaponOf(Object source) {
-		if (source instanceof DamagingProjectileAPI projectile) return projectile.getWeapon();
-		if (source instanceof BeamAPI beam) return beam.getWeapon();
-		if (source instanceof WeaponAPI weapon) return weapon;
+	static SourceKey weaponKey(WeaponAPI weapon) {
+		String id = weapon.getSpec() == null ? "" : weapon.getSpec().getWeaponId();
+		if (id == null || id.isEmpty()) id = weapon.getId();
+		return new SourceKey("weapon", idOrUnknown(id));
+	}
+
+	private static SourceKey weaponSource(Object source) {
+		if (source instanceof DamagingProjectileAPI projectile) {
+			SourceKey key = BattleNext_ProximityDamageAttribution.sourceKey(projectile);
+			if (key != null) return key;
+			return projectile.getWeapon() == null ? null : weaponKey(projectile.getWeapon());
+		}
+		if (source instanceof BeamAPI beam) return beam.getWeapon() == null ? null : weaponKey(beam.getWeapon());
+		if (source instanceof WeaponAPI weapon) return weaponKey(weapon);
 		return null;
 	}
 
