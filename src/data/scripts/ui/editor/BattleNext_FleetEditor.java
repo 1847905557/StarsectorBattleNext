@@ -160,6 +160,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			fields.tagsField = createTextField(List.of(memberKey, "tags"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("tags"), String.join(",", member.getTags()), true, fieldContent, rowsContent);
 			createButton(fieldContent, areaWidth, fleetStrings.get("remove_member"), "remove_member:" + index);
+			createButton(fieldContent, areaWidth, fleetStrings.get("copy_member"), "copy_member:" + index);
 			float contentHeight = fieldContent.getHeightSoFar();
 			fieldContent.getPosition().setSize(areaWidth, contentHeight);
 			bodyPanel.getPosition().setSize(columnWidth, contentHeight + MEMBER_DETAIL_INSET * 2f);
@@ -239,6 +240,23 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				if (expanded < index) adjusted.add(expanded);
 				if (expanded > index) adjusted.add(expanded - 1);
 			}
+			expandedMembers.clear();
+			expandedMembers.addAll(adjusted);
+			refreshStructure();
+		} else if (buttonId instanceof String && ((String) buttonId).startsWith("copy_member:")) {
+			int index = Integer.parseInt(((String) buttonId).substring("copy_member:".length()));
+			if (!captureDraft(false)) return;
+			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
+			BattleNext_MemberModel member = members.get(index);
+			members.add(index + 1, new BattleNext_MemberModel(member.getVariantId(), member.getName(), member.getPersonality(),
+					member.getSkills(), member.getPortrait(), member.getOrders(), member.getTags()));
+			memberKeys.add(index + 1, new Object());
+			draft.setMembers(members);
+			Set<Integer> adjusted = new HashSet<>();
+			for (Integer expanded : expandedMembers) {
+				adjusted.add(expanded > index ? expanded + 1 : expanded);
+			}
+			adjusted.add(index + 1);
 			expandedMembers.clear();
 			expandedMembers.addAll(adjusted);
 			refreshStructure();

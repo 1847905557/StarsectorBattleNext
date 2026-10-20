@@ -112,6 +112,62 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
+	@CsvSource({"1", "3"})
+	void copyMemberCapturesInputsInsertsIndependentCopyAndSavesOrder(int copied) throws Exception {
+
+		registeredVariants.put("parent_variant", source().getApi());
+		registeredVariants.put("child_variant", source().getApi().getModuleVariant("module"));
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		List<String> names = List.of("first", "second", "third", "fourth");
+		var fleet = new BattleNext_FleetModel("copied_fleet", "Copied fleet", List.of(), List.of(),
+				names.stream().map(name -> new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of())).toList());
+		var editor = new BattleNext_FleetEditor(store);
+		editor.open(fleet, false);
+		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
+		editor.buttonPressed("toggle_member:1");
+		editor.buttonPressed("toggle_member:3");
+		List<?> fields = (List<?>) getField(editor, "memberFields");
+		Object sourceFields = fields.get(copied);
+		((TextFieldAPI) getField(sourceFields, "variantField")).setText("child_variant");
+		((TextFieldAPI) getField(sourceFields, "nameField")).setText("Edited ship");
+		((TextFieldAPI) getField(sourceFields, "officerPersonalityField")).setText("aggressive");
+		((TextFieldAPI) getField(sourceFields, "officerSkillsField")).setText("helmsmanship,target_analysis");
+		((TextFieldAPI) getField(sourceFields, "officerPortraitField")).setText("graphics/portraits/officer.png");
+		((TextFieldAPI) getField(sourceFields, "ordersField")).setText("full_assault");
+		((TextFieldAPI) getField(sourceFields, "tagsField")).setText("frontline,escort");
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_copy_member"), buttonLabels.get("copy_member:" + copied));
+		BattleNext_OptionField variant = optionFields(editor).get(copied == 1 ? 1 : 5);
+		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
+		body.getPlugin().buttonPressed("copy_member:" + copied);
+		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		var expected = new BattleNext_MemberModel("child_variant", "Edited ship", "aggressive",
+				List.of("helmsmanship", "target_analysis"), "graphics/portraits/officer.png", "full_assault", List.of("frontline", "escort"));
+		assertEquals(5, draft.getMembers().size());
+		assertJsonEquals(expected.toJson(), draft.getMembers().get(copied).toJson());
+		assertJsonEquals(expected.toJson(), draft.getMembers().get(copied + 1).toJson());
+		assertNotSame(draft.getMembers().get(copied), draft.getMembers().get(copied + 1));
+		assertEquals(copied == 1 ? Set.of(1, 2, 4) : Set.of(1, 3, 4), getField(editor, "expandedMembers"));
+		fields = (List<?>) getField(editor, "memberFields");
+		((TextFieldAPI) getField(fields.get(copied + 1), "nameField")).setText("Independent copy");
+		((TextFieldAPI) getField(fields.get(copied + 1), "tagsField")).setText("reserve");
+		editor.refreshContent();
+		assertTrue(editor.hasUnsavedChanges());
+		assertTrue(editor.save(), editor.getStatusText());
+		store.reload();
+		var saved = store.get("copied_fleet");
+		assertEquals(copied == 1 ? List.of("first", "Edited ship", "Independent copy", "third", "fourth")
+				: List.of("first", "second", "third", "Edited ship", "Independent copy"),
+				saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertJsonEquals(expected.toJson(), saved.getMembers().get(copied).toJson());
+		expected.setName("Independent copy");
+		expected.setTags(List.of("reserve"));
+		assertJsonEquals(expected.toJson(), saved.getMembers().get(copied + 1).toJson());
+		assertEquals("child_variant", saved.getVariant("child_variant").build().getHullVariantId());
+		editor.close();
+	}
+
+	@ParameterizedTest
 	@CsvSource({"0,false", "1,false", "0,true", "1,true"})
 	void memberRemovalKeepsSurvivorFieldsBoundToTheirOwnData(int removed, boolean collapsed) throws Exception {
 
@@ -181,7 +237,9 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 			assertTrue(position.getY() + position.getHeight() <= bounds.getY() + bounds.getHeight());
 		}
 		PositionAPI remove = components.get(15).getPosition();
-		assertEquals(body.getPosition().getY() + 8f, remove.getY());
+		PositionAPI copy = components.get(16).getPosition();
+		assertEquals(body.getPosition().getY() + 8f, copy.getY());
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, remove.getY() - copy.getY() - copy.getHeight());
 		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[1];
 		List<UIComponentAPI> memberRows = tooltips.get(viewport).getComponents();
 		assertEquals(memberRows.get(0).getPosition().getHeight() + BattleNext_ExpandablePanel.ROW_GAP
