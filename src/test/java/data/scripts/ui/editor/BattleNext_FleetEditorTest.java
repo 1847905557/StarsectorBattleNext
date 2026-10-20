@@ -168,6 +168,67 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
+	@CsvSource({"up,0,false", "up,0,true", "down,2,false", "down,2,true"})
+	void moveMemberPreservesInputsAndExpansionRenumbersAndSavesOrder(String direction, int target, boolean collapsed) throws Exception {
+
+		registeredVariants.put("parent_variant", source().getApi());
+		var store = new BattleNext_FleetStore();
+		store.reload();
+		List<String> names = List.of("first", "second", "third");
+		var fleet = new BattleNext_FleetModel("moving_fleet", "Moving fleet", List.of(), List.of(),
+				names.stream().map(name -> new BattleNext_MemberModel("parent_variant", name, "aggressive",
+						List.of("helmsmanship"), "graphics/portraits/officer.png", "orders_" + name, List.of(name))).toList());
+		var editor = new BattleNext_FleetEditor(store);
+		editor.open(fleet, false);
+		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
+		for (int index = 0; index < 3; index++) {
+			editor.buttonPressed("toggle_member:" + index);
+			assertEquals(index > 0, buttons.get("move_member_up:" + index).get());
+			assertEquals(index < 2, buttons.get("move_member_down:" + index).get());
+		}
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_move_up"), buttonLabels.get("move_member_up:1"));
+		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_move_down"), buttonLabels.get("move_member_down:1"));
+		List<?> fields = (List<?>) getField(editor, "memberFields");
+		((TextFieldAPI) getField(fields.get(1), "nameField")).setText("edited");
+		((TextFieldAPI) getField(fields.get(1), "ordersField")).setText("edited_order");
+		if (collapsed) editor.buttonPressed("toggle_member:" + target);
+		fields = (List<?>) getField(editor, "memberFields");
+		TextFieldAPI variantField = (TextFieldAPI) getField(fields.get(1), "variantField");
+		BattleNext_OptionField variant = optionFields(editor).stream().filter(option -> option.getField() == variantField).findFirst().orElseThrow();
+		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
+		body.getPlugin().buttonPressed("move_member_" + direction + ":1");
+		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		List<String> expectedNames = target == 0 ? List.of("edited", "first", "third") : List.of("first", "third", "edited");
+		assertEquals(expectedNames, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(collapsed ? Set.of(0, 2) : Set.of(0, 1, 2), getField(editor, "expandedMembers"));
+		assertTrue(editor.hasUnsavedChanges());
+		fields = (List<?>) getField(editor, "memberFields");
+		assertEquals("edited", ((TextFieldAPI) getField(fields.get(target), "nameField")).getText());
+		for (int index : collapsed ? List.of(0, 2) : List.of(0, 1, 2)) {
+			TextFieldAPI field = (TextFieldAPI) getField(fields.get(index), "variantField");
+			BattleNext_OptionField option = optionFields(editor).stream().filter(entry -> entry.getField() == field).findFirst().orElseThrow();
+			TooltipMakerAPI content = (TooltipMakerAPI) getField(option, "host");
+			assertEquals(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_label") + " " + (index + 1),
+					((LabelAPI) tooltips.get(content).getComponents().get(0)).getText());
+			assertEquals(index > 0, buttons.get("move_member_up:" + index).get());
+			assertEquals(index < 2, buttons.get("move_member_down:" + index).get());
+		}
+		editor.refreshContent();
+		assertTrue(editor.save(), editor.getStatusText());
+		store.reload();
+		var saved = store.get("moving_fleet");
+		assertEquals(expectedNames, saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		for (int index = 0; index < expectedNames.size(); index++) {
+			String name = expectedNames.get(index);
+			var expected = new BattleNext_MemberModel("parent_variant", name, "aggressive", List.of("helmsmanship"),
+					"graphics/portraits/officer.png", name.equals("edited") ? "edited_order" : "orders_" + name,
+					List.of(name.equals("edited") ? "second" : name));
+			assertJsonEquals(expected.toJson(), saved.getMembers().get(index).toJson());
+		}
+		editor.close();
+	}
+
+	@ParameterizedTest
 	@CsvSource({"0,false", "1,false", "0,true", "1,true"})
 	void memberRemovalKeepsSurvivorFieldsBoundToTheirOwnData(int removed, boolean collapsed) throws Exception {
 
@@ -221,7 +282,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		TooltipMakerAPI content = (TooltipMakerAPI) getField(variant, "host");
 		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
 		assertSame(body.getPosition(), geometry.get(tooltips.get(content).getViewport()).getParent());
-		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
+		assertFieldFlow(content, 3, Set.of(0, 2, 3, 4));
 		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
 		assertEquals(tooltips.get(content).getMountedHeight() + 16f, body.getPosition().getHeight());
 		PositionAPI member = geometry.get(body.getPosition()).getParent();
@@ -236,8 +297,14 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 			assertTrue(position.getY() >= bounds.getY());
 			assertTrue(position.getY() + position.getHeight() <= bounds.getY() + bounds.getHeight());
 		}
-		PositionAPI remove = components.get(15).getPosition();
-		PositionAPI copy = components.get(16).getPosition();
+		PositionAPI up = components.get(1).getPosition();
+		PositionAPI down = components.get(2).getPosition();
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, heading.getY() - up.getY() - up.getHeight());
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, up.getY() - down.getY() - down.getHeight());
+		assertFalse(((ButtonAPI) components.get(1)).isEnabled());
+		assertFalse(((ButtonAPI) components.get(2)).isEnabled());
+		PositionAPI remove = components.get(17).getPosition();
+		PositionAPI copy = components.get(18).getPosition();
 		assertEquals(body.getPosition().getY() + 8f, copy.getY());
 		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, remove.getY() - copy.getY() - copy.getHeight());
 		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[1];
@@ -270,7 +337,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(expected, ((Map<?, ?>) getField(router.getSession(), "registrations")).keySet());
 		pickers = optionFields(editor).subList(1, optionFields(editor).size());
 		content = (TooltipMakerAPI) getField(pickers.get(0), "host");
-		assertFieldFlow(content, 1, Set.of(0, 2, 3, 4));
+		assertFieldFlow(content, 3, Set.of(0, 2, 3, 4));
 		assertEquals(tooltips.get(content).getUsedHeight(), tooltips.get(content).getHeightAtMount());
 		editor.close();
 		assertFalse(router.getSession().hasInputState());

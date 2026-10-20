@@ -141,6 +141,8 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
 			TooltipMakerAPI fieldContent = bodyPanel.createUIElement(areaWidth, 0f, false);
 			fieldContent.addPara(memberStrings.get("label") + " " + (index + 1), 0f);
+			createButton(fieldContent, areaWidth, fleetStrings.get("move_up"), "move_member_up:" + index).setEnabled(index > 0);
+			createButton(fieldContent, areaWidth, fleetStrings.get("move_down"), "move_member_down:" + index).setEnabled(index + 1 < draft.getMembers().size());
 			Object memberKey = memberKeys.get(index);
 			fields.variantField = createOptionField(List.of(memberKey, "variant"), bodyPanel, fieldContent, fieldArea,
 					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
@@ -257,6 +259,21 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				adjusted.add(expanded > index ? expanded + 1 : expanded);
 			}
 			adjusted.add(index + 1);
+			expandedMembers.clear();
+			expandedMembers.addAll(adjusted);
+			refreshStructure();
+		} else if (buttonId instanceof String action && (action.startsWith("move_member_up:") || action.startsWith("move_member_down:"))) {
+			int index = Integer.parseInt(action.substring(action.lastIndexOf(':') + 1));
+			int target = action.startsWith("move_member_up:") ? index - 1 : index + 1;
+			if (!captureDraft(false)) return;
+			List<BattleNext_MemberModel> members = new ArrayList<>(draft.getMembers());
+			Collections.swap(members, index, target);
+			Collections.swap(memberKeys, index, target);
+			draft.setMembers(members);
+			Set<Integer> adjusted = new HashSet<>();
+			for (Integer expanded : expandedMembers) {
+				adjusted.add(expanded == index ? target : expanded == target ? index : expanded);
+			}
 			expandedMembers.clear();
 			expandedMembers.addAll(adjusted);
 			refreshStructure();
