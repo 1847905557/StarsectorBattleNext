@@ -4,6 +4,7 @@ import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.ai.rtt.BattleNext_RttGeometry;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
+import data.scripts.battlesnext.util.BattleNext_FontData;
 import data.scripts.order.BattleNext_OrderField;
 import data.scripts.tools.BattleNext_CombatInput;
 import data.scripts.tools.BattleNext_GeometryRenderer;
@@ -17,9 +18,19 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	private static final String AUTOPILOT_CONTROL = "C2_TOGGLE_AUTOPILOT";
 	private static final String VENT_CONTROL = "SHIP_VENT_FLUX";
 	private static final String SYSTEM_CONTROL = "SHIP_USE_SYSTEM";
+	private static final String ADD_SELECTION_CONTROL = "SHIP_STRAFE_KEY";
+
+	private static final String TOGGLE_GROUP_PREFIX = "SHIP_TOGGLE_GROUP_";
+	private static final String SELECT_GROUP_PREFIX = "SHIP_SELECT_GROUP_";
+	private static final int GROUP_COUNT = 7;
 
 	private static final float DRAG_THRESHOLD = 10f;
 	private static final int RING_SEGMENTS = 48;
+	private static final float RING_SHIP_SCALE = 1.2f;
+	private static final float RING_PADDING = 30f;
+	private static final float GROUP_FONT_SIZE = 16f;
+	private static final float GROUP_TEXT_GAP = 4f;
+	private static final float RING_DIAGONAL = 0.70710677f;
 	private static final Color SELECTION_COLOR = new Color(75, 215, 230, 230);
 	private static final Color DRAG_FILL = new Color(75, 215, 230, 48);
 	private static final Color MOVE_COLOR = new Color(75, 215, 230, 190);
@@ -27,9 +38,11 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	private static final Color FOLLOW_COLOR = new Color(95, 215, 125, 210);
 
 	private final Set<ShipAPI> selected = new LinkedHashSet<>();
+	private final Map<Integer, Set<ShipAPI>> groups = new HashMap<>();
 	private final Map<ShipAPI, BattleNext_RttShipAI> controlled = new IdentityHashMap<>();
 	private final Map<ShipAPI, ShipAIPlugin> previousAis = new IdentityHashMap<>();
 	private CombatEngineAPI engine;
+	private BattleNext_FontData.TextObject groupText;
 
 	private boolean pressing;
 	private boolean dragging;
@@ -62,6 +75,10 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				continue;
 			}
 			if (!active) continue;
+			if (!event.isRepeat() && handleGroupEvent(event)) {
+				event.consume();
+				continue;
+			}
 			if (!selected.isEmpty() && !event.isRepeat() && event.isControlDownEvent(VENT_CONTROL)) {
 				for (ShipAPI ship : selected) {
 					ship.giveCommand(ShipCommand.VENT_FLUX, null, -1);
@@ -81,7 +98,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			if (event.isLMBDownEvent()) {
 				pressing = true;
 				dragging = false;
-				addSelection = event.isShiftDown();
+				addSelection = event.isControlActivated(ADD_SELECTION_CONTROL);
 				startX = pointerX = event.getX();
 				startY = pointerY = event.getY();
 				event.consume();
@@ -147,7 +164,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 		if (engine == null || engine.isCombatOver()) return;
 		for (ShipAPI ship : selected) {
 			if (!validSelection(ship)) continue;
-			circle(ship.getLocation(), ship.getCollisionRadius() * 1.2f + 30f, SELECTION_COLOR);
+			circle(ship.getLocation(), ship.getCollisionRadius() * RING_SHIP_SCALE + RING_PADDING, SELECTION_COLOR);
 			BattleNext_RttShipAI ai = controlled.get(ship);
 			if (ai == null || ai.getVisualTargetPoint() == null) continue;
 			Color color = switch (ai.getCommandType()) {
@@ -172,6 +189,59 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			BattleNext_GeometryRenderer.lineLoop(new float[]{left, bottom, left + width, bottom,
 					left + width, bottom + height, left, bottom + height}, SELECTION_COLOR, viewport.getAlphaMult(), 1f);
 		}
+	}
+
+	@Override
+	public void renderInUICoords(ViewportAPI viewport) {
+
+		if (engine == null || engine.isCombatOver()) return;
+		for (ShipAPI ship : selected) {
+			if (!validSelection(ship)) continue;
+			StringJoiner numbers = new StringJoiner(",");
+			for (int number = 1; number <= GROUP_COUNT; number++) {
+				Set<ShipAPI> group = groups.get(number);
+				if (group != null && group.contains(ship)) numbers.add(Integer.toString(number));
+			}
+			if (numbers.length() == 0) continue;
+			if (groupText == null) {
+				groupText = BattleNext_FontData.getInsigniaNormal();
+				groupText.setFontSize(GROUP_FONT_SIZE);
+			}
+			groupText.setText(numbers.toString());
+			float offset = (ship.getCollisionRadius() * RING_SHIP_SCALE + RING_PADDING) * RING_DIAGONAL;
+			float x = viewport.convertWorldXtoScreenX(ship.getLocation().x + offset) + GROUP_TEXT_GAP;
+			float y = viewport.convertWorldYtoScreenY(ship.getLocation().y - offset) - GROUP_TEXT_GAP;
+			groupText.setBaseColor(Color.BLACK);
+			groupText.draw(x + 1f, y - 1f);
+			groupText.setBaseColor(SELECTION_COLOR);
+			groupText.draw(x, y);
+		}
+	}
+
+	private boolean handleGroupEvent(InputEventAPI event) {
+
+		for (int number = 1; number <= GROUP_COUNT; number++) {
+			boolean assign = event.isControlDownEvent(TOGGLE_GROUP_PREFIX + number);
+			if (!assign && !event.isControlDownEvent(SELECT_GROUP_PREFIX + number)) continue;
+			pressing = false;
+			dragging = false;
+			addSelection = false;
+			if (assign) {
+				if (!selected.isEmpty()) {
+					groups.put(number, new LinkedHashSet<>(selected));
+				}
+			} else {
+				Set<ShipAPI> group = groups.get(number);
+				if (group != null && !group.isEmpty()) {
+					if (!event.isControlActivated(ADD_SELECTION_CONTROL)) {
+						selected.clear();
+					}
+					selected.addAll(group);
+				}
+			}
+			return true;
+		}
+		return false;
 	}
 
 	private void selectAt(ViewportAPI viewport) {
@@ -255,11 +325,20 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 		selected.clear();
 		pressing = false;
 		dragging = false;
+		addSelection = false;
+		groups.clear();
+		if (groupText != null) {
+			groupText.dispose();
+			groupText = null;
+		}
 		engine.removePlugin(this);
 	}
 
 	private void prune() {
 		selected.removeIf(ship -> !validSelection(ship));
+		for (Set<ShipAPI> group : groups.values()) {
+			group.removeIf(ship -> !validSelection(ship));
+		}
 		controlled.entrySet().removeIf(entry -> {
 			if (entry.getKey().isAlive() && !entry.getKey().isExpired()
 					&& engine.getShips().contains(entry.getKey())) return false;

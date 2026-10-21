@@ -124,11 +124,11 @@ tasks.register("simulatorBenchmark", JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 }
 
-tasks.register("lunaFleetSaveSmoke", JavaExec) {
+tasks.register("rttGroupsSmoke", JavaExec) {
 	group = "verification"
-	description = "Verifies fleet snapshot rows, native scrolling, and rendering in an isolated game."
+	description = "Verifies RTT groups and rebound native controls through the lab mission."
 	dependsOn "jar", "compileTestJava"
-	mainClass = "data.scripts.campaign.luna.BattleNext_LunaFleetSaveSmoke"
+	mainClass = "data.scripts.plugin.BattleNext_RttGroupsSmoke"
 	classpath = sourceSets.test.runtimeClasspath
 }
 
