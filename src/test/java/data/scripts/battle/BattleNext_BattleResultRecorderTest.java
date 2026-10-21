@@ -198,7 +198,10 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 		provider.getStartedStore().reload();
 		assertTrue(provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRounds().isEmpty());
 		var pendingPath = directory.resolve(BattleNext_StartedTournamentStore.pendingRoundPath(started.getId()));
-		JSONObject pending = new JSONObject(Files.readString(pendingPath, StandardCharsets.UTF_8));
+		String pendingText = Files.readString(pendingPath, StandardCharsets.UTF_8);
+		JSONObject pending = new JSONObject(pendingText);
+		assertEquals(pending.toString(4), pendingText);
+		assertTrue(pendingText.contains("\n    \""));
 		assertEquals(scorekeeper.report.toJson().toString(), pending.getJSONObject("report").toString());
 		assertTrue(provider.load().isEmpty());
 		assertTrue(provider.getWarnings().stream().anyMatch(warning -> warning.contains(started.getId())));

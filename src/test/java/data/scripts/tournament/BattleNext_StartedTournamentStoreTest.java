@@ -21,6 +21,21 @@ import java.util.UUID;
 class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
+	void saveWritesStartedTournamentCatalogAsFourSpaceIndentedJson() throws Exception {
+		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup",
+				BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
+
+		store.save(started);
+
+		String text = Files.readString(directory.resolve(BattleNext_StartedTournamentStore.PATH), StandardCharsets.UTF_8);
+		JSONObject saved = new JSONObject(text);
+		assertEquals(saved.toString(4), text);
+		assertTrue(text.contains("\n    \""));
+		assertEquals(started.getId(), saved.getJSONArray("instances").getJSONObject(0).getString("id"));
+	}
+
+	@Test
 	void independentStoresMergeInstancesActivationAndRoundProgressAndLockConfiguration() throws Exception {
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
@@ -173,9 +188,15 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		assertTrue(selected.error().contains("fleetIds"));
 		assertEquals(broken.toString(), selected.raw());
 		store.delete(selected);
-		JSONObject remaining = new JSONObject(Files.readString(path, StandardCharsets.UTF_8));
+		String remainingText = Files.readString(path, StandardCharsets.UTF_8);
+		JSONObject remaining = new JSONObject(remainingText);
 		assertEquals("", remaining.getString("activeTournamentId"));
-		assertEquals(new JSONArray().put(valid.toJson()).put(unowned).toString(), remaining.getJSONArray("instances").toString());
+		JSONArray remainingInstances = remaining.getJSONArray("instances");
+		assertEquals(2, remainingInstances.length());
+		assertEquals(valid.getId(), remainingInstances.getJSONObject(0).getString("id"));
+		assertEquals("保留 50%", remainingInstances.getJSONObject(1).getString("unreadable"));
+		assertTrue(remainingText.contains("\n    \""));
+		assertEquals(remaining.toString(4), remainingText);
 		assertFalse(store.hasInstances("cup"));
 		assertEquals(1, store.getLoadErrors().size());
 	}
@@ -198,7 +219,13 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		assertEquals(2, store.getLoadErrors().size());
 		assertThrows(IllegalArgumentException.class, () -> store.delete(instance.getId()));
 		store.delete(store.getCatalog().get(0));
-		assertEquals(duplicate.toString(), new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).getJSONArray("instances").getJSONObject(0).toString());
+		String remainingText = Files.readString(path, StandardCharsets.UTF_8);
+		JSONObject remaining = new JSONObject(remainingText);
+		JSONObject retained = remaining.getJSONArray("instances").getJSONObject(0);
+		assertEquals(duplicate.getString("id"), retained.getString("id"));
+		assertEquals(123, retained.getInt("startedAt"));
+		assertTrue(remainingText.contains("\n    \""));
+		assertEquals(remaining.toString(4), remainingText);
 		assertEquals(instance.getId(), store.getActiveId());
 		assertTrue(Files.exists(pending));
 		store.delete(store.getCatalog().get(0));

@@ -77,7 +77,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			if (oldDirectory != null && !oldDirectory.equals(directory) && files.exists(path)) {
 				throw new IOException("Fleet target already exists: " + path);
 			}
-			String fleetJson = fleet.toJson().toString();
+			String fleetJson = fleet.toJson().toString(4);
 			Map<String, String> variants = prepareVariants(fleet, directory);
 			Set<String> staleVariants = findStaleVariants(directory, variants.keySet());
 			Map<String, byte[]> targetSnapshot = snapshot(directory);
@@ -274,7 +274,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 				throw new IOException("Invalid fleet variant ID: " + variant.getId());
 			}
 			String path = directory + "/" + variant.getId() + ".variant";
-			if (variants.put(path, variant.toJson().toString(2)) != null) {
+			if (variants.put(path, variant.toJson().toString(4)) != null) {
 				throw new IOException("Duplicate fleet variant ID: " + variant.getId());
 			}
 		}

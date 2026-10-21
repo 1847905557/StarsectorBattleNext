@@ -85,6 +85,23 @@ class BattleNext_FleetSaverTest {
 	}
 
 	@Test
+	void saveWritesFleetAndVariantAsFourSpaceIndentedJson() throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
+
+		new BattleNext_FleetSaver(files).save(fleet);
+
+		String fleetJson = files.text("tournament/alpha/fleet_data.json");
+		assertEquals(fleet.toJson().toString(4), fleetJson);
+		assertTrue(fleetJson.contains("\n    \""));
+		assertEquals(fleet.toJson().toString(), new JSONObject(fleetJson).toString());
+		String variantJson = files.text("tournament/alpha/current.variant");
+		assertEquals(fleet.getVariant("current").toJson().put("variantId", "current").toString(4), variantJson);
+		assertTrue(variantJson.contains("\n    \""));
+		assertEquals(fleet.getVariant("current").toJson().put("variantId", "current").toString(), new JSONObject(variantJson).toString());
+	}
+
+	@Test
 	void saveCreatesCompleteBackupAndPreservesOtherFiles() throws Exception {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");

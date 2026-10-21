@@ -18,7 +18,7 @@ public class BattleNext_PinnedVariantSaver extends BattleNext_BaseSaver<BattleNe
 			throw new IOException("Invalid pinned variant ID: " + model.getPinId());
 		}
 		String path = RESOURCE_ROOT + model.getPinId() + ".json";
-		BattleNext_ModFileManager.writeText(path, model.toJson().toString(2));
+		writeResourceJson(path, model.toJson());
 		return path;
 	}
 

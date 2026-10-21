@@ -15,6 +15,6 @@ public abstract class BattleNext_BaseSaver<T extends BattleNext_BaseModel> {
 	public abstract void delete(T model) throws IOException;
 
 	protected void writeResourceJson(String path, JSONObject json) throws IOException, JSONException {
-		BattleNext_ModFileManager.writeText(path, json.toString());
+		BattleNext_ModFileManager.writeText(path, json.toString(4));
 	}
 }

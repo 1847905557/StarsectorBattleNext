@@ -101,7 +101,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		prepareTournamentRoundReport(report, tournament.getName(provider.getTournamentStore().get(tournament.getSourceTournamentId())), match, playerLabel, enemyLabel);
 		JSONObject pending = new JSONObject().put("instanceId", tournament.getId()).put("matchId", match.getId())
 				.put("winner", resolveWinner(match, report.getWinner())).put("report", report.toJson());
-		BattleNext_ModFileManager.writeTextAtomic(BattleNext_StartedTournamentStore.pendingRoundPath(tournament.getId()), pending.toString());
+		BattleNext_ModFileManager.writeTextAtomic(BattleNext_StartedTournamentStore.pendingRoundPath(tournament.getId()), pending.toString(4));
 		boolean retained = retryTournamentRound(tournament.getId());
 		return retained ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
 	}

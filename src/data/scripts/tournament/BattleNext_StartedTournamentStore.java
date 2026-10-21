@@ -113,8 +113,9 @@ public class BattleNext_StartedTournamentStore {
 	}
 
 	private void write(JSONObject next) throws IOException, JSONException {
-		BattleNext_ModFileManager.writeTextAtomic(PATH, next.toString());
-		publish(next);
+		String text = next.toString(4);
+		BattleNext_ModFileManager.writeTextAtomic(PATH, text);
+		publish(new JSONObject(text));
 	}
 
 	private JSONObject read() throws IOException, JSONException {

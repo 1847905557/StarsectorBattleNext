@@ -71,7 +71,10 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 		String path = saver.save(model);
 		assertEquals(root(kind) + "/entry.json", path);
 		byte[] bytes = Files.readAllBytes(directory.resolve(path));
-		assertEquals(model.toJson().toString(), new JSONObject(new String(bytes, StandardCharsets.UTF_8)).toString());
+		String text = new String(bytes, StandardCharsets.UTF_8);
+		assertEquals(model.toJson().toString(4), text);
+		assertTrue(text.contains("\n    \""));
+		assertEquals(model.toJson().toString(), new JSONObject(text).toString());
 		assertFalse(bytes.length >= 3 && bytes[0] == (byte) 0xef && bytes[1] == (byte) 0xbb && bytes[2] == (byte) 0xbf);
 		var sibling = directory.resolve(root(kind) + "/keep.txt");
 		Files.writeString(sibling, "保留", StandardCharsets.UTF_8);

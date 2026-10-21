@@ -176,7 +176,14 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		assertEquals(1, confirmation.size());
 		assertEquals(2, new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).getJSONArray("instances").length());
 		confirmation.remove(0).run();
-		assertEquals(new JSONArray().put(other).toString(), new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).getJSONArray("instances").toString());
+		String savedText = Files.readString(path, StandardCharsets.UTF_8);
+		JSONObject saved = new JSONObject(savedText);
+		JSONArray instances = saved.getJSONArray("instances");
+		assertEquals(1, instances.length());
+		assertEquals("other", instances.getJSONObject(0).getString("id"));
+		assertEquals("other", instances.getJSONObject(0).getString("sourceTournamentId"));
+		assertTrue(savedText.contains("\n    \""));
+		assertEquals(saved.toString(4), savedText);
 		assertFalse(editor.isReadOnly());
 		assertTrue(buttons.get("save").get());
 		page.close();
