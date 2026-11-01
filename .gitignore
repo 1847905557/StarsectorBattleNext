@@ -4,6 +4,7 @@ jars/*.jar
 build/
 dist/
 .zcode/
+/.zcode/plans/
 /tournament/
 data/variants/
 /*.md
