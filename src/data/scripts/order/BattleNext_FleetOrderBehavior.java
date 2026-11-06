@@ -23,7 +23,7 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 	}
 
 	public static final float ORDERS_INTERVAL = 0.15f;
-	public static final float FULL_ASSAULT_INTERVAL = 1f;
+	public static final float FULL_ASSAULT_INTERVAL = 0.1f;
 	private final FleetOrderMode playerMode;
 	private final FleetOrderMode enemyMode;
 	private final List<MemberOrders> orders = new ArrayList<>();
@@ -133,12 +133,9 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 
 	private void processFullAssault(FleetSide side, FleetOrderMode mode) {
 		if (mode != FleetOrderMode.FULL_ASSAULT) return;
-		for (ShipAPI ship : engine.getShips()) {
-			if (!BattleNext_OrderUtils.isValid(ship, engine) || ship.isStation() || ship.getOwner() != side.ordinal()) continue;
-			if (BattleNext_RttShipAI.isControlled(ship)) continue;
-			CombatTaskManagerAPI tasks = engine.getFleetManager(ship.getOwner()).getTaskManager(ship.isAlly());
-			if (tasks.getAssignmentFor(ship) != null || ship.isRetreating() || tasks.isInFullRetreat()) continue;
-			tasks.orderSearchAndDestroy(engine.getFleetManager(ship.getOwner()).getDeployedFleetMember(ship), false);
+		engine.getFleetManager(side).getTaskManager(false).setFullAssault(true);
+		if (side == FleetSide.PLAYER) {
+			engine.getFleetManager(side).getTaskManager(true).setFullAssault(true);
 		}
 	}
 

@@ -27,6 +27,36 @@ class BattleNext_FleetOrderBehaviorIntegrationTest extends BattleNext_TestOrderF
 				BattleNext_FleetOrderBehavior.fromTags(List.of("default_ai", "orders", "full_assault")));
 	}
 
+	@ParameterizedTest
+	@ValueSource(ints = {0, 1})
+	void fullAssaultAppliesToItsFleetEveryTenthSecondAndWaitsWhilePaused(int owner) {
+
+		FleetOrderMode mode = BattleNext_FleetOrderBehavior.fromTags(List.of("full_assault"));
+		var plugin = new BattleNext_FleetOrderBehavior(owner == 0 ? mode : FleetOrderMode.ORDERS,
+				owner == 1 ? mode : FleetOrderMode.ORDERS);
+		plugin.init(world.getEngine());
+		plugin.advance(0.05f, List.of());
+		assertFalse(world.side(owner, false).getTasks().isFullAssault());
+		plugin.advance(0.05f, List.of());
+		assertEquals(owner == 0, world.side(0, false).getTasks().isFullAssault());
+		assertEquals(owner == 0, world.side(0, true).getTasks().isFullAssault());
+		assertEquals(owner == 1, world.side(1, false).getTasks().isFullAssault());
+
+		world.side(owner, false).setFullAssault(false);
+		world.side(0, true).setFullAssault(false);
+		world.setPaused(true);
+		plugin.advance(1f, List.of());
+		assertFalse(world.side(owner, false).getTasks().isFullAssault());
+		world.setPaused(false);
+		plugin.advance(0.05f, List.of());
+		assertFalse(world.side(owner, false).getTasks().isFullAssault());
+		plugin.advance(0.05f, List.of());
+		assertEquals(owner == 0, world.side(0, false).getTasks().isFullAssault());
+		assertEquals(owner == 0, world.side(0, true).getTasks().isFullAssault());
+		assertEquals(owner == 1, world.side(1, false).getTasks().isFullAssault());
+		plugin.cleanup();
+	}
+
 	@Test
 	void bothSidesKeepTheirAssignmentsAcrossCompleteBatches() throws Exception {
 		ShipState player = world.ship(0, 0f);
