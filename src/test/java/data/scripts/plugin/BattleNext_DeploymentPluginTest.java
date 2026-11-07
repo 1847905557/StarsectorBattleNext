@@ -163,7 +163,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 
 	@ParameterizedTest
 	@MethodSource("deploymentLayouts")
-	void shipsFillEachRowFromItsCenterWithinTheMiddleHalfOfTheMap(float width, int shipCount, float[][] expected) {
+	void fleetOrderFillsRowsFromTheFrontTowardItsMapEdge(float width, int shipCount, float[][] expected) {
 		List<FleetMemberAPI> ships = new ArrayList<>();
 		for (int index = 0; index < shipCount; index++) {
 			ships.add(proxy(FleetMemberAPI.class, (method, args) -> null));
@@ -216,11 +216,11 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 		return Stream.of(
 				Arguments.of(12000f, 1, new float[][]{{0f, 0f}}),
 				Arguments.of(12000f, 3, new float[][]{{0f, 0f}, {-800f, 0f}, {800f, 0f}}),
-				Arguments.of(12000f, 8, new float[][]{{0f, 0f}, {-800f, 0f}, {800f, 0f}, {-1600f, 0f}, {1600f, 0f}, {-2400f, 0f}, {2400f, 0f}, {0f, 650f}}),
-				Arguments.of(8000f, 6, new float[][]{{0f, 0f}, {-800f, 0f}, {800f, 0f}, {-1600f, 0f}, {1600f, 0f}, {0f, 650f}}),
-				Arguments.of(3199f, 3, new float[][]{{0f, 0f}, {0f, 650f}, {0f, 1300f}}),
-				Arguments.of(3200f, 4, new float[][]{{0f, 0f}, {-800f, 0f}, {800f, 0f}, {0f, 650f}}),
-				Arguments.of(800f, 2, new float[][]{{0f, 0f}, {0f, 650f}}),
-				Arguments.of(800f, 31, new float[][]{{0f, 0f}, {0f, 650f}, {0f, 1300f}, {0f, 1950f}, {0f, 2600f}, {0f, 3250f}, {0f, 3900f}, {0f, 4550f}, {0f, 5200f}, {0f, 5850f}, {0f, 6500f}, {0f, 7150f}, {0f, 7800f}, {0f, 8450f}, {0f, 9100f}, {0f, 9750f}, {0f, 10400f}, {0f, 11050f}, {0f, 11700f}, {0f, 12350f}, {0f, 13000f}, {0f, 13650f}, {0f, 14300f}, {0f, 14950f}, {0f, 15600f}, {0f, 16250f}, {0f, 16900f}, {0f, 17550f}, {0f, 18200f}, {0f, 18850f}, {0f, 19500f}}));
+				Arguments.of(12000f, 8, new float[][]{{0f, 650f}, {-800f, 650f}, {800f, 650f}, {-1600f, 650f}, {1600f, 650f}, {-2400f, 650f}, {2400f, 650f}, {0f, 0f}}),
+				Arguments.of(8000f, 6, new float[][]{{0f, 650f}, {-800f, 650f}, {800f, 650f}, {-1600f, 650f}, {1600f, 650f}, {0f, 0f}}),
+				Arguments.of(3199f, 3, new float[][]{{0f, 1300f}, {0f, 650f}, {0f, 0f}}),
+				Arguments.of(3200f, 4, new float[][]{{0f, 650f}, {-800f, 650f}, {800f, 650f}, {0f, 0f}}),
+				Arguments.of(800f, 2, new float[][]{{0f, 650f}, {0f, 0f}}),
+				Arguments.of(800f, 31, new float[][]{{0f, 19500f}, {0f, 18850f}, {0f, 18200f}, {0f, 17550f}, {0f, 16900f}, {0f, 16250f}, {0f, 15600f}, {0f, 14950f}, {0f, 14300f}, {0f, 13650f}, {0f, 13000f}, {0f, 12350f}, {0f, 11700f}, {0f, 11050f}, {0f, 10400f}, {0f, 9750f}, {0f, 9100f}, {0f, 8450f}, {0f, 7800f}, {0f, 7150f}, {0f, 6500f}, {0f, 5850f}, {0f, 5200f}, {0f, 4550f}, {0f, 3900f}, {0f, 3250f}, {0f, 2600f}, {0f, 1950f}, {0f, 1300f}, {0f, 650f}, {0f, 0f}}));
 	}
 }

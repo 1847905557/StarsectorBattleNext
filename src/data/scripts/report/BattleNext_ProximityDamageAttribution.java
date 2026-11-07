@@ -17,6 +17,7 @@ import java.util.WeakHashMap;
 public class BattleNext_ProximityDamageAttribution {
 
 	private static final String SOURCE_KEY = "BattleNext_proximityWeaponSource";
+	private static final String VISITED_KEY = "BattleNext_proximityAttributionVisited";
 	private static final Map<ShotBehaviorSpecAPI, String> ORIGINAL_EFFECTS = new WeakHashMap<>();
 
 	private BattleNext_ProximityDamageAttribution() {
@@ -34,6 +35,7 @@ public class BattleNext_ProximityDamageAttribution {
 			}
 			if (behavior == null || !"PROXIMITY_FUSE".equals(behavior.getBehavorString())) continue;
 			if (ExplosionEffect.class.getName().equals(behavior.getOnExplosionClassName())) continue;
+			if (ORIGINAL_EFFECTS.containsKey(behavior)) continue;
 			ORIGINAL_EFFECTS.put(behavior, behavior.getOnExplosionClassName());
 			behavior.setOnExplosionClassName(ExplosionEffect.class.getName());
 		}
@@ -46,6 +48,8 @@ public class BattleNext_ProximityDamageAttribution {
 	public static class ExplosionEffect implements ProximityExplosionEffect {
 		@Override
 		public void onExplosion(DamagingProjectileAPI explosion, DamagingProjectileAPI originalProjectile) {
+			if (Boolean.TRUE.equals(explosion.getCustomData().get(VISITED_KEY))) return;
+			explosion.setCustomData(VISITED_KEY, true);
 			WeaponAPI weapon = originalProjectile.getWeapon();
 			if (weapon != null) {
 				explosion.setCustomData(SOURCE_KEY, BattleNext_DamageAttribution.weaponKey(weapon));

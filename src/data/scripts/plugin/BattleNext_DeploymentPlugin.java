@@ -90,6 +90,8 @@ public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 			engine.getFleetManager(side).setSuppressDeploymentMessages(true);
 			List<FleetMemberAPI> reserves = engine.getFleetManager(side).getReservesCopy();
 			int columns = 1 + 2 * (int)Math.floor(engine.getMapWidth() * SIDE_MARGIN_FRACTION / SHIP_SPACING);
+			int ships = (int)reserves.stream().filter(member -> !member.isFighterWing()).count();
+			int rows = (ships + columns - 1) / columns;
 			float y = side == FleetSide.PLAYER ? -engine.getMapHeight() / 2f : engine.getMapHeight() / 2f;
 			float direction = side == FleetSide.PLAYER ? 1f : -1f;
 			int index = 0;
@@ -98,7 +100,7 @@ public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 				int row = index / columns;
 				int position = index % columns;
 				float x = ((position + 1) / 2) * (position % 2 == 0 ? 1f : -1f) * SHIP_SPACING;
-				float spawnY = y + row * ROW_SPACING * direction;
+				float spawnY = y + (rows - row - 1) * ROW_SPACING * direction;
 				engine.getFleetManager(side).spawnFleetMember(member, new Vector2f(x, spawnY), side == FleetSide.PLAYER ? PLAYER_FACING : ENEMY_FACING, SPAWN_DELAY);
 				index++;
 			}

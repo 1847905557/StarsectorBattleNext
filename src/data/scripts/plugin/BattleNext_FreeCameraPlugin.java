@@ -107,7 +107,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 
 		if (BattleNext_CombatInput.isUiCovered(engine)) return;
 
-		boolean toggleDown = BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL);
+		boolean toggleDown = isCameraTogglePressed();
 		if (cameraToggle == CameraToggleState.BLOCKED) {
 			if (!toggleDown) {
 				cameraToggle = CameraToggleState.READY;
@@ -159,7 +159,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		}
 		boolean active = cameraEnabled && !blocked;
 		if (blocked || externalCamera && !active) {
-			cameraToggle = BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL) ? CameraToggleState.BLOCKED : CameraToggleState.READY;
+			cameraToggle = isCameraTogglePressed() ? CameraToggleState.BLOCKED : CameraToggleState.READY;
 			moveHoldTime = 0f;
 		}
 		if (active == externalCamera) return;
@@ -177,6 +177,11 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 					viewportWidth, viewportHeight);
 			engine.getViewport().setCenter(new Vector2f(cameraCenter));
 		}
+	}
+
+	private boolean isCameraTogglePressed() {
+		return BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL)
+				|| BattleNext_KeyTuning.isPressed(Keyboard.KEY_BACKSLASH);
 	}
 
 	private boolean acceptsMouseInput() {

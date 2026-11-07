@@ -29,6 +29,7 @@ class BattleNext_ProximityDamageAttributionTest extends BattleNext_TestGameFixtu
 	private final List<ProximityExplosionEffect> effects = new ArrayList<>();
 	private final List<String> loadedEffects = new ArrayList<>();
 	private final List<DamagingProjectileAPI> forwarded = new ArrayList<>();
+	private final Map<String, ProximityExplosionEffect> scriptedEffects = new HashMap<>();
 	private Map<ShotBehaviorSpecAPI, String> registrations;
 	private Map<ShotBehaviorSpecAPI, String> previousRegistrations;
 	private RuntimeException effectFailure;
@@ -45,7 +46,9 @@ class BattleNext_ProximityDamageAttributionTest extends BattleNext_TestGameFixtu
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
 			if (method.getName().equals("getAllWeaponSpecs")) return weapons;
 			if (method.getName().equals("getInstanceOfScript")) {
-				loadedEffects.add((String) args[0]);
+				String name = (String) args[0];
+				loadedEffects.add(name);
+				if (scriptedEffects.containsKey(name)) return scriptedEffects.get(name);
 				ProximityExplosionEffect effect = new ProximityExplosionEffect() {
 					@Override
 					public void onExplosion(DamagingProjectileAPI explosion, DamagingProjectileAPI original) {
@@ -178,6 +181,52 @@ class BattleNext_ProximityDamageAttributionTest extends BattleNext_TestGameFixtu
 		assertEquals(List.of("effect.unarmed"), loadedEffects);
 		assertEquals(List.of(explosion, original), forwarded);
 		assertEquals(new BattleNext_DamageAttribution.SourceKey("damage_type", "HIGH_EXPLOSIVE"), key(explosion));
+	}
+
+	@Test
+	void laterWrappersRemainAboveTheRecordedChainAcrossReloads() {
+		Behavior behavior = new Behavior("PROXIMITY_FUSE", "effect.original");
+		Object spec = spec(behavior.api, false);
+		weapons.add(weaponSpec("gun", spec));
+		BattleNext_ProximityDamageAttribution.register();
+		behavior.effect = "effect.later";
+		for (int reload = 0; reload < 16; reload++) {
+			BattleNext_ProximityDamageAttribution.register();
+		}
+
+		assertEquals("effect.later", behavior.effect);
+		assertEquals(1, behavior.writes);
+		DamagingProjectileAPI explosion = projectile(null, null, false);
+		new BattleNext_ProximityDamageAttribution.ExplosionEffect().onExplosion(explosion,
+				projectile(weapon("gun", "gun"), spec, false));
+		assertEquals(List.of("effect.original"), loadedEffects);
+	}
+
+	@Test
+	void arbitraryWrapperDepthTerminatesWhenTheChainReturnsToThisEffect() {
+		Behavior behavior = new Behavior("PROXIMITY_FUSE", "wrapper.0");
+		Object spec = spec(behavior.api, false);
+		weapons.add(weaponSpec("gun", spec));
+		int[] calls = new int[64];
+		ProximityExplosionEffect next = new BattleNext_ProximityDamageAttribution.ExplosionEffect();
+		for (int index = calls.length - 1; index >= 0; index--) {
+			int current = index;
+			ProximityExplosionEffect delegate = next;
+			next = (explosion, original) -> {
+				calls[current]++;
+				delegate.onExplosion(explosion, original);
+			};
+		}
+		scriptedEffects.put("wrapper.0", next);
+		BattleNext_ProximityDamageAttribution.register();
+
+		DamagingProjectileAPI explosion = projectile(null, null, false);
+		new BattleNext_ProximityDamageAttribution.ExplosionEffect().onExplosion(explosion,
+				projectile(weapon("gun", "gun"), spec, false));
+
+		assertTrue(Arrays.stream(calls).allMatch(value -> value == 1));
+		assertEquals(new BattleNext_DamageAttribution.SourceKey("weapon", "gun"), key(explosion));
+		assertEquals(List.of("wrapper.0"), loadedEffects);
 	}
 
 	private Object spec(ShotBehaviorSpecAPI behavior, boolean missile) {

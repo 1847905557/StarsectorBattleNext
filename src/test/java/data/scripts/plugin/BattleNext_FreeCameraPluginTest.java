@@ -443,10 +443,22 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		assertEquals(previousWrites + 1, geometryWrites);
 	}
 
+	@Test
+	void backslashTogglesCameraOnRelease() {
+		toggleCamera(Keyboard.KEY_BACKSLASH);
+		assertTrue(external);
+		toggleCamera(Keyboard.KEY_BACKSLASH);
+		assertFalse(external);
+	}
+
 	private void toggleCamera() {
-		keys.add(Keyboard.KEY_RCONTROL);
+		toggleCamera(Keyboard.KEY_RCONTROL);
+	}
+
+	private void toggleCamera(int key) {
+		keys.add(key);
 		camera.advance(0f, List.of());
-		keys.remove(Keyboard.KEY_RCONTROL);
+		keys.remove(key);
 		camera.advance(0f, List.of());
 	}
 
