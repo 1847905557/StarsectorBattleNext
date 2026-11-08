@@ -19,8 +19,9 @@ class BattleNext_SaveErrorsTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void idDetailsPreserveInputsLocalizeReasonsAndExposeEveryErrorInOrder(boolean chinese) {
+
 		BattleNext_Settings.save(chinese, true, false, false, 500f, 1f, 3f, 50, 0);
-		var errors = new BattleNext_SaveErrors();
+		BattleNext_SaveErrors errors = new BattleNext_SaveErrors();
 		List<String> inputs = List.of("", "123", "舰\u3000队", "  🚀?舰  ", "fleet.", "CON.txt", "舰\u0001队");
 		List<String> reasons = List.of(
 				BattleNext_TestTextCatalog.text("Common", "BattleNext_common_error_required"),
@@ -37,15 +38,16 @@ class BattleNext_SaveErrorsTest extends BattleNext_TestPageFixture {
 			expected.add(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_field_error"),
 					"Fleet", "ID", visible, reasons.get(index)));
 		}
-		assertEquals(expected, errors.getMessages());
+		assertEquals(expected, errors.getMessagesCopy());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 7, expected.get(0)), errors.summary());
 		TooltipMakerAPI hover = tooltip(480f, 0f, false);
-		BattleNext_SaveErrors.tooltip(errors::getMessages).createTooltip(hover, false, null);
+		BattleNext_SaveErrors.tooltip(errors::getMessagesCopy).createTooltip(hover, false, null);
 		assertEquals(IntStream.range(0, 7).mapToObj(index -> (index + 1) + ". " + expected.get(index)).toList(),
 				tooltips.get(hover).getComponents().stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+
 		errors.clear();
 		errors.id("Fleet", "ID", "  valid_id  ");
 		assertEquals("", errors.summary());
-		assertTrue(errors.getMessages().isEmpty());
+		assertTrue(errors.getMessagesCopy().isEmpty());
 	}
 }

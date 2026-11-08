@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.InputImplementation;
 
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ class BattleNext_SimulatorMouseTest {
 			calls.add(method.getName());
 			return null;
 		});
-		var constructor = BattleNext_SimulatorMouse.class.getDeclaredConstructor(InputImplementation.class);
+		Constructor<BattleNext_SimulatorMouse> constructor = BattleNext_SimulatorMouse.class.getDeclaredConstructor(InputImplementation.class);
 		constructor.setAccessible(true);
 		BattleNext_SimulatorMouse mouse = constructor.newInstance(original);
 		IntBuffer coordinates = IntBuffer.allocate(3);

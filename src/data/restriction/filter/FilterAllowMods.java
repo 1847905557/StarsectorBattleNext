@@ -13,7 +13,7 @@ public class FilterAllowMods implements BattleNext_EquipmentRestriction {
 		if (item.getSource().isEmpty()) {
 			return List.of(item.getContext() + " " + item.getCategory() + " " + item.getId() + " source mod unknown");
 		}
-		if (restriction.getItems().contains(item.getSource())) return List.of();
+		if (restriction.getItemsReadonly().contains(item.getSource())) return List.of();
 		return List.of(item.getContext() + " " + item.getCategory() + " " + item.getId()
 				+ " mod " + item.getSource() + " outside " + restriction.getId());
 	}

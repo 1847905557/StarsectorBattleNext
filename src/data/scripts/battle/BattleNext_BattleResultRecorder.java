@@ -26,7 +26,9 @@ import java.util.*;
 public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin {
 	private static final int MESSAGE_PRIORITY = 0;
 
-	enum SaveOutcome { RETAINED, NOT_RETAINED }
+	enum SaveOutcome {
+		RETAINED, NOT_RETAINED
+	}
 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private final BattleNext_Match match;
@@ -34,7 +36,9 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	private final String playerName;
 	private final String enemyName;
 	private final String marker;
+
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
+
 	private CombatEngineAPI combatEngine;
 	private boolean recorded;
 
@@ -69,6 +73,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			combatEngine.getCombatUI().addMessage(MESSAGE_PRIORITY, reportStrings.get("save_failed"));
 			return;
 		}
+
 		BattleNext_Logger.operationSucceeded(BattleNext_BattleResultRecorder.class, "battle.report.record",
 				() -> BattleNext_Logger.fields().put("report", report).put("match", match).put("outcome", outcome).build());
 		String message = outcome == SaveOutcome.RETAINED
@@ -77,6 +82,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	}
 
 	private SaveOutcome record(BattleNext_BattleReportModel report) throws IOException, JSONException {
+
 		if (report.getId().isEmpty()) {
 			report.setId(UUID.randomUUID().toString());
 			BattleNext_Logger.warn(BattleNext_BattleResultRecorder.class, "report.identity.completed",
@@ -85,44 +91,55 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		if (report.getCreatedAt() <= 0L) {
 			report.setCreatedAt(System.currentTimeMillis());
 		}
+
 		String playerLabel = playerName == null || playerName.isBlank() ? match.getPlayer() : playerName;
 		String enemyLabel = enemyName == null || enemyName.isBlank() ? match.getEnemy() : enemyName;
 		if (report.getName().isEmpty()) {
 			report.setName(defaultName(playerLabel, enemyLabel, marker, report.getCreatedAt()));
 		}
+
 		BattleNext_StartedTournament tournament = provider == null ? null : provider.getActiveTournament();
 		if (tournament == null) {
 			return saveStandalone(report) ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
 		}
+
 		provider.getStartedStore().reload();
 		BattleNext_StartedTournament current = provider.getStartedStore().get(tournament.getId());
 		if (current == null) throw new IllegalStateException("Tournament instance was removed: " + tournament.getId());
 		tournament = current;
+
 		prepareTournamentRoundReport(report, tournament.getName(provider.getTournamentStore().get(tournament.getSourceTournamentId())), match, playerLabel, enemyLabel);
 		JSONObject pending = new JSONObject().put("instanceId", tournament.getId()).put("matchId", match.getId())
 				.put("winner", resolveWinner(match, report.getWinner())).put("report", report.toJson());
+
 		BattleNext_ModFileManager.writeTextAtomic(BattleNext_StartedTournamentStore.pendingRoundPath(tournament.getId()), pending.toString(4));
 		boolean retained = retryTournamentRound(tournament.getId());
 		return retained ? SaveOutcome.RETAINED : SaveOutcome.NOT_RETAINED;
 	}
 
 	public static boolean retryTournamentRound(String id) throws IOException, JSONException {
+
 		JSONObject pending = new JSONObject(new String(BattleNext_ModFileManager.readBytes(BattleNext_StartedTournamentStore.pendingRoundPath(id)), StandardCharsets.UTF_8));
 		if (!id.equals(pending.getString("instanceId"))) throw new IllegalArgumentException("Pending tournament identity mismatch: " + id);
+
 		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		instances.reload();
 		BattleNext_StartedTournament started = instances.get(id);
 		if (started == null) throw new IllegalStateException("Tournament instance was removed: " + id);
+
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		if (configurations.get(started.getSourceTournamentId()) == null) throw new IllegalStateException("Missing tournament configuration: " + started.getSourceTournamentId());
+
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.fromJson(pending.getJSONObject("report"));
 		boolean retained = saveStandalone(report);
+
 		new BattleNext_TournamentEngine().recordRound(configurations.get(started.getSourceTournamentId()), started,
 				pending.getString("matchId"), pending.getString("winner"), report.getId());
 		instances.save(started);
 		BattleNext_ModFileManager.delete(BattleNext_StartedTournamentStore.pendingRoundPath(id));
+
 		return retained;
 	}
 
@@ -132,27 +149,31 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 			report.setCreatedAt(System.currentTimeMillis());
 		}
 		report.setName(defaultName(playerName, enemyName, instanceName + " / " + match.getId()
-				+ " / " + (match.getRounds().size() + 1), report.getCreatedAt()));
+				+ " / " + (match.getRoundsReadonly().size() + 1), report.getCreatedAt()));
 	}
 
 	public static boolean saveStandalone(BattleNext_BattleReportModel report) throws IOException, JSONException {
+
 		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
 		store.reload();
 		if (store.get(report.getId()) == null) {
 			store.save(report);
 		}
+
 		int keepCount = BattleNext_Settings.getReportKeepCount();
-		List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
+		List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAllCopy());
 		reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 		BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
 				() -> BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports.stream().map(BattleNext_BattleReportModel::getId).toList()).put("report_id", report.getId()).build());
 		for (int index = keepCount; index < reports.size(); index++) {
 			store.delete(reports.get(index).getId());
 		}
+
 		boolean retained = reports.subList(0, Math.min(keepCount, reports.size())).stream().anyMatch(value -> value.getId().equals(report.getId()));
 		if (retained) {
 			BattleNext_BattleSignals.markPendingResult(report.getId());
 		}
+
 		return retained;
 	}
 
@@ -162,12 +183,8 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 	}
 
 	private String resolveWinner(BattleNext_Match match, String winner) {
-		if ("player".equals(winner)) {
-			return match.getPlayer();
-		}
-		if ("enemy".equals(winner)) {
-			return match.getEnemy();
-		}
+		if ("player".equals(winner)) return match.getPlayer();
+		if ("enemy".equals(winner)) return match.getEnemy();
 		return winner;
 	}
 }

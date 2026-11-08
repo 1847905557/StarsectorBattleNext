@@ -75,9 +75,11 @@ public class BattleNext_SimulatorNative {
 			field.setAccessible(true);
 			field.setBoolean(null, false);
 		}
+
 		Field luna = GraphicsLibSettings.class.getDeclaredField("useLunaLib");
 		luna.setAccessible(true);
 		luna.setBoolean(null, false);
+
 		for (String name : List.of("enableLights", "enableBloom", "enableNormal", "autoGenNormals", "loadMaterial",
 				"loadSurface", "enableDistortion", "enablePostProcess", "preloadAllMaps")) {
 			Field field = GraphicsLibSettings.class.getDeclaredField(name);
@@ -100,11 +102,11 @@ public class BattleNext_SimulatorNative {
 		engine.setDoNotEndCombat(!limitedDeployment);
 	}
 
-	public void maintainWindowAndSound(CombatEngineAPI engine, float elapsed) throws Throwable {
+	public void maintainWindowAndSound(CombatEngineAPI engine, float elapsedSeconds) throws Throwable {
 		Display.processMessages();
 		Keyboard.poll();
 		Vector2f center = engine.getViewport().getCenter();
-		soundAdvance.invoke(elapsed, center.x, center.y, 0f, 0f, 1800);
+		soundAdvance.invoke(elapsedSeconds, center.x, center.y, 0f, 0f, 1800);
 	}
 
 	public void finish(CombatEngineAPI engine) throws Throwable {

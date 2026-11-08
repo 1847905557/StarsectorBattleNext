@@ -44,13 +44,13 @@ class BattleNext_SimulatorModelTest {
 
 	@Test
 	void completeReportTravelsThroughTheProtocolPayload() throws Exception {
-		var request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
-		var report = new BattleNext_BattleReportModel();
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults());
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId(request.id());
 		report.setName("中文 50% report");
-		var result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
+		BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
 				report.toJson().toString(), 100f, 500000000L, 6000L, 1024L, "");
-		var received = BattleNext_SimulationResult.fromJson(result.toJson());
+		BattleNext_SimulationResult received = BattleNext_SimulationResult.fromJson(result.toJson());
 		assertEquals(result, received);
 		assertEquals(request.id(), received.report().getId());
 		assertEquals("中文 50% report", received.report().getName());

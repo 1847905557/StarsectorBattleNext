@@ -70,13 +70,14 @@ class BattleNext_AllShipsStatusPluginObfIntegrationTest {
 					"secondaryGetter", MethodType.methodType(boolean.class, reticle),
 					"shipGetter", MethodType.methodType(ship, reticle),
 					"refresh", MethodType.methodType(void.class, renderer, ship, float.class));
-			for (var signature : signatures.entrySet()) {
+			for (Map.Entry<String, MethodType> signature : signatures.entrySet()) {
 				Field field = BattleNext_AllShipsStatusPlugin.VanillaAccess.class.getDeclaredField(signature.getKey());
 				field.setAccessible(true);
 				MethodHandle handle = (MethodHandle) field.get(access);
 				if (!handle.type().equals(signature.getValue())) throw new AssertionError(signature.getKey() + ": " + handle.type());
 			}
 			access.clear();
+
 			for (String name : signatures.keySet()) {
 				Field field = BattleNext_AllShipsStatusPlugin.VanillaAccess.class.getDeclaredField(name);
 				field.setAccessible(true);

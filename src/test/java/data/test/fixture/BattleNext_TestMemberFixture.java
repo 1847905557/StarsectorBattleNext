@@ -30,8 +30,10 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 
 	@BeforeEach
 	protected void configureMemberServices() throws Exception {
+
 		selectedVariant = source();
 		Global.setSector(proxy(SectorAPI.class, (method, args) -> null));
+
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(SettingsAPI.class.getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
@@ -67,12 +69,19 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 		PersonAPI[] person = {officer};
 		RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (method, args) ->
 				"getMaxCR".equals(method) ? 0.7f : null);
+
 		return proxy(FleetMemberAPI.class, (method, args) -> switch (method) {
 			case "getVariant" -> variant;
 			case "getShipName" -> shipName[0];
-			case "setShipName" -> { shipName[0] = (String) args[0]; yield null; }
+			case "setShipName" -> {
+				shipName[0] = (String) args[0];
+				yield null;
+			}
 			case "getCaptain" -> person[0];
-			case "setCaptain" -> { person[0] = (PersonAPI) args[0]; yield null; }
+			case "setCaptain" -> {
+				person[0] = (PersonAPI) args[0];
+				yield null;
+			}
 			case "isMothballed", "isCivilian" -> mothballed;
 			case "getRepairTracker" -> repair;
 			case "getCrewComposition" -> proxy(CrewCompositionAPI.class, (key, values) -> null);
@@ -90,7 +99,10 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 		String[] behavior = {personality};
 		MutableCharacterStatsAPI stats = proxy(MutableCharacterStatsAPI.class, (method, args) -> switch (method) {
 			case "getLevel" -> level[0];
-			case "setLevel" -> { level[0] = (Integer) args[0]; yield null; }
+			case "setLevel" -> {
+				level[0] = (Integer) args[0];
+				yield null;
+			}
 			case "getSkillsCopy" -> skills.entrySet().stream().map(entry ->
 					proxy(MutableCharacterStatsAPI.SkillLevelAPI.class, (key, values) -> switch (key) {
 						case "getLevel" -> entry.getValue();
@@ -105,9 +117,15 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 		return proxy(PersonAPI.class, (method, args) -> switch (method) {
 			case "getName" -> fullName[0];
 			case "getNameString" -> fullName[0].getFullName();
-			case "setName" -> { fullName[0] = (FullName) args[0]; yield null; }
+			case "setName" -> {
+				fullName[0] = (FullName) args[0];
+				yield null;
+			}
 			case "getPortraitSprite" -> sprite[0];
-			case "setPortraitSprite" -> { sprite[0] = (String) args[0]; yield null; }
+			case "setPortraitSprite" -> {
+				sprite[0] = (String) args[0];
+				yield null;
+			}
 			case "getStats" -> stats;
 			case "isDefault" -> defaultPerson;
 			case "isPlayer" -> playerPerson;
@@ -116,7 +134,10 @@ public class BattleNext_TestMemberFixture extends BattleNext_TestVariantFixture 
 				case "getId", "getDisplayName" -> behavior[0];
 				default -> null;
 			});
-			case "setPersonality" -> { behavior[0] = (String) args[0]; yield null; }
+			case "setPersonality" -> {
+				behavior[0] = (String) args[0];
+				yield null;
+			}
 			default -> null;
 		});
 	}

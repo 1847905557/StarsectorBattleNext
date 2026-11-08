@@ -16,6 +16,7 @@ public abstract class BattleNext_CatalogLoader<T extends BattleNext_BaseModel> e
 	@Override
 	public List<T> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<T> result = new ArrayList<>();
 		for (String path : catalogPaths()) {
 			Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", MOD_ID).put("kind", kind()).build();
@@ -33,12 +34,14 @@ public abstract class BattleNext_CatalogLoader<T extends BattleNext_BaseModel> e
 				reject(path, -1, id, raw, exception);
 				continue;
 			}
+
 			markSource(value, path);
 			recordInput(path, -1, value.getId(), raw);
 			result.add(value);
 			BattleNext_Logger.operationSucceeded(getClass(), "resource.load",
 					() -> BattleNext_Logger.fields().put("path", path).put("model", value).build());
 		}
+
 		return finishLoad(result);
 	}
 

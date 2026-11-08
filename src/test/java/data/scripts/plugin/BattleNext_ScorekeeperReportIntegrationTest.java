@@ -12,6 +12,8 @@ import com.fs.starfarer.api.loading.ProjectileSpecAPI;
 import com.fs.starfarer.api.loading.ShotBehaviorSpecAPI;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
+import data.scripts.report.BattleNext_DamageSourceReport;
+import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.report.BattleNext_ProximityDamageAttribution;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.AfterEach;
@@ -33,7 +35,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 	@AfterEach
 	void releaseScorekeepers() {
-		for (var entry : registrations.entrySet()) {
+		for (Map.Entry<BattleNext_ScorekeeperPlugin, Map<String, Object>> entry : registrations.entrySet()) {
 			entry.getKey().cleanup();
 			assertTrue(entry.getValue().isEmpty());
 		}
@@ -71,13 +73,14 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
 		assertEquals(36d, playerReport.getDamageDealt());
-		assertEquals(3, playerReport.getDealtBySource().size());
-		assertEquals("weapon", playerReport.getDealtBySource().get(0).getKind());
-		assertEquals("lightmg", playerReport.getDealtBySource().get(0).getId());
-		assertEquals(24d, playerReport.getDealtBySource().get(0).getTotal());
-		assertEquals("fighter_wing", playerReport.getDealtBySource().get(1).getKind());
-		assertEquals("talon_wing", playerReport.getDealtBySource().get(1).getId());
-		assertEquals("modulegun", playerReport.getDealtBySource().get(2).getId());
+		List<BattleNext_DamageSourceReport> dealt = playerReport.getDealtBySourceCopy();
+		assertEquals(3, dealt.size());
+		assertEquals("weapon", dealt.get(0).getKind());
+		assertEquals("lightmg", dealt.get(0).getId());
+		assertEquals(24d, dealt.get(0).getTotal());
+		assertEquals("fighter_wing", dealt.get(1).getKind());
+		assertEquals("talon_wing", dealt.get(1).getId());
+		assertEquals("modulegun", dealt.get(2).getId());
 		assertEquals(24d, enemyReport.getDamageTaken());
 		assertEquals(6d, playerReport.getDamageTaken());
 		assertEquals(12d, playerReport.getArmorDamageDealt());
@@ -106,7 +109,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		BattleNext_MemberReport report = report(scorekeeper, 0);
 		assertEquals(18d, report.getDamageDealt());
 		assertEquals(18d, report.getDamageTaken());
-		assertEquals("damage_type", report.getTakenBySource().get(1).getKind());
+		assertEquals("damage_type", report.getTakenBySourceCopy().get(1).getKind());
 	}
 
 	@Test
@@ -146,16 +149,17 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
-		assertEquals(2, playerReport.getDealtBySource().size());
-		assertEquals("damage_type", playerReport.getDealtBySource().get(0).getKind());
-		assertEquals("ENERGY", playerReport.getDealtBySource().get(0).getId());
-		assertEquals(6d, playerReport.getDealtBySource().get(0).getHull());
-		assertEquals(8d, playerReport.getDealtBySource().get(0).getArmor());
-		assertEquals(10d, playerReport.getDealtBySource().get(0).getShields());
-		assertEquals(12d, playerReport.getDealtBySource().get(0).getEmp());
-		assertEquals("ship", playerReport.getDealtBySource().get(1).getKind());
-		assertEquals(2, enemyReport.getTakenBySource().size());
-		assertEquals("ENERGY", enemyReport.getTakenBySource().get(0).getId());
+		List<BattleNext_DamageSourceReport> dealt = playerReport.getDealtBySourceCopy();
+		assertEquals(2, dealt.size());
+		assertEquals("damage_type", dealt.get(0).getKind());
+		assertEquals("ENERGY", dealt.get(0).getId());
+		assertEquals(6d, dealt.get(0).getHull());
+		assertEquals(8d, dealt.get(0).getArmor());
+		assertEquals(10d, dealt.get(0).getShields());
+		assertEquals(12d, dealt.get(0).getEmp());
+		assertEquals("ship", dealt.get(1).getKind());
+		assertEquals(2, enemyReport.getTakenBySourceCopy().size());
+		assertEquals("ENERGY", enemyReport.getTakenBySourceCopy().get(0).getId());
 	}
 
 	@Test
@@ -177,15 +181,16 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
 		assertEquals(12d, playerReport.getDamageDealt());
-		assertEquals(1, playerReport.getDealtBySource().size());
-		assertEquals("weapon", playerReport.getDealtBySource().get(0).getKind());
-		assertEquals("lightmg", playerReport.getDealtBySource().get(0).getId());
-		assertEquals(2d, playerReport.getDealtBySource().get(0).getHull());
-		assertEquals(4d, playerReport.getDealtBySource().get(0).getArmor());
-		assertEquals(6d, playerReport.getDealtBySource().get(0).getShields());
-		assertEquals(8d, playerReport.getDealtBySource().get(0).getEmp());
-		assertEquals(1, enemyReport.getTakenBySource().size());
-		assertEquals("lightmg", enemyReport.getTakenBySource().get(0).getId());
+		List<BattleNext_DamageSourceReport> dealt = playerReport.getDealtBySourceCopy();
+		assertEquals(1, dealt.size());
+		assertEquals("weapon", dealt.get(0).getKind());
+		assertEquals("lightmg", dealt.get(0).getId());
+		assertEquals(2d, dealt.get(0).getHull());
+		assertEquals(4d, dealt.get(0).getArmor());
+		assertEquals(6d, dealt.get(0).getShields());
+		assertEquals(8d, dealt.get(0).getEmp());
+		assertEquals(1, enemyReport.getTakenBySourceCopy().size());
+		assertEquals("lightmg", enemyReport.getTakenBySourceCopy().get(0).getId());
 	}
 
 	@Test
@@ -200,16 +205,16 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		apply(scorekeeper, player, enemy, projectile(player, weapon("lightmg", player), "proj"),
 				damage(0f, 0f, 0f, 0f));
 
-		assertEquals(0, report(scorekeeper, 0).getDealtBySource().size());
-		assertEquals(0, report(scorekeeper, 1).getTakenBySource().size());
+		assertEquals(0, report(scorekeeper, 0).getDealtBySourceCopy().size());
+		assertEquals(0, report(scorekeeper, 1).getTakenBySourceCopy().size());
 
 		scorekeeper = new BattleNext_ScorekeeperPlugin(List.of(playerMember), List.of(enemyMember));
 		apply(scorekeeper, player, enemy, projectile(player, weapon("lightmg", player), "proj"),
 				damage(0f, 0f, 0f, 4f));
 
-		assertEquals(1, report(scorekeeper, 0).getDealtBySource().size());
-		assertEquals(4d, report(scorekeeper, 0).getDealtBySource().get(0).getEmp());
-		assertEquals(1, report(scorekeeper, 1).getTakenBySource().size());
+		assertEquals(1, report(scorekeeper, 0).getDealtBySourceCopy().size());
+		assertEquals(4d, report(scorekeeper, 0).getDealtBySourceCopy().get(0).getEmp());
+		assertEquals(1, report(scorekeeper, 1).getTakenBySourceCopy().size());
 	}
 
 	@Test
@@ -238,19 +243,19 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 		BattleNext_MemberReport playerReport = report(scorekeeper, 0);
 		BattleNext_MemberReport enemyReport = report(scorekeeper, 1);
-		assertEquals(2, playerReport.getDealtBySource().size());
+		List<BattleNext_DamageSourceReport> dealt = playerReport.getDealtBySourceCopy();
+		assertEquals(2, dealt.size());
 		assertEquals(new BattleNext_DamageAttribution.SourceKey("arc", "arc"),
-				new BattleNext_DamageAttribution.SourceKey(playerReport.getDealtBySource().get(0).getKind(),
-						playerReport.getDealtBySource().get(0).getId()));
-		assertEquals(8d, playerReport.getDealtBySource().get(0).getHull());
-		assertEquals(8d, playerReport.getDealtBySource().get(0).getArmor());
-		assertEquals(10d, playerReport.getDealtBySource().get(0).getShields());
-		assertEquals(13d, playerReport.getDealtBySource().get(0).getEmp());
-		assertEquals("fighter_wing", playerReport.getDealtBySource().get(1).getKind());
-		assertEquals("talon_wing", playerReport.getDealtBySource().get(1).getId());
-		assertEquals(2, enemyReport.getTakenBySource().size());
-		assertEquals("arc", enemyReport.getTakenBySource().get(0).getKind());
-		assertEquals(15d, enemyReport.getTakenBySource().get(0).getEmp());
+				new BattleNext_DamageAttribution.SourceKey(dealt.get(0).getKind(), dealt.get(0).getId()));
+		assertEquals(8d, dealt.get(0).getHull());
+		assertEquals(8d, dealt.get(0).getArmor());
+		assertEquals(10d, dealt.get(0).getShields());
+		assertEquals(13d, dealt.get(0).getEmp());
+		assertEquals("fighter_wing", dealt.get(1).getKind());
+		assertEquals("talon_wing", dealt.get(1).getId());
+		assertEquals(2, enemyReport.getTakenBySourceCopy().size());
+		assertEquals("arc", enemyReport.getTakenBySourceCopy().get(0).getKind());
+		assertEquals(15d, enemyReport.getTakenBySourceCopy().get(0).getEmp());
 	}
 
 	@Test
@@ -287,20 +292,20 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 
 		BattleNext_MemberReport report = report(scorekeeper, 0);
 		assertEquals(46d, report.getDamageDealt());
-		assertEquals(2, report.getDealtBySource().size());
-		var weapon = report.getDealtBySource().get(0);
+		assertEquals(2, report.getDealtBySourceCopy().size());
+		BattleNext_DamageSourceReport weapon = report.getDealtBySourceCopy().get(0);
 		assertEquals("weapon", weapon.getKind());
 		assertEquals("devastator", weapon.getId());
 		assertEquals(11d, weapon.getHull());
 		assertEquals(15d, weapon.getArmor());
 		assertEquals(19d, weapon.getShields());
 		assertEquals(23d, weapon.getEmp());
-		assertEquals("fighter_wing", report.getDealtBySource().get(1).getKind());
-		assertEquals("talon_wing", report.getDealtBySource().get(1).getId());
-		var enemies = scorekeeper.getFrozenReport().getEnemyMembers();
+		assertEquals("fighter_wing", report.getDealtBySourceCopy().get(1).getKind());
+		assertEquals("talon_wing", report.getDealtBySourceCopy().get(1).getId());
+		List<BattleNext_MemberReport> enemies = scorekeeper.getFrozenReport().getEnemyMembersReadonly();
 		assertEquals(37d, enemies.get(0).getDamageTaken());
 		assertEquals(9d, enemies.get(1).getDamageTaken());
-		assertEquals(5d, enemies.get(1).getTakenBySource().get(0).getEmp());
+		assertEquals(5d, enemies.get(1).getTakenBySourceCopy().get(0).getEmp());
 	}
 
 	private void apply(BattleNext_ScorekeeperPlugin scorekeeper, Object source, ShipAPI target,
@@ -349,10 +354,10 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 		}
 		scorekeeper.advance(0.1f, List.of());
 		assertTrue(scorekeeper.isFrozen());
-		var frozen = scorekeeper.getFrozenReport();
+		BattleNext_BattleReportModel frozen = scorekeeper.getFrozenReport();
 		assertEquals("player", frozen.getWinner());
 		assertEquals(2000L, frozen.getDurationMillis());
-		return (index == 0 ? frozen.getPlayerMembers() : frozen.getEnemyMembers()).get(0);
+		return (index == 0 ? frozen.getPlayerMembersReadonly() : frozen.getEnemyMembersReadonly()).get(0);
 	}
 
 	private FleetMemberAPI member(String id) {
@@ -372,6 +377,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 	}
 
 	private ShipAPI ship(FleetMemberAPI member, boolean fighter, boolean module, FighterWingAPI wing, ShipAPI parent) {
+
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (name, args) ->
 				"getHullId".equals(name) ? (module ? "module_hull" : "wolf_hull") : null);
 		Object[] damageParam = new Object[1];
@@ -388,6 +394,7 @@ class BattleNext_ScorekeeperReportIntegrationTest {
 			case "getParentStation" -> parent;
 			default -> null;
 		});
+
 		damageParams.put(ship, damageParam);
 		return ship;
 	}

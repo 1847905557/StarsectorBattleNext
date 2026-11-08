@@ -18,8 +18,9 @@ import lunalib.lunaRefit.LunaRefitManager;
 
 public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton implements EveryFrameScript {
 
-	private static final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
-	private static final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+	private static final BattleNext_I18nSection REFIT_STRINGS = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
+	private static final BattleNext_I18nSection VARIANT_STRINGS = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private CustomPanelAPI background;
 	private UIPanelAPI host;
 	private BattleNext_CampaignRefitContext openedContext;
@@ -48,7 +49,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 
 	@Override
 	public String getButtonName(FleetMemberAPI member, ShipVariantAPI variant) {
-		return variantStrings.get("pin_current_action");
+		return VARIANT_STRINGS.get("pin_current_action");
 	}
 
 	@Override
@@ -73,7 +74,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 
 	@Override
 	public void addTooltip(TooltipMakerAPI tooltip, FleetMemberAPI member, ShipVariantAPI variant, MarketAPI market) {
-		tooltip.addPara(variantStrings.get(member == null && variant != null ? "pin_return_to_parent" : "pin_description"), 0f);
+		tooltip.addPara(VARIANT_STRINGS.get(member == null && variant != null ? "pin_return_to_parent" : "pin_description"), 0f);
 	}
 
 	@Override
@@ -110,7 +111,7 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 				selected = openedContext.variant();
 			}
 		} catch (Throwable exception) {
-			error = variantStrings.get("pin_context_error") + ": " + exception;
+			error = VARIANT_STRINGS.get("pin_context_error") + ": " + exception;
 			BattleNext_Logger.warn(BattleNext_LunaPinnedVariantRefitButton.class, "variant.pin.refit.context.unavailable",
 				BattleNext_Logger.fields().put("member", member).put("variant", variant).build(), exception);
 		}
@@ -125,10 +126,10 @@ public class BattleNext_LunaPinnedVariantRefitButton extends BaseRefitButton imp
 
 	static String contextError(FleetMemberAPI member, ShipVariantAPI variant) {
 
-		if (variant == null) return refitStrings.get("no_ship_selected");
+		if (variant == null) return REFIT_STRINGS.get("no_ship_selected");
 		// Vanilla refit panels have no fleet member while editing a module.
-		if (member == null) return variantStrings.get("pin_return_to_parent");
-		if (variant.isFighter() || variant.getHullSpec() == null) return variantStrings.get("invalid_reference");
+		if (member == null) return VARIANT_STRINGS.get("pin_return_to_parent");
+		if (variant.isFighter() || variant.getHullSpec() == null) return VARIANT_STRINGS.get("invalid_reference");
 		return "";
 	}
 

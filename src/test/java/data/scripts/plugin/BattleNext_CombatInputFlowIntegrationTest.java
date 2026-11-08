@@ -23,12 +23,14 @@ class BattleNext_CombatInputFlowIntegrationTest extends BattleNext_TestGameFixtu
 		});
 		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) ->
 				"getPlayerShip".equals(method) ? player : null);
+
 		assertEquals(playing, BattleNext_CombatInput.isPlayerPlaying(engine));
 	}
 
 	@ParameterizedTest
 	@ValueSource(strings = {"none", "command", "deployment", "dialog"})
 	void sharedUiGateKeepsRttSceneInputWithTheUncoveredViewport(String overlay) {
+
 		ShipAPI player = proxy(ShipAPI.class, (method, args) -> "isShuttlePod".equals(method));
 		ViewportAPI viewport = proxy(ViewportAPI.class, (method, args) -> "isExternalControl".equals(method));
 		CombatUIAPI ui = proxy(CombatUIAPI.class, (method, args) -> switch (method) {

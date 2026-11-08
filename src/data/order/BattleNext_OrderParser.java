@@ -1,5 +1,7 @@
 package data.order;
 
+import data.order.BattleNext_OrderRegistry.BattleNext_OrderSpec;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,15 +12,23 @@ public class BattleNext_OrderParser {
 
 	private static final Pattern SEGMENT = Pattern.compile("^([A-Za-z_][A-Za-z0-9_]*)(?:\\(([^()]*)\\))?$");
 
+	private BattleNext_OrderParser() {
+
+	}
+
 	public static OrderParseResult parse(String expression) {
 		return parse(expression, BattleNext_OrderRegistry.getInstance());
 	}
 
 	public static OrderParseResult parse(String expression, BattleNext_OrderRegistry registry) {
 		if (expression == null || expression.trim().isEmpty()) return OrderParseResult.error("empty instruction");
+
 		List<String> segments = splitOutsideParentheses(expression.trim(), '.');
 		if (segments.size() < 2) return OrderParseResult.error("missing picker");
-		ParsedOrderCommand command = new ParsedOrderCommand();
+		String starter = null;
+		String picker = null;
+		List<OrderScriptInvocation> filters = new ArrayList<>();
+		List<OrderScriptInvocation> suffixes = new ArrayList<>();
 		for (int index = 0; index < segments.size(); index++) {
 			Matcher matcher = SEGMENT.matcher(segments.get(index).trim());
 			if (!matcher.matches()) return OrderParseResult.error("invalid segment: " + segments.get(index).trim());
@@ -26,22 +36,23 @@ public class BattleNext_OrderParser {
 			List<String> params = splitParams(matcher.group(2));
 			BattleNext_OrderSpec spec = registry.get(id);
 			if (spec == null) return OrderParseResult.error("unknown order ID: " + id);
-			String type = spec.getType();
+			String type = spec.type();
 			if (index == 0) {
 				if (!"starter".equals(type) || matcher.group(2) != null) return OrderParseResult.error("expected starter without parameters: " + id);
-				command.starter = id;
-			} else if ("filter".equals(type) && command.picker == null) {
-				command.filters.add(new OrderScriptInvocation(id, params));
-			} else if ("picker".equals(type) && command.picker == null && matcher.group(2) == null) {
-				command.picker = id;
-			} else if ("suffix".equals(type) && command.picker != null) {
-				command.suffixes.add(new OrderScriptInvocation(id, params));
+				starter = id;
+			} else if ("filter".equals(type) && picker == null) {
+				filters.add(new OrderScriptInvocation(id, params));
+			} else if ("picker".equals(type) && picker == null && matcher.group(2) == null) {
+				picker = id;
+			} else if ("suffix".equals(type) && picker != null) {
+				suffixes.add(new OrderScriptInvocation(id, params));
 			} else {
 				return OrderParseResult.error("invalid order position or parameters: " + id);
 			}
 		}
-		if (command.picker == null) return OrderParseResult.error("missing picker");
-		return OrderParseResult.success(command);
+		if (picker == null) return OrderParseResult.error("missing picker");
+
+		return OrderParseResult.success(new ParsedOrderCommand(starter, picker, filters, suffixes));
 	}
 
 	public static List<OrderParseResult> parseScript(String script) {
@@ -85,52 +96,18 @@ public class BattleNext_OrderParser {
 	private static List<String> splitParams(String value) {
 		if (value == null || value.trim().isEmpty()) return List.of();
 		List<String> result = new ArrayList<>();
-		for (String param : value.split(",", -1)) {
-			result.add(param.trim());
-		}
+		for (String param : value.split(",", -1)) result.add(param.trim());
 		return Collections.unmodifiableList(result);
 	}
 
-	public static class OrderScriptInvocation {
+	public record OrderScriptInvocation(String id, List<String> params) {
 
-		private final String id;
-		private final List<String> params;
-
-		private OrderScriptInvocation(String id, List<String> params) {
-			this.id = id;
-			this.params = params;
-		}
-
-		public String getId() {
-			return id;
-		}
-
-		public List<String> getParams() {
-			return params;
-		}
 	}
 
-	public static class ParsedOrderCommand {
-
-		private String starter;
-		private String picker;
-		private final List<OrderScriptInvocation> filters = new ArrayList<>();
-		private final List<OrderScriptInvocation> suffixes = new ArrayList<>();
-
-		public String getStarter() {
-			return starter;
-		}
-
-		public String getPicker() {
-			return picker;
-		}
-
-		public List<OrderScriptInvocation> getFilters() {
-			return Collections.unmodifiableList(filters);
-		}
-
-		public List<OrderScriptInvocation> getSuffixes() {
-			return Collections.unmodifiableList(suffixes);
+	public record ParsedOrderCommand(String starter, String picker, List<OrderScriptInvocation> filters, List<OrderScriptInvocation> suffixes) {
+		public ParsedOrderCommand {
+			filters = Collections.unmodifiableList(filters);
+			suffixes = Collections.unmodifiableList(suffixes);
 		}
 	}
 

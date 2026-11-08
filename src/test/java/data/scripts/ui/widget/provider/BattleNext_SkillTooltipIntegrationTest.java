@@ -15,6 +15,7 @@ import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -25,6 +26,7 @@ import data.test.fixture.BattleNext_TestSkillFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,7 +38,7 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.awt.Color;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -73,25 +75,27 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 				throw exception.getCause();
 			}
 		}));
-		var commander = provider("commander");
-		var officer = provider("officer");
+
+		BattleNext_SkillSourceProvider commander = provider("commander");
+		BattleNext_SkillSourceProvider officer = provider("officer");
 		assertEquals(List.of("combat", "fleet", "forced", "npc", "player"),
-				commander.getOptions().stream().map(option -> option.getId()).toList());
+				commander.getOptions().stream().map(option -> option.id()).toList());
 		assertEquals(List.of("combat", "forced", "npc", "player"),
-				officer.getOptions().stream().map(option -> option.getId()).toList());
+				officer.getOptions().stream().map(option -> option.id()).toList());
 		assertEquals(List.of("Name combat", "Name forced", "Name npc", "Name player"),
-				officer.getOptions().stream().map(option -> option.getLabel()).toList());
+				officer.getOptions().stream().map(option -> option.label()).toList());
 		assertEquals("graphics/combat.png", officer.getIconPath("combat"));
 		assertEquals("", officer.getIconPath("missing"));
+
 		catalog.remove("combat");
 		catalog.put("fleet", catalogSkill("fleet", false, true, false));
 		assertEquals(List.of("fleet", "forced", "npc", "player"),
-				officer.getOptions().stream().map(option -> option.getId()).toList());
+				officer.getOptions().stream().map(option -> option.id()).toList());
 	}
 
 	@Test
 	void stackLimitUsesDisplayEffectLevelsAndCurrentSpecAvailability() {
-		var source = provider("officer");
+		BattleNext_SkillSourceProvider source = provider("officer");
 		assertEquals(0, source.getMaxStack("missing"));
 		assertEquals(1, source.getMaxStack(SKILL_ID));
 		effects.add(effect(SkillEffectType.DESCRIPTION, 3f, "Text", false, null));
@@ -205,13 +209,14 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		for (int index = 0; index < scripts.size(); index++) {
 			effects.add(effect(SkillEffectType.SHIP, index < 2 ? 1f : 2f, index < 2 ? null : "Elite", false, scripts.get(index)));
 		}
-		var source = provider("officer");
+		BattleNext_SkillSourceProvider source = provider("officer");
 		TooltipMakerAPI content = renderSkill(source);
 		List<String> values = textValues(content);
 		assertEquals(List.of("Preview Skill", SKILL_ID, "First paragraph 50%.", author, "Ship - Fleet", String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_skill_effect_level"), "1"),
 				scripts.get(0).getEffectDescription(1f), scripts.get(1).getEffectDescription(1f), "Elite",
 				scripts.get(2).getEffectDescription(2f), scripts.get(3).getEffectDescription(2f)), values);
 		assertEquals(2, source.getMaxStack(SKILL_ID));
+
 		List<LabelAPI> labels = textLabels(content);
 		assertGap(labels.get(4), labels.get(5), 8f);
 		assertGap(labels.get(5), labels.get(6), 5f);
@@ -223,6 +228,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			assertEquals("default", labelFonts.get(labels.get(index).getPosition()));
 			assertEquals(Misc.getHighlightColor(), labelColors.get(labels.get(index).getPosition()));
 		}
+
 		assertEquals(List.of("skip:true", SKILL_ID + ":1.0", SKILL_ID + ":1.0", SKILL_ID + ":2.0", SKILL_ID + ":2.0"),
 				previews.get(0).getCalls());
 	}
@@ -301,6 +307,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			assertGap(labels.get(5), labels.get(6), 5f);
 			assertEquals(List.of("Custom first 20%", "Custom second 30%"), textValues(content).subList(6, 8));
 		}
+
 		assertNotSame(receivedStats.get(0), receivedStats.get(1));
 		assertSame(previews.get(0).getApi(), receivedStats.get(0));
 		assertSame(previews.get(1).getApi(), receivedStats.get(1));
@@ -369,16 +376,18 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			protected void append(LoggingEvent event) {
 				events.add(event);
 			}
+
 			@Override
 			public void close() {
 
 			}
+
 			@Override
 			public boolean requiresLayout() {
 				return false;
 			}
 		};
-		var logger = Global.getLogger(BattleNext_Logger.class);
+		Logger logger = Global.getLogger(BattleNext_Logger.class);
 		logger.addAppender(appender);
 		try {
 			TooltipMakerAPI content = renderSkill(provider("officer"));
@@ -389,6 +398,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(diagnostic.getPosition()));
 			assertEquals(new Helmsmanship.Level4().getEffectDescription(2f), labels.get(labels.size() - 1).getText());
 			assertEquals(1, events.size());
+
 			assertEquals(Level.WARN, events.get(0).getLevel());
 			JSONObject entry = new JSONObject(events.get(0).getRenderedMessage());
 			assertEquals("skill.effect.description.degraded", entry.getString("event"));
@@ -416,15 +426,16 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, ids -> {});
 		picker.attach(host, root);
 		root.addUIElement(host).inTL(20f, 20f);
-		var open = picker.getClass().getDeclaredMethod("open");
+		Method open = picker.getClass().getDeclaredMethod("open");
 		open.setAccessible(true);
 		open.invoke(picker);
-		CustomPanelAPI popup = (CustomPanelAPI) pickerField(picker, "popup");
+		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+
 		for (int rebuild = 0; rebuild < 2; rebuild++) {
-			CustomPanelAPI gridPanel = (CustomPanelAPI) pickerField(picker, "gridPanel");
+			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			var tile = tooltips.get(grid).getComponents().get(0);
-			var creator = attachedTooltips.get(tile);
+			UIComponentAPI tile = tooltips.get(grid).getComponents().get(0);
+			TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(tile);
 			assertEquals(520f, creator.getTooltipWidth(null));
 			assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
 			assertSame(tooltips.get(grid), tooltipBindings.get(tile).owner());
@@ -433,14 +444,16 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			assertEquals(SKILL_ID, textValues(content).get(1));
 			assertEquals(author, textValues(content).get(3));
 			assertEquals(new Helmsmanship.Level1().getEffectDescription(1f), textValues(content).get(6));
-			BattleNext_TextField search = (BattleNext_TextField) pickerField(picker, "search");
+
+			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 			search.setText("unmatched");
 			plugins.get(popup).advance(0f);
 			assertTrue(removedComponents.contains(gridPanel));
 			search.setText("");
 			plugins.get(popup).advance(0f);
 		}
-		BattleNext_TextField search = (BattleNext_TextField) pickerField(picker, "search");
+
+		BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 		search.grabFocus(false);
 		assertTrue(search.hasFocus());
 		plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
@@ -462,12 +475,6 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			case "hasTag" -> List.of(tags).contains(args[0]);
 			default -> null;
 		});
-	}
-
-	private Object pickerField(BattleNext_OptionPicker picker, String name) throws Exception {
-		Field field = BattleNext_OptionPicker.class.getDeclaredField(name);
-		field.setAccessible(true);
-		return field.get(picker);
 	}
 
 	private void assertGap(LabelAPI previous, LabelAPI next, float gap) {

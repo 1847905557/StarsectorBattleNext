@@ -38,6 +38,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
+
 	private final Set<MemberRow> expandedMembers = new HashSet<>();
 	private final Map<String, MemberRow> memberActions = new HashMap<>();
 	private int memberActionIndex;
@@ -63,21 +64,26 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
 		float offset = content == null ? 0f : content.getExternalScroller().getYOffset();
 		memberActions.clear();
 		memberActionIndex = 0;
+
 		content = panel.createUIElement(width, height, true);
 		BattleNext_BattleReportModel report = target.report();
 		content.addPara(report.getId(), REPORT_CONTEXT_TOP_GAP);
 		String time = report.getCreatedAt() <= 0L ? "" : new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(report.getCreatedAt()));
 		content.addPara((time.isEmpty() ? "" : time + " / ") + strings.get("winner") + ": " + report.getWinner()
 				+ " / " + reportStrings.get("duration") + ": " + report.getDurationMillis() + " ms", REPORT_SUMMARY_TOP_GAP);
+
 		content.addPara(reportStrings.get("damage_dealt"), REPORT_SECTION_TOP_GAP);
 		appendMembers(content, panel, width, sorted(report, true));
+
 		content.addPara(reportStrings.get("damage_taken"), REPORT_SECTION_TOP_GAP);
 		appendMembers(content, panel, width, sorted(report, false));
+
 		panel.addUIElement(content).inTL(0f, 0f);
 		content.getExternalScroller().setYOffset(offset);
 	}
@@ -108,6 +114,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 					totalLabel(row) + "  " + statusLabel(member.getStatus()),
 					reportStrings.get("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
 							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()), null);
+
 			LabelAPI nameLabel = BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
@@ -118,16 +125,20 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 
 	private void addMemberBody(CustomPanelAPI body, MemberRow row,
 			List<BattleNext_DamageSourceReport> sources, float width, float height) {
+
 		float contentWidth = width - MEMBER_BODY_INSET * 2f;
 		TooltipMakerAPI content = body.createUIElement(contentWidth, height - MEMBER_BODY_INSET * 2f, false);
+
 		CustomPanelAPI summary = body.createCustomPanel(contentWidth, MEMBER_BODY_LINE_HEIGHT,
 				new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI summaryHost = summary.createUIElement(contentWidth, MEMBER_BODY_LINE_HEIGHT, false);
 		summaryHost.setParaSmallOrbitron();
 		addDamageColumns(summaryHost, 0f, contentWidth, damageValues(row));
 		summaryHost.setHeightSoFar(MEMBER_BODY_LINE_HEIGHT);
+
 		summary.addUIElement(summaryHost).inTL(0f, 0f);
 		content.addCustom(summary, 0f);
+
 		if (sources.isEmpty()) {
 			CustomPanelAPI empty = body.createCustomPanel(contentWidth, SOURCE_ROW_HEIGHT,
 					new BaseCustomUIPanelPlugin());
@@ -142,17 +153,21 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 				addSourceRow(body, content, source, contentWidth);
 			}
 		}
+
 		content.setHeightSoFar(height - MEMBER_BODY_INSET * 2f);
+
 		body.addUIElement(content).inTL(MEMBER_BODY_INSET, MEMBER_BODY_INSET);
 	}
 
 	private void addSourceRow(CustomPanelAPI body, TooltipMakerAPI content,
 			BattleNext_DamageSourceReport source, float width) {
+
 		SourceRowPlugin plugin = new SourceRowPlugin();
 		CustomPanelAPI sourcePanel = body.createCustomPanel(width, SOURCE_ROW_HEIGHT, plugin);
 		plugin.setPosition(sourcePanel.getPosition());
 		BattleNext_ReportSourceDisplay.SourceVisual visual =
 				BattleNext_ReportSourceDisplay.resolve(source, Global.getSettings());
+
 		TooltipMakerAPI icon = sourcePanel.createUIElement(MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE, false);
 		float iconY = (SOURCE_ROW_HEIGHT - MEMBER_THUMB_SIZE) * 0.5f;
 		if (visual.accentIcon()) {
@@ -164,6 +179,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		} else if (addSprite(icon, visual.primarySprite()) || addSprite(icon, visual.secondarySprite())) {
 			icon.getPrev().getPosition().inTL(0f, 0f);
 			icon.setHeightSoFar(MEMBER_THUMB_SIZE);
+
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		} else if ("weapon".equals(source.getKind()) || "fighter_wing".equals(source.getKind())
 				|| "ship".equals(source.getKind()) || "source_type".equals(source.getKind())
@@ -172,8 +188,10 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		} else {
 			icon.addPara(visual.placeholder(), 0f).getPosition().inMid();
 			icon.setHeightSoFar(MEMBER_THUMB_SIZE);
+
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		}
+
 		float textX = MEMBER_THUMB_SIZE + 8f;
 		float textWidth = sourceTextWidth(width);
 		TooltipMakerAPI labels = sourcePanel.createUIElement(textWidth, SOURCE_ROW_HEIGHT, false);
@@ -181,6 +199,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		LabelAPI nameLabel = labels.addPara(labels.shortenString(name, Math.max(1f, textWidth - 4f)), 0f);
 		LabelAPI[] damageLabels = addDamageColumns(labels, 0f, textWidth,
 				new double[]{source.getHull(), source.getArmor(), source.getShields(), source.getEmp()});
+
 		float nameHeight = nameLabel.getPosition().getHeight();
 		float damageHeight = 0f;
 		for (LabelAPI label : damageLabels) {
@@ -194,16 +213,17 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 					textTop + nameHeight + textGap);
 		}
 		labels.setHeightSoFar(SOURCE_ROW_HEIGHT);
+
 		sourcePanel.addUIElement(labels).inTL(textX, 0f);
 		content.addCustom(sourcePanel, SOURCE_ROW_GAP);
 		content.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return BattleNext_EquipmentTooltip.WIDTH;
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				switch (source.getKind()) {
 					case "weapon" ->
 							BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(visual.name(), source.getId(), source.getId(), Description.Type.WEAPON, Global.getSettings(), List.of()));
@@ -266,7 +286,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	static List<BattleNext_DamageSourceReport> sourcesFor(MemberRow row) {
-		return row.dealt() ? row.member().getDealtBySource() : row.member().getTakenBySource();
+		return row.dealt() ? row.member().getDealtBySourceCopy() : row.member().getTakenBySourceCopy();
 	}
 
 	static HullSummary resolveHull(String hullId, Function<String, ShipHullSpecAPI> hulls) {
@@ -349,8 +369,13 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		if (!expanded.add(row)) expanded.remove(row);
 	}
 
-	record MemberRow(BattleNext_MemberReport member, boolean dealt, boolean playerSide) { }
-	record HullSummary(String name, String spritePath) { }
+	record MemberRow(BattleNext_MemberReport member, boolean dealt, boolean playerSide) {
+
+	}
+
+	record HullSummary(String name, String spritePath) {
+
+	}
 
 	private static class SourceRowPlugin extends BaseCustomUIPanelPlugin {
 		private PositionAPI position;
@@ -380,22 +405,26 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 						MEMBER_THUMB_SIZE, MEMBER_THUMB_SIZE, BattleNext_UiTheme.ACCENT, alphaMult);
 				return;
 			}
+
 			if (!missingIcon) return;
 			float size = MEMBER_THUMB_SIZE * 0.75f;
 			float x = position.getX() + (MEMBER_THUMB_SIZE - size) * 0.5f;
 			float y = position.getY() + (SOURCE_ROW_HEIGHT - size) * 0.5f;
+
 			BattleNext_PageLayout.renderMissingIcon(BattleNext_PageLayout.missingIcon(), x, y, size, alphaMult);
 		}
 	}
 
 	private List<MemberRow> sorted(BattleNext_BattleReportModel report, boolean dealt) {
 		List<MemberRow> result = new ArrayList<>();
-		for (BattleNext_MemberReport member : report.getPlayerMembers()) {
+		for (BattleNext_MemberReport member : report.getPlayerMembersReadonly()) {
 			result.add(new MemberRow(member, dealt, true));
 		}
-		for (BattleNext_MemberReport member : report.getEnemyMembers()) {
+
+		for (BattleNext_MemberReport member : report.getEnemyMembersReadonly()) {
 			result.add(new MemberRow(member, dealt, false));
 		}
+
 		result.sort(Comparator.comparing(MemberRow::member, BattleNext_MemberReport.damageOrder(dealt)));
 		return result;
 	}

@@ -2,7 +2,7 @@ package data.model.rule;
 
 import data.model.BattleNext_JsonModel;
 import data.restriction.BattleNext_RestrictionRegistry;
-import data.restriction.BattleNext_RestrictionSpec;
+import data.restriction.BattleNext_RestrictionRegistry.BattleNext_RestrictionSpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,6 +27,7 @@ public class BattleNext_RuleRestriction {
 	}
 
 	public static BattleNext_RuleRestriction fromJson(JSONObject json) throws JSONException {
+
 		String id = json.getString("id");
 		if (json.has("value") == json.has("items")) {
 			throw new IllegalArgumentException("Restriction requires exactly one value or items: " + id);
@@ -34,7 +35,7 @@ public class BattleNext_RuleRestriction {
 		String type = json.has("value") ? "number" : "list";
 		BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(id, type);
 		BattleNext_RestrictionSpec entry = BattleNext_RestrictionRegistry.getInstance().get(id);
-		if (entry != null && !entry.getType().equals(type)) {
+		if (entry != null && !entry.type().equals(type)) {
 			throw new IllegalArgumentException("Restriction type differs from registry: " + id);
 		}
 		restriction.enabled = json.getBoolean("enabled");
@@ -44,9 +45,7 @@ public class BattleNext_RuleRestriction {
 			JSONArray values = json.getJSONArray("items");
 			List<String> parsed = BattleNext_JsonModel.parseStrings("items", values, restriction.loadErrors);
 			Map<String, Integer> counts = new HashMap<>();
-			for (String item : parsed) {
-				counts.merge(item.trim(), 1, Integer::sum);
-			}
+			for (String item : parsed) counts.merge(item.trim(), 1, Integer::sum);
 			for (int index = 0; index < values.length(); index++) {
 				if (!(values.opt(index) instanceof String item)) continue;
 				String value = item.trim();
@@ -73,7 +72,7 @@ public class BattleNext_RuleRestriction {
 		return id;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
 
@@ -102,7 +101,7 @@ public class BattleNext_RuleRestriction {
 		unregisteredJson = null;
 	}
 
-	public List<String> getItems() {
+	public List<String> getItemsReadonly() {
 		return Collections.unmodifiableList(items);
 	}
 

@@ -61,6 +61,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 				saveButton = button;
 			}
 		}
+
 		UIRect statusRect = BattleNext_PageLayout.managementFooterStatusRect(footerRect, buttonWidth, actions.length);
 		if (statusRect.getWidth() >= BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_MIN_WIDTH) {
 			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
@@ -68,6 +69,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			footerStatus.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), footerStatus.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
 			footerStatus.setHeightSoFar(statusRect.getHeight());
+
 			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
 		}
 	}
@@ -102,22 +104,26 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 					promptRect.getY() - detailRect.getY());
 			return;
 		}
+
 		if (editorView().getStatusText().isEmpty()) {
 			saveErrors.clear();
 			status = "";
 		}
+
 		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
 		CustomPanelAPI contentPanel = detailPanel.createCustomPanel(editorRect.getWidth(), editorRect.getHeight(),
 				detailPanel.getPlugin());
 		detailPanel.addComponent(contentPanel).inTL(editorRect.getX() - detailRect.getX(),
 				editorRect.getY() - detailRect.getY());
 		buildDetail(contentPanel);
+
 		if (hasSelection()) {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
 					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
 					strings.get("delete"), "delete", CutStyle.ALL, true);
 			delete.setEnabled(canDelete());
 		}
+
 		String noteText = sourceNote();
 		if (!noteText.isEmpty()) {
 			UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(detailRect);
@@ -151,6 +157,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			setStatus(editorView().getStatusText());
 			return false;
 		}
+
 		setStatus(strings.get("saved"));
 		String inputState = editorView().serializeState();
 		try {
@@ -163,6 +170,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			BattleNext_Logger.warn(getClass(), "management.display.after_commit.failed",
 					BattleNext_Logger.fields().put("input_state", inputState).build(), exception);
 		}
+
 		return true;
 	}
 
@@ -212,6 +220,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	@Override
 	protected final void handlePageAction(Object buttonId) {
 		if (!(buttonId instanceof String action)) return;
+
 		if (action.startsWith(selectionPrefix) || action.equals("add")) {
 			String id = action.equals("add") ? "" : action.substring(selectionPrefix.length());
 			navigation.accept(() -> {
@@ -308,12 +317,12 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			content.addPara(content.shortenString(title, BattleNext_PageLayout.managementContentRect(listRect).getWidth()), listErrorGap());
 			content.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
-				public float getTooltipWidth(Object ignored) {
+				public float getTooltipWidth(Object tooltipParam) {
 					return 480f;
 				}
 
 				@Override
-				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					tooltip.addPara(title + " / " + error.position(), 0f);
 					tooltip.addPara(error.diagnostic(), 5f);
 					tooltip.addPara(error.raw(), 5f);
@@ -331,7 +340,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 	}
 
 	protected boolean isListEmpty() {
-		return catalog().getAll().isEmpty();
+		return catalog().getAllCopy().isEmpty();
 	}
 
 	protected abstract String emptyListText();

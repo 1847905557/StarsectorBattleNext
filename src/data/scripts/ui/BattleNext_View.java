@@ -1,5 +1,6 @@
 package data.scripts.ui;
 
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.widget.BattleNext_SaveErrors;
 
@@ -10,12 +11,30 @@ import java.util.function.Function;
 public abstract class BattleNext_View {
 
 	protected BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
+	protected CustomPanelAPI overlayHost;
+
 	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+
 	protected final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private Function<Callable<Boolean>, CompletableFuture<Boolean>> persistence;
 	private Pending pending;
 
-	private record Pending(CompletableFuture<Boolean> result, Runnable publish, String failure, boolean commit) { }
+	private record Pending(CompletableFuture<Boolean> result, Runnable publish, String failure, boolean commit) {
+
+	}
+
+	public final void setInputRouter(BattleNext_UiInputRouter router) {
+		inputRouter = router;
+		bindInput();
+	}
+
+	protected void bindInput() {
+
+	}
+
+	public final void setOverlayHost(CustomPanelAPI host) {
+		overlayHost = host;
+	}
 
 	public void setPersistence(Function<Callable<Boolean>, CompletableFuture<Boolean>> persistence) {
 		this.persistence = persistence;
@@ -34,6 +53,7 @@ public abstract class BattleNext_View {
 	}
 
 	public final boolean perform(Callable<Boolean> write, Runnable publish, String progress, String failure, boolean commit) throws Exception {
+
 		saveErrors.clear();
 		if (persistence == null) {
 			boolean success = write.call();
@@ -41,6 +61,7 @@ public abstract class BattleNext_View {
 			if (success) publish.run();
 			return success;
 		}
+
 		pending = new Pending(persistence.apply(write), publish, failure, commit);
 		operationStatus(progress);
 		return false;
@@ -49,9 +70,11 @@ public abstract class BattleNext_View {
 	protected final Boolean completeOperation() {
 		Pending completed = pending;
 		if (completed == null || !completed.result().isDone()) return null;
+
 		pending = null;
 		try {
 			if (!completed.result().join()) return completed.commit() ? false : null;
+
 			if (!completed.commit()) operationStatus("");
 			completed.publish().run();
 			if (completed.commit()) commitPublished();
@@ -68,6 +91,7 @@ public abstract class BattleNext_View {
 	}
 
 	protected void commitPublished() {
+
 	}
 
 	protected abstract void operationStatus(String value);

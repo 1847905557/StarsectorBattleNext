@@ -30,36 +30,6 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 	private BattleNext_TextField field;
 	private CustomPanelAPI row;
 
-	@Override
-	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI owner) {
-		float buttonWidth = Math.min(PICKER_BUTTON_WIDTH, Math.max(0f, fieldWidth - 1f));
-		float inputWidth = fieldWidth - buttonWidth;
-		row = ownPanel(host, owner.createCustomPanel(fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
-				new BaseCustomUIPanelPlugin()));
-		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		BattleNext_TextField textField = new BattleNext_TextField(inputRouter, row, inputWidth,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
-		textField.attach(input, row);
-		field = textField;
-		field.getPosition().inTL(0f, 0f);
-		field.setLimitByStringWidth(false);
-		field.setVerticalCursor(true);
-		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
-		row.addUIElement(input).inTL(0f, 0f);
-		TooltipMakerAPI pickerHost = row.createUIElement(buttonWidth,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
-		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, buttonWidth,
-				BattleNext_PageLayout.FORM_FIELD_HEIGHT, "...", 0f, source, toPickerMode(mode),
-				() -> parse(field.getText()), ids -> field.setText(expand(ids)), viewports);
-		picker.attach(pickerHost, row);
-		row.addUIElement(pickerHost).inTL(inputWidth, 0f);
-		host.addCustom(row, PICKER_ROW_TOP_GAP);
-	}
-
-	public TextFieldAPI getField() {
-		return field;
-	}
-
 	public BattleNext_OptionField(BattleNext_UiInputRouter inputRouter,
 			CustomPanelAPI overlayHost, float fieldWidth,
 			BattleNext_OptionPicker.OptionChoiceSource source, OptionSelectionMode mode,
@@ -70,6 +40,42 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 		this.fieldWidth = fieldWidth;
 		this.overlayHost = overlayHost;
 		this.viewports = viewports;
+	}
+
+	@Override
+	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI owner) {
+
+		float buttonWidth = Math.min(PICKER_BUTTON_WIDTH, Math.max(0f, fieldWidth - 1f));
+		float inputWidth = fieldWidth - buttonWidth;
+		row = ownPanel(host, owner.createCustomPanel(fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT,
+				new BaseCustomUIPanelPlugin()));
+
+		TooltipMakerAPI input = row.createUIElement(inputWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		BattleNext_TextField textField = new BattleNext_TextField(inputRouter, row, inputWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, viewports);
+		textField.attach(input, row);
+		field = textField;
+		field.getPosition().inTL(0f, 0f);
+		field.setLimitByStringWidth(false);
+		field.setVerticalCursor(true);
+		field.setMaxChars(BattleNext_TextField.RECOMMENDED_MAX_CHARS);
+
+		row.addUIElement(input).inTL(0f, 0f);
+
+		TooltipMakerAPI pickerHost = row.createUIElement(buttonWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, false);
+		picker = new BattleNext_OptionPicker(inputRouter, overlayHost, buttonWidth,
+				BattleNext_PageLayout.FORM_FIELD_HEIGHT, "...", 0f, source, toPickerMode(mode),
+				() -> parse(field.getText()), ids -> field.setText(String.join(",", ids)), viewports);
+		picker.attach(pickerHost, row);
+
+		row.addUIElement(pickerHost).inTL(inputWidth, 0f);
+
+		host.addCustom(row, PICKER_ROW_TOP_GAP);
+	}
+
+	public TextFieldAPI getField() {
+		return field;
 	}
 
 	@Override
@@ -110,9 +116,5 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 			if (!id.isEmpty()) result.add(id);
 		}
 		return result;
-	}
-
-	private String expand(List<String> values) {
-		return String.join(",", values);
 	}
 }

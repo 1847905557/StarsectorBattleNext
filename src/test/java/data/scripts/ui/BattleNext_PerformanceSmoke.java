@@ -10,6 +10,8 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.sun.management.ThreadMXBean;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
+import java.util.Map;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
@@ -50,9 +52,11 @@ public final class BattleNext_PerformanceSmoke {
 	private static Path output;
 
 	private BattleNext_PerformanceSmoke() {
+
 	}
 
 	public static void main(String[] arguments) throws Throwable {
+
 		if (arguments.length == 0) {
 			Path core = Path.of("../../starsector-core").toAbsolutePath().normalize();
 			Path report = Path.of("build/reports/performance").toAbsolutePath();
@@ -70,6 +74,7 @@ public final class BattleNext_PerformanceSmoke {
 			System.out.println(text.lines().filter(line -> line.startsWith("PERF ") || line.startsWith("PERFORMANCE")).reduce("", (first, second) -> first + second + "\n"));
 			return;
 		}
+
 		output = Path.of(arguments[0]);
 		System.setProperty("launchDirect", "true");
 		System.setProperty("startRes", "1600x900");
@@ -79,13 +84,14 @@ public final class BattleNext_PerformanceSmoke {
 		Display.setLocation(-20000, -20000);
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
+
 		Thread driver = new Thread(() -> {
 			try {
-				long deadline = System.nanoTime() + 180_000_000_000L;
+				long deadlineNanos = System.nanoTime() + 180_000_000_000L;
 				CombatEngineAPI attached = null;
 				Probe probe = new Probe();
 				while (!complete) {
-					if (System.nanoTime() > deadline) throw new AssertionError("Native performance startup or execution timed out");
+					if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native performance startup or execution timed out");
 					if (Global.getSettings() != null && Global.getCurrentState() == GameState.TITLE && Global.getCombatEngine() != null
 							&& attached != Global.getCombatEngine()) {
 						Thread.sleep(5000L);
@@ -139,25 +145,30 @@ public final class BattleNext_PerformanceSmoke {
 					manager.advance(1f / 60f);
 					if (manager.isLoading()) return;
 					BattleNext_ManagementSession session = (BattleNext_ManagementSession) field(manager, "catalogs");
-					if (!session.errors().isEmpty()) throw new AssertionError(session.errors());
+					if (!session.errorsCopy().isEmpty()) throw new AssertionError(session.errorsCopy());
 					results.put("enabled_mods", Global.getSettings().getModManager().getEnabledModsCopy().stream().map(mod -> mod.getId()).toList());
-					results.put("fleets", session.data().fleets().getAll().size());
-					results.put("members", session.data().fleets().getAll().stream().mapToInt(fleet -> fleet.getMembers().size()).sum());
+					List<BattleNext_FleetModel> fleets = session.data().fleets().getAllCopy();
+					results.put("fleets", fleets.size());
+					int members = 0;
+					for (BattleNext_FleetModel fleet : fleets) members += fleet.getMembersReadonly().size();
+					results.put("members", members);
 					results.put("variants", session.data().variants().options().size());
-					results.put("reports", session.data().reports().getAll().size());
+					results.put("reports", session.data().reports().getAllCopy().size());
+
 					JSONArray fleetDirectory = new JSONArray();
-					for (var fleet : session.data().fleets().getAll()) {
+					for (BattleNext_FleetModel fleet : fleets) {
 						fleetDirectory.put(new JSONObject().put("id", fleet.getId()).put("name", fleet.getName())
-								.put("path", fleet.getSourcePath()).put("members", fleet.getMembers().size()));
+								.put("path", fleet.getSourcePath()).put("members", fleet.getMembersReadonly().size()));
 					}
 					results.put("fleet_directory", fleetDirectory);
+
 					BattleNext_ModFileManager.ReadSession.deactivate();
 					BattleNext_FleetStore direct = new BattleNext_FleetStore();
 					direct.reload();
-					var expected = new LinkedHashMap<String, String>();
-					var actual = new LinkedHashMap<String, String>();
-					for (var fleet : direct.getAll()) expected.put(fleet.getId(), fleet.toJson().toString());
-					for (var fleet : session.data().fleets().getAll()) actual.put(fleet.getId(), fleet.toJson().toString());
+					Map<String, String> expected = new LinkedHashMap<>();
+					Map<String, String> actual = new LinkedHashMap<>();
+					for (BattleNext_FleetModel fleet : direct.getAllCopy()) expected.put(fleet.getId(), fleet.toJson().toString());
+					for (BattleNext_FleetModel fleet : fleets) actual.put(fleet.getId(), fleet.toJson().toString());
 					Files.writeString(output.resolve("fleet-catalog-comparison.json"), new JSONObject().put("direct", new JSONObject(expected))
 							.put("management", new JSONObject(actual)).toString(2), StandardCharsets.UTF_8);
 					if (!expected.equals(actual)) throw new AssertionError("Management fleet catalog differs from direct file loading");
@@ -186,6 +197,7 @@ public final class BattleNext_PerformanceSmoke {
 					});
 					picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(200f, 500f, 200f, 30f));
 					capture("picker-hulls.png");
+
 					CustomPanelAPI popup = (CustomPanelAPI) field(picker, "popup");
 					popup.getPlugin().buttonPressed("browse:pinned");
 					capture("picker-pinned.png");
@@ -228,6 +240,7 @@ public final class BattleNext_PerformanceSmoke {
 		}
 
 		private void measure(String name, int count, double limit, Work work) throws Throwable {
+
 			JSONArray samples = new JSONArray();
 			double[] times = new double[count];
 			for (int index = 0; index < count; index++) {
@@ -238,6 +251,7 @@ public final class BattleNext_PerformanceSmoke {
 				times[index] = (System.nanoTime() - start) / 1_000_000d;
 				samples.put(new JSONObject().put("milliseconds", times[index]).put("allocated_bytes", allocations.getThreadAllocatedBytes(thread) - before));
 			}
+
 			Arrays.sort(times);
 			double p95 = times[(int) Math.ceil(count * 0.95d) - 1];
 			results.put(name, new JSONObject().put("p95_ms", p95).put("limit_ms", limit).put("samples", samples));
@@ -252,6 +266,7 @@ public final class BattleNext_PerformanceSmoke {
 		}
 
 		private void capture(String name) throws Exception {
+
 			GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 			GL11.glMatrixMode(GL11.GL_PROJECTION);
 			GL11.glPushMatrix();
@@ -275,6 +290,7 @@ public final class BattleNext_PerformanceSmoke {
 								| (pixels.get(offset + 1) & 255) << 8 | pixels.get(offset + 2) & 255);
 					}
 				}
+
 				ImageIO.write(image, "png", output.resolve(name).toFile());
 			} finally {
 				GL11.glPopMatrix();

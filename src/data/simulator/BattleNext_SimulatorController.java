@@ -17,11 +17,11 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private CombatEngineAPI engine;
 	private BattleNext_SimulatorNative nativeAccess;
-	private long started;
-	private long lastMaintenance;
+	private long startedAtNanos;
+	private long lastMaintenanceAtNanos;
 	private long steps;
 	private long peakHeap;
-	private float soundElapsed;
+	private float soundElapsedSeconds;
 	private float previousSpeed;
 	private float previousSteps;
 	private boolean completed;
@@ -38,12 +38,14 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 		try {
 			nativeAccess = new BattleNext_SimulatorNative(engine.getClass().getClassLoader());
 			nativeAccess.prepareDeployment(engine, request.config().deploymentPointLimit() > 0);
+
 			previousSpeed = Global.getSettings().getFloat("combatSpeedMult");
 			previousSteps = Global.getSettings().getFloat("combatStepsPerFrame");
 			Global.getSettings().setFloat("combatSpeedMult", 1f);
 			Global.getSettings().setFloat("combatStepsPerFrame", request.config().strategy() == BattleNext_SimulationConfig.Strategy.COMPATIBLE
 					? (float) request.config().stepsPerFrame() : 1f);
 			configured = true;
+
 			BattleNext_Logger.info(getClass(), "simulator.settings.acquired", () -> BattleNext_Logger.fields()
 					.put("id", request.id()).put("previous_speed", previousSpeed).put("previous_steps", previousSteps)
 					.put("strategy", request.config().strategy()).put("steps_per_frame", request.config().stepsPerFrame()).build());
@@ -57,18 +59,18 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 
 		if (completed) return;
 		try {
-			if (started == 0L) {
-				started = System.nanoTime();
-				lastMaintenance = started;
+			if (startedAtNanos == 0L) {
+				startedAtNanos = System.nanoTime();
+				lastMaintenanceAtNanos = startedAtNanos;
 				BattleNext_SimulatorWorker.status(request.id(), BattleNext_SimulationTask.State.RUNNING);
 			}
 			steps++;
-			soundElapsed += amount;
-			long now = System.nanoTime();
-			if (now - lastMaintenance >= 50000000L) {
-				lastMaintenance = now;
-				nativeAccess.maintainWindowAndSound(engine, soundElapsed);
-				soundElapsed = 0f;
+			soundElapsedSeconds += amount;
+			long nowNanos = System.nanoTime();
+			if (nowNanos - lastMaintenanceAtNanos >= 50000000L) {
+				lastMaintenanceAtNanos = nowNanos;
+				nativeAccess.maintainWindowAndSound(engine, soundElapsedSeconds);
+				soundElapsedSeconds = 0f;
 				Runtime runtime = Runtime.getRuntime();
 				peakHeap = Math.max(peakHeap, runtime.totalMemory() - runtime.freeMemory());
 			}
@@ -79,7 +81,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			} else if (engine.getTotalElapsedTime(false) >= request.config().simulationSeconds()
 					|| request.config().strategy() == BattleNext_SimulationConfig.Strategy.AGGRESSIVE
 					&& steps >= Math.ceil(request.config().simulationSeconds() * 60d)
-					|| now - started >= request.config().executionSeconds() * 1000000000d) {
+					|| nowNanos - startedAtNanos >= request.config().executionSeconds() * 1000000000d) {
 				complete(BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, "Simulation or execution budget exhausted");
 			}
 		} catch (Throwable exception) {
@@ -125,7 +127,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 		engine.setDoNotEndCombat(false);
 		nativeAccess.finish(engine);
 		BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), outcome, reportJson,
-				engine.getTotalElapsedTime(false), System.nanoTime() - started, steps, peakHeap, diagnostic);
+				engine.getTotalElapsedTime(false), System.nanoTime() - startedAtNanos, steps, peakHeap, diagnostic);
 		BattleNext_Logger.info(getClass(), "simulator.execution.finished", () -> BattleNext_Logger.fields().put("id", result.id()).put("outcome", result.outcome()).build());
 		BattleNext_SimulatorWorker.complete(result);
 		engine.removePlugin(this);

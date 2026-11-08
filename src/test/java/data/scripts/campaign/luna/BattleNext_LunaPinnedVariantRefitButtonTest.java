@@ -15,6 +15,7 @@ import data.scripts.BattleNextModPlugin;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
 import lunalib.lunaRefit.LunaRefitManager;
+import lunalib.lunaRefit.BaseRefitButton;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,8 +31,8 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 	@Test
 	void registrationAndLoadCleanupAreIdempotentAndMenuIsAlwaysVisible() {
 
-		var registry = LunaRefitManager.INSTANCE.getButtons();
-		var previous = List.copyOf(registry);
+		ArrayList<BaseRefitButton> registry = LunaRefitManager.INSTANCE.getButtons();
+		List<BaseRefitButton> previous = List.copyOf(registry);
 		registry.removeIf(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton);
 		List<EveryFrameScript> scripts = new ArrayList<>();
 		Global.setSector(proxy(SectorAPI.class, (method, args) -> {
@@ -74,7 +75,7 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 		UIPanelAPI host = panel(640f, 560f, new BaseCustomUIPanelPlugin());
 		Refit refit = new Refit(member, variant.getApi());
 		Core core = new Core(new Tab(List.of(new Object(), refit)));
-		var context = BattleNext_CampaignRefitContext.from(core, host);
+		BattleNext_CampaignRefitContext context = BattleNext_CampaignRefitContext.from(core, host);
 		assertSame(member, context.member());
 		assertSame(variant.getApi(), context.variant());
 		assertSame(refit, context.refitPanel());
@@ -92,8 +93,8 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 	@ValueSource(strings = {"callback", "reload", "leave", "detached", "left", "right"})
 	void buttonOwnerReleasesItsPanelAcrossLifecyclePaths(String path) throws Exception {
 
-		var registry = LunaRefitManager.INSTANCE.getButtons();
-		var previous = registry.stream().filter(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton).toList();
+		ArrayList<BaseRefitButton> registry = LunaRefitManager.INSTANCE.getButtons();
+		List<BaseRefitButton> previous = registry.stream().filter(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton).toList();
 		registry.removeAll(previous);
 		BattleNext_LunaPinnedVariantRefitButton.register();
 		BattleNext_LunaPinnedVariantRefitButton button = (BattleNext_LunaPinnedVariantRefitButton)

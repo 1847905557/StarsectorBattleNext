@@ -16,6 +16,7 @@ class BattleNext_DropdownFieldTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {180, 400})
 	void dropdownUsesTheCompleteHostDuringSelectionRefreshAndRepeatedClose(int width) throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		CustomPanelAPI buttonPanel = panel(width, 32f, new BaseCustomUIPanelPlugin());
@@ -42,6 +43,7 @@ class BattleNext_DropdownFieldTest extends BattleNext_TestPageFixture {
 			assertEquals(1, children.get(root).size());
 			assertTrue(router.isEmpty());
 		}
+
 		buttonPanel.getPosition().setSize(width + 40f, 40f);
 		field.refreshContent();
 		row = (CustomPanelAPI) getField(field, "row");
@@ -54,6 +56,7 @@ class BattleNext_DropdownFieldTest extends BattleNext_TestPageFixture {
 		assertEquals(List.of("first"), selected);
 		assertEquals("first", field.getValue());
 		assertEquals("First", buttonLabels.get("TOGGLE"));
+
 		field.close();
 		assertTrue(children.get(buttonPanel).isEmpty());
 		assertTrue(((List<?>) getField(field, "ownedPanels")).isEmpty());

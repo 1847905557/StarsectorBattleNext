@@ -25,15 +25,18 @@ class BattleNext_EntryIdTest extends BattleNext_TestFleetIoFixture {
 		assertEquals(new Problem(Reason.NUMERIC, 0, 0), BattleNext_EntryId.problem("123"));
 		assertEquals(new Problem(Reason.WHITESPACE, 2, 0x3000), BattleNext_EntryId.problem("舰\u3000队"));
 		assertEquals(new Problem(Reason.TRAILING_DOT, 0, 0), BattleNext_EntryId.problem("fleet."));
+
 		for (String reserved : List.of("con", "NUL.txt", "COM9", "LPT1.json", "_rules", "_pinnedVariants")) {
 			assertEquals(new Problem(Reason.RESERVED, 0, 0), BattleNext_EntryId.problem(reserved));
 			assertFalse(BattleNext_EntryId.isValidPathSegment(reserved));
 		}
+
 		for (int character : "<>:\"/\\|?*".codePoints().toArray()) {
 			String value = "🚀" + Character.toString(character) + "fleet";
 			assertEquals(new Problem(Reason.CHARACTER, 2, character), BattleNext_EntryId.problem(value));
 			assertFalse(BattleNext_EntryId.isValid(value));
 		}
+
 		for (int character = 0; character < 32; character++) {
 			String value = "舰" + Character.toString(character) + "队";
 			assertEquals(new Problem(Reason.CONTROL, 2, character), BattleNext_EntryId.problem(value));

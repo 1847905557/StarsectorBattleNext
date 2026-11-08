@@ -3,6 +3,7 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.Description;
@@ -82,7 +83,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 	private void buildDetails(CustomPanelAPI owner, float width, float height, JSONObject json) {
 
 		Map<String, Float> offsets = new LinkedHashMap<>();
-		for (var entry : lists.entrySet()) {
+		for (Map.Entry<String, TooltipMakerAPI> entry : lists.entrySet()) {
 			if (entry.getValue().getExternalScroller() != null) {
 				offsets.put(entry.getKey(), entry.getValue().getExternalScroller().getYOffset());
 			}
@@ -119,7 +120,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		zones.put("modules", modules);
 		zones.put("groups", groups);
 		zones.put("wings", wings);
-		for (var entry : zones.entrySet()) {
+		for (Map.Entry<String, Zone> entry : zones.entrySet()) {
 			Zone zone = entry.getValue();
 			zone.list().addSpacer(GAP);
 			zone.panel().addUIElement(zone.list()).inTL(GAP - BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
@@ -220,12 +221,12 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			list.addCustom(card, ROW_GAP);
 			list.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
-				public float getTooltipWidth(Object ignored) {
+				public float getTooltipWidth(Object tooltipParam) {
 					return BattleNext_EquipmentTooltip.WIDTH;
 				}
 
 				@Override
-				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					BattleNext_EquipmentTooltip.renderHullmod(tooltip, spec.getDisplayName(), id, spec,
 							hull.getHullSize(), json.optString("variantId", ""), List::of);
 				}
@@ -370,12 +371,12 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		list.addCustom(row, pad);
 		list.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return 360f;
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				BattleNext_EquipmentTooltip.render(tooltip, BattleNext_EquipmentTooltip.description(
 						weaponName, id, id, Description.Type.WEAPON, Global.getSettings(), List.of()));
 			}
@@ -410,7 +411,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				FighterWingSpecAPI wing = Global.getSettings().getFighterWingSpec(id);
 				if (wing == null) throw new IllegalArgumentException("Unknown fighter wing: " + id);
 				name = wing.getWingName();
-				var variant = wing.getVariant();
+				ShipVariantAPI variant = wing.getVariant();
 				if (variant == null) throw new IllegalArgumentException("Missing fighter variant: " + id);
 				ShipHullSpecAPI hull = variant.getHullSpec();
 				if (hull == null) throw new IllegalArgumentException("Missing fighter hull: " + id);
@@ -471,12 +472,12 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		String displayError = error;
 		caption.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return 360f;
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				List<String> notes = displayError.isEmpty() ? List.of() : List.of(displayError);
 				BattleNext_EquipmentTooltip.Content info = tile.hull() == null
 						? new BattleNext_EquipmentTooltip.Content(tile.name(), tile.id(), "", notes)

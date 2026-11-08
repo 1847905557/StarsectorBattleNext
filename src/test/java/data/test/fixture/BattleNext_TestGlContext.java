@@ -57,9 +57,7 @@ public class BattleNext_TestGlContext implements AutoCloseable {
 			buffer = created;
 		} catch (Exception | Error failure) {
 			try {
-				for (var entry : rendererState.entrySet()) {
-					entry.getKey().set(null, entry.getValue());
-				}
+				for (Map.Entry<Field, Object> entry : rendererState.entrySet()) entry.getKey().set(null, entry.getValue());
 			} finally {
 				try {
 					if (created != null) {
@@ -109,9 +107,7 @@ public class BattleNext_TestGlContext implements AutoCloseable {
 			}
 		} finally {
 			try {
-				for (var entry : rendererState.entrySet()) {
-					entry.getKey().set(null, entry.getValue());
-				}
+				for (Map.Entry<Field, Object> entry : rendererState.entrySet()) entry.getKey().set(null, entry.getValue());
 			} finally {
 				try {
 					buffer.destroy();
@@ -151,15 +147,9 @@ public class BattleNext_TestGlContext implements AutoCloseable {
 
 		private State() {
 
-			for (int index = 0; index < integers.length; index++) {
-				integers[index] = GL11.glGetInteger(INTEGER_PARAMETERS[index]);
-			}
-			for (int index = 0; index < enabled.length; index++) {
-				enabled[index] = GL11.glIsEnabled(ENABLE_PARAMETERS[index]);
-			}
-			for (int index = 0; index < floats.length; index++) {
-				floats[index] = GL11.glGetFloat(FLOAT_PARAMETERS[index]);
-			}
+			for (int index = 0; index < integers.length; index++) integers[index] = GL11.glGetInteger(INTEGER_PARAMETERS[index]);
+			for (int index = 0; index < enabled.length; index++) enabled[index] = GL11.glIsEnabled(ENABLE_PARAMETERS[index]);
+			for (int index = 0; index < floats.length; index++) floats[index] = GL11.glGetFloat(FLOAT_PARAMETERS[index]);
 			IntBuffer integerValues = BufferUtils.createIntBuffer(16);
 			for (int index = 0; index < integerVectors.length; index++) {
 				integerValues.clear();

@@ -26,6 +26,7 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
+
 		if (json.getInt("formatVersion") != FORMAT_VERSION) {
 			throw new IllegalArgumentException("Unsupported rule formatVersion");
 		}
@@ -36,7 +37,7 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 		List<BattleNext_RuleRestriction> parsed = readIdentifiedCollection("restrictions", values, BattleNext_RuleRestriction::fromJson);
 		setRestrictions(parsed);
 		for (BattleNext_RuleRestriction restriction : parsed) {
-			for (String error : restriction.getLoadErrors()) {
+			for (String error : restriction.getLoadErrorsCopy()) {
 				addLoadError("Restriction " + restriction.getId() + ": " + error);
 			}
 		}
@@ -48,9 +49,7 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 	public JSONObject toJson() throws JSONException {
 		JSONObject json = new JSONObject().put("formatVersion", FORMAT_VERSION).put("id", id).put("name", name);
 		JSONArray values = new JSONArray();
-		for (BattleNext_RuleRestriction restriction : restrictions) {
-			values.put(restriction.toJson());
-		}
+		for (BattleNext_RuleRestriction restriction : restrictions) values.put(restriction.toJson());
 		return json.put("restrictions", writeCollection("restrictions", values));
 	}
 
@@ -71,7 +70,7 @@ public class BattleNext_RuleModel extends BattleNext_JsonModel {
 		this.name = name == null ? "" : name.trim();
 	}
 
-	public List<BattleNext_RuleRestriction> getRestrictions() {
+	public List<BattleNext_RuleRestriction> getRestrictionsReadonly() {
 		return Collections.unmodifiableList(restrictions);
 	}
 

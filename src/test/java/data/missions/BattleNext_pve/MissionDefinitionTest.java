@@ -28,17 +28,17 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		MissionDefinitionPlugin pvp = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_pvp.MissionDefinition")
 				.getDeclaredConstructor().newInstance();
 		keys.add(Keyboard.KEY_RIGHT);
-		var pvpNext = new MissionState();
+		MissionState pvpNext = new MissionState();
 		pvp.defineMission(pvpNext.getApi());
-		var pveNext = new MissionState();
+		MissionState pveNext = new MissionState();
 		new MissionDefinition().defineMission(pveNext.getApi());
 		assertEquals("child_variant", pvpNext.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals("hegemony", generatedParameters.get(0).factionId);
 		keys.clear();
 		keys.add(Keyboard.KEY_LEFT);
-		var pvpPrevious = new MissionState();
+		MissionState pvpPrevious = new MissionState();
 		pvp.defineMission(pvpPrevious.getApi());
-		var pvePrevious = new MissionState();
+		MissionState pvePrevious = new MissionState();
 		new MissionDefinition().defineMission(pvePrevious.getApi());
 		assertEquals("parent_variant", pvpPrevious.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals("mod_faction", generatedParameters.get(1).factionId);
@@ -95,7 +95,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		quickBattles("alpha,beta,2,1.5\nalpha,alpha,-1,2\n");
 		List<String> variants = List.of("parent_variant", "child_variant", "parent_variant", "parent_variant");
 		for (int index = 0; index < variants.size(); index++) {
-			var mission = new MissionState();
+			MissionState mission = new MissionState();
 			new MissionDefinition().defineMission(mission.getApi());
 			assertEquals(variants.get(index), mission.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 			assertEquals(List.of(index < 2 ? String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 2, 1.5f) : String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), -1, 2.0f),
@@ -117,12 +117,12 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 			}
 			keys.add(Keyboard.KEY_D);
 		}
-		var wrapped = new MissionState();
+		MissionState wrapped = new MissionState();
 		new MissionDefinition().defineMission(wrapped.getApi());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 4), wrapped.getBriefing().get(1));
 		keys.clear();
 		keys.add(Keyboard.KEY_A);
-		var previous = new MissionState();
+		MissionState previous = new MissionState();
 		new MissionDefinition().defineMission(previous.getApi());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 4, 4), previous.getBriefing().get(1));
 		assertEquals(variants.size() + 2, generatedParameters.size());
@@ -133,7 +133,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 
 		quickBattles("alpha,beta,0,1\n");
 		keys.addAll(List.of(Keyboard.KEY_D, Keyboard.KEY_RIGHT, Keyboard.KEY_UP));
-		var selected = new MissionState();
+		MissionState selected = new MissionState();
 		new MissionDefinition().defineMission(selected.getApi());
 		assertEquals("child_variant", selected.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals("hegemony", generatedParameters.get(0).factionId);
@@ -169,7 +169,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 		new MissionDefinition().defineMission(new MissionState().getApi());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,4,2\n");
 		factionSpecs.removeIf(faction -> faction.getId().equals("hegemony"));
-		var current = new MissionState();
+		MissionState current = new MissionState();
 		new MissionDefinition().defineMission(current.getApi());
 		assertEquals("child_variant", current.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals(List.of(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 4, 2.0f), String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 1, 2, 2)), current.getBriefing());
@@ -180,7 +180,7 @@ class MissionDefinitionTest extends BattleNext_TestMissionFixture {
 	@Test
 	void successfulBriefingPlacesWarningsBeforeMapAndSelectionLikePvp() throws Exception {
 		quickBattles("missing,beta,0,1\nalpha,beta,2,1.5\n");
-		var mission = new MissionState();
+		MissionState mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		assertTrue(mission.getBriefing().get(0).contains("missing player/enemy fleet reference"));
 		assertEquals(List.of(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_summary"), 2, 1.5f), String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 2, 1, 2)), mission.getBriefing().subList(1, 3));

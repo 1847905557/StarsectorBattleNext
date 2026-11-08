@@ -3,8 +3,8 @@ package checks.project.rules;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import checks.project.ProjectRule;
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 import checks.project.support.AstSupport;
 
@@ -20,9 +20,7 @@ public class LifecycleConstructorRule implements ProjectRule {
 		for (ClassOrInterfaceDeclaration classDeclaration : sourceFile.unit().findAll(ClassOrInterfaceDeclaration.class)) {
 			boolean isLifecycleController = !context.lifecycleControllerAnalysis().findLifecycleEntries(classDeclaration).isEmpty()
 					|| context.lifecycleControllerAnalysis().hasLifecycleEntryAnnotation(classDeclaration);
-			if (!isLifecycleController) {
-				continue;
-			}
+			if (!isLifecycleController) continue;
 			for (ConstructorDeclaration constructor : classDeclaration.getConstructors()) {
 				if (constructor.isPublic()) {
 					violations.add(new Violation(sourceFile.path(), AstSupport.lineOf(constructor), NAME,

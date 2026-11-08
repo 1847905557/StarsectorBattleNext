@@ -84,6 +84,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			engine.removePlugin(this);
 			return;
 		}
+
 		BoxUtilModPlugin.initLater();
 		entryIcon = Global.getSettings().getSprite("icon", "BattleNext_Icon");
 		loadBackdrop();
@@ -94,6 +95,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
 	@Override
 	public void advance(float amount, List<InputEventAPI> events) {
+
 		if (engine == null || Global.getCurrentState() != GameState.TITLE || engine.isSimulation()) {
 			BattleNext_MissionRestrictedUnlock.getInstance().forget();
 			closePanel();
@@ -103,11 +105,13 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			}
 			return;
 		}
+
 		if (missionListClickPending) {
 			missionListClickPending = false;
 		} else {
 			updateMissionRestrictedUnlock();
 		}
+
 		panelCooldown = Math.min(ENTRY_COOLDOWN_CAP, panelCooldown + amount);
 		if (displayedPanel == null && titleModal.hasOwnedDialog()) titleModal.close();
 		if (isRefitPanelDisplayed() && !isRefitDialogAttached(refitDialog)) {
@@ -130,25 +134,30 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			captureBackdrop();
 			return;
 		}
+
 		updateEntryInput();
 		renderEntry();
 	}
 
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
+
 		if (Global.getCurrentState() == GameState.TITLE && displayedPanel == null) {
 			restoreBeforeMissionListClick(events);
 		}
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null || displayedPanel == null) {
 			return;
 		}
+
 		if (displayedPanel == configurationPanel && configurationPlugin != null) {
 			configurationPlugin.handleGlobalInput(events);
 		}
+
 		if (displayedPanel == null) return;
 		if (isRefitPanelDisplayed()) {
 			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).handleGlobalInput(events);
 		}
+
 		if (displayedPanel == null) return;
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
@@ -162,6 +171,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				return;
 			}
 		}
+
 		consumeOutsideMouseInput(displayedPanel.getPosition(), events);
 	}
 
@@ -266,6 +276,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void createConfigurationPanel() {
+
 		if (configurationPanel != null) {
 			return;
 		}
@@ -273,6 +284,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		if (screenPanel == null) {
 			return;
 		}
+
 		float width = ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_SCREEN_SHARE;
 		float height = ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_SCREEN_SHARE;
 		configurationPlugin = new BattleNext_ConfigurationPanelPlugin(this::closePanel);
@@ -284,12 +296,14 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void openPanel() {
+
 		if (configurationPanel == null) {
 			createConfigurationPanel();
 		}
 		if (configurationPanel == null || screenPanel == null) {
 			return;
 		}
+
 		Object dialog = findMissionRefitDialog();
 		CustomPanelAPI nextPanel;
 		if (dialog != null) {
@@ -311,6 +325,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			configurationPlugin.open();
 			nextPanel = configurationPanel;
 		}
+
 		titleModal.open(screenPanel, BattleNext_AppContext.currentState());
 		screenPanel.addComponent(nextPanel);
 		screenPanel.bringComponentToTop(nextPanel);
@@ -324,10 +339,12 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		if (isRefitPanelDisplayed()) {
 			((BattleNext_RefitPanelPlugin) refitPanel.getPlugin()).close();
 		}
+
 		titleModal.close();
 		if (screenPanel != null && displayedPanel != null) {
 			screenPanel.removeComponent(displayedPanel);
 		}
+
 		displayedPanel = null;
 		refitDialog = null;
 		panelCooldown = 0f;
@@ -356,6 +373,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 				if (!hasDialogSuperclass(dialog) || !isRefitDialogAttached(dialog)) continue;
 				for (Object child : childrenOf(dialog)) {
 					if (!MISSION_CORE_UI_CLASS.equals(child.getClass().getName())) continue;
+
 					Object provider = invokeNoArg(child, "getPlugin");
 					if (matchesMissionRefit(provider == null ? null : provider.getClass().getName(),
 							hasDialogSuperclass(dialog))) return dialog;
@@ -372,11 +390,14 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		try {
 			for (Object core : childrenOf(dialog)) {
 				if (!MISSION_CORE_UI_CLASS.equals(core.getClass().getName())) continue;
+
 				Object tabData = invokeNoArg(core, "getCurrentTabData");
 				if (tabData == null) return null;
+
 				Object refitTab = MethodHandles.publicLookup().findGetter(tabData.getClass(),
 						REFIT_TAB_CONTENT_FIELD, screenPanel.getClass()).invoke(tabData);
 				if (refitTab == null || !REFIT_TAB_CLASS.equals(refitTab.getClass().getName())) return null;
+
 				Object refitScreen = invokeNoArg(refitTab, "getRefitPanel");
 				if (refitScreen == null || !REFIT_SCREEN_CLASS.equals(refitScreen.getClass().getName())) return null;
 				return refitScreen;
@@ -469,6 +490,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 			hovered = inside;
 			if (hovered) Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, 1f, 1f);
 		}
+
 		boolean down = Mouse.isButtonDown(0);
 		if (inside && down && !mouseHeld && panelCooldown > ENTRY_CLICK_COOLDOWN) {
 			Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID, 1f, 1f);

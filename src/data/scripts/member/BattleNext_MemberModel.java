@@ -39,6 +39,7 @@ public class BattleNext_MemberModel {
 	}
 
 	public static BattleNext_MemberModel fromJson(JSONObject json) throws JSONException {
+
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported member formatVersion: " + version);
 		List<String> errors = new ArrayList<>();
@@ -48,14 +49,14 @@ public class BattleNext_MemberModel {
 				json.optString("personality", ""), skills, json.optString("portrait", ""),
 				json.optString("orders", ""), tags);
 		member.loadErrors.addAll(errors);
-		if (!errors.isEmpty()) {
-			member.incompleteJson = new JSONObject(json.toString());
-		}
+		if (!errors.isEmpty()) member.incompleteJson = new JSONObject(json.toString());
+
 		return member;
 	}
 
 	public JSONObject toJson() throws JSONException {
 		if (incompleteJson != null) return new JSONObject(incompleteJson.toString());
+
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("variant_id", variantId);
@@ -65,10 +66,11 @@ public class BattleNext_MemberModel {
 		json.put("portrait", portrait);
 		json.put("orders", orders);
 		json.put("tags", new JSONArray(tags));
+
 		return json;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
 
@@ -96,7 +98,7 @@ public class BattleNext_MemberModel {
 		this.personality = normalize(personality);
 	}
 
-	public List<String> getSkills() {
+	public List<String> getSkillsReadonly() {
 		return Collections.unmodifiableList(skills);
 	}
 
@@ -120,7 +122,7 @@ public class BattleNext_MemberModel {
 		this.orders = normalize(orders);
 	}
 
-	public List<String> getTags() {
+	public List<String> getTagsReadonly() {
 		return Collections.unmodifiableList(tags);
 	}
 
@@ -129,14 +131,11 @@ public class BattleNext_MemberModel {
 	}
 
 	private static List<String> copy(List<String> values) {
-		if (values == null || values.isEmpty()) {
-			return new ArrayList<>();
-		}
+		if (values == null || values.isEmpty()) return new ArrayList<>();
+
 		List<String> result = new ArrayList<>();
 		for (String value : values) {
-			if (value != null && !value.trim().isEmpty()) {
-				result.add(value.trim());
-			}
+			if (value != null && !value.trim().isEmpty()) result.add(value.trim());
 		}
 		return result;
 	}

@@ -3,6 +3,9 @@ package data.scripts.campaign.luna;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.loading.HullModSpecAPI;
+import org.json.JSONObject;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -34,10 +37,12 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	private final Runnable closeAction;
 	private final BattleNext_FleetStore store;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private final Set<Integer> expandedMembers = new HashSet<>();
 	private CustomPanelAPI panel;
 	private CustomPanelAPI contentsPanel;
@@ -135,7 +140,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		membersContent.setTextWidthOverride(width);
 		if (snapshot != null) {
 			membersContent.addPara(fleetStrings.format("player_save_commander", commanderName), 0f);
-			membersContent.addPara(fleetStrings.format("player_save_members", snapshot.getMembers().size()), BattleNext_ExpandablePanel.ROW_GAP);
+			membersContent.addPara(fleetStrings.format("player_save_members", snapshot.getMembersReadonly().size()), BattleNext_ExpandablePanel.ROW_GAP);
 			membersContent.addPara(fleetStrings.get("player_save_preview_hint"), BattleNext_ExpandablePanel.ROW_GAP);
 		}
 		if (!status.isEmpty()) {
@@ -143,10 +148,11 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 			membersContent.addTooltipToPrevious(BattleNext_SaveErrors.tooltip(this::getSaveErrors), TooltipMakerAPI.TooltipLocation.ABOVE);
 		}
 		if (snapshot != null) {
-			for (int index = 0; index < snapshot.getMembers().size(); index++) {
-				BattleNext_MemberModel member = snapshot.getMembers().get(index);
-				var json = snapshot.getVariant(member.getVariantId()).toJson();
-				var hull = Global.getSettings().getHullSpec(json.optString("hullId"));
+			List<BattleNext_MemberModel> members = snapshot.getMembersReadonly();
+			for (int index = 0; index < members.size(); index++) {
+				BattleNext_MemberModel member = members.get(index);
+				JSONObject json = snapshot.getVariant(member.getVariantId()).toJson();
+				ShipHullSpecAPI hull = Global.getSettings().getHullSpec(json.optString("hullId"));
 				BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(hull.getSpriteName(),
 						true, member.getPortrait(), member.getName(), hull.getHullName() + " / " + json.optString("displayName"), "", "", null);
 				int key = index;
@@ -178,9 +184,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		}
 		content.addPara(memberStrings.get("officer_personality") + ": " + personality, BattleNext_ExpandablePanel.ROW_GAP);
 		Map<String, Integer> skills = new LinkedHashMap<>();
-		for (String skill : member.getSkills()) {
-			skills.merge(skill, 1, Integer::sum);
-		}
+		for (String skill : member.getSkillsReadonly()) skills.merge(skill, 1, Integer::sum);
 		List<String> skillLabels = new ArrayList<>();
 		for (String id : sortedIds(skills.keySet(), skill -> Global.getSettings().getSkillSpec(skill).getName())) {
 			skillLabels.add(Global.getSettings().getSkillSpec(id).getName() + " / "
@@ -191,9 +195,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		content.addPara(variantStrings.get("flux_capacitors") + ": " + variant.getNumFluxCapacitors()
 				+ " / " + variantStrings.get("flux_vents") + ": " + variant.getNumFluxVents(), BattleNext_ExpandablePanel.ROW_GAP);
 		List<String> weapons = new ArrayList<>();
-		for (String slot : variant.getFittedWeaponSlots()) {
-			weapons.add(variant.getWeaponId(slot));
-		}
+		for (String slot : variant.getFittedWeaponSlots()) weapons.add(variant.getWeaponId(slot));
 		content.addPara(variantStrings.get("weapons") + ": " + equipmentSummary(weapons,
 				id -> Global.getSettings().getWeaponSpec(id).getWeaponName()), BattleNext_ExpandablePanel.ROW_GAP);
 		content.addPara(variantStrings.get("hullmods") + ": " + hullmodsSummary(variant), BattleNext_ExpandablePanel.ROW_GAP);
@@ -221,9 +223,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 
 	private String equipmentSummary(Collection<String> ids, Function<String, String> name) {
 		Map<String, Integer> counts = new LinkedHashMap<>();
-		for (String id : ids) {
-			counts.merge(id, 1, Integer::sum);
-		}
+		for (String id : ids) counts.merge(id, 1, Integer::sum);
 		List<String> values = new ArrayList<>();
 		for (String id : sortedIds(counts.keySet(), name)) {
 			values.add(name.apply(id) + " × " + counts.get(id));
@@ -241,7 +241,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		ids.addAll(variant.getSuppressedMods());
 		List<String> values = new ArrayList<>();
 		for (String id : sortedIds(ids, mod -> Global.getSettings().getHullModSpec(mod).getDisplayName())) {
-			var spec = Global.getSettings().getHullModSpec(id);
+			HullModSpecAPI spec = Global.getSettings().getHullModSpec(id);
 			List<String> markers = new ArrayList<>();
 			if (variant.getSMods().contains(id) || variant.getSModdedBuiltIns().contains(id)) {
 				markers.add(variantStrings.get("s_mod"));
@@ -322,6 +322,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 				return;
 			}
 		}
+
 		inputRouter.handleGlobalInput(events);
 		for (InputEventAPI event : events) {
 			if (event.isConsumed() || !event.isKeyboardEvent()) continue;
@@ -330,11 +331,13 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	}
 
 	void close() {
+
 		saveErrors.clear();
 		if (name != null) name.close();
 		inputRouter.clear();
 		if (saveButton != null) saveButton.setEnabled(false);
 		if (contentsPanel != null) panel.removeComponent(contentsPanel);
+
 		contentsPanel = null;
 		membersPanel = null;
 		membersContent = null;
@@ -349,7 +352,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 	}
 
 	public List<String> getSaveErrors() {
-		return saveErrors.getMessages();
+		return saveErrors.getMessagesCopy();
 	}
 
 	private class ContentsPlugin extends BaseCustomUIPanelPlugin {

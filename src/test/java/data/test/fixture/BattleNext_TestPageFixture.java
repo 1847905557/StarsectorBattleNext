@@ -18,6 +18,8 @@ import data.scripts.ui.page.BattleNext_PageView;
 import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
+import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoiceSource;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 import data.scripts.ui.widget.BattleNext_TableWidget;
@@ -32,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -60,8 +64,8 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 
 	@AfterEach
 	void restoreCsvRegistries() throws Exception {
-		for (var entry : registryState.entrySet()) {
-			for (var field : entry.getValue().entrySet()) {
+		for (Map.Entry<Object, Map<Field, Object>> entry : registryState.entrySet()) {
+			for (Map.Entry<Field, Object> field : entry.getValue().entrySet()) {
 				field.getKey().set(entry.getKey(), field.getValue());
 			}
 		}
@@ -106,13 +110,15 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	}
 
 	protected void clickPickerOption(BattleNext_OptionPicker picker, String id) throws Exception {
+
 		browsePickerOption(picker, id);
 		CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
 		for (UIComponentAPI component : tooltips.get(content).getComponents()) {
 			if (!(component instanceof CustomPanelAPI tile)) continue;
-			var option = (BattleNext_OptionPicker.OptionChoice) getField(tile.getPlugin(), "option");
-			if (!option.getId().equals(id)) continue;
+			OptionChoice option = (OptionChoice) getField(tile.getPlugin(), "option");
+			if (!option.id().equals(id)) continue;
+
 			PositionAPI bounds = tile.getPosition();
 			InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
 				case "isLMBDownEvent" -> true;
@@ -128,12 +134,12 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	}
 
 	protected void browsePickerOption(BattleNext_OptionPicker picker, String id) throws Exception {
-		var source = (BattleNext_OptionPicker.OptionChoiceSource) getField(picker, "source");
+		OptionChoiceSource source = (OptionChoiceSource) getField(picker, "source");
 		if (source.groupsChoices()) {
 			String group = id.startsWith("pinned:") ? "@pinned" : source.getGroups().stream()
-					.filter(hull -> source.getGroupOptions(hull.getId()).stream().anyMatch(option -> option.getId().equals(id)))
-					.map(BattleNext_OptionPicker.OptionChoice::getId).findFirst().orElseThrow();
-			var browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
+					.filter(hull -> source.getGroupOptions(hull.id()).stream().anyMatch(option -> option.id().equals(id)))
+					.map(OptionChoice::id).findFirst().orElseThrow();
+			Method browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
 			browse.setAccessible(true);
 			browse.invoke(picker, group, false);
 		}
@@ -141,7 +147,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 
 	protected BattleNext_OptionPicker openQuickBattleFleet(BattleNext_QuickBattleDisplay display, int index,
 			BattleNext_QuickBattleDisplay.Column column) throws Exception {
-		var row = display.getRows().get(index);
+		BattleNext_QuickBattleDisplay.Row row = display.getRowsReadonly().get(index);
 		BattleNext_OptionField field = ((Map<BattleNext_QuickBattleDisplay.Column, BattleNext_OptionField>) getField(row, "fleetFields")).get(column);
 		if (field == null) return null;
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(field, "picker");
@@ -157,8 +163,8 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 			TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
 			for (UIComponentAPI component : tooltips.get(content).getComponents()) {
 				if (!(component instanceof CustomPanelAPI tile)) continue;
-				var option = (BattleNext_OptionPicker.OptionChoice) getField(tile.getPlugin(), "option");
-				if (!option.getId().equals(id)) continue;
+				OptionChoice option = (OptionChoice) getField(tile.getPlugin(), "option");
+				if (!option.id().equals(id)) continue;
 				PositionAPI bounds = tile.getPosition();
 				InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
 					case "isLMBDownEvent" -> true;
@@ -176,6 +182,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	}
 
 	protected void assertTablePickerAlignment(BattleNext_TableWidget table, BattleNext_OptionPicker picker) throws Exception {
+
 		PositionAPI tableBounds = table.getPanel().getPosition();
 		CustomPanelAPI pickerRow = (CustomPanelAPI) getField(picker, "row");
 		ButtonAPI button = (ButtonAPI) getField(picker, "toggle");
@@ -187,6 +194,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT, button.getPosition().getHeight(), 0.001f);
 		assertTrue(button.getPosition().getX() + button.getPosition().getWidth()
 				<= tableBounds.getX() + tableBounds.getWidth() + 0.001f);
+
 		int rows = 0;
 		for (UIComponentAPI component : tooltips.get(table.getContent()).getComponents()) {
 			if (component == pickerRow) continue;
@@ -201,25 +209,14 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	protected BattleNext_PinnedVariantPage page(BattleNext_PinnedVariantStore store,
 			Consumer<Runnable> navigation,
 			BiConsumer<String, Runnable> deletion, Runnable back) throws Exception {
-		var constructor = BattleNext_PinnedVariantPage.class.getDeclaredConstructor(Runnable.class,
+		Constructor<BattleNext_PinnedVariantPage> constructor = BattleNext_PinnedVariantPage.class.getDeclaredConstructor(Runnable.class,
 				Consumer.class, BiConsumer.class, BattleNext_PinnedVariantStore.class);
 		constructor.setAccessible(true);
 		return constructor.newInstance(back, navigation, deletion, store);
 	}
 
-	protected Object getField(Object target, String name) throws Exception {
-		Class<?> owner = target.getClass();
-		while (true) {
-			for (Field field : owner.getDeclaredFields()) {
-				if (!field.getName().equals(name)) continue;
-				field.setAccessible(true);
-				return field.get(target);
-			}
-			owner = owner.getSuperclass();
-		}
-	}
-
 	protected void assertJsonEquals(Object expected, Object actual) throws Exception {
+
 		if (expected instanceof JSONObject object) {
 			JSONObject other = (JSONObject) actual;
 			assertEquals(object.length(), other.length());
@@ -228,17 +225,24 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 				assertTrue(other.has(key), key);
 				assertJsonEquals(object.get(key), other.get(key));
 			}
-		} else if (expected instanceof JSONArray array) {
+			return;
+		}
+
+		if (expected instanceof JSONArray array) {
 			JSONArray other = (JSONArray) actual;
 			assertEquals(array.length(), other.length());
 			for (int index = 0; index < array.length(); index++) {
 				assertJsonEquals(array.get(index), other.get(index));
 			}
-		} else if (expected instanceof Number number) {
-			assertEquals(0, new BigDecimal(number.toString()).compareTo(new BigDecimal(((Number) actual).toString())));
-		} else {
-			assertEquals(expected, actual);
+			return;
 		}
+
+		if (expected instanceof Number number) {
+			assertEquals(0, new BigDecimal(number.toString()).compareTo(new BigDecimal(((Number) actual).toString())));
+			return;
+		}
+
+		assertEquals(expected, actual);
 	}
 
 	public class ProbePage extends BattleNext_PageView {
@@ -350,9 +354,11 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 
 	public static class Core {
 		private final Tab tab;
+
 		public Core(Tab tab) {
 			this.tab = tab;
 		}
+
 		public Tab getCurrentTab() {
 			return tab;
 		}
@@ -360,9 +366,11 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 
 	public static class Tab {
 		private final List<Object> children;
+
 		public Tab(List<Object> children) {
 			this.children = children;
 		}
+
 		public List<Object> getChildrenCopy() {
 			return children;
 		}
@@ -371,13 +379,16 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	public static class Refit {
 		private FleetMemberAPI member;
 		private final ShipVariantAPI variant;
+
 		public Refit(FleetMemberAPI member, ShipVariantAPI variant) {
 			this.member = member;
 			this.variant = variant;
 		}
+
 		public void syncWithCurrentVariant() {
 
 		}
+
 		public FleetMemberAPI getMember() {
 			return member;
 		}
@@ -385,9 +396,11 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 		public void setMember(FleetMemberAPI value) {
 			member = value;
 		}
+
 		public Refit getShipDisplay() {
 			return this;
 		}
+
 		public ShipVariantAPI getCurrentVariant() {
 			return variant;
 		}

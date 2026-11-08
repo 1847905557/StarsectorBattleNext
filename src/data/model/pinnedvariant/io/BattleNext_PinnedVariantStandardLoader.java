@@ -73,7 +73,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 			paths = List.of();
 			errors.add(RESOURCE_FOLDER + ": " + exception);
 		}
-		errors.addAll(getErrors().stream().map(error -> error.path() + ": " + error.diagnostic()).toList());
+		for (LoadError error : getErrorsCopy()) errors.add(error.path() + ": " + error.diagnostic());
 		for (String path : paths) {
 			String name = path.substring(path.lastIndexOf('/') + 1);
 			String pinId = "";
@@ -110,6 +110,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 				entries.add(new CatalogEntry(path, name, pinId, hullId, null, error, raw));
 			}
 		}
+
 		Map<String, Integer> counts = new HashMap<>();
 		for (CatalogEntry entry : entries) {
 			if (entry.pinId().isEmpty()) continue;
@@ -129,13 +130,17 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 		return result;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return paths(RESOURCE_FOLDER, false).stream().filter(path -> path.endsWith(".json")).toList();
+		List<String> result = new ArrayList<>();
+		for (String path : paths(RESOURCE_FOLDER, false)) {
+			if (path.endsWith(".json")) result.add(path);
+		}
+		return List.copyOf(result);
 	}
 
 	@Override

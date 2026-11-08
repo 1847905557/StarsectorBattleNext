@@ -23,6 +23,7 @@ public class BattleNext_MissionRestrictedUnlock {
 	private Object preview;
 
 	private BattleNext_MissionRestrictedUnlock() {
+
 	}
 
 	@LifecycleEntry
@@ -57,15 +58,9 @@ public class BattleNext_MissionRestrictedUnlock {
 		if (enabled) return;
 		enabled = true;
 		try {
-			for (WeaponSpecAPI weapon : settings.getAllWeaponSpecs()) {
-				removeRestricted(weapon.getTags());
-			}
-			for (FighterWingSpecAPI wing : settings.getAllFighterWingSpecs()) {
-				removeRestricted(wing.getTags());
-			}
-			for (HullModSpecAPI hullmod : settings.getAllHullModSpecs()) {
-				removeRestricted(hullmod.getTags());
-			}
+			for (WeaponSpecAPI weapon : settings.getAllWeaponSpecs()) removeRestricted(weapon.getTags());
+			for (FighterWingSpecAPI wing : settings.getAllFighterWingSpecs()) removeRestricted(wing.getTags());
+			for (HullModSpecAPI hullmod : settings.getAllHullModSpecs()) removeRestricted(hullmod.getTags());
 		} catch (RuntimeException exception) {
 			restore();
 			throw exception;
@@ -82,9 +77,7 @@ public class BattleNext_MissionRestrictedUnlock {
 	public void restore() {
 
 		if (!enabled) return;
-		for (Set<String> tags : changedTags) {
-			tags.add(Tags.RESTRICTED);
-		}
+		for (Set<String> tags : changedTags) tags.add(Tags.RESTRICTED);
 		changedTags.clear();
 		enabled = false;
 		BattleNext_Logger.info(BattleNext_MissionRestrictedUnlock.class, "restricted_assets.restored",

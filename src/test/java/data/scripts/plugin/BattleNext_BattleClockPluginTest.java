@@ -22,6 +22,7 @@ class BattleNext_BattleClockPluginTest extends BattleNext_TestGameFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {0, 2})
 	void timeoutAppliesOnceAtItsThresholdWithGraphicsDisabledAndReleasesOnCombatEnd(int timeLimit) {
+
 		BattleNext_Settings.save(false, false, false, false, 500f, 1f, 3f, 50, 0);
 		List<String> personalities = new ArrayList<>();
 		List<String> assaults = new ArrayList<>();
@@ -71,6 +72,7 @@ class BattleNext_BattleClockPluginTest extends BattleNext_TestGameFixture {
 		clock.init(engine);
 		clock.advance(0.1f, List.of());
 		assertTrue(personalities.isEmpty());
+
 		elapsed[0] = 2f;
 		clock.advance(0.1f, List.of());
 		elapsed[0] = 4f;
@@ -78,6 +80,7 @@ class BattleNext_BattleClockPluginTest extends BattleNext_TestGameFixture {
 		assertEquals(timeLimit > 0 ? List.of(Personalities.RECKLESS) : List.of(), personalities);
 		assertEquals(timeLimit > 0 ? List.of("PLAYER:false", "PLAYER:true", "ENEMY:false") : List.of(), assaults);
 		assertEquals(timeLimit > 0 ? List.of(0, 1) : List.of(), reveals);
+
 		combatOver[0] = true;
 		clock.advance(0.1f, List.of());
 		clock.advance(0.1f, List.of());

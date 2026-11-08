@@ -13,51 +13,58 @@ class BattleNext_BattleReportStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void saveReloadSortAndDeleteUseThePersistedCatalog() throws Exception {
-		var store = new BattleNext_BattleReportStore();
+
+		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
 		store.reload();
-		var earlier = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel earlier = new BattleNext_BattleReportModel();
 		earlier.setId("earlier");
 		earlier.setName("Earlier");
 		earlier.setCreatedAt(1);
-		var recent = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel recent = new BattleNext_BattleReportModel();
 		recent.setId("recent");
 		recent.setName("Recent");
 		recent.setCreatedAt(10);
-		var tie = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel tie = new BattleNext_BattleReportModel();
 		tie.setId("another_recent");
 		tie.setName("Another recent");
 		tie.setCreatedAt(recent.getCreatedAt());
+
 		store.save(earlier);
 		store.save(recent);
 		store.save(tie);
 		assertEquals("tournament/_reports/recent.json", recent.getSourcePath());
 		store.reload();
-		assertEquals(List.of("another_recent", "recent", "earlier"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of("another_recent", "recent", "earlier"), store.getAllCopy().stream().map(BattleNext_BattleReportModel::getId).toList());
+
 		store.delete("recent");
 		assertNull(store.get("recent"));
 		assertFalse(Files.exists(directory.resolve("tournament/_reports/recent.json")));
 		store.reload();
-		assertEquals(List.of("another_recent", "earlier"), store.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of("another_recent", "earlier"), store.getAllCopy().stream().map(BattleNext_BattleReportModel::getId).toList());
 	}
 
 	@Test
 	void malformedReloadAndSaveFailureKeepPreviouslyPublishedObjects() throws Exception {
-		var store = new BattleNext_BattleReportStore();
+
+		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
 		store.reload();
-		var report = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId("valid");
 		report.setName("Valid");
 		store.save(report);
+
 		Files.writeString(directory.resolve("tournament/_reports/broken.json"), "broken", StandardCharsets.UTF_8);
 		store.reload();
 		assertEquals("Valid", store.get("valid").getName());
 		assertTrue(store.isLoaded());
 		assertEquals("tournament/_reports/broken.json", store.getErrors().get(0).path());
+
 		Files.writeString(directory.resolve("tournament/_reports/broken.json"), report.toJson().put("id", "fixed").toString(), StandardCharsets.UTF_8);
 		store.reload();
-		var original = store.get("valid");
+		BattleNext_BattleReportModel original = store.get("valid");
+
 		Files.createDirectory(directory.resolve("tournament/_reports/blocked.json"));
-		var blocked = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel blocked = new BattleNext_BattleReportModel();
 		blocked.setId("blocked");
 		assertThrows(IOException.class, () -> store.save(blocked));
 		assertSame(original, store.get("valid"));

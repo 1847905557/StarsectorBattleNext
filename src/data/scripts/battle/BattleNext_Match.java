@@ -13,14 +13,19 @@ import java.util.List;
 
 public class BattleNext_Match {
 
-	public enum MatchStatus { PENDING, COMPLETE }
-	public enum MatchStage { MAIN, WINNERS, LOSERS, GRAND_FINAL, GRAND_FINAL_RESET, ROUND_ROBIN, KING_OF_THE_HILL, BYE }
+	public enum MatchStatus {
+		PENDING, COMPLETE
+	}
 
-	private String id;
+	public enum MatchStage {
+		MAIN, WINNERS, LOSERS, GRAND_FINAL, GRAND_FINAL_RESET, ROUND_ROBIN, KING_OF_THE_HILL, BYE
+	}
+
+	private final String id;
 	private String player;
 	private String enemy;
-	private int map;
-	private float mapScale;
+	private final int map;
+	private final float mapScale;
 	private final List<BattleNext_Round> rounds = new ArrayList<>();
 	private MatchStatus status = MatchStatus.PENDING;
 	private MatchStage stage = MatchStage.MAIN;
@@ -46,22 +51,27 @@ public class BattleNext_Match {
 	}
 
 	public static BattleNext_Match fromJson(JSONObject json) throws JSONException {
+
 		BattleNext_Match match = new BattleNext_Match(json.getString("id"), json.getString("player"), json.getString("enemy"), json.getInt("map"), (float)json.getDouble("mapScale"));
 		if (!Float.isFinite(match.mapScale) || match.mapScale <= 0f) throw new IllegalArgumentException("Invalid match mapScale");
+
 		JSONArray values = json.optJSONArray("rounds");
 		if (values != null) {
 			match.rounds.addAll(BattleNext_JsonModel.parseCollection("rounds", values, BattleNext_Round::fromJson, match.loadErrors));
 		}
+
 		try {
 			match.status = MatchStatus.valueOf(json.getString("status"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid match.status: " + json.getString("status"), exception);
 		}
+
 		try {
 			match.stage = MatchStage.valueOf(json.getString("stage"));
 		} catch (IllegalArgumentException exception) {
 			throw new IllegalArgumentException("Invalid match.stage: " + json.getString("stage"), exception);
 		}
+
 		JSONArray sources = json.optJSONArray("dependencies");
 		if (sources != null) {
 			for (int index = 0; index < sources.length(); index++) {
@@ -73,9 +83,8 @@ public class BattleNext_Match {
 				}
 			}
 		}
-		if (!match.loadErrors.isEmpty()) {
-			match.incompleteJson = new JSONObject(json.toString());
-		}
+		if (!match.loadErrors.isEmpty()) match.incompleteJson = new JSONObject(json.toString());
+
 		return match;
 	}
 
@@ -88,9 +97,7 @@ public class BattleNext_Match {
 		json.put("map", map);
 		json.put("mapScale", mapScale);
 		JSONArray values = new JSONArray();
-		for (BattleNext_Round round : rounds) {
-			values.put(round.toJson());
-		}
+		for (BattleNext_Round round : rounds) values.put(round.toJson());
 		json.put("rounds", values);
 		json.put("status", status.name());
 		json.put("stage", stage.name());
@@ -98,14 +105,12 @@ public class BattleNext_Match {
 		return json;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
 
 	public void addRound(BattleNext_Round round) {
-		if (round != null) {
-			rounds.add(round);
-		}
+		if (round != null) rounds.add(round);
 	}
 
 	public String getId() {
@@ -128,7 +133,7 @@ public class BattleNext_Match {
 		return mapScale;
 	}
 
-	public List<BattleNext_Round> getRounds() {
+	public List<BattleNext_Round> getRoundsReadonly() {
 		return Collections.unmodifiableList(rounds);
 	}
 
@@ -165,7 +170,7 @@ public class BattleNext_Match {
 		if (matchId != null && !matchId.isEmpty() && !dependencies.contains(matchId)) dependencies.add(matchId);
 	}
 
-	public List<String> getDependencies() {
+	public List<String> getDependenciesReadonly() {
 		return Collections.unmodifiableList(dependencies);
 	}
 

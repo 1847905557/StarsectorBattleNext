@@ -50,7 +50,7 @@ class BattleNext_FleetCsvExportIntegrationTest extends BattleNext_TestFleetIoFix
 
 					}
 				}, router);
-		var root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		BattleNext_FleetLibraryPage page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, dialog::requestDelete);
 		page.setInputRouter(router);
 		page.setOverlayHost(root);
@@ -100,9 +100,9 @@ class BattleNext_FleetCsvExportIntegrationTest extends BattleNext_TestFleetIoFix
 		csvFleet("package", "01", "1,parent_local,,,,,,\n");
 		variant("package", "parent_local", "parent", 12, new JSONObject().put("module", "child_local"));
 		variant("package", "child_local", "child", 19, null);
-		var original = Files.readAllBytes(directory.resolve("tournament/package/parent_local.variant"));
+		byte[] original = Files.readAllBytes(directory.resolve("tournament/package/parent_local.variant"));
 		BattleNext_FleetLibraryPage page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
-		var root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		page.setOverlayHost(root);
 		page.attach(root);
 		page.buttonPressed("fleet:01");
@@ -114,7 +114,7 @@ class BattleNext_FleetCsvExportIntegrationTest extends BattleNext_TestFleetIoFix
 		((TextFieldAPI) getField(editor, "folderNameField")).setText("exported");
 		assertTrue(page.save(), page.getStatusText());
 		BattleNext_FleetStore store = (BattleNext_FleetStore) getField(page, "store");
-		assertEquals(2, store.getAll().size());
+		assertEquals(2, store.getAllCopy().size());
 		assertEquals("exported", getField(page, "selectedId"));
 		assertFalse(page.hasUnsavedChanges());
 		assertEquals(19, store.get("exported").getVariant("parent_local").build()

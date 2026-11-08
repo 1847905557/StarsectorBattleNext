@@ -2,6 +2,8 @@ package data.scripts.campaign.simulation;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import org.lwjgl.input.Keyboard;
@@ -17,9 +19,9 @@ public class BattleNext_SimulationPlugin extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void processInputPreCoreControls(float amount, List<InputEventAPI> events) {
 
-		var engine = Global.getCombatEngine();
+		CombatEngineAPI engine = Global.getCombatEngine();
 		if (!engine.isInCampaignSim() && !engine.isInMissionSim() && !engine.isSimulation()) return;
-		var ui = engine.getCombatUI();
+		CombatUIAPI ui = engine.getCombatUI();
 		try {
 			Object current = null;
 			if (ui != null && ui.isShowingDeploymentDialog()) {

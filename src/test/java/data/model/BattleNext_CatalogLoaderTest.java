@@ -38,14 +38,14 @@ class BattleNext_CatalogLoaderTest extends BattleNext_TestGameFixture {
 		loader.failure = kind;
 		writeEntries(loader.paths);
 		assertEquals(List.of("first", "last"), loader.load().stream().map(Entry::getId).toList());
-		assertEquals("broken", loader.getErrors().get(0).path());
-		assertEquals("broken", loader.getErrors().get(0).id());
+		assertEquals("broken", loader.getErrorsCopy().get(0).path());
+		assertEquals("broken", loader.getErrorsCopy().get(0).id());
 		String exceptionType = switch (kind) {
 			case "io" -> IOException.class.getName();
 			case "json" -> JSONException.class.getName();
 			default -> IllegalArgumentException.class.getName();
 		};
-		assertEquals(exceptionType + ": " + kind, loader.getErrors().get(0).diagnostic());
+		assertEquals(exceptionType + ": " + kind, loader.getErrorsCopy().get(0).diagnostic());
 		assertEquals(List.of("first", "broken", "last"), loader.parsed);
 	}
 

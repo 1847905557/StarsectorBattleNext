@@ -8,6 +8,8 @@ import com.fs.starfarer.api.combat.AdmiralAIPlugin;
 import com.fs.starfarer.api.combat.CombatTaskManagerAPI;
 import com.fs.starfarer.api.combat.BattleCreationContext;
 import data.model.report.BattleNext_BattleReportStore;
+import data.model.report.BattleNext_BattleReportModel;
+import java.nio.file.Path;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleResultRecorder;
@@ -43,9 +45,9 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		fleetSkills("beta", List.of("gunnery", "gunnery", "industry"), List.of("default_ai"));
 		int deploymentPointLimit = rtt ? 120 : -5;
 		BattleNext_Settings.save(false, true, false, rtt, 123f, 1f, 3f, 50, deploymentPointLimit);
-		var tournaments = new BattleNext_TournamentStore();
+		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
-		var tournament = new BattleNext_TournamentModel();
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
 		tournament.setId("active");
 		tournament.setName("Active");
 		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
@@ -54,11 +56,11 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		instances.save(started);
 		instances.activate(started.getId());
-		var pvp = new MissionState();
+		MissionState pvp = new MissionState();
 		MissionDefinitionPlugin pvpDefinition = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_pvp.MissionDefinition")
 				.getDeclaredConstructor().newInstance();
 		pvpDefinition.defineMission(pvp.getApi());
-		var pve = new MissionState();
+		MissionState pve = new MissionState();
 		new MissionDefinition().defineMission(pve.getApi());
 		assertEquals(pvp.getPlugins().stream().map(Object::getClass).toList(), pve.getPlugins().stream().map(Object::getClass).toList());
 		assertEquals(rtt, pve.getPlugins().stream().anyMatch(plugin -> plugin instanceof BattleNext_RttPlugin));
@@ -78,7 +80,7 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		assertEquals(2f, pve.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("combat"));
 		assertEquals("mod_faction patrol", getField(pve.getPlugins().get(pve.getPlugins().size() - 1), "enemyName"));
 		assertSame(generatedFleets.get(0).getMembers().get(0), pve.getMembers().get(FleetSide.ENEMY).get(0));
-		var lab = new MissionState();
+		MissionState lab = new MissionState();
 		MissionDefinitionPlugin labDefinition = (MissionDefinitionPlugin) Class.forName("data.missions.BattleNext_lab.MissionDefinition")
 				.getDeclaredConstructor().newInstance();
 		labDefinition.defineMission(lab.getApi());
@@ -109,12 +111,12 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 
 		quickBattles("alpha,beta,0,1\n");
 		write(BattleNext_StartedTournamentStore.PATH, "{\"formatVersion\":1,\"activeTournamentId\":\"missing\",\"instances\":[]}");
-		var meta = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+		Path meta = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		byte[] original = Files.readAllBytes(meta);
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, keepCount, 0);
-		var mission = new MissionState();
+		MissionState mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
-		var combat = new CombatState(mission);
+		CombatState combat = new CombatState(mission);
 		BattleNext_ScorekeeperPlugin scorekeeper = mission.getPlugins().stream()
 				.filter(plugin -> plugin instanceof BattleNext_ScorekeeperPlugin).map(plugin -> (BattleNext_ScorekeeperPlugin) plugin).findFirst().orElseThrow();
 		BattleNext_BattleResultRecorder recorder = mission.getPlugins().stream()
@@ -128,17 +130,17 @@ class MissionReportTest extends BattleNext_TestMissionFixture {
 		recorder.init(combat.getApi());
 		recorder.advance(0.1f, List.of());
 		recorder.advance(0.1f, List.of());
-		var reports = new BattleNext_BattleReportStore();
+		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
-		assertEquals(keepCount, reports.getAll().size());
-		var report = scorekeeper.getFrozenReport();
+		assertEquals(keepCount, reports.getAllCopy().size());
+		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		assertTrue(report.getName().contains("PvE row 1 (PLAYER), faction mod_faction, budget 100 FP, actual 45 FP"));
 		assertTrue(report.getName().startsWith("Standard vs mod_faction patrol - "));
 		assertEquals("player", report.getWinner());
 		assertEquals(24000L, report.getDurationMillis());
 		assertEquals(generatedFleets.get(0).getMembers().stream().map(member -> member.getShipName()).toList(),
-				report.getEnemyMembers().stream().map(member -> member.getName()).toList());
-		assertTrue(report.getEnemyMembers().stream().allMatch(member -> member.getStatus().equals("destroyed")));
+				report.getEnemyMembersReadonly().stream().map(member -> member.getName()).toList());
+		assertTrue(report.getEnemyMembersReadonly().stream().allMatch(member -> member.getStatus().equals("destroyed")));
 		assertEquals(1, combat.getNotices().size());
 		assertArrayEquals(original, Files.readAllBytes(meta));
 		assertEquals(keepCount == 0 ? "" : report.getId(), BattleNext_BattleSignals.consumePendingResult());

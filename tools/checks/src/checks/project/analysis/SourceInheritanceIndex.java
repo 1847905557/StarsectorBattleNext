@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.Set;
 
 public class SourceInheritanceIndex {
-	private boolean indexed = false;
 	private final Set<String> extendedClasses = new HashSet<>();
 
 	public boolean isExtended(TypeDeclaration<?> typeDeclaration) {
@@ -25,14 +24,6 @@ public class SourceInheritanceIndex {
 				extendedClasses.add(extendedType.toString());
 			}
 		}
-	}
-
-	public void markIndexed() {
-		indexed = true;
-	}
-
-	public boolean isIndexed() {
-		return indexed;
 	}
 
 	private Set<String> qualifiedNames(TypeDeclaration<?> typeDeclaration) {

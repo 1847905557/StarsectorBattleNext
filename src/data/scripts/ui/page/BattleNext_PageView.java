@@ -15,39 +15,33 @@ import java.util.function.Function;
 public abstract class BattleNext_PageView extends BattleNext_View {
 
 	protected CustomPanelAPI panel;
-	protected CustomPanelAPI overlayHost;
 	protected String status = "";
 	protected LabelAPI statusLabel;
 	private CustomPanelAPI owner;
-
-	public final void setInputRouter(BattleNext_UiInputRouter router) {
-		inputRouter = router;
-		bindPageInput();
-	}
-
-	public final void setOverlayHost(CustomPanelAPI host) {
-		overlayHost = host;
-	}
 
 	public final void attach(CustomPanelAPI body) {
 		close();
 		owner = body;
 		status = "";
-		bindPageInput();
+
+		bindInput();
 		loadPageState();
 		createContents();
 		establishPageState();
 	}
 
 	public final void createContents() {
+
 		clearPageOverlays();
 		if (editorView() != null) editorView().detach();
 		inputRouter.clear();
 		clearPageResources();
 		releasePanel();
+
 		panel = owner.createCustomPanel(owner.getPosition().getWidth(), owner.getPosition().getHeight(), owner.getPlugin());
 		owner.addComponent(panel).inTL(0f, 0f);
 		statusLabel = null;
+
 		buildPage();
 		refreshContent();
 	}
@@ -57,6 +51,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 		if (editorView() != null) editorView().detach();
 		inputRouter.clear();
 		clearPageResources();
+
 		refreshPage();
 		updatePageControls();
 		updateStatus();
@@ -65,6 +60,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	public final void close() {
 		clearOperation();
 		saveErrors.clear();
+
 		clearPageOverlays();
 		if (editorView() != null) editorView().close();
 		inputRouter.clear();
@@ -90,6 +86,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	public final boolean save() {
 		saveErrors.clear();
 		boolean saved = savePage();
+
 		updatePageControls();
 		updateStatus();
 		return saved;
@@ -99,6 +96,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 		saveErrors.clear();
 		status = "";
 		discardPage();
+
 		updatePageControls();
 		updateStatus();
 	}
@@ -108,7 +106,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	}
 
 	public final List<String> getSaveErrors() {
-		if (!saveErrors.isEmpty()) return saveErrors.getMessages();
+		if (!saveErrors.isEmpty()) return saveErrors.getMessagesCopy();
 		return editorView() == null ? List.of() : editorView().getSaveErrors();
 	}
 
@@ -129,6 +127,7 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	}
 
 	public void restoreSelection(String id) {
+
 	}
 
 	public void catalogChanged() {
@@ -141,7 +140,8 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 
 	protected abstract void refreshPage();
 
-	protected void bindPageInput() {
+	@Override
+	protected void bindInput() {
 		if (editorView() != null) editorView().setInputRouter(inputRouter);
 	}
 
@@ -182,12 +182,15 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	}
 
 	public final Boolean completeSave() {
+
 		boolean own = super.isSaving();
 		boolean pending = isSaving();
 		Boolean completed = own ? completeOperation() : editorView() == null ? null : editorView().completeSave();
+
 		if (pending && !isSaving()) {
 			if (!own && (completed != null || !editorView().getSaveErrors().isEmpty())) status = editorView().getStatusText();
 			if (Boolean.TRUE.equals(completed)) savePublished();
+
 			updatePageControls();
 			updateStatus();
 		}
@@ -195,9 +198,11 @@ public abstract class BattleNext_PageView extends BattleNext_View {
 	}
 
 	protected void afterSave() {
+
 	}
 
 	protected void savePublished() {
+
 	}
 
 	public final void refreshAfterSave() {

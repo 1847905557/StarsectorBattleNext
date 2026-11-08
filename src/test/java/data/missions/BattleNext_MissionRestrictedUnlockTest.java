@@ -71,6 +71,7 @@ class BattleNext_MissionRestrictedUnlockTest {
 
 	@Test
 	void previewIdentityAllowsRefitReopenAndReleasesOnSelectionChange() {
+
 		Set<String> weaponTags = new HashSet<>(Set.of(Tags.RESTRICTED));
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings(settings(List.of(spec(WeaponSpecAPI.class, weaponTags)), List.of(), List.of()));
@@ -81,12 +82,15 @@ class BattleNext_MissionRestrictedUnlockTest {
 			unlock.enable(selected);
 			assertTrue(unlock.owns(selected));
 			assertFalse(unlock.owns(other));
+
 			unlock.observe(selected, false, false);
 			assertTrue(weaponTags.contains(Tags.RESTRICTED));
+
 			unlock.observe(selected, true, false);
 			assertFalse(weaponTags.contains(Tags.RESTRICTED));
 			unlock.observe(selected, false, true);
 			assertFalse(weaponTags.contains(Tags.RESTRICTED));
+
 			unlock.observe(other, true, false);
 			assertFalse(unlock.hasPreview());
 			assertTrue(weaponTags.contains(Tags.RESTRICTED));

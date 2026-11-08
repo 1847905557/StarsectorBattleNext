@@ -5,7 +5,9 @@ public abstract class BattleNext_BaseModel {
 	private BattleNext_LoadSource sourceType = BattleNext_LoadSource.CREATED;
 	private String sourcePath = "";
 
-	protected BattleNext_BaseModel() {}
+	protected BattleNext_BaseModel() {
+
+	}
 
 	public abstract String getId();
 

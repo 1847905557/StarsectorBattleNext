@@ -2,6 +2,7 @@ public class LifecycleInterfaceDirectMissingAnnotation implements EveryFrameScri
 	private static final String KEY = "key";
 
 	private LifecycleInterfaceDirectMissingAnnotation() {
+
 	}
 
 	public static LifecycleInterfaceDirectMissingAnnotation getInstance(CombatEntityAPI entity) {

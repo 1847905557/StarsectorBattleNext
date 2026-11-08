@@ -5,6 +5,7 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.scripts.tools.BattleNext_Logger;
 
@@ -32,8 +33,9 @@ public final class BattleNext_VariantCatalog {
 
 	public boolean advance(long budgetNanos) {
 		if (ids == null) ids = List.copyOf(Global.getSettings().getAllVariantIds());
-		long deadline = System.nanoTime() + budgetNanos;
-		while (position < ids.size() && System.nanoTime() < deadline) {
+
+		long deadlineNanos = System.nanoTime() + budgetNanos;
+		while (position < ids.size() && System.nanoTime() < deadlineNanos) {
 			String id = ids.get(position++);
 			ShipVariantAPI variant = Global.getSettings().getVariant(id);
 			if (variant == null || variant.isFighter()) continue;
@@ -45,22 +47,26 @@ public final class BattleNext_VariantCatalog {
 			icons.put(id, hull.getSpriteName());
 			icons.put(hull.getHullId(), hull.getSpriteName());
 		}
+
 		if (position == ids.size() && !ready) {
-			standard.sort(Comparator.comparing(OptionChoice::getId));
-			groups.values().forEach(values -> values.sort(Comparator.comparing(OptionChoice::getId)));
+			standard.sort(Comparator.comparing(OptionChoice::id));
+			for (List<OptionChoice> values : groups.values()) values.sort(Comparator.comparing(OptionChoice::id));
 			ready = true;
 		}
+
 		return ready;
 	}
 
 	public List<OptionChoice> options() {
 		loadPins();
-		while (!advance(2_000_000L)) { }
+		while (!advance(2_000_000L)) {
+
+		}
 		if (pinRevision != pins.getRevision()) {
 			List<OptionChoice> values = new ArrayList<>();
-			for (var pin : pins.getAll()) {
+			for (BattleNext_PinnedVariantModel pin : pins.getAllCopy()) {
 				String id = BattleNext_VariantSourceProvider.PINNED_PREFIX + pin.getPinId();
-				String hullId = pin.getVariantJson().optString("hullId");
+				String hullId = pin.getVariantJsonCopy().optString("hullId");
 				ShipHullSpecAPI hull;
 				try {
 					hull = Global.getSettings().getHullSpec(hullId);
@@ -73,7 +79,7 @@ public final class BattleNext_VariantCatalog {
 				values.add(new OptionChoice(id, pin.getDisplayName()));
 				icons.put(id, hull.getSpriteName());
 			}
-			values.sort(Comparator.comparing(OptionChoice::getId));
+			values.sort(Comparator.comparing(OptionChoice::id));
 			pinned = List.copyOf(values);
 			values.addAll(standard);
 			options = List.copyOf(values);
@@ -93,7 +99,7 @@ public final class BattleNext_VariantCatalog {
 		icons.clear();
 	}
 
-	public List<OptionChoice> hulls() {
+	public List<OptionChoice> hullsCopy() {
 		options();
 		return List.copyOf(hulls.values());
 	}

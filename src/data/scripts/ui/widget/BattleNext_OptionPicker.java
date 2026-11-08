@@ -26,25 +26,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		SINGLE, MULTIPLE
 	}
 
-	public record Anchor(float x, float y, float width, float height) { }
+	public record Anchor(float x, float y, float width, float height) {
 
-	public static class OptionChoice {
+	}
 
-		private final String id;
-		private final String label;
+	public record OptionChoice(String id, String label) {
 
-		public OptionChoice(String id, String label) {
-			this.id = id;
-			this.label = label;
-		}
-
-		public String getId() {
-			return id;
-		}
-
-		public String getLabel() {
-			return label;
-		}
 	}
 
 	public interface OptionChoiceSource {
@@ -121,6 +108,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final Color CHECK_COLOR = new Color(0.5f, 0.9f, 1f, 1f);
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+
 	private final OptionChoiceSource source;
 	private final OptionSelectionMode mode;
 	private final Supplier<List<String>> initialSelection;
@@ -134,17 +122,6 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private boolean enabled = true;
 	private Supplier<Anchor> externalAnchor;
 	private final Map<String, Integer> selection = new LinkedHashMap<>();
-
-	@Override
-	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
-		row = ownPanel(host, panelOwner.createCustomPanel(buttonWidth,
-				buttonHeight, new OptionPickerPanelPlugin()));
-		toggle = BattleNext_PageLayout.fixedButton(row,
-				new UIRect(0f, 0f, buttonWidth, buttonHeight), title,
-				OptionPickerAction.TOGGLE, CutStyle.ALL, false);
-		host.addCustom(row, topGap);
-		row.getPosition().inTL(0f, host.getHeightSoFar() - buttonHeight);
-	}
 
 	private List<OptionChoice> options = List.of();
 	private List<String> previousIds = List.of();
@@ -178,16 +155,27 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		this.viewports = viewports;
 	}
 
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
-		if (toggle != null) toggle.setEnabled(enabled);
-		if (!enabled) clearOverlays();
-	}
-
 	public BattleNext_OptionPicker(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			OptionChoiceSource source, OptionSelectionMode mode, Supplier<List<String>> initialSelection,
 			Consumer<List<String>> onConfirmed) {
 		this(inputRouter, overlayHost, 0f, 0f, "", 0f, source, mode, initialSelection, onConfirmed);
+	}
+
+	@Override
+	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
+		row = ownPanel(host, panelOwner.createCustomPanel(buttonWidth,
+				buttonHeight, new OptionPickerPanelPlugin()));
+		toggle = BattleNext_PageLayout.fixedButton(row,
+				new UIRect(0f, 0f, buttonWidth, buttonHeight), title,
+				OptionPickerAction.TOGGLE, CutStyle.ALL, false);
+		host.addCustom(row, topGap);
+		row.getPosition().inTL(0f, host.getHeightSoFar() - buttonHeight);
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+		if (toggle != null) toggle.setEnabled(enabled);
+		if (!enabled) clearOverlays();
 	}
 
 	public void openAt(CustomPanelAPI panelOwner, Supplier<Anchor> anchor) {
@@ -208,6 +196,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			if (popupOverlay != null) inputRouter.pop(popupOverlay);
 		}
 		if (popup != null) releasePanel(popup);
+
 		popup = null;
 		popupOverlay = null;
 		gridPanel = null;
@@ -259,9 +248,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		category = "";
 		selectedOnly = false;
 		Set<String> known = new HashSet<>();
-		for (OptionChoice option : options) {
-			known.add(option.id);
-		}
+		for (OptionChoice option : options) known.add(option.id);
 		previousIds = initialSelection == null ? List.of() : new ArrayList<>(initialSelection.get());
 		selection.clear();
 		for (Map.Entry<String, Integer> entry : parse(previousIds).entrySet()) {
@@ -366,23 +353,27 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private void rebuildGrid() {
 		if (visibleRows != null) visibleRows.close();
 		if (gridPanel != null) releasePanel(gridPanel);
+
 		float width = popup.getPosition().getWidth() - 2f * POPUP_INSET;
 		float top = source.groupsChoices() ? 80f : POPUP_GRID_TOP;
 		float height = popup.getPosition().getHeight() - top - 46f;
 		gridPanel = ownPanel(popup, popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin()));
 		grid = gridPanel.createUIElement(width, height, true);
+
 		String query = search.getText().trim().toLowerCase(Locale.ROOT);
 		List<OptionChoice> choices = selectedOnly ? options.stream().filter(option -> selection.containsKey(option.id)).toList()
 				: source.groupsChoices() ? category.isEmpty() ? source.getGroups() : source.getGroupOptions(category) : options;
 		List<OptionChoice> visible = choices.stream().filter(option -> query.isEmpty()
 				|| option.id.toLowerCase(Locale.ROOT).contains(query) || option.label.toLowerCase(Locale.ROOT).contains(query)).toList();
 		if (visible.isEmpty()) grid.addPara(strings.get("picker_no_options"), POPUP_INSET);
+
 		int columns = selectedOnly ? 1 : gridColumns(popup.getPosition().getWidth());
 		int count = (visible.size() + columns - 1) / columns;
 		float rowHeight = selectedOnly ? 40f : TILE_SIZE + TILE_GAP;
 		visibleRows = new VisibleRows(count, row -> rowHeight,
 				row -> mountGridRow(row, columns, rowHeight, visible), this::releaseGridRow, row -> false);
 		grid.setHeightSoFar(POPUP_INSET * 2f + visibleRows.height());
+
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
 		popup.addComponent(gridPanel).inTL(POPUP_INSET, top);
 		visibleRows.update(0f, height);
@@ -428,11 +419,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP), POPUP_INSET + row * rowHeight);
 			grid.addTooltipTo(new BaseTooltipCreator() {
 				@Override
-				public float getTooltipWidth(Object ignored) {
+				public float getTooltipWidth(Object tooltipParam) {
 					return source.getTooltipWidth();
 				}
+
 				@Override
-				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					BattleNext_UiTheme.configure(tooltip);
 					if (group) tooltip.addTitle(option.label);
 					else source.createTooltip(tooltip, option);
@@ -460,7 +452,9 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		else selection.put(id, count);
 	}
 
-	private record SelectionChange(String id, int delta) { }
+	private record SelectionChange(String id, int delta) {
+
+	}
 
 	private void addIcon(CustomPanelAPI tile, OptionChoice option, OptionPickerTilePlugin tilePlugin) {
 
@@ -544,9 +538,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		Map<String, Integer> previous = parse(previousIds);
 		Set<String> known = new HashSet<>();
-		for (OptionChoice option : options) {
-			known.add(option.id);
-		}
+		for (OptionChoice option : options) known.add(option.id);
 		if (mode == OptionSelectionMode.SINGLE) {
 			List<String> selected = new ArrayList<>();
 			if (!selection.isEmpty()) {
@@ -621,6 +613,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			return anchor != null && anchor.width() > 0f && anchor.height() > 0f;
 		}
 		if (row == null) return false;
+
 		PositionAPI rowPosition = row.getPosition();
 		for (TooltipMakerAPI host : viewports) {
 			ScrollPanelAPI scroller = host.getExternalScroller();
@@ -680,11 +673,13 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		@Override
 		public void advance(float amount) {
 			if (search == null || popup == null) return;
+
 			if (visibleRows != null) visibleRows.update(grid.getExternalScroller().getYOffset(), gridPanel.getPosition().getHeight());
 			if (!isRowVisible()) {
 				clearOverlays();
 				return;
 			}
+
 			float hostWidth = overlayHost.getPosition().getWidth();
 			float hostHeight = overlayHost.getPosition().getHeight();
 			Anchor anchor = anchor();
@@ -697,8 +692,10 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			float y = above ? rowTop - popupHeight - POPUP_ROW_GAP : belowY;
 			float x = Math.max(POPUP_INSET, Math.min(anchor.x() - overlayHost.getPosition().getX(),
 					hostWidth - popup.getPosition().getWidth() - POPUP_INSET));
+
 			popup.getPosition().inTL(x,
 					Math.max(POPUP_INSET, Math.min(y, hostHeight - popupHeight - POPUP_INSET)));
+
 			String current = search.getText();
 			if (!current.equals(lastSearch)) {
 				lastSearch = current;
@@ -761,6 +758,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			}
 			int count = selection.getOrDefault(option.id, 0);
 			if (count == 0) return;
+
 			BattleNext_GeometryRenderer.lineLoop(new float[]{
 					position.getX() + TILE_SELECTION_OUTLINE_INSET, position.getY() + TILE_SELECTION_OUTLINE_INSET,
 					position.getX() + TILE_SIZE - TILE_SELECTION_OUTLINE_INSET,
@@ -787,6 +785,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 					event.consume();
 					return;
 				}
+
 				int max = maxStack(option.id);
 				int next = selection.getOrDefault(option.id, 0) + 1;
 				if (next > max) {

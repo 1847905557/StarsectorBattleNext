@@ -39,30 +39,34 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 
 	@Test
 	void simulatorSessionStartsEmptyAndReportsRemainIndependent() throws Exception {
+
 		BattleNext_SimulationTask completed = completedTaskThroughService("Saved result");
 		BattleNext_SimulatorService.advance();
 		awaitImports();
 		assertTrue(completed.isRetained());
+
 		quickBattles("alpha,beta,-1,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup",
 				BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 3, 2);
 		sources.getTournamentStore().save(configuration);
-		var request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"),
+		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"),
 				sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults());
 		BattleNext_SimulationTask task = pausedTournamentThroughService(request);
 		assertTrue(sources.getTournamentStore().isLocked("cup"));
 		assertEquals(task.getStartedTournament().getId(), BattleNext_SimulatorService.simulatedInstances().get(0).getId());
 		assertFalse(Files.exists(directory.resolve("tournament/_simulations/" + request.id() + ".json")));
-		var page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (name, action) -> action.run());
+
+		BattleNext_TournamentPage page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (name, action) -> action.run());
 		page.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("tournament:select:cup");
-		var editor = (BattleNext_TournamentEditor) getField(page, "editor");
+		BattleNext_TournamentEditor editor = (BattleNext_TournamentEditor) getField(page, "editor");
 		assertTrue(editor.isReadOnly());
 		editor.buttonPressed("instance:toggle:" + request.id());
 		assertTrue(buttons.get("instance:delete:" + request.id()).get());
 		page.close();
+
 		service.close();
 		singleton.set(null, null);
 		createOwnedService();
@@ -71,7 +75,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertFalse(sources.getTournamentStore().isLocked("cup"));
 		assertNull(readField("process"));
 		assertNull(readField("supervisor"));
-		var reports = new BattleNext_BattleReportStore();
+		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
 		assertEquals("Saved result", reports.get(completed.getRequest().id()).getName());
 	}
@@ -87,7 +91,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertFalse(campaignMonitor.isDone());
 		assertTrue(campaignMonitor.runWhilePaused());
 		Runnable advance = campaign ? () -> campaignMonitor.advance(0f) : () -> combatMonitor.advance(0f, List.of());
-		var manager = new BattleNext_UiManager(() -> {});
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		manager.open();
 		settleUi(manager);
@@ -95,7 +99,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		advance.run();
 		awaitImports();
 		manager.advance(0f);
-		var status = (BattleNext_StatusBar) getField(manager, "statusBar");
+		BattleNext_StatusBar status = (BattleNext_StatusBar) getField(manager, "statusBar");
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), task.getRequest().id()),
 				((LabelAPI) getField(status, "statusLabel")).getText());
 		manager.buttonPressed("close");
@@ -103,14 +107,14 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertTrue(task.isRetained());
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
-		assertEquals(task.getRequest().id(), reports.getAll().get(0).getId());
+		assertEquals(task.getRequest().id(), reports.getAllCopy().get(0).getId());
 		service.close();
 		singleton.set(null, null);
 		createOwnedService();
 		advance.run();
 		awaitImports();
 		reports.reload();
-		assertEquals(List.of(task.getRequest().id()), reports.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
+		assertEquals(List.of(task.getRequest().id()), reports.getAllCopy().stream().map(BattleNext_BattleReportModel::getId).toList());
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0, 0);
 		BattleNext_SimulationTask discarded = completedTaskThroughService("Not retained");
 		advance.run();
@@ -118,7 +122,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertFalse(discarded.isRetained());
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
-		assertTrue(reports.getAll().isEmpty());
+		assertTrue(reports.getAllCopy().isEmpty());
 	}
 
 	@Test
@@ -159,17 +163,18 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals("Retry simulation", resultReport.getName());
 		assertJsonEquals(expectedReport.toJson(), resultReport.toJson());
 		assertEquals(expectedResult, task.getResult());
-		assertEquals(List.of(task), service.getFailedImports());
+		assertEquals(List.of(task), service.getFailedImportsCopy());
 		assertTrue(task.getImportError().contains("directory"));
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
 		assertEquals(existingJson, reports.get("existing").toJson().toString());
 		assertNull(reports.get(request.id()));
+
 		Files.delete(blocked);
 		task.retryImport();
 		awaitImports();
 		assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
-		assertTrue(service.getFailedImports().isEmpty());
+		assertTrue(service.getFailedImportsCopy().isEmpty());
 		reports.reload();
 		BattleNext_BattleReportModel imported = reports.get(task.getRequest().id());
 		assertNotNull(imported);
@@ -181,6 +186,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals(600L, task.getResult().steps());
 		assertEquals(1024L, task.getResult().peakHeapBytes());
 		assertEquals(request.id(), BattleNext_BattleSignals.consumePendingResult());
+
 		Files.delete(blocked);
 		task.retryImport();
 		awaitImports();
@@ -240,8 +246,8 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 			assertEquals(request, submitted);
 			peer.send("RESULT", result.toJson());
 			peer.send("READY", new JSONObject());
-			long deadline = System.nanoTime() + 5000000000L;
-			while ((task.getResult() == null || readField("active") != null) && System.nanoTime() < deadline) {
+			long deadlineNanos = System.nanoTime() + 5000000000L;
+			while ((task.getResult() == null || readField("active") != null) && System.nanoTime() < deadlineNanos) {
 				Thread.sleep(10L);
 			}
 			assertNotNull(task.getResult());

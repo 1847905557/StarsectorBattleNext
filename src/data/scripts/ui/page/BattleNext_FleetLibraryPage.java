@@ -17,6 +17,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+
 	private final BattleNext_FleetStore store;
 	private final BattleNext_FleetEditor editor;
 
@@ -50,7 +51,7 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		addCatalogDiagnostics(listContent, store.getErrors());
-		for (BattleNext_FleetModel fleet : store.getAll()) {
+		for (BattleNext_FleetModel fleet : store.getAllCopy()) {
 			addListItem(listContent, fleet.getName(), "fleet:" + fleet.getId());
 		}
 	}

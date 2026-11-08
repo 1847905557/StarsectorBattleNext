@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
@@ -29,10 +30,10 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 	@Test
 	void optionalResourceRootsPublishLoadedEmptyCatalogsWithoutReadingFiles() throws Exception {
 		for (String kind : List.of("report", "rule", "tournament", "pin")) {
-			var store = store(kind);
+			BattleNext_BaseStore<? extends BattleNext_JsonModel> store = store(kind);
 			store.reload();
 			assertTrue(store.isLoaded());
-			assertTrue(store.getAll().isEmpty());
+			assertTrue(store.getAllCopy().isEmpty());
 			assertTrue(dataReads.isEmpty());
 			assertFalse(Files.exists(directory.resolve(root(kind))));
 		}
@@ -43,18 +44,18 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 	void storesLoadFlatResourcesInPathOrderAndPreserveTheirContentAndOrigins(String kind) throws Exception {
 
 		hull("wolf", "Wolf", List.of());
-		var root = directory.resolve(root(kind));
+		Path root = directory.resolve(root(kind));
 		Files.createDirectories(root.resolve("nested"));
 		for (String id : List.of("b", "a")) {
 			Files.writeString(root.resolve(id + ".json"), model(kind, id).toJson().toString(), StandardCharsets.UTF_8);
 		}
 		Files.writeString(root.resolve("nested/ignored.json"), "invalid", StandardCharsets.UTF_8);
 		Files.writeString(root.resolve("ignored.txt"), "invalid", StandardCharsets.UTF_8);
-		var store = store(kind);
+		BattleNext_BaseStore<? extends BattleNext_JsonModel> store = store(kind);
 		store.reload();
 		assertTrue(store.isLoaded());
-		assertEquals(List.of("a", "b"), store.getAll().stream().map(BattleNext_BaseModel::getId).toList());
-		for (var entry : store.getAll()) {
+		assertEquals(List.of("a", "b"), store.getAllCopy().stream().map(BattleNext_BaseModel::getId).toList());
+		for (BattleNext_JsonModel entry : store.getAllCopy()) {
 			assertEquals(BattleNext_LoadSource.STANDARD, entry.getSourceType());
 			assertEquals(root(kind) + "/" + entry.getId() + ".json", entry.getSourcePath());
 			assertEquals(model(kind, entry.getId()).toJson().toString(), entry.toJson().toString());
@@ -78,7 +79,7 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 		assertTrue(text.contains("\n    \""));
 		assertEquals(model.toJson().toString(), new JSONObject(text).toString());
 		assertFalse(bytes.length >= 3 && bytes[0] == (byte) 0xef && bytes[1] == (byte) 0xbb && bytes[2] == (byte) 0xbf);
-		var sibling = directory.resolve(root(kind) + "/keep.txt");
+		Path sibling = directory.resolve(root(kind) + "/keep.txt");
 		Files.writeString(sibling, "保留", StandardCharsets.UTF_8);
 		saver.delete(model);
 		assertFalse(Files.exists(directory.resolve(path)));
@@ -89,8 +90,8 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 	@Test
 	void invalidIdentityFailsBeforeCreatingTheResourceDirectory() throws Exception {
 		for (String kind : List.of("report", "rule", "tournament", "pin")) {
-			var model = model(kind, "");
-			var saver = saver(kind);
+			BattleNext_JsonModel model = model(kind, "");
+			BattleNext_BaseSaver<BattleNext_JsonModel> saver = saver(kind);
 			assertThrows(IOException.class, () -> saver.save(model));
 			assertThrows(IOException.class, () -> saver.delete(model));
 			assertFalse(Files.exists(directory.resolve(root(kind))));
@@ -100,11 +101,11 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 	@Test
 	void filesystemFailurePreservesTheInputModel() throws Exception {
 		for (String kind : List.of("report", "rule", "tournament", "pin")) {
-			var model = model(kind, "entry");
+			BattleNext_JsonModel model = model(kind, "entry");
 			model.setSourceType(BattleNext_LoadSource.STANDARD);
 			model.setSourcePath("source.json");
 			String before = model.toJson().toString();
-			var blocked = directory.resolve(root(kind));
+			Path blocked = directory.resolve(root(kind));
 			Files.createDirectories(blocked.getParent());
 			Files.writeString(blocked, "blocked", StandardCharsets.UTF_8);
 			assertThrows(IOException.class, () -> saver(kind).save(model));
@@ -130,7 +131,7 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 			case "tournament" -> new BattleNext_TournamentModel(id, "中文赛事", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 			case "pin" -> new BattleNext_PinnedVariantModel(id, "中文装配", new JSONObject().put("hullId", "wolf"));
 			default -> {
-				var report = new BattleNext_BattleReportModel();
+				BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 				report.setId(id);
 				report.setName("中文报告");
 				yield report;

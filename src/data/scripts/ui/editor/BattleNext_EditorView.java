@@ -23,7 +23,6 @@ import java.util.LinkedHashSet;
 public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	protected CustomPanelAPI panel;
-	protected CustomPanelAPI overlayHost;
 	protected String statusText = "";
 	private CustomPanelAPI owner;
 	private String baseline;
@@ -39,14 +38,6 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	private final Map<Object, Float> offsets = new LinkedHashMap<>();
 	private final List<BattleNext_TooltipBasedWidget> tooltipWidgets = new ArrayList<>();
 	private final List<BattleNext_PanelBasedWidget> panelWidgets = new ArrayList<>();
-
-	public final void setInputRouter(BattleNext_UiInputRouter router) {
-		inputRouter = router;
-	}
-
-	public final void setOverlayHost(CustomPanelAPI host) {
-		overlayHost = host;
-	}
 
 	protected final void beginSession() {
 		close();
@@ -72,9 +63,11 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	public final void refreshContent() {
 		if (owner == null) return;
+
 		detachContent();
 		panel = owner.createCustomPanel(owner.getPosition().getWidth(), owner.getPosition().getHeight(), owner.getPlugin());
 		owner.addComponent(panel).inTL(0f, 0f);
+
 		try {
 			buildEditorContent();
 			restoreState();
@@ -93,14 +86,17 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	protected final void createColumns(Object metadataKey, Object rowsKey,
 			BiConsumer<TooltipMakerAPI, Float> metadataBuilder, BiConsumer<TooltipMakerAPI, Float> rowsBuilder) {
+
 		UIRect[] columns = BattleNext_PageLayout.editorColumns(panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		List<BiConsumer<TooltipMakerAPI, Float>> builders = List.of(metadataBuilder, rowsBuilder);
 		List<Object> keys = List.of(metadataKey, rowsKey);
+
 		for (int index = 0; index < columns.length; index++) {
 			UIRect column = columns[index];
 			TooltipMakerAPI content = panel.createUIElement(column.getWidth(), column.getHeight(), true);
 			BattleNext_UiTheme.configure(content);
 			builders.get(index).accept(content, column.getWidth());
+
 			panel.addUIElement(content).inTL(column.getX(), column.getY());
 			bindViewport(keys.get(index), content);
 		}
@@ -111,10 +107,12 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		LabelAPI fieldLabel = fieldContent.addPara(label, BattleNext_PageLayout.EDITOR_LABEL_GAP);
 		fieldLabel.getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - fieldLabel.getPosition().getHeight());
+
 		if (!editable) {
 			fieldContent.addPara(value, BattleNext_PageLayout.EDITOR_READ_ONLY_VALUE_GAP);
 			return null;
 		}
+
 		BattleNext_TextField field = own(BattleNext_PageLayout.editorTextField(inputRouter, hostPanel, fieldContent,
 				fieldArea, value, viewports));
 		return bindField(key, field);
@@ -129,12 +127,15 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	protected final TextFieldAPI createOptionField(Object key, CustomPanelAPI hostPanel, TooltipMakerAPI fieldContent,
 			UIRect fieldArea, String label, String value, BattleNext_OptionPicker.OptionChoiceSource source,
 			BattleNext_OptionField.OptionSelectionMode mode, TooltipMakerAPI... viewports) {
+
 		LabelAPI fieldLabel = fieldContent.addPara(label, BattleNext_PageLayout.EDITOR_LABEL_GAP);
 		fieldLabel.getPosition().inTL(fieldArea.getX(),
 				fieldContent.getHeightSoFar() - fieldLabel.getPosition().getHeight());
+
 		BattleNext_OptionField optionField = own(new BattleNext_OptionField(inputRouter, overlayHost,
 				fieldArea.getWidth(), source, mode, viewports));
 		optionField.attach(fieldContent, hostPanel);
+
 		TextFieldAPI field = optionField.getField();
 		field.setMaxChars(-1);
 		field.setText(value);
@@ -187,6 +188,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		if (editable) bindCheck(key, enabledCheckbox);
 		if (tooltip != null) fieldContent.addTooltipToPrevious(tooltip, TooltipMakerAPI.TooltipLocation.RIGHT);
 		fieldContent.setHeightSoFar(bounds.getHeight());
+
 		hostPanel.addUIElement(fieldContent).inTL(bounds.getX(), bounds.getY());
 		return enabledCheckbox;
 	}
@@ -196,7 +198,9 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		return BattleNext_PageLayout.cellLabel(hostPanel, cell, text, compact, tooltip, location, recreate);
 	}
 
-	protected record EditorAction(String label, Object id, boolean enabled) { }
+	protected record EditorAction(String label, Object id, boolean enabled) {
+
+	}
 
 	protected final void createActions(CustomPanelAPI hostPanel, UIRect cell, EditorAction... actions) {
 		UIRect[] bounds = BattleNext_PageLayout.editorActions(cell, actions.length);
@@ -220,12 +224,14 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	protected final BattleNext_TableWidget createTable(Object key, TooltipMakerAPI rowsContent, float areaWidth,
 			String title, String[] headers, float[] columnShares, int rowCount, BattleNext_TableWidget.RowBuilder rowBuilder,
 			BiConsumer<Float, TooltipMakerAPI> contentBuilder) {
+
 		rowsContent.addTitle(title);
 		float areaHeight = Math.max(1f, panel.getPosition().getHeight() - BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT);
 		UIRect tableArea = BattleNext_PageLayout.pageContentRect(new UIRect(0f,
 				BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT, areaWidth, areaHeight));
 		CustomPanelAPI tablePanel = panel.createCustomPanel(tableArea.getWidth(), tableArea.getHeight(), panel.getPlugin());
 		rowsContent.addComponent(tablePanel).inTL(tableArea.getX(), tableArea.getY());
+
 		BattleNext_TableWidget tableWidget = own(new BattleNext_TableWidget(panel.getPlugin(), headers, columnShares,
 				rowCount, rowBuilder, contentBuilder));
 		tableWidget.attach(tablePanel);
@@ -241,22 +247,16 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	protected final void captureState() {
 		inputs.putAll(inputRouter.getSession().captureFields(fields));
-		for (var entry : checks.entrySet()) {
-			checked.put(entry.getKey(), entry.getValue().isChecked());
-		}
-		for (var entry : viewports.entrySet()) {
-			offsets.put(entry.getKey(), entry.getValue().getExternalScroller().getYOffset());
-		}
+		for (Map.Entry<Object, ButtonAPI> entry : checks.entrySet()) checked.put(entry.getKey(), entry.getValue().isChecked());
+		for (Map.Entry<Object, TooltipMakerAPI> entry : viewports.entrySet()) offsets.put(entry.getKey(), entry.getValue().getExternalScroller().getYOffset());
 	}
 
 	protected final void restoreState() {
 		inputRouter.getSession().restoreFields(fields, inputs, true);
-		for (var entry : checks.entrySet()) {
+		for (Map.Entry<Object, ButtonAPI> entry : checks.entrySet()) {
 			if (checked.containsKey(entry.getKey())) entry.getValue().setChecked(checked.get(entry.getKey()));
 		}
-		for (var entry : viewports.entrySet()) {
-			entry.getValue().getExternalScroller().setYOffset(offsets.getOrDefault(entry.getKey(), 0f));
-		}
+		for (Map.Entry<Object, TooltipMakerAPI> entry : viewports.entrySet()) entry.getValue().getExternalScroller().setYOffset(offsets.getOrDefault(entry.getKey(), 0f));
 	}
 
 	protected final TextFieldAPI bindField(Object key, TextFieldAPI field) {
@@ -290,14 +290,18 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	}
 
 	protected final RowContent mountRow(Runnable build) {
+
 		int firstTooltip = tooltipWidgets.size();
 		int firstPanel = panelWidgets.size();
 		Set<Object> previous = new LinkedHashSet<>(fields.keySet());
+
 		build.run();
+
 		Set<Object> keys = new LinkedHashSet<>(fields.keySet());
 		keys.removeAll(previous);
 		Map<Object, BattleNext_TextField> rowFields = new LinkedHashMap<>();
 		for (Object key : keys) rowFields.put(key, fields.get(key));
+
 		inputRouter.getSession().restoreFields(rowFields, inputs, true);
 		return new RowContent(keys, List.copyOf(tooltipWidgets.subList(firstTooltip, tooltipWidgets.size())),
 				List.copyOf(panelWidgets.subList(firstPanel, panelWidgets.size())));
@@ -324,6 +328,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 				BattleNext_TextField field = fields.remove(key);
 				if (field != null) inputs.put(key, field.captureEditState());
 			}
+
 			for (BattleNext_TooltipBasedWidget widget : tooltips) release(widget);
 			for (BattleNext_PanelBasedWidget widget : panels) {
 				widget.close();
@@ -333,6 +338,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	}
 
 	public void advance(float amount) {
+
 	}
 
 	public abstract void buttonPressed(Object buttonId);
@@ -362,7 +368,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	}
 
 	public final List<String> getSaveErrors() {
-		return saveErrors.getMessages();
+		return saveErrors.getMessagesCopy();
 	}
 
 	public final boolean save() {
@@ -371,9 +377,11 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	public final boolean serialize() {
 		if (isSaving()) return false;
+
 		saveErrors.clear();
 		statusText = "";
 		if (!submitDraft()) return false;
+
 		saveErrors.clear();
 		baseline = draftState();
 		statusText = strings.get("saved");
@@ -399,6 +407,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	protected final boolean validateName(String subject, String field, String name, String message) {
 		if (!name.isBlank()) return true;
+
 		statusText = message;
 		saveErrors.field(subject, field, name, message);
 		BattleNext_Logger.warn(getClass(), "editor.name.rejected", BattleNext_Logger.fields()
@@ -420,6 +429,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	}
 
 	public final void deserialize() {
+
 		saveErrors.clear();
 		statusText = "";
 		restoring = true;
@@ -428,6 +438,7 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 			inputs.clear();
 			checked.clear();
 			offsets.clear();
+
 			refreshContent();
 			baseline = draftState();
 		} finally {
@@ -449,12 +460,14 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	public final void close() {
 		clearOperation();
 		detach();
+
 		saveErrors.clear();
 		statusText = "";
 		inputs.clear();
 		checked.clear();
 		offsets.clear();
 		baseline = null;
+
 		closeEditorState();
 	}
 
@@ -464,15 +477,18 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 
 	private void detachContent() {
 		if (panel == null) return;
+
 		if (!restoring) {
 			captureState();
 			if (!draftCaptured) captureDraftInputs();
 		}
+
 		draftCaptured = false;
 		releaseContent();
 	}
 
 	private void releaseContent() {
+
 		releaseRows();
 		for (int index = tooltipWidgets.size() - 1; index >= 0; index--) {
 			tooltipWidgets.get(index).close();
@@ -480,15 +496,18 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		for (int index = panelWidgets.size() - 1; index >= 0; index--) {
 			panelWidgets.get(index).close();
 		}
+
 		tooltipWidgets.clear();
 		panelWidgets.clear();
 		fields.clear();
 		checks.clear();
 		viewports.clear();
+
 		owner.removeComponent(panel);
 		panel = null;
 	}
 
 	protected void releaseRows() {
+
 	}
 }

@@ -7,21 +7,30 @@ import com.fs.starfarer.api.combat.listeners.DamageDealtModifier;
 public class BattleNext_DamageAttribution {
 	public static final String ARC_SOURCE_ID = "arc";
 
-	public record SourceKey(String kind, String id) { }
+	public record SourceKey(String kind, String id) {
+
+	}
 
 	private BattleNext_DamageAttribution() {
+
 	}
 
 	public static ShipAPI sourceShip(Object source) {
 		if (source instanceof ShipAPI ship) return ship;
 		if (source instanceof DamagingProjectileAPI projectile) {
-			if (projectile.getSource() != null) return projectile.getSource();
-			return projectile.getWeapon() == null ? null : projectile.getWeapon().getShip();
+			ShipAPI ship = projectile.getSource();
+			if (ship != null) return ship;
+			WeaponAPI weapon = projectile.getWeapon();
+			return weapon == null ? null : weapon.getShip();
 		}
+
 		if (source instanceof BeamAPI beam) {
-			if (beam.getSource() != null) return beam.getSource();
-			return beam.getWeapon() == null ? null : beam.getWeapon().getShip();
+			ShipAPI ship = beam.getSource();
+			if (ship != null) return ship;
+			WeaponAPI weapon = beam.getWeapon();
+			return weapon == null ? null : weapon.getShip();
 		}
+
 		if (source instanceof WeaponAPI weapon) return weapon.getShip();
 		return null;
 	}
@@ -38,13 +47,12 @@ public class BattleNext_DamageAttribution {
 			if (wing == null) return null;
 			ship = wing.getSourceShip();
 		}
-		while (ship != null && ship.isStationModule()) {
-			ship = ship.getParentStation();
-		}
+		while (ship != null && ship.isStationModule()) ship = ship.getParentStation();
 		return ship;
 	}
 
 	public static SourceKey sourceKey(Object source, Object damageParam, ApplyDamageResultAPI result) {
+
 		ShipAPI ship = sourceShip(source, damageParam);
 		if (ship != null && ship.isFighter() && ship.getWing() != null) {
 			return new SourceKey("fighter_wing", idOrUnknown(ship.getWing().getWingId()));
@@ -53,9 +61,11 @@ public class BattleNext_DamageAttribution {
 				|| DamageDealtModifier.EMP_SHIP_SYSTEM_PARAM.equals(damageParam)) {
 			return new SourceKey("arc", ARC_SOURCE_ID);
 		}
+
 		SourceKey weapon = weaponSource(damageParam);
 		if (weapon == null) weapon = weaponSource(source);
 		if (weapon != null) return weapon;
+
 		if (damageParam instanceof DamagingProjectileAPI || source instanceof DamagingProjectileAPI
 				|| damageParam instanceof BeamAPI || source instanceof BeamAPI) {
 			return new SourceKey("damage_type", result.getType() == null ? "unknown" : result.getType().name());

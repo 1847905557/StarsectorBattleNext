@@ -34,6 +34,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void modSelectorsUseLocalizedTitlesExactGeometryAndFullPanelOverlayHost() throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(() -> {});
 		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
@@ -44,9 +45,11 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 			field.setAccessible(true);
 			field.set(plugin, "panel".equals(name) ? root : right);
 		}
+
 		Method build = BattleNext_RefitPanelPlugin.class.getDeclaredMethod("buildPickers", float.class);
 		build.setAccessible(true);
 		build.invoke(plugin, 180f);
+
 		BattleNext_OptionPicker sMods = (BattleNext_OptionPicker) getField(plugin, "sModPicker");
 		BattleNext_OptionPicker dMods = (BattleNext_OptionPicker) getField(plugin, "dModPicker");
 		for (BattleNext_OptionPicker picker : List.of(sMods, dMods)) {
@@ -169,6 +172,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 		HullModSpecAPI noPhaseDMod = (HullModSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{HullModSpecAPI.class}, (instance, method, args) ->
 						"hasTag".equals(method.getName()) && "notPhase".equals(args[0]));
+
 		withSettings(null, () -> {
 			assertFalse(BattleNext_HullModSourceProvider.isSuitableFor(
 					new VariantState(phase, Set.of()).api, noPhaseDMod));
@@ -184,9 +188,9 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 		withSettings(null, () -> {
 			VariantState variant = new VariantState(hull, Set.of("normal", "built", "d"));
 			List<String> sIds = new BattleNext_RefitSModSourceProvider(() -> variant.api).getOptions().stream()
-					.map(choice -> choice.getId()).toList();
+					.map(choice -> choice.id()).toList();
 			List<String> dIds = new BattleNext_RefitDModSourceProvider(() -> variant.api).getOptions().stream()
-					.map(choice -> choice.getId()).toList();
+					.map(choice -> choice.id()).toList();
 
 			assertEquals(List.of("built", "normal"), sIds);
 			assertEquals(List.of("d"), dIds);
@@ -203,7 +207,10 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 					case "isConsumed" -> consumed.get();
 					case "isKeyboardEvent", "isKeyDownEvent" -> true;
 					case "getEventValue" -> Keyboard.KEY_ESCAPE;
-					case "consume" -> { consumed.set(true); yield null; }
+					case "consume" -> {
+						consumed.set(true);
+						yield null;
+					}
 					default -> null;
 				});
 
@@ -213,6 +220,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 	}
 
 	private void withSettings(HullState damaged, Runnable action) {
+
 		SettingsAPI previous = Global.getSettings();
 		HullModSpecAPI dMod = spec("d", true);
 		HullModSpecAPI built = spec("built", false);
@@ -233,6 +241,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 					case "getColor" -> Color.WHITE;
 					default -> null;
 				});
+
 		Global.setSettings(settings);
 		try {
 			action.run();
@@ -295,10 +304,14 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 		private VariantState(HullState hull, Set<String> initialMods) {
 			this.hull = hull.api;
 			hullMods.addAll(initialMods);
+
 			api = (ShipVariantAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 					new Class<?>[]{ShipVariantAPI.class}, (instance, method, args) -> switch (method.getName()) {
 						case "getHullSpec" -> this.hull;
-						case "setHullSpecAPI" -> { this.hull = (ShipHullSpecAPI) args[0]; yield null; }
+						case "setHullSpecAPI" -> {
+							this.hull = (ShipHullSpecAPI) args[0];
+							yield null;
+						}
 						case "getHullMods" -> hullMods;
 						case "getPermaMods" -> permaMods;
 						case "getSMods" -> sMods;
@@ -307,8 +320,14 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 						case "hasDMods" -> hullMods.contains("d");
 						case "hasHullMod" -> hullMods.contains(args[0]);
 						case "hasTag" -> false;
-						case "addMod" -> { hullMods.add((String) args[0]); yield null; }
-						case "removeMod" -> { hullMods.remove(args[0]); yield null; }
+						case "addMod" -> {
+							hullMods.add((String) args[0]);
+							yield null;
+						}
+						case "removeMod" -> {
+							hullMods.remove(args[0]);
+							yield null;
+						}
 						case "addPermaMod" -> {
 							String id = (String) args[0];
 							permaMods.add(id);

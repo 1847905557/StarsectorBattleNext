@@ -26,7 +26,7 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 	@Override
 	public String save(BattleNext_QuickBattleModel model) throws IOException, JSONException {
 		String path = isLegacy(model) ? LEGACY_PATH : STANDARD_PATH;
-		write(path, upsert(entries.get(), model), path);
+		write(path, upsert(entries.get(), model));
 		return path;
 	}
 
@@ -35,11 +35,10 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 		String path = isLegacy(model) ? LEGACY_PATH : STANDARD_PATH;
 		List<BattleNext_QuickBattleModel> view = new ArrayList<>();
 		for (BattleNext_QuickBattleModel entry : entries.get()) {
-			if (!entry.getId().equals(model.getId())) {
-				view.add(entry);
-			}
+			if (!entry.getId().equals(model.getId())) view.add(entry);
 		}
-		write(path, view, path);
+
+		write(path, view);
 	}
 
 	private boolean isLegacy(BattleNext_QuickBattleModel model) {
@@ -59,27 +58,21 @@ public class BattleNext_QuickBattleSaver extends BattleNext_BaseSaver<BattleNext
 				view.add(entry);
 			}
 		}
-		if (!replaced) {
-			view.add(model);
-		}
+		if (!replaced) view.add(model);
+
 		return view;
 	}
 
-	private void write(String path, List<BattleNext_QuickBattleModel> models, String targetPath)
+	private void write(String path, List<BattleNext_QuickBattleModel> models)
 			throws IOException {
 		StringBuilder text = new StringBuilder();
 		text.append(HEADER).append('\n');
 		for (BattleNext_QuickBattleModel model : models) {
-			if (!targetPath.equals(sourcePath(model))) {
-				continue;
-			}
+			String sourcePath = isLegacy(model) ? LEGACY_PATH : STANDARD_PATH;
+			if (!path.equals(sourcePath)) continue;
 			text.append(model.toSourceLine()).append('\n');
 		}
+
 		BattleNext_ModFileManager.writeText(path, text.toString());
 	}
-
-	private String sourcePath(BattleNext_QuickBattleModel model) {
-		return isLegacy(model) ? LEGACY_PATH : STANDARD_PATH;
-	}
-
 }

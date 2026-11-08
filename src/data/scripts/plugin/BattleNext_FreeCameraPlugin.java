@@ -20,6 +20,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	}
 
 	private static final String ID = "BattleNext_FreeCameraPlugin";
+
 	private static final BattleNext_I18nSection STRINGS = BattleNext_I18nSection.getInstance("Combat", "BattleNext_combat_");
 
 	// Movement speed in visible viewport fractions per second; held keys accelerate toward the cap.
@@ -59,7 +60,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 		if (engine == null || engine.isCombatOver()) return;
 
 		updateControlState();
-		if (!acceptsMouseInput()) return;
+		if (!externalCamera) return;
 
 		// events here
 		for (InputEventAPI event : events) {
@@ -182,9 +183,5 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private boolean isCameraTogglePressed() {
 		return BattleNext_KeyTuning.isPressed(Keyboard.KEY_RCONTROL)
 				|| BattleNext_KeyTuning.isPressed(Keyboard.KEY_BACKSLASH);
-	}
-
-	private boolean acceptsMouseInput() {
-		return externalCamera;
 	}
 }

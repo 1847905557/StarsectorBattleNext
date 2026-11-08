@@ -2,10 +2,11 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.ui.*;
 import data.model.rule.BattleNext_RuleModel;
+import data.model.BattleNext_BaseStore.EditRejection;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.model.rule.BattleNext_RuleStore;
 import data.restriction.BattleNext_RestrictionRegistry;
-import data.restriction.BattleNext_RestrictionSpec;
+import data.restriction.BattleNext_RestrictionRegistry.BattleNext_RestrictionSpec;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_EntryId;
@@ -30,6 +31,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 	private static final int ACTIONS_COLUMN = 3;
 
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
+
 	private final BattleNext_RuleStore store;
 	private final Map<String, ButtonAPI> enabledCheckboxes = new LinkedHashMap<>();
 	private final Map<String, TextFieldAPI> valueFields = new LinkedHashMap<>();
@@ -50,12 +52,12 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		}
 
 		@Override
-		public float getTooltipWidth(Object ignored) {
+		public float getTooltipWidth(Object tooltipParam) {
 			return BattleNext_EquipmentTooltip.WIDTH;
 		}
 
 		@Override
-		public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+		public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 			BattleNext_EquipmentTooltip.render(tooltip, content);
 		}
 	}
@@ -77,6 +79,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 	protected void buildEditorContent() {
 		enabledCheckboxes.clear();
 		valueFields.clear();
+
 		createColumns("metadata", "restrictions", (metadataContent, columnWidth) -> {
 			metadataContent.addTitle(ruleStrings.get("editor_title"));
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(columnWidth);
@@ -85,7 +88,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		}, (rowsContent, columnWidth) -> {
 			String[] headers = {ruleStrings.get("restriction"), ruleStrings.get("value_or_items"), strings.get("enabled"), strings.get("actions")};
 			tableWidget = createTable("rows", rowsContent, columnWidth, ruleStrings.get("restrictions"), headers, COLUMN_SHARES,
-					draft.getRestrictions().size(),
+					draft.getRestrictionsReadonly().size(),
 					(index, rowWidth, cells, content) -> addRestrictionRow(index, rowWidth, cells, content, rowsContent),
 					(rowWidth, content) -> restrictionPicker = createPicker(panel, content, rowWidth,
 							ruleStrings.get("add_restriction"), new BattleNext_RestrictionSourceProvider(() -> draft),
@@ -95,11 +98,11 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	private void addRestrictionRow(int index, float rowWidth, UIRect[] cells,
 			TooltipMakerAPI rowsContent, TooltipMakerAPI restrictionsContent) {
-		BattleNext_RuleRestriction restriction = draft.getRestrictions().get(index);
+		BattleNext_RuleRestriction restriction = draft.getRestrictionsReadonly().get(index);
 		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(restriction.getId());
-		String name = spec == null ? ruleStrings.get("missing_restriction") : spec.getName();
+		String name = spec == null ? ruleStrings.get("missing_restriction") : spec.name();
 		BattleNext_EquipmentTooltip.Content tooltip = new BattleNext_EquipmentTooltip.Content(name,
-				restriction.getId() + "  [" + restriction.getType() + "]", spec == null ? "" : spec.getDescription(), List.of());
+				restriction.getId() + "  [" + restriction.getType() + "]", spec == null ? "" : spec.description(), List.of());
 		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, panel.getPlugin());
 		new UIRect(0f, 0f, rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBorder(rowPanel,
 				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
@@ -117,35 +120,37 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		}
 		createActions(rowPanel, cells[ACTIONS_COLUMN],
 				new EditorAction("^", "rule:up:" + index, index > 0),
-				new EditorAction("V", "rule:down:" + index, index + 1 < draft.getRestrictions().size()),
+				new EditorAction("V", "rule:down:" + index, index + 1 < draft.getRestrictionsReadonly().size()),
 				new EditorAction("X", "rule:remove:" + index, true));
 		rowsContent.addCustom(rowPanel, 0f);
 	}
 
 	private void addRestrictions(List<String> ids) {
 		if (ids.isEmpty()) return;
+
 		try {
 			captureInputs(false);
 		} catch (RuntimeException exception) {
 			setStatus(exception.getMessage());
 			return;
 		}
-		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>(draft.getRestrictions());
+
+		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>(draft.getRestrictionsReadonly());
 		for (String id : ids) {
 			BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(id);
 			if (spec == null || draft.getRestriction(id) != null) continue;
-			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(id, spec.getType());
+			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(id, spec.type());
 			restriction.setEnabled(true);
 			restrictions.add(restriction);
 		}
+
 		draft.setRestrictions(restrictions);
 		refreshContent();
 	}
 
-
 	private String displayValue(BattleNext_RuleRestriction restriction) {
 		return "number".equals(restriction.getType()) ? Double.toString(restriction.getValue())
-				: String.join(",", restriction.getItems());
+				: String.join(",", restriction.getItemsReadonly());
 	}
 
 	private void append(StringBuilder state, String value) {
@@ -169,14 +174,16 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		if (!(buttonId instanceof String action)) return;
 		if (!action.startsWith("rule:up:") && !action.startsWith("rule:down:")
 				&& !action.startsWith("rule:remove:")) return;
+
 		try {
 			captureInputs(false);
 		} catch (RuntimeException exception) {
 			setStatus(exception.getMessage());
 			return;
 		}
+
 		int index = Integer.parseInt(action.substring(action.lastIndexOf(':') + 1));
-		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>(draft.getRestrictions());
+		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>(draft.getRestrictionsReadonly());
 		if (action.startsWith("rule:remove:")) {
 			restrictions.remove(index);
 		} else {
@@ -184,6 +191,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 			if (target < 0 || target >= restrictions.size()) return;
 			Collections.swap(restrictions, index, target);
 		}
+
 		draft.setRestrictions(restrictions);
 		refreshContent();
 	}
@@ -191,10 +199,11 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 	@Override
 	protected String draftState() {
 		if (idField == null) return "";
+
 		StringBuilder state = new StringBuilder();
 		append(state, idField.getText());
 		append(state, nameField.getText());
-		for (BattleNext_RuleRestriction restriction : draft.getRestrictions()) {
+		for (BattleNext_RuleRestriction restriction : draft.getRestrictionsReadonly()) {
 			append(state, restriction.getId());
 			if (enabledCheckboxes.containsKey(restriction.getId())) {
 				append(state, Boolean.toString(enabledCheckboxes.get(restriction.getId()).isChecked()));
@@ -204,6 +213,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 				append(state, displayValue(restriction));
 			}
 		}
+
 		return state.toString();
 	}
 
@@ -215,12 +225,14 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 	protected boolean submitDraft() {
 		validateName(ruleStrings.get("editor_title") + " / " + idField.getText().trim(), strings.get("name"), nameField.getText(), strings.get("name_required"));
 		saveErrors.id(ruleStrings.get("editor_title"), ruleStrings.get("id"), idField.getText());
+
 		try {
 			captureInputs(true);
-			for (var rejection : store.editRejections(draft, baseline == null ? "" : baseline.getId())) {
+			for (EditRejection rejection : store.editRejections(draft, baseline == null ? "" : baseline.getId())) {
 				saveErrors.rejection(ruleStrings.get("editor_title"), ruleStrings.get("id"), rejection);
 			}
 			if (!saveErrors.isEmpty()) return false;
+
 			String sourceId = baseline == null ? "" : baseline.getId();
 			BattleNext_RuleModel nextBaseline = copy(draft);
 			return persist(() -> {
@@ -245,14 +257,17 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	private void captureInputs(boolean validate) {
 		if (idField == null) return;
+
 		draft.setId(idField.getText());
 		draft.setName(nameField.getText());
+
 		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>();
-		for (BattleNext_RuleRestriction current : draft.getRestrictions()) {
+		for (BattleNext_RuleRestriction current : draft.getRestrictionsReadonly()) {
 			if (!enabledCheckboxes.containsKey(current.getId())) {
 				restrictions.add(current);
 				continue;
 			}
+
 			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(current.getId(), current.getType());
 			restriction.setEnabled(enabledCheckboxes.get(current.getId()).isChecked());
 			String input = valueFields.get(current.getId()).getText().trim();
@@ -275,11 +290,12 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 				if ("number".equals(current.getType())) {
 					restriction.setValue(current.getValue());
 				} else {
-					restriction.setItems(current.getItems());
+					restriction.setItems(current.getItemsReadonly());
 				}
 			}
 			restrictions.add(restriction);
 		}
+
 		draft.setRestrictions(restrictions);
 	}
 

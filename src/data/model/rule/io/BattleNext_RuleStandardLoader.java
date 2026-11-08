@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 public class BattleNext_RuleStandardLoader extends BattleNext_CatalogLoader<BattleNext_RuleModel> {
 
@@ -15,7 +16,11 @@ public class BattleNext_RuleStandardLoader extends BattleNext_CatalogLoader<Batt
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return paths(RESOURCE_ROOT, false).stream().filter(path -> path.endsWith(".json")).toList();
+		List<String> result = new ArrayList<>();
+		for (String path : paths(RESOURCE_ROOT, false)) {
+			if (path.endsWith(".json")) result.add(path);
+		}
+		return List.copyOf(result);
 	}
 
 	@Override

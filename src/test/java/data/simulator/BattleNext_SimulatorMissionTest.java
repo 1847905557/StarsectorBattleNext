@@ -1,6 +1,9 @@
 package data.simulator;
 
 import com.fs.starfarer.api.mission.FleetSide;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
+import data.model.report.BattleNext_BattleReportModel;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
@@ -26,17 +29,19 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 
 	@Test
 	void duplicateRegisteredVariantsProduceIndependentMembersWithCompleteModulesAndDefaultCaptains() {
+
 		registeredVariants.put("parent_variant", selectedVariant.getApi());
 		registeredVariants.put("child_variant", selectedVariant.getModules().get("module"));
 		MissionState mission = new MissionState();
 		BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
 				12000f, 9000f, 500f, 3600f, 120f, 32, true, false, 0);
+
 		BattleNext_SimulatorMission.define(mission.getApi(), BattleNext_SimulationRequest.fromVariants(
 				List.of("parent_variant", "parent_variant"), List.of("child_variant"), config));
 		assertArrayEquals(new float[]{-6000f, 6000f, -4500f, 4500f}, mission.getMap());
 		assertTrue(mission.getDefaultAi().get(FleetSide.PLAYER));
 		assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
-		var members = mission.getMembers().get(FleetSide.PLAYER);
+		List<FleetMemberAPI> members = mission.getMembers().get(FleetSide.PLAYER);
 		assertEquals(2, members.size());
 		assertNotSame(members.get(0), members.get(1));
 		assertNotSame(members.get(0).getVariant(), members.get(1).getVariant());
@@ -78,14 +83,16 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 				List.of("gunnery", "gunnery", "helmsmanship"), "officer.png", "", List.of("member_tag"));
 		playerFleet.setMembers(List.of(member, member));
 		fleets.save(playerFleet);
+
 		BattleNext_FleetModel enemyFleet = fleets.get("beta");
 		enemyFleet.setName("Enemy fleet");
 		enemyFleet.setSkills(List.of("industry"));
 		enemyFleet.setTags(List.of("default_ai"));
 		fleets.save(enemyFleet);
+
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadQuickBattleCatalog();
-		var entry = sources.getQuickBattleStore().getAll().get(0);
+		BattleNext_QuickBattleModel entry = sources.getQuickBattleStore().getAllCopy().get(0);
 		BattleNext_Match match = BattleNext_Match.fromQuickBattle(entry);
 		BattleNext_SimulationRequest request = BattleNext_SimulationRequest.fromMatch(match, sources.getFleetStore(),
 				BattleNext_SimulationConfig.quickBattle(123f, 0));
@@ -97,6 +104,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		int actualMap = request.source().getInt("actualMap");
 		assertTrue(actualMap >= 0 && actualMap <= BattleNext_MissionBattleMap.LAST_MAP_ID);
 		assertEquals(List.of("local_snapshot", "local_snapshot"), request.player());
+
 		JSONObject frozen = request.source();
 		sources.getFleetStore().get("alpha").setName("Changed after submission");
 		sources.getFleetStore().get("alpha").setSkills(List.of());
@@ -113,7 +121,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		assertTrue(mission.getDefaultAi().get(FleetSide.ENEMY));
 		assertEquals(2f, mission.getCommanders().get(FleetSide.PLAYER).getStats().getSkillLevel("combat"));
 		assertEquals(1f, mission.getCommanders().get(FleetSide.ENEMY).getStats().getSkillLevel("industry"));
-		var restored = mission.getMembers().get(FleetSide.PLAYER);
+		List<FleetMemberAPI> restored = mission.getMembers().get(FleetSide.PLAYER);
 		assertEquals(2, restored.size());
 		assertNotSame(restored.get(0), restored.get(1));
 		assertEquals("Named ship", restored.get(0).getShipName());
@@ -132,26 +140,29 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		assertEquals(123f, getField(mission.getPlugins().get(2), "timeLimit"));
 		assertSame(scorekeeper, mission.getPlugins().get(1));
 		assertEquals(BattleNext_FleetOrderBehavior.FleetOrderMode.FULL_ASSAULT, getField(mission.getPlugins().get(3), "playerMode"));
+
 		CombatState combat = new CombatState(mission);
 		scorekeeper.init(combat.getApi());
 		scorekeeper.advance(0.1f, List.of());
 		assertFalse(scorekeeper.isFrozen());
+
 		combat.destroySide(FleetSide.ENEMY, 24f);
 		scorekeeper.advance(0.1f, List.of());
-		var report = scorekeeper.getFrozenReport();
+		BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 		report.setId(request.id());
 		report.setName("Complete local fleet report");
 		BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
 				report.toJson().toString(), 24f, 100000000L, 1440L, 1024L, "");
-		var received = BattleNext_SimulationResult.fromJson(result.toJson()).report();
-		assertEquals(List.of("parent", "parent"), received.getPlayerMembers().stream().map(value -> value.getHullId()).toList());
-		assertEquals("local_snapshot", received.getPlayerMembers().get(0).getVariantId());
-		assertEquals("child", received.getEnemyMembers().get(0).getHullId());
+		BattleNext_BattleReportModel received = BattleNext_SimulationResult.fromJson(result.toJson()).report();
+		assertEquals(List.of("parent", "parent"), received.getPlayerMembersReadonly().stream().map(value -> value.getHullId()).toList());
+		assertEquals("local_snapshot", received.getPlayerMembersReadonly().get(0).getVariantId());
+		assertEquals("child", received.getEnemyMembersReadonly().get(0).getHullId());
 		scorekeeper.cleanup();
 	}
 
 	@Test
 	void tournamentRequestReferencesItsConfigurationAndCarriesTheExecutionConfig() throws Exception {
+
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_FleetStore fleets = new BattleNext_FleetStore();
 		fleets.reload();
@@ -167,6 +178,7 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		assertEquals(List.of("", "alpha", "beta", ""), request.tournamentFleetIds());
 		assertThrows(UnsupportedOperationException.class, () -> request.tournamentFleetIds().clear());
 		assertEquals(request, BattleNext_SimulationRequest.fromJson(request.toJson()));
+
 		configuration.setName("Changed");
 		assertEquals("Cup", request.label());
 	}
@@ -180,12 +192,13 @@ class BattleNext_SimulatorMissionTest extends BattleNext_TestMissionFixture {
 		IllegalArgumentException missing = assertThrows(IllegalArgumentException.class,
 				() -> BattleNext_SimulationRequest.fromMatch(match, fleets, BattleNext_SimulationConfig.defaults()));
 		assertEquals("Simulation fleet reference is unavailable: missing", missing.getMessage());
+
 		fleets.get("alpha").setMembers(List.of(new BattleNext_MemberModel("unavailable_variant", "Ship", "", List.of(), "", "", List.of())));
 		match.setSides("alpha", "beta");
 		IllegalArgumentException assembly = assertThrows(IllegalArgumentException.class,
 				() -> BattleNext_SimulationRequest.fromMatch(match, fleets, BattleNext_SimulationConfig.defaults()));
 		assertTrue(assembly.getMessage().contains("alpha"));
 		assertTrue(assembly.getMessage().contains("unavailable_variant"));
-		assertEquals("unavailable_variant", fleets.get("alpha").getMembers().get(0).getVariantId());
+		assertEquals("unavailable_variant", fleets.get("alpha").getMembersReadonly().get(0).getVariantId());
 	}
 }

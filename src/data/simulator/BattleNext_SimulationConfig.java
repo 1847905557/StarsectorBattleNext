@@ -7,7 +7,9 @@ public record BattleNext_SimulationConfig(Strategy strategy, float mapWidth, flo
 		float assaultAfterSeconds, float simulationSeconds, float executionSeconds,
 		int stepsPerFrame, boolean playerAdmiral, boolean enemyAdmiral, int deploymentPointLimit) {
 
-	public enum Strategy { AGGRESSIVE, COMPATIBLE }
+	public enum Strategy {
+		AGGRESSIVE, COMPATIBLE
+	}
 
 	public BattleNext_SimulationConfig {
 		if (strategy == null) throw new IllegalArgumentException("Simulation strategy is required");

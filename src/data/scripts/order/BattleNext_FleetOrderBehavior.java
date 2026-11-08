@@ -12,6 +12,7 @@ import data.order.BattleNext_OrderRegistry;
 import data.order.BattleNext_OrderUtils;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
 import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Logger;
 
 import java.util.*;
@@ -46,11 +47,13 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 
 	private void addOrders(BattleNext_AssembledFleet assembledFleet, FleetSide side) {
 		if (assembledFleet == null) return;
-		for (int index = 0; index < assembledFleet.getMembers().size(); index++) {
-			FleetMemberAPI member = assembledFleet.getMembers().get(index);
-			String script = assembledFleet.getDefinition().getMembers().get(index).getOrders();
+		List<FleetMemberAPI> members = assembledFleet.getMembersReadonly();
+		List<BattleNext_MemberModel> definitions = assembledFleet.getDefinition().getMembersReadonly();
+		for (int index = 0; index < members.size(); index++) {
+			FleetMemberAPI member = members.get(index);
+			String script = definitions.get(index).getOrders();
 			String label = assembledFleet.getDefinition().getName() + " member[" + index + "] "
-					+ assembledFleet.getDefinition().getMembers().get(index).getVariantId();
+					+ definitions.get(index).getVariantId();
 			BattleNext_OrderProcessor processor = new BattleNext_OrderProcessor(script, label,
 					BattleNext_OrderRegistry.getInstance(), message -> BattleNext_Logger.warn(BattleNext_FleetOrderBehavior.class, "orders.statement.rejected",
 						BattleNext_Logger.fields().put("fleet_id", assembledFleet.getDefinition().getId()).put("side", side)
@@ -97,9 +100,7 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 	private void processOrders() {
 
 		Map<FleetMemberAPI, MemberOrders> registered = new IdentityHashMap<>();
-		for (MemberOrders entry : orders) {
-			registered.put(entry.member, entry);
-		}
+		for (MemberOrders entry : orders) registered.put(entry.member, entry);
 		Map<FleetMemberAPI, ShipAPI> deployed = new IdentityHashMap<>();
 		for (ShipAPI ship : engine.getShips()) {
 			MemberOrders entry = registered.get(ship.getFleetMember());
@@ -118,18 +119,14 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 			activeFields.add(BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly()));
 		}
 		try (BattleNext_AssignmentIndex index = BattleNext_AssignmentIndex.begin(engine)) {
-			for (BattleNext_OrderField field : activeFields) {
-				field.reconcile(eligible);
-			}
+			for (BattleNext_OrderField field : activeFields) field.reconcile(eligible);
 			for (MemberOrders entry : orders) {
 				ShipAPI ship = deployed.get(entry.member);
 				if (ship == null || ship.getOwner() != entry.owner) continue;
 				BattleNext_OrderField field = BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly());
 				entry.processor.advance(ship, engine, field);
 			}
-			for (BattleNext_OrderField field : activeFields) {
-				field.pruneAssignments();
-			}
+			for (BattleNext_OrderField field : activeFields) field.pruneAssignments();
 		}
 	}
 
@@ -142,13 +139,13 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 	}
 
 	public void cleanup() {
-		for (BattleNext_OrderField field : activeFields) {
-			field.cleanup();
-		}
+		for (BattleNext_OrderField field : activeFields) field.cleanup();
 		activeFields.clear();
 		orders.clear();
 		engine.removePlugin(this);
 	}
 
-	private record MemberOrders(FleetMemberAPI member, int owner, BattleNext_OrderProcessor processor) { }
+	private record MemberOrders(FleetMemberAPI member, int owner, BattleNext_OrderProcessor processor) {
+
+	}
 }

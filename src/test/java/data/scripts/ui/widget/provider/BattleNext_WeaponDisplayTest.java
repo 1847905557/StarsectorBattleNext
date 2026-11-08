@@ -4,6 +4,8 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import data.scripts.ui.page.BattleNext_ReportSourceDisplay;
+import data.scripts.ui.page.BattleNext_ReportSourceDisplay.SourceVisual;
+import data.scripts.ui.widget.provider.BattleNext_WeaponDisplay.Visual;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,6 +20,7 @@ class BattleNext_WeaponDisplayTest {
 	@NullSource
 	@ValueSource(strings = {"Ion Pulser", "   "})
 	void sharedVisualMatchesTheReportWeaponSource(String name) {
+
 		WeaponSpecAPI spec = (WeaponSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{WeaponSpecAPI.class}, (instance, method, arguments) -> switch (method.getName()) {
 					case "getWeaponName" -> name;
@@ -26,8 +29,9 @@ class BattleNext_WeaponDisplayTest {
 					default -> null;
 				});
 		SettingsAPI settings = settings(spec, false);
-		var visual = BattleNext_WeaponDisplay.resolve("ion", settings);
-		var report = BattleNext_ReportSourceDisplay.resolve(new BattleNext_DamageSourceReport("weapon", "ion"), settings);
+		Visual visual = BattleNext_WeaponDisplay.resolve("ion", settings);
+		SourceVisual report = BattleNext_ReportSourceDisplay.resolve(new BattleNext_DamageSourceReport("weapon", "ion"), settings);
+
 		assertEquals(name == null || name.isBlank() ? "ion" : name, visual.name());
 		assertTrue(visual.resolved());
 		assertEquals("graphics/turret.png", visual.primarySprite());
@@ -42,8 +46,8 @@ class BattleNext_WeaponDisplayTest {
 	@ValueSource(booleans = {false, true})
 	void unavailableSpecsRetainTheirOriginalIdentity(boolean exception) {
 		SettingsAPI settings = settings(null, exception);
-		var visual = BattleNext_WeaponDisplay.resolve("missing", settings);
-		var report = BattleNext_ReportSourceDisplay.resolve(new BattleNext_DamageSourceReport("weapon", "missing"), settings);
+		Visual visual = BattleNext_WeaponDisplay.resolve("missing", settings);
+		SourceVisual report = BattleNext_ReportSourceDisplay.resolve(new BattleNext_DamageSourceReport("weapon", "missing"), settings);
 		assertEquals("missing", visual.name());
 		assertFalse(visual.resolved());
 		assertEquals("", visual.primarySprite());
@@ -57,11 +61,11 @@ class BattleNext_WeaponDisplayTest {
 		WeaponSpecAPI spec = (WeaponSpecAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{WeaponSpecAPI.class}, (instance, method, arguments) ->
 						method.getName().equals("getWeaponName") ? "Name" : null);
-		var visual = BattleNext_WeaponDisplay.resolve("id", settings(spec, false));
+		Visual visual = BattleNext_WeaponDisplay.resolve("id", settings(spec, false));
 		assertEquals("", visual.primarySprite());
 		assertEquals("", visual.secondarySprite());
 		assertTrue(visual.resolved());
-		var empty = BattleNext_WeaponDisplay.resolve("", settings(null, true));
+		Visual empty = BattleNext_WeaponDisplay.resolve("", settings(null, true));
 		assertEquals("", empty.name());
 		assertFalse(empty.resolved());
 	}

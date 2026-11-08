@@ -53,9 +53,11 @@ public class BattleNext_VariantBuilder {
 
 	private static JSONObject snapshot(ShipVariantAPI variant, Set<ShipVariantAPI> visiting) throws JSONException {
 		if (!visiting.add(variant)) throw new IllegalArgumentException("Cyclic variant modules");
+
 		JSONObject result = variant.clone().toJSONObject();
 		result.put("sModdedBuiltIns", new JSONArray(variant.getSModdedBuiltIns()));
 		result.put("suppressedMods", new JSONArray(variant.getSuppressedMods()));
+
 		JSONObject modules = new JSONObject();
 		for (String slot : variant.getStationModules().keySet()) {
 			ShipVariantAPI module = variant.getModuleVariant(slot);
@@ -65,6 +67,7 @@ public class BattleNext_VariantBuilder {
 		if (modules.length() > 0) {
 			result.put("modules", modules);
 		}
+
 		visiting.remove(variant);
 		return result;
 	}
@@ -96,11 +99,13 @@ public class BattleNext_VariantBuilder {
 	}
 
 	private ShipVariantAPI buildJson(Set<String> moduleIds) throws JSONException {
+
 		String hullId = json.getString("hullId");
 		ShipHullSpecAPI hull = Global.getSettings().getHullSpec(hullId);
 		if (hull == null) {
 			throw new IllegalArgumentException("Unknown hull: " + hullId);
 		}
+
 		ShipVariantAPI variant = Global.getSettings().createEmptyVariant(id, hull);
 		variant.setVariantDisplayName(json.optString("displayName", id));
 		variant.setNumFluxCapacitors(json.optInt("fluxCapacitors", 0));
@@ -108,11 +113,13 @@ public class BattleNext_VariantBuilder {
 		variant.setGoalVariant(json.optBoolean("goalVariant", false));
 		variant.setSource(VariantSource.REFIT);
 		variant.setMayAutoAssignWeapons(false);
+
 		addMods("hullMods", variant::addMod);
 		addMods("permaMods", variant::addPermaMod);
 		addMods("sMods", mod -> variant.addPermaMod(mod, true));
 		addMods("sModdedBuiltIns", mod -> variant.getSModdedBuiltIns().add(mod));
 		addMods("suppressedMods", variant::addSuppressedMod);
+
 		JSONArray tags = json.optJSONArray("tags");
 		if (tags != null) {
 			for (int index = 0; index < tags.length(); index++) {
@@ -129,6 +136,7 @@ public class BattleNext_VariantBuilder {
 				variant.setWingId(index + hull.getBuiltInWings().size(), wing);
 			}
 		}
+
 		JSONArray groups = json.optJSONArray("weaponGroups");
 		if (groups != null) {
 			for (int index = 0; index < groups.length(); index++) {
@@ -149,6 +157,7 @@ public class BattleNext_VariantBuilder {
 				variant.addWeaponGroup(group);
 			}
 		}
+
 		buildModules(variant, moduleIds);
 		return variant;
 	}
@@ -179,9 +188,11 @@ public class BattleNext_VariantBuilder {
 
 	private void addModules(ShipVariantAPI variant, JSONObject modules, Set<String> moduleIds) throws JSONException {
 		if (modules.length() == 0) return;
+
 		for (String slot : JSONObject.getNames(modules)) {
 			WeaponSlotAPI moduleSlot = variant.getHullSpec().getWeaponSlot(slot);
 			if (moduleSlot == null || !moduleSlot.isStationModule()) throw new IllegalArgumentException("Unknown module slot: " + slot);
+
 			Object value = modules.get(slot);
 			JSONObject moduleJson;
 			String moduleId;
@@ -196,6 +207,7 @@ public class BattleNext_VariantBuilder {
 			} else {
 				throw new IllegalArgumentException("Invalid module: " + slot);
 			}
+
 			if (!moduleIds.add(moduleId)) throw new IllegalArgumentException("Cyclic module variant: " + moduleId);
 			variant.setModuleVariant(slot, fromJson(moduleJson, moduleId).build(moduleIds));
 			moduleIds.remove(moduleId);

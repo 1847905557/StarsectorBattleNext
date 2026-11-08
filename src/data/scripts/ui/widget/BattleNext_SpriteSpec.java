@@ -18,6 +18,7 @@ public record BattleNext_SpriteSpec(float width, float height, float centerX, fl
 				spec = BUtil_RefMethod.java_lang_reflect_Method_invoke().invoke(method, hull);
 				break;
 			}
+
 			MethodType scalar = MethodType.methodType(float.class);
 			return new BattleNext_SpriteSpec(
 					(float) lookup.findVirtual(spriteType, "null", scalar).invoke(spec),

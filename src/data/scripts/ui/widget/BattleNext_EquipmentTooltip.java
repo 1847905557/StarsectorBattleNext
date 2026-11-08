@@ -4,6 +4,8 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.HullModEffect;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -25,9 +27,12 @@ public class BattleNext_EquipmentTooltip {
 	private static final float BODY_GAP = 8f;
 	private static final float ROW_GAP = 2f;
 	private static final float BOTTOM_INSET = 8f;
+
 	private static final BattleNext_I18nSection STRINGS = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 
-	public record Content(String title, String id, String description, List<String> notes) { }
+	public record Content(String title, String id, String description, List<String> notes) {
+
+	}
 
 	public record VariantSection(String title, int count, List<String> rows) {
 		public VariantSection {
@@ -35,7 +40,9 @@ public class BattleNext_EquipmentTooltip {
 		}
 	}
 
-	public record FleetMemberLine(String hull, String officer, int elite, String personality) { }
+	public record FleetMemberLine(String hull, String officer, int elite, String personality) {
+
+	}
 
 	private BattleNext_EquipmentTooltip() {
 
@@ -204,11 +211,11 @@ public class BattleNext_EquipmentTooltip {
 
 	public static Content wing(String title, String id, SettingsAPI settings, List<String> notes) {
 		try {
-			var wing = settings.getFighterWingSpec(id);
+			FighterWingSpecAPI wing = settings.getFighterWingSpec(id);
 			if (wing == null) throw new IllegalArgumentException("Unknown fighter wing: " + id);
-			var variant = wing.getVariant();
+			ShipVariantAPI variant = wing.getVariant();
 			if (variant == null) throw new IllegalArgumentException("Missing fighter variant: " + id);
-			var hull = variant.getHullSpec();
+			ShipHullSpecAPI hull = variant.getHullSpec();
 			if (hull == null) throw new IllegalArgumentException("Missing fighter hull: " + id);
 			return hull(title, id, hull, settings, notes);
 		} catch (RuntimeException exception) {

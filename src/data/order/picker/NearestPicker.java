@@ -12,6 +12,6 @@ public class NearestPicker implements BattleNext_OrderPicker {
 	@Override
 	public AssignmentTargetAPI pick(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatAssignmentType type, CombatEngineAPI engine) {
 		targets.sort(new CollectionUtils.SortEntitiesByDistance(source.getLocation()));
-			return BattleNext_OrderUtils.toTarget(targets.get(0), engine);
+		return BattleNext_OrderUtils.toTarget(targets.get(0), engine);
 	}
 }

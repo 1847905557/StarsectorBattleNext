@@ -10,10 +10,12 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ProjectRulesCheck {
+	private ProjectRulesCheck() {
+
+	}
+
 	public static void main(String[] args) throws IOException {
-		if (args.length < 1) {
-			throw new IllegalArgumentException("Usage: ProjectRulesCheck <source-root> [classpath...]");
-		}
+		if (args.length < 1) throw new IllegalArgumentException("Usage: ProjectRulesCheck <source-root> [classpath...]");
 
 		Path sourceRoot = Path.of(args[0]);
 		List<Path> classpath = Arrays.stream(args)

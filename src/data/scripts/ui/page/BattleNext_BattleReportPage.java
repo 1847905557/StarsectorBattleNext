@@ -18,8 +18,10 @@ import java.util.function.Consumer;
 public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_BattleReportStore reportStore;
+
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
+
 	private final List<BattleNext_ReportTarget> entries = new ArrayList<>();
 	private final BattleNext_ReportEditor editor;
 
@@ -82,7 +84,7 @@ public class BattleNext_BattleReportPage extends BattleNext_ManagementPage {
 
 	private void load() {
 		entries.clear();
-		for (BattleNext_BattleReportModel report : reportStore.getAll()) {
+		for (BattleNext_BattleReportModel report : reportStore.getAllCopy()) {
 			entries.add(new BattleNext_ReportTarget(report));
 		}
 		entries.sort(Comparator.comparingLong((BattleNext_ReportTarget entry) -> entry.report().getCreatedAt()).reversed());

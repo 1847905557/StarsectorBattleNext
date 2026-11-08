@@ -1,6 +1,7 @@
 package data.test.fixture;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -20,6 +21,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class BattleNext_TestSourceIndex {
 
@@ -49,7 +51,7 @@ public class BattleNext_TestSourceIndex {
 				.setCharacterEncoding(StandardCharsets.UTF_8));
 		Map<Path, CompilationUnit> parsed = new LinkedHashMap<>();
 		for (Path root : new Path[]{Path.of("src"), Path.of("tools/checks")}) {
-			try (var paths = Files.walk(root)) {
+			try (Stream<Path> paths = Files.walk(root)) {
 				for (Path path : paths.filter(file -> file.toString().endsWith(".java")).sorted().toList()) {
 					boolean runtime = path.startsWith(Path.of("src/data"));
 					boolean compiled = path.startsWith(Path.of("src"))
@@ -57,7 +59,7 @@ public class BattleNext_TestSourceIndex {
 					compiledConfiguration.setStoreTokens(runtime);
 					JavaParser parser = compiled ? compiledParser : rulesParser;
 					String sourceText = Files.readString(path, StandardCharsets.UTF_8);
-					var result = parser.parse(sourceText);
+					ParseResult<CompilationUnit> result = parser.parse(sourceText);
 					if (compiled) {
 						compiledPostProcessor.postProcess(result, compiledConfiguration);
 					}

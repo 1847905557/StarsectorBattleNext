@@ -6,6 +6,7 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
+import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.tools.BattleNext_Logger;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.apache.log4j.AppenderSkeleton;
@@ -93,10 +94,12 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		state.ally = ally;
 		ships.add(state.api);
 		paused = true;
+
 		for (int frame = 0; frame < 5; frame++) {
 			plugin.advance(0f, List.of());
 			plugin.renderInUICoords(null);
 		}
+
 		assertEquals(List.of(state.api, state.api, state.api, state.api, state.api), access.refreshed);
 		assertEquals(List.of(0.75f, 0.75f, 0.75f, 0.75f, 0.75f), access.alphas);
 		assertEquals(1, access.binds);
@@ -123,6 +126,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		ships.add(state.api);
 		ShipState ordinary = new ShipState("ordinary", 0);
 		ships.add(ordinary.api);
+
 		plugin.renderInUICoords(null);
 		assertEquals(List.of(ordinary.api), access.refreshed);
 		assertEquals(List.of(0.75f), access.alphas);
@@ -134,18 +138,24 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		ShipState first = new ShipState("first", 0);
 		ShipState second = new ShipState("second", 1);
 		ships.add(first.api);
+
 		plugin.renderInUICoords(null);
+
 		ships.add(second.api);
 		first.owner = 100;
 		plugin.renderInUICoords(null);
+
 		first.owner = 1;
 		departed.add(second.api);
 		plugin.renderInUICoords(null);
+
 		first.alive = false;
 		plugin.renderInUICoords(null);
+
 		first.alive = true;
 		ships.remove(first.api);
 		plugin.renderInUICoords(null);
+
 		assertEquals(List.of(first.api, second.api, first.api), access.refreshed);
 		assertTrue(removed.isEmpty());
 	}
@@ -186,10 +196,12 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		gameState = GameState.TITLE;
 		plugin.renderInUICoords(null);
 		assertEquals(0, access.binds);
+
 		gameState = GameState.COMBAT;
 		ui = null;
 		plugin.renderInUICoords(null);
 		assertEquals(0, access.binds);
+
 		ui = readyUi;
 		access.manager = null;
 		plugin.renderInUICoords(null);
@@ -214,6 +226,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		ShipState visible = new ShipState("visible", 1);
 		ships.addAll(List.of(hidden.api, visible.api));
 		access.manager.hidden.add(hidden.api);
+
 		plugin.renderInUICoords(null);
 		assertEquals(List.of(hidden.api, visible.api), access.refreshed);
 		assertEquals(List.of(visible.api), access.manager.reticles.stream().map(reticle -> reticle.ship).toList());
@@ -270,6 +283,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		plugin.renderInUICoords(null);
 		Manager nativeManager = access.manager;
 		Reticle original = nativeManager.reticles.get(0);
+
 		combatOver = true;
 		if (render) {
 			plugin.renderInUICoords(null);
@@ -278,6 +292,7 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		}
 		plugin.renderInUICoords(null);
 		plugin.advance(0.1f, List.of());
+
 		assertReleased();
 		assertEquals(List.of(plugin), removed);
 		assertEquals(1, access.clears);
@@ -317,19 +332,14 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		}
 	}
 
-	private static class Reticle {
-		private final ShipAPI ship;
-		private final boolean secondary;
+	private record Reticle(ShipAPI ship, boolean secondary) {
 
-		private Reticle(ShipAPI ship, boolean secondary) {
-			this.ship = ship;
-			this.secondary = secondary;
-		}
 	}
 
+	@PublicData
 	private static class Manager {
-		private final List<Reticle> reticles = new ArrayList<>();
-		private final Set<ShipAPI> hidden = new HashSet<>();
+		public final List<Reticle> reticles = new ArrayList<>();
+		public final Set<ShipAPI> hidden = new HashSet<>();
 	}
 
 	private static class FakeAccess implements BattleNext_AllShipsStatusPlugin.Access {

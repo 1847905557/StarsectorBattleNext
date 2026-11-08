@@ -33,7 +33,7 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 		content = host;
 		textWidth = width - STATUS_TEXT_RIGHT_RESERVE;
 		statusLabel = content.addPara(strings.get("ready"), 0f);
-		content.addTooltipTo(BattleNext_SaveErrors.tooltip(saveErrors::getMessages), content.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
+		content.addTooltipTo(BattleNext_SaveErrors.tooltip(saveErrors::getMessagesCopy), content.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		statusLabel.getPosition().inTL(0f, STATUS_TEXT_TOP_INSET);
 		content.setHeightSoFar(height);
 	}

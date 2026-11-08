@@ -8,7 +8,6 @@ import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
 import data.scripts.battle.BattleNext_Round;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
@@ -48,6 +47,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	protected final List<Edge> edges = new ArrayList<>();
 	private Map<String, String> fleetNames;
 	private final List<NodeLabels> labels = new ArrayList<>();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
@@ -77,8 +77,13 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	private String layoutError = "";
 	private Set<String> reportIds = Set.of();
 
-	public record ViewState(float zoom, float panX, float panY) { }
-	public record SlotHit(String nodeId, float nodeX, float nodeY, int row, int slot) { }
+	public record ViewState(float zoom, float panX, float panY) {
+
+	}
+
+	public record SlotHit(String nodeId, float nodeX, float nodeY, int row, int slot) {
+
+	}
 
 	public ViewState captureState() {
 		return new ViewState(zoom, panX, panY);
@@ -142,13 +147,16 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	}
 
 	public void update(BattleNext_TournamentModel model, BattleNext_StartedTournament started, List<String> fleetIds, Map<String, String> names) {
+
 		String hoveredId = hovered == null ? "" : hovered.id;
 		List<NodeLabels> previousLabels = List.copyOf(labels);
+
 		tournament = model;
 		this.started = started;
 		this.fleetIds = List.copyOf(fleetIds);
 		fleetNames = Map.copyOf(names);
 		initializeLayout();
+
 		labels.clear();
 		for (int index = 0; index < nodes.size(); index++) {
 			Node node = nodes.get(index);
@@ -156,6 +164,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			nodeLabels.update(node);
 			labels.add(nodeLabels);
 		}
+
 		hovered = hoveredId.isEmpty() ? null : findNode(hoveredId);
 		updateTooltipTarget();
 	}
@@ -201,7 +210,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		tooltipTarget.getPosition().setSize(0f, 0f);
 		host.addTooltipTo(new BaseTooltipCreator() {
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				if (hovered == null || !inputRouter.isEmpty()) return;
 
 				BattleNext_UiTheme.configure(tooltip);
@@ -359,7 +368,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			y = Math.max(y, node.y + node.height + 20f);
 		}
 
-		for (BattleNext_Match match : (started == null ? List.<BattleNext_Match>of() : started.getMatches())) {
+		for (BattleNext_Match match : (started == null ? List.<BattleNext_Match>of() : started.getMatchesReadonly())) {
 			if (findNode(match.getId()) != null) continue;
 
 			Participant player = new Participant(match.getPlayer(), "", false, true);
@@ -728,23 +737,19 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		BattleNext_GeometryRenderer.beginBatch();
 		try {
-		for (int index = 0; index < nodes.size(); index++) {
-			Node node = nodes.get(index);
-			float[] point = project(node.x, node.y);
-			float width = node.width * scale;
-			float height = node.height * scale;
-			if (point[0] + width < visible[0] || point[0] > visible[0] + visible[2]) continue;
-			if (point[1] < visible[1] || point[1] - height > visible[1] + visible[3]) continue;
+			for (Node node : nodes) {
+				float[] point = project(node.x, node.y);
+				float width = node.width * scale;
+				float height = node.height * scale;
+				if (point[0] + width < visible[0] || point[0] > visible[0] + visible[2]) continue;
+				if (point[1] < visible[1] || point[1] - height > visible[1] + visible[3]) continue;
 
-			Color color = stateColor(node);
-			BattleNext_GeometryRenderer.fillRect(point[0], point[1] - height, width, height,
-					BACKGROUND_COLOR, alphaMult);
-			BattleNext_GeometryRenderer.lineLoop(new float[]{point[0], point[1], point[0] + width, point[1],
-					point[0] + width, point[1] - height, point[0], point[1] - height},
-					node == hovered ? BattleNext_UiTheme.ACCENT : color, alphaMult,
-					BORDER_WIDTH);
-
-		}
+				Color color = stateColor(node);
+				BattleNext_GeometryRenderer.fillRect(point[0], point[1] - height, width, height, BACKGROUND_COLOR, alphaMult);
+				BattleNext_GeometryRenderer.lineLoop(new float[]{point[0], point[1], point[0] + width, point[1],
+						point[0] + width, point[1] - height, point[0], point[1] - height},
+						node == hovered ? BattleNext_UiTheme.ACCENT : color, alphaMult, BORDER_WIDTH);
+			}
 		} finally {
 			BattleNext_GeometryRenderer.endBatch();
 		}
@@ -828,11 +833,13 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		}
 
 		private void update(Node node) {
+
 			float textWidth = node.width - NODE_TEXT_INSET * 2f;
 			idLabel.setText(host.shortenString(node.id.isEmpty() ? node.title : node.id, textWidth));
 			idLabel.setColor(stateColor(node));
 			idLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT)
 					.setSize(textWidth, NODE_TEXT_ROW_HEIGHT);
+
 			String playerScore = node.id.isEmpty() ? "" : participantScore(node, node.player);
 			String enemyScore = node.id.isEmpty() ? "" : participantScore(node, node.enemy);
 			playerScoreLabel.setText(playerScore);
@@ -840,12 +847,14 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			float scoreWidth = Math.max(playerScoreLabel.computeTextWidth(playerScore), enemyScoreLabel.computeTextWidth(enemyScore));
 			float nameX = NODE_TEXT_INSET + scoreWidth + NODE_SCORE_GAP;
 			float nameWidth = textWidth - scoreWidth - NODE_SCORE_GAP;
+
 			playerNameLabel.setText(node.id.isEmpty() ? "" : host.shortenString(participantText(node.player), nameWidth));
 			enemyNameLabel.setText(node.id.isEmpty() ? "" : host.shortenString(participantText(node.enemy), nameWidth));
 			playerScoreLabel.setColor(participantColor(node, node.player));
 			playerNameLabel.setColor(participantColor(node, node.player));
 			enemyScoreLabel.setColor(participantColor(node, node.enemy));
 			enemyNameLabel.setColor(participantColor(node, node.enemy));
+
 			playerScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
 					.setSize(scoreWidth, NODE_TEXT_ROW_HEIGHT);
 			playerNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
@@ -891,8 +900,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					.append('\n').append(battleStrings.get("map_label")).append(": ").append(node.match.getMap())
 					.append(" / ").append(battleStrings.get("map_scale_label")).append(": ")
 					.append(BattleNext_I18nSection.buildFactor(node.match.getMapScale())).append('\n');
-			for (int index = 0; index < node.match.getRounds().size(); index++) {
-				BattleNext_Round round = node.match.getRounds().get(index);
+
+			List<BattleNext_Round> rounds = node.match.getRoundsReadonly();
+			for (int index = 0; index < rounds.size(); index++) {
+				BattleNext_Round round = rounds.get(index);
 				String winner = round.getWinnerFleetId();
 				result.append(tournamentStrings.get("round")).append(' ').append(index + 1).append(": ")
 						.append(winner.isEmpty() ? tournamentStrings.get("round_draw") : fleetNames.getOrDefault(winner, winner)
@@ -901,15 +912,16 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 						.append(strings.get(reportIds.contains(round.getReportId()) ? "available" : "unavailable"))
 						.append(" [").append(round.getReportId()).append("]\n");
 			}
-			if (!node.match.getDependencies().isEmpty()) {
+			if (!node.match.getDependenciesReadonly().isEmpty()) {
 				result.append(tournamentStrings.get("chart_sources")).append(": ")
-						.append(String.join(", ", node.match.getDependencies())).append('\n');
+						.append(String.join(", ", node.match.getDependenciesReadonly())).append('\n');
 			}
 		} else {
 			result.append(tournamentStrings.get("chart_predicted")).append('\n').append(battleStrings.get("map_label"))
 					.append(": ").append(tournament.getMapId()).append(" / ")
 					.append(battleStrings.get("map_scale_label")).append(": 1\n");
 		}
+
 		for (Participant participant : List.of(node.player, node.enemy)) {
 			if (participant.seedIndex >= 0) {
 				result.append(tournamentStrings.format("seed_position", participant.seedIndex + 1)).append('\n');
@@ -919,12 +931,14 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			result.append(tournamentStrings.format(participant.loser ? "chart_loser_of" : "chart_winner_of",
 					participant.sourceId)).append('\n');
 		}
+
 		if (node.stage == BattleNext_Match.MatchStage.GRAND_FINAL_RESET && node.match == null) {
 			result.append(tournamentStrings.get((started != null && started.isCompleted()) ? "chart_reset_unused" : "chart_reset_required")).append('\n');
 		}
 		if (!node.error.isEmpty()) {
 			result.append(tournamentStrings.get("chart_error")).append(": ").append(node.error);
 		}
+
 		return result.toString();
 	}
 
@@ -942,67 +956,18 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		return List.copyOf(result);
 	}
 
-	@PublicData
-	public static class Participant {
-		public final String fleetId;
-		public final String sourceId;
-		public final boolean loser;
-		public final boolean known;
-		public final int seedIndex;
-
+	public record Participant(String fleetId, String sourceId, boolean loser, boolean known, int seedIndex) {
 		public Participant(String fleetId, String sourceId, boolean loser, boolean known) {
 			this(fleetId, sourceId, loser, known, -1);
 		}
-
-		public Participant(String fleetId, String sourceId, boolean loser, boolean known, int seedIndex) {
-			this.fleetId = fleetId;
-			this.sourceId = sourceId;
-			this.loser = loser;
-			this.known = known;
-			this.seedIndex = seedIndex;
-		}
 	}
 
-	@PublicData
-	public static class Node {
-		public final String id;
-		public final BattleNext_Match.MatchStage stage;
-		public final Participant player;
-		public final Participant enemy;
-		public final BattleNext_Match match;
-		public final float x;
-		public final float y;
-		public final float width;
-		public final float height;
-		public final String error;
-		public final String title;
+	public record Node(String id, BattleNext_Match.MatchStage stage, Participant player, Participant enemy,
+			BattleNext_Match match, float x, float y, float width, float height, String error, String title) {
 
-		public Node(String id, BattleNext_Match.MatchStage stage, Participant player, Participant enemy,
-				BattleNext_Match match, float x, float y, float width, float height, String error, String title) {
-			this.id = id;
-			this.stage = stage;
-			this.player = player;
-			this.enemy = enemy;
-			this.match = match;
-			this.x = x;
-			this.y = y;
-			this.width = width;
-			this.height = height;
-			this.error = error;
-			this.title = title;
-		}
 	}
 
-	@PublicData
-	public static class Edge {
-		public final String from;
-		public final String to;
-		public final boolean loser;
+	public record Edge(String from, String to, boolean loser) {
 
-		public Edge(String from, String to, boolean loser) {
-			this.from = from;
-			this.to = to;
-			this.loser = loser;
-		}
 	}
 }

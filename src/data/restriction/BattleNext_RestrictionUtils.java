@@ -26,15 +26,19 @@ public class BattleNext_RestrictionUtils {
 	}
 
 	public static long hullSizeCount(BattleNext_AssembledFleet assembledFleet, ShipAPI.HullSize size) {
-		return assembledFleet.getMembers().stream()
-				.filter(member -> member.getVariant().getHullSpec().getHullSize() == size).count();
+		long count = 0;
+		for (FleetMemberAPI member : assembledFleet.getMembersReadonly()) {
+			if (member.getVariant().getHullSpec().getHullSize() == size) count++;
+		}
+		return count;
 	}
 
 	public static List<RestrictionEquipmentItem> equipment(BattleNext_AssembledFleet assembledFleet) {
 
 		List<RestrictionEquipmentItem> result = new ArrayList<>();
-		for (int index = 0; index < assembledFleet.getMembers().size(); index++) {
-			FleetMemberAPI member = assembledFleet.getMembers().get(index);
+		List<FleetMemberAPI> members = assembledFleet.getMembersReadonly();
+		for (int index = 0; index < members.size(); index++) {
+			FleetMemberAPI member = members.get(index);
 			ShipVariantAPI variant = member.getVariant();
 			ShipHullSpecAPI hull = variant.getHullSpec();
 			String context = assembledFleet.getDefinition().getId() + " member[" + index + "] " + hull.getHullId();

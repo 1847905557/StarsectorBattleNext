@@ -39,6 +39,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	}
 
 	public static BattleNext_QuickBattleModel parseLine(String line, boolean legacy) {
+
 		String original = line == null ? "" : line;
 		String trimmed = original.trim();
 		if (trimmed.equalsIgnoreCase(HEADER)) return null;
@@ -63,9 +64,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	private static String normalizeComment(String value) {
 		String trimmed = value == null ? "" : value.trim();
-		while (trimmed.startsWith("#")) {
-			trimmed = trimmed.substring(1).trim();
-		}
+		while (trimmed.startsWith("#")) trimmed = trimmed.substring(1).trim();
 		return trimmed.isEmpty() ? "#" : "# " + trimmed;
 	}
 
@@ -78,6 +77,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 		copy.legacyIds = legacyIds;
 		copy.setSourceType(getSourceType());
 		copy.setSourcePath(getSourcePath());
+
 		return copy;
 	}
 
@@ -101,6 +101,7 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 	@Override
 	public void fromCsvLine(List<String> fields) {
 		if (fields.size() != 4) throw new IllegalArgumentException("Quick battle row must have 4 columns");
+
 		int parsedMap;
 		float parsedSize;
 		try {
@@ -202,15 +203,5 @@ public class BattleNext_QuickBattleModel extends BattleNext_CsvModel {
 
 	public void setLegacyIds(boolean legacyIds) {
 		this.legacyIds = legacyIds;
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		return super.equals(obj);
 	}
 }

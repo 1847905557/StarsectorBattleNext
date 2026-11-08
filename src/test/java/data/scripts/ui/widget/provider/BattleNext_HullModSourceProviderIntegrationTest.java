@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.awt.Color;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,6 +64,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		mods.put("d", new Mod("d", "Zulu damaged", true));
 		installed = mods.get("installed");
 		current.set(context(HullSize.FRIGATE, false, List.of("installed", "built", "damage")));
+
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {
@@ -83,6 +85,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 				throw exception.getCause();
 			}
 		}));
+
 		BattleNext_Logger.fields();
 		logger = Global.getLogger(BattleNext_Logger.class);
 		previousLevel = logger.getLevel();
@@ -109,15 +112,18 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	@Test
 	void supplierChangesAffectSourcesDescriptionsAndSuitabilityImmediately() {
 
-		var source = provider("smod");
+		BattleNext_HullModSourceProvider source = provider("smod");
 		assertEquals(List.of("installed", "built"), ids(source));
+
 		current.set(context(HullSize.CAPITAL_SHIP, true, List.of("zeta")));
 		assertEquals(List.of("built", "zeta"), ids(source));
-		var text = textValues(render(provider("all"), "installed"));
+		List<String> text = textValues(render(provider("all"), "installed"));
 		assertTrue(text.stream().anyMatch(value -> value.contains("First: CAPITAL_SHIP 20%.")));
+
 		mods.get("damage").notPhase = true;
 		assertFalse(BattleNext_HullModSourceProvider.isSuitableFor(current.get(), mods.get("damage").api));
 		assertTrue(textValues(render(provider("dmod"), "damage")).contains(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_unsuitable")));
+
 		current.set(context(HullSize.FRIGATE, false, List.of()));
 		assertTrue(BattleNext_HullModSourceProvider.isSuitableFor(current.get(), mods.get("damage").api));
 		assertTrue(textValues(render(provider("all"), "damage")).contains(BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mod_suitable")));
@@ -147,7 +153,8 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		assertTrue(values.contains("S-mod bonus"));
 		assertEquals(1, values.stream().filter(value -> value.startsWith("Enhanced:")).count());
 		assertEquals(List.of("description:" + size, "post_description:" + size, "s_mod:" + size), installed.script.calls);
-		var components = tooltips.get(tooltip).getComponents();
+
+		List<UIComponentAPI> components = tooltips.get(tooltip).getComponents();
 		assertEquals("small-orbitron", labelFonts.get(components.get(0).getPosition()));
 		assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(components.get(0).getPosition()));
 		assertEquals("small-insignia", labelFonts.get(components.get(1).getPosition()));
@@ -207,7 +214,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		TooltipMakerAPI tooltip = render(provider("all"), "installed");
 		assertTrue(textValues(tooltip).contains("Custom post 50%"));
 		assertTrue(textValues(tooltip).contains("Custom S-mod 60%"));
-		var table = tooltips.get(tooltip).getComponents().stream().filter(UIPanelAPI.class::isInstance)
+		UIPanelAPI table = tooltips.get(tooltip).getComponents().stream().filter(UIPanelAPI.class::isInstance)
 				.map(UIPanelAPI.class::cast).findFirst().orElseThrow();
 		assertEquals(List.of("Size", 180f, "Value", 180f), tables.get(table).getColumns());
 		assertEquals(List.of(List.of("FRIGATE", "75%")), tables.get(table).getRows());
@@ -216,6 +223,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 				.findFirst().orElseThrow();
 		assertEquals("default", labelFonts.get(customSMod.getPosition()));
 		assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(customSMod.getPosition()));
+
 		tooltip.addPara("Following public text 70%", 8f);
 		LabelAPI following = (LabelAPI) tooltip.getPrev();
 		assertEquals("default", labelFonts.get(following.getPosition()));
@@ -229,7 +237,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		installed.script.customPost = true;
 		installed.script.customSMod = true;
 		installed.sModText = "";
-		var text = textValues(render(provider("all"), "installed"));
+		List<String> text = textValues(render(provider("all"), "installed"));
 		assertTrue(text.contains("Custom post 50%"));
 		assertTrue(text.contains("Custom S-mod 60%"));
 		assertFalse(text.stream().anyMatch(value -> value.startsWith("First:")));
@@ -248,7 +256,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	void emptyBasicDescriptionsPreserveTheRemainingEffectChain(String description) {
 		installed.mainText = description;
 		installed.script.customPost = true;
-		var text = textValues(render(provider("all"), "installed"));
+		List<String> text = textValues(render(provider("all"), "installed"));
 		assertEquals(List.of("Alpha installed", "installed", "Custom post 50%"), text.subList(0, 3));
 		assertTrue(text.contains("Enhanced: FRIGATE 30%.\nComplete extra effect 40%."));
 	}
@@ -273,6 +281,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		if (!phase.equals("s_mod")) assertTrue(text.contains("Custom S-mod 60%"));
 		if (!phase.equals("notes")) assertEquals("Final auxiliary note 80%", text.get(text.size() - 1));
 		assertEquals(1, appender.events.size());
+
 		LoggingEvent event = appender.events.get(0);
 		assertEquals(Level.WARN, event.getLevel());
 		JSONObject entry = new JSONObject(event.getRenderedMessage());
@@ -293,10 +302,11 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 
 	@Test
 	void unknownHullmodHasAStableHeaderAndDiagnosticAndMissingSourceIsOmitted() {
-		var source = provider("all");
+		BattleNext_HullModSourceProvider source = provider("all");
 		assertEquals("", source.getIconPath("unknown"));
 		assertEquals(List.of("Choice", "unknown", "java.lang.IllegalArgumentException: Unknown hullmod: unknown"),
 				textValues(render(source, "unknown")));
+
 		current.set(context(HullSize.FRIGATE, false, List.of("unknown", "installed")));
 		assertEquals(List.of("installed", "built"), ids(provider("smod")));
 		assertEquals(3, appender.events.size());
@@ -315,7 +325,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 		root.addUIElement(host).inTL(0f, 0f);
 		String id = kind.equals("dmod") ? "damage" : "installed";
 		for (int cycle = 0; cycle < 2; cycle++) {
-			var open = picker.getClass().getDeclaredMethod("open");
+			Method open = picker.getClass().getDeclaredMethod("open");
 			open.setAccessible(true);
 			open.invoke(picker);
 			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
@@ -324,11 +334,11 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			plugins.get(popup).advance(0f);
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			var card = tooltips.get(grid).getComponents().get(0);
+			UIComponentAPI card = tooltips.get(grid).getComponents().get(0);
 			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(card).location());
 			assertFalse(tooltipBindings.get(card).recreateEveryFrame());
 			assertSame(tooltips.get(grid), tooltipBindings.get(card).owner());
-			var creator = attachedTooltips.get(card);
+			TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(card);
 			assertEquals(360f, creator.getTooltipWidth(null));
 			TooltipMakerAPI content = tooltip(360f, 0f, false);
 			creator.createTooltip(content, false, null);
@@ -336,11 +346,13 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			assertTrue(textValues(content).stream().anyMatch(value -> value.contains("Second: Literal %s, %d and 50%.")));
 			TooltipMakerAPI image = (TooltipMakerAPI) children.get((CustomPanelAPI) card).get(0);
 			assertEquals("graphics/" + id + ".png", imagePaths.get(tooltips.get(image).getComponents().get(0)));
+
 			Map<?, ?> selection = (Map<?, ?>) getField(picker, "selection");
 			click((CustomPanelAPI) card);
 			assertEquals(Map.of(id, 1), selection);
 			click((CustomPanelAPI) card);
 			assertTrue(selection.isEmpty());
+
 			search.setText("unmatched");
 			plugins.get(popup).advance(0f);
 			assertTrue(removedComponents.contains(gridPanel));
@@ -348,6 +360,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			List<UIComponentAPI> empty = tooltips.get(children.get(emptyGrid).get(0)).getComponents();
 			assertEquals(List.of(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_picker_no_options")),
 					empty.stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+
 			search.grabFocus(false);
 			assertTrue(search.hasFocus());
 			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
@@ -355,6 +368,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 		}
+
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
 	}
@@ -366,7 +380,10 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			case "getX" -> (int) card.getPosition().getCenterX();
 			case "getY" -> (int) card.getPosition().getCenterY();
 			case "isConsumed" -> consumed.get();
-			case "consume" -> { consumed.set(true); yield null; }
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
 			default -> null;
 		});
 		plugins.get(card).processInput(List.of(event));
@@ -382,7 +399,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 	}
 
 	private List<String> ids(BattleNext_HullModSourceProvider source) {
-		return source.getOptions().stream().map(OptionChoice::getId).toList();
+		return source.getOptions().stream().map(option -> option.id()).toList();
 	}
 
 	private TooltipMakerAPI render(BattleNext_HullModSourceProvider source, String id) {
@@ -524,6 +541,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 				tooltip.setParaFontColor(Color.MAGENTA);
 				throw new IllegalStateException("Failed post description 50%");
 			}
+
 			if (customPost) {
 				tooltip.setParaSmallInsignia();
 				tooltip.setParaFontColor(Color.MAGENTA);
@@ -553,10 +571,12 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 				tooltip.setParaFontColor(Color.MAGENTA);
 				throw new IllegalStateException("Failed S-mod 50%");
 			}
+
 			if (customSMod) {
 				tooltip.addPara("Custom S-mod 60%", 8f);
 				return;
 			}
+
 			super.addSModSection(tooltip, hullSize, ship, width, isForModSpec, isForBuildInList);
 		}
 	}

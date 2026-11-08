@@ -46,14 +46,13 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
+
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported fleet formatVersion: " + version);
 		List<BattleNext_MemberModel> members = new ArrayList<>();
 		JSONArray memberArray = json.optJSONArray("members");
 		beginParse();
-		if (memberArray != null) {
-			members = readCollection("members", memberArray, BattleNext_MemberModel::fromJson);
-		}
+		if (memberArray != null) members = readCollection("members", memberArray, BattleNext_MemberModel::fromJson);
 
 		setId(json.optString("id", ""));
 		setName(json.optString("name", ""));
@@ -61,7 +60,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		setTags(readStringCollection("tags", json.optJSONArray("tags")));
 		setMembers(members);
 		for (BattleNext_MemberModel member : members) {
-			for (String error : member.getLoadErrors()) {
+			for (String error : member.getLoadErrorsCopy()) {
 				addLoadError("Member " + member.getName() + ": " + error);
 			}
 		}
@@ -71,6 +70,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	@Override
 	public JSONObject toJson() throws JSONException {
+
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
@@ -78,12 +78,11 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		json.put("skills", writeCollection("skills", new JSONArray(skills)));
 		json.put("tags", writeCollection("tags", new JSONArray(tags)));
 		JSONArray memberArray = new JSONArray();
-		for (BattleNext_MemberModel member : members) {
-			memberArray.put(member.toJson());
-		}
+		for (BattleNext_MemberModel member : members) memberArray.put(member.toJson());
 		json.put("members", writeCollection("members", memberArray));
 		json.put("author", author);
 		json.put("description", description);
+
 		return json;
 	}
 
@@ -112,7 +111,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		this.name = normalize(name);
 	}
 
-	public List<String> getSkills() {
+	public List<String> getSkillsReadonly() {
 		return Collections.unmodifiableList(skills);
 	}
 
@@ -120,7 +119,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		this.skills = copyStrings(skills);
 	}
 
-	public List<String> getTags() {
+	public List<String> getTagsReadonly() {
 		return Collections.unmodifiableList(tags);
 	}
 
@@ -128,7 +127,7 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		this.tags = copyStrings(tags);
 	}
 
-	public List<BattleNext_MemberModel> getMembers() {
+	public List<BattleNext_MemberModel> getMembersReadonly() {
 		return Collections.unmodifiableList(members);
 	}
 
@@ -160,15 +159,13 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 		return variants.get(variantId);
 	}
 
-	public List<BattleNext_VariantBuilder> getVariants() {
+	public List<BattleNext_VariantBuilder> getVariantsCopy() {
 		return List.copyOf(variants.values());
 	}
 
 	public void setVariants(List<BattleNext_VariantBuilder> values) {
 		variants.clear();
-		for (BattleNext_VariantBuilder variant : values) {
-			putVariant(variant);
-		}
+		for (BattleNext_VariantBuilder variant : values) putVariant(variant);
 	}
 
 	public boolean hasLocalVariants() {
@@ -186,12 +183,9 @@ public class BattleNext_FleetModel extends BattleNext_JsonModel {
 
 	private static List<BattleNext_MemberModel> copyMembers(List<BattleNext_MemberModel> values) {
 		List<BattleNext_MemberModel> result = new ArrayList<>();
-		if (values != null) {
-			for (BattleNext_MemberModel value : values) {
-				if (value != null) {
-					result.add(value);
-				}
-			}
+		if (values == null) return result;
+		for (BattleNext_MemberModel value : values) {
+			if (value != null) result.add(value);
 		}
 		return result;
 	}

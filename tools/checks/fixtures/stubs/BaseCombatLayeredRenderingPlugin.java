@@ -1,2 +1,3 @@
 public abstract class BaseCombatLayeredRenderingPlugin implements CombatLayeredRenderingPlugin {
+
 }

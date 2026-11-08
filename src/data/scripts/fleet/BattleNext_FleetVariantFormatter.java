@@ -21,15 +21,21 @@ public class BattleNext_FleetVariantFormatter {
 	}
 
 	public record Result(BattleNext_FleetModel candidate, Map<String, String> mapping, List<String> errors,
-			int renamedIds, int affectedMembers) { }
+			int renamedIds, int affectedMembers) {
 
-	private record Variant(JSONObject json, Set<String> dependencies) { }
+	}
+
+	private record Variant(JSONObject json, Set<String> dependencies) {
+
+	}
 
 	private final BattleNext_FleetModel source;
 	private final String prefix;
 	private final SourceResolver resolver;
 	private final BattleNext_SaveErrors errors = new BattleNext_SaveErrors();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
+
 	private final Map<String, Variant> roots = new LinkedHashMap<>();
 	private final Map<String, Variant> local = new LinkedHashMap<>();
 	private final Map<String, String> hulls = new LinkedHashMap<>();
@@ -53,8 +59,8 @@ public class BattleNext_FleetVariantFormatter {
 
 		errors.id(strings.get("details_heading"), strings.get("variant_id_prefix"), prefix, BattleNext_EntryId.problem(prefix));
 		if (!errors.isEmpty()) return failure();
-		for (int index = 0; index < source.getMembers().size(); index++) {
-			BattleNext_MemberModel member = source.getMembers().get(index);
+		for (int index = 0; index < source.getMembersReadonly().size(); index++) {
+			BattleNext_MemberModel member = source.getMembersReadonly().get(index);
 			String context = strings.format("format_member", index + 1, member.getName());
 			if (!roots.containsKey(member.getVariantId())) {
 				roots.put(member.getVariantId(), read(member.getVariantId(), context));
@@ -64,7 +70,7 @@ public class BattleNext_FleetVariantFormatter {
 		boolean added;
 		do {
 			added = false;
-			for (BattleNext_VariantBuilder variant : source.getVariants()) {
+			for (BattleNext_VariantBuilder variant : source.getVariantsCopy()) {
 				if (!hulls.containsKey(variant.getId()) || !processed.add(variant.getId())) continue;
 				local.put(variant.getId(), roots.containsKey(variant.getId()) ? roots.get(variant.getId())
 						: read(variant.getId(), contexts.get(variant.getId())));
@@ -138,7 +144,7 @@ public class BattleNext_FleetVariantFormatter {
 				if (entry instanceof JSONObject object) {
 					visitModules(object, context + " / " + (index + 1), dependencies, visiting);
 				} else {
-				errors.field(context + " / " + id, "modules", String.valueOf(entry), strings.get("format_invalid_modules"));
+					errors.field(context + " / " + id, "modules", String.valueOf(entry), strings.get("format_invalid_modules"));
 				}
 			}
 		} else if (modules != null) {
@@ -185,11 +191,9 @@ public class BattleNext_FleetVariantFormatter {
 
 		Set<String> occupied = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		occupied.addAll(hulls.keySet());
-		for (BattleNext_VariantBuilder variant : source.getVariants()) {
-			occupied.add(variant.getId());
-		}
+		for (BattleNext_VariantBuilder variant : source.getVariantsCopy()) occupied.add(variant.getId());
 		Map<String, Integer> next = new HashMap<>();
-		for (var entry : hulls.entrySet()) {
+		for (Map.Entry<String, String> entry : hulls.entrySet()) {
 			String id = entry.getKey();
 			if (id.startsWith(prefix + "_")) {
 				mapping.put(id, id);
@@ -210,11 +214,9 @@ public class BattleNext_FleetVariantFormatter {
 
 	private Result apply() throws JSONException {
 
-		for (JSONObject node : nodes) {
-			node.put("variantId", mapping.get(node.getString("variantId")));
-		}
+		for (JSONObject node : nodes) node.put("variantId", mapping.get(node.getString("variantId")));
 		List<BattleNext_VariantBuilder> variants = new ArrayList<>();
-		for (BattleNext_VariantBuilder variant : source.getVariants()) {
+		for (BattleNext_VariantBuilder variant : source.getVariantsCopy()) {
 			Variant replacement = local.get(variant.getId());
 			variants.add(replacement != null && changed(replacement)
 					? BattleNext_VariantBuilder.fromJson(replacement.json(), "") : variant);
@@ -224,23 +226,23 @@ public class BattleNext_FleetVariantFormatter {
 		candidate.setFolderName(source.getFolderName());
 		candidate.setSourceType(source.getSourceType());
 		candidate.setSourcePath(source.getSourcePath());
-		for (String error : source.getLoadErrors()) {
-			if (!candidate.getLoadErrors().contains(error)) candidate.addLoadError(error);
+		for (String error : source.getLoadErrorsCopy()) {
+			if (!candidate.getLoadErrorsCopy().contains(error)) candidate.addLoadError(error);
 		}
 		candidate.setVariants(variants);
 		int affected = 0;
-		for (int index = 0; index < source.getMembers().size(); index++) {
-			BattleNext_MemberModel member = source.getMembers().get(index);
+		for (int index = 0; index < source.getMembersReadonly().size(); index++) {
+			BattleNext_MemberModel member = source.getMembersReadonly().get(index);
 			Variant root = roots.get(member.getVariantId());
 			String target = root.json().getString("variantId");
 			if (!member.getVariantId().equals(target) || changed(root)) {
-				candidate.getMembers().get(index).setVariantId(target);
+				candidate.getMembersReadonly().get(index).setVariantId(target);
 				if (candidate.getVariant(target) == null) candidate.putVariant(BattleNext_VariantBuilder.fromJson(root.json(), target));
 				affected++;
 			}
 		}
 		Set<String> filenames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-		for (BattleNext_VariantBuilder variant : candidate.getVariants()) {
+		for (BattleNext_VariantBuilder variant : candidate.getVariantsCopy()) {
 			if (!filenames.add(variant.getId())) {
 				errors.field(strings.get("format_ids"), strings.get("format_target_id"), variant.getId(), strings.get("format_file_conflict"));
 			}
@@ -261,6 +263,6 @@ public class BattleNext_FleetVariantFormatter {
 	}
 
 	private Result failure() {
-		return new Result(null, Collections.unmodifiableMap(new LinkedHashMap<>(mapping)), errors.getMessages(), 0, 0);
+		return new Result(null, Collections.unmodifiableMap(new LinkedHashMap<>(mapping)), errors.getMessagesCopy(), 0, 0);
 	}
 }

@@ -8,6 +8,10 @@ import java.util.Map;
 
 public class BattleNext_SimulatorBenchmark {
 
+	private BattleNext_SimulatorBenchmark() {
+
+	}
+
 	public static void main(String[] arguments) throws Exception {
 
 		Map<String, List<String>> profiles = new LinkedHashMap<>();
@@ -21,7 +25,7 @@ public class BattleNext_SimulatorBenchmark {
 		profiles.put("g1_huge_methods", List.of("-XX:+UseG1GC", "-XX:-DontCompileHugeMethods"));
 		JSONObject summaries = new JSONObject();
 		boolean failed = false;
-		for (var profile : profiles.entrySet()) {
+		for (Map.Entry<String, List<String>> profile : profiles.entrySet()) {
 			try {
 				summaries.put(profile.getKey(), BattleNext_SimulatorSmoke.runSession(profile.getKey(), profile.getValue(), 5));
 			} catch (Exception exception) {

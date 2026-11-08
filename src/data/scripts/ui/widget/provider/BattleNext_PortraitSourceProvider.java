@@ -22,6 +22,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 
 	private static final String MOD_PORTRAIT_ROOT = "graphics/portraits";
 	private static final float TOOLTIP_WIDTH = 520f;
+
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 
 	@Override
@@ -41,25 +42,9 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 		specs.add(player);
 
 		for (FactionSpecAPI spec : specs) {
-
-			for (String path : spec.getAllPortraits(Gender.MALE)) {
-				if (!loaded.contains(path)) {
-					loaded.add(path);
-					options.add(new OptionChoice(path, spec.getDisplayName()));
-				}
-			}
-
-			for (String path : spec.getAllPortraits(Gender.FEMALE)) {
-				if (!loaded.contains(path)) {
-					loaded.add(path);
-					options.add(new OptionChoice(path, spec.getDisplayName()));
-				}
-			}
-
-			for (String path : spec.getAllPortraits(Gender.ANY)) {
-				if (!loaded.contains(path)) {
-					loaded.add(path);
-					options.add(new OptionChoice(path, spec.getDisplayName()));
+			for (Gender gender : List.of(Gender.MALE, Gender.FEMALE, Gender.ANY)) {
+				for (String path : spec.getAllPortraits(gender)) {
+					if (loaded.add(path)) options.add(new OptionChoice(path, spec.getDisplayName()));
 				}
 			}
 		}
@@ -81,14 +66,16 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 							BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build(), exception);
 					continue;
 				}
+
 				BattleNext_Logger.operationSucceeded(BattleNext_PortraitSourceProvider.class, "texture.load",
 						() -> BattleNext_Logger.fields().put("path", path).build());
 				result.add(new OptionChoice(path, fileName(path)));
 			}
 		} catch (IOException exception) {
 			BattleNext_Logger.warn(BattleNext_PortraitSourceProvider.class, "portraits.load.degraded",
-				BattleNext_Logger.fields().put("root", MOD_PORTRAIT_ROOT).put("loaded", result.stream().map(OptionChoice::getId).toList()).build(), exception);
+				BattleNext_Logger.fields().put("root", MOD_PORTRAIT_ROOT).put("loaded", result.stream().map(OptionChoice::id).toList()).build(), exception);
 		}
+
 		return result;
 	}
 
@@ -115,12 +102,12 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		addHeader(tooltip, option.getLabel(), option.getId());
+		addHeader(tooltip, option.label(), option.id());
 		for (FactionSpecAPI spec : Global.getSettings().getAllFactionSpecs()) {
-			if (!option.getLabel().equals(spec.getDisplayName())) continue;
-			if (!spec.getAllPortraits(Gender.MALE).contains(option.getId())
-					&& !spec.getAllPortraits(Gender.FEMALE).contains(option.getId())
-					&& !spec.getAllPortraits(Gender.ANY).contains(option.getId())) continue;
+			if (!option.label().equals(spec.getDisplayName())) continue;
+			if (!spec.getAllPortraits(Gender.MALE).contains(option.id())
+					&& !spec.getAllPortraits(Gender.FEMALE).contains(option.id())
+					&& !spec.getAllPortraits(Gender.ANY).contains(option.id())) continue;
 			Description description = Global.getSettings().getDescription(spec.getId(), Type.FACTION);
 			if (description != null) addDescription(tooltip, description.getText1());
 			return;

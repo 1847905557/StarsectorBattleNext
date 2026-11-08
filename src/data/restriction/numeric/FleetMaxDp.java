@@ -13,9 +13,8 @@ public class FleetMaxDp implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		float total = 0f;
-		for (FleetMemberAPI member : assembledFleet.getMembers()) {
-			total += member.getDeploymentPointsCost();
-		}
+		for (FleetMemberAPI member : assembledFleet.getMembersReadonly()) total += member.getDeploymentPointsCost();
+
 		return BattleNext_RestrictionUtils.maximum(restriction, assembledFleet.getDefinition().getId(), total);
 	}
 }

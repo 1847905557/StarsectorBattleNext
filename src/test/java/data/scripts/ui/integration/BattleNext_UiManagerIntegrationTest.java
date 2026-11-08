@@ -6,6 +6,7 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
@@ -51,23 +53,25 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	void retainedReportsRefreshTheShellImmediatelyAndStayWithinTheCurrentPage() throws Exception {
 
 		installSettings(false);
-		var configurations = new BattleNext_TournamentStore();
+		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		configurations.save(new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2));
-		var started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
-		var instances = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta"));
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		instances.save(started);
 		instances.activate(started.getId());
-		var manager = new BattleNext_UiManager(() -> {});
+
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		BattleNext_BattleSignals.markPendingResult("before-open");
 		manager.open();
 		settleUi(manager);
 		manager.buttonPressed(tab("SETTINGS"));
-		var status = (BattleNext_StatusBar) getField(manager, "statusBar");
-		var label = (LabelAPI) getField(status, "statusLabel");
+		BattleNext_StatusBar status = (BattleNext_StatusBar) getField(manager, "statusBar");
+		LabelAPI label = (LabelAPI) getField(status, "statusLabel");
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_active_tournament"), started.getId()), label.getText());
-		var report = new BattleNext_BattleReportModel();
+
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId(UUID.randomUUID().toString());
 		report.setName("Generated report");
 		report.setCreatedAt(System.currentTimeMillis());
@@ -78,21 +82,24 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), report.getId()), label.getText());
 		manager.advance(0f);
 		assertEquals(report.getId(), manager.getPendingReportId());
+
 		String error = BattleNext_TestTextCatalog.text("Common", "BattleNext_common_load_failed");
 		status.showError(error);
 		manager.advance(0f);
 		assertEquals(error, label.getText());
 		status.update("", started.getId(), manager.getPendingReportId());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), report.getId()), label.getText());
-		var reports = new BattleNext_BattleReportStore();
+
+		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
 		report.setName("Renamed report");
 		reports.save(report);
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
-		var page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
+
+		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(true);
 		manager.buttonPressed(tab("FLEETS"));
-		var latest = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel latest = new BattleNext_BattleReportModel();
 		latest.setId(UUID.randomUUID().toString());
 		latest.setName("Latest report");
 		latest.setCreatedAt(System.currentTimeMillis());
@@ -100,6 +107,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.advance(0f);
 		assertEquals(latest.getId(), manager.getPendingReportId());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), latest.getId()), label.getText());
+
 		manager.buttonPressed("confirm_cancel");
 		assertEquals(latest.getId(), manager.getPendingReportId());
 		manager.buttonPressed("settings_save");
@@ -107,10 +115,12 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed(tab("FLEETS"));
 		assertEquals("", manager.getPendingReportId());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_active_tournament"), started.getId()), label.getText());
+
 		BattleNext_BattleSignals.markPendingResult(report.getId());
 		manager.buttonPressed(tab("REPORTS"));
 		manager.advance(0f);
 		assertEquals("", manager.getPendingReportId());
+
 		manager.buttonPressed("close");
 		BattleNext_BattleSignals.markPendingResult(latest.getId());
 		manager.advance(0f);
@@ -126,19 +136,20 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		store.reload();
-		var pin = store.saveVariant("Original", source().getApi());
+		BattleNext_PinnedVariantModel pin = store.saveVariant("Original", source().getApi());
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		Object variants = tab("VARIANTS");
 		Object fleets = tab("FLEETS");
 		manager.buttonPressed(variants);
-		var page = (BattleNext_PinnedVariantPage) getField(manager, "variantPage");
+		BattleNext_PinnedVariantPage page = (BattleNext_PinnedVariantPage) getField(manager, "variantPage");
 		manager.buttonPressed("pin:" + pin.getSourcePath());
 		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Changed");
 		manager.buttonPressed(fleets);
 		assertEquals(variants, getField(manager, "currentPage"));
 		manager.buttonPressed("confirm_cancel");
 		assertTrue(page.hasUnsavedChanges());
+
 		manager.buttonPressed(fleets);
 		manager.buttonPressed("confirm_save");
 		assertEquals(fleets, getField(manager, "currentPage"));
@@ -151,12 +162,13 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
-		var enumeration = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage");
+		Class<?> enumeration = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage");
 		Object[] tabs = enumeration.getEnumConstants();
 		Object variants = Arrays.stream(tabs).filter(tab -> tab.toString().equals("VARIANTS")).findFirst().orElseThrow();
 		Object selector = Arrays.stream(tabs).filter(tab -> tab.toString().equals("BATTLE_SELECTOR")).findFirst().orElseThrow();
 		manager.buttonPressed(variants);
 		assertInstanceOf(BattleNext_PinnedVariantPage.class, getField(manager, "variantPage"));
+
 		AtomicBoolean consumed = new AtomicBoolean();
 		assertTrue(manager.handleGlobalInput(List.of(event("escape", consumed))));
 		assertTrue(consumed.get());
@@ -195,6 +207,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		} else {
 			manager.buttonPressed("settings_save");
 		}
+
 		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
 		assertEquals(!initial, BattleNext_Settings.isCnTextEnabled());
 		assertFalse(page.hasUnsavedChanges());
@@ -218,6 +231,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 			assertEquals(String.format(BattleNext_TestTextCatalog.text(category, "BattleNext_management_active_tournament"), "example"),
 					((LabelAPI) getField(statusBar, "statusLabel")).getText());
 		}
+
 		manager.buttonPressed(settings);
 		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(initial);
 		manager.buttonPressed("settings_save");
@@ -238,6 +252,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void failedConfirmationSaveKeepsTheDialogDraftAndShellLanguage(boolean initial) throws Exception {
+
 		installSettings(initial);
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
@@ -247,6 +262,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(!initial);
 		manager.buttonPressed(tabs[0]);
+
 		failSettingsWrite = true;
 		manager.buttonPressed("confirm_save");
 		assertEquals(settings, getField(manager, "currentPage"));
@@ -272,8 +288,10 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 			assertEquals(List.of("1. " + error), tooltips.get(hover).getComponents().stream()
 					.map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 		}
+
 		manager.buttonPressed("confirm_cancel");
 		assertTrue(page.hasUnsavedChanges());
+
 		failSettingsWrite = false;
 		manager.buttonPressed(tabs[0]);
 		manager.buttonPressed("confirm_save");
@@ -282,6 +300,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
 		assertFalse(page.hasUnsavedChanges());
 		assertTrue(page.getSaveErrors().isEmpty());
+
 		manager.buttonPressed(settings);
 		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(initial);
 		manager.buttonPressed("close");
@@ -294,7 +313,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	void simulatorUnlockIsConfirmedAndRetainedUntilTheManagementWindowCloses(boolean initial) throws Exception {
 
 		installSettings(initial);
-		var instance = BattleNext_SimulatorService.class.getDeclaredField("instance");
+		Field instance = BattleNext_SimulatorService.class.getDeclaredField("instance");
 		instance.setAccessible(true);
 		Object service = instance.get(null);
 		AtomicInteger closes = new AtomicInteger();
@@ -309,7 +328,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		String category = "Simulator";
 		ButtonAPI enable = simulatorButtons(page).get(0);
 		assertEquals(BattleNext_TestTextCatalog.text(category, "BattleNext_simulator_enable"), enable.getText());
-		assertSimulatorHeading(page, initial);
+		assertSimulatorHeading(page);
 		assertFalse(page.hasUnsavedChanges());
 		String stored = savedSettings.get().toString();
 		manager.buttonPressed(enable.getCustomData());
@@ -323,18 +342,20 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed("action_cancel");
 		assertEquals(List.of(enable), simulatorButtons(page));
 		assertEquals(stored, savedSettings.get().toString());
+
 		manager.buttonPressed(enable.getCustomData());
 		AtomicBoolean escape = new AtomicBoolean();
 		assertTrue(manager.handleGlobalInput(List.of(event("escape", escape))));
 		assertTrue(escape.get());
 		assertFalse(dialog.isActive());
 		assertEquals(List.of(enable), simulatorButtons(page));
+
 		TextFieldAPI timeLimit = (TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField");
 		timeLimit.setText("pending");
 		manager.buttonPressed(enable.getCustomData());
 		manager.buttonPressed("action_confirm");
 		assertTrue(simulatorButtons(page).isEmpty());
-		assertSimulatorHeading(page, initial);
+		assertSimulatorHeading(page);
 		BattleNext_SimulatorWidget unlocked = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
 		PositionAPI source = ((BattleNext_BattleSourceField) getField(unlocked, "sourceField")).getPanel().getPosition();
 		assertEquals(BattleNext_PageLayout.HEADER_HEIGHT + BattleNext_PageLayout.PAGE_CONTENT_INSET,
@@ -345,17 +366,21 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals("pending", timeLimit.getText());
 		assertTrue(page.hasUnsavedChanges());
 		assertFalse(dialog.isActive());
+
 		page.refreshContent();
 		assertTrue(simulatorButtons(page).isEmpty());
 		assertEquals("pending", ((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).getText());
+
 		page.discard();
 		assertTrue(simulatorButtons(page).isEmpty());
 		assertFalse(page.hasUnsavedChanges());
+
 		((ButtonAPI) getField(getField(page, "editor"), "cnTextCheckbox")).setChecked(!initial);
 		manager.buttonPressed("settings_save");
 		assertEquals(!initial, savedSettings.get().getBoolean("cnText"));
 		assertTrue(simulatorButtons(page).isEmpty());
-		assertSimulatorHeading(page, !initial);
+		assertSimulatorHeading(page);
+
 		manager.buttonPressed(tab("FLEETS"));
 		assertNull(getField(page, "panel"));
 		manager.buttonPressed(settings);
@@ -365,6 +390,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.buttonPressed("close");
 		assertEquals(1, closes.get());
 		assertNull(getField(page, "simulatorWidget"));
+
 		manager.open();
 		settleUi(manager);
 		manager.buttonPressed(settings);
@@ -388,7 +414,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 				.filter(button -> "simulator_enable".equals(button.getCustomData())).toList();
 	}
 
-	private void assertSimulatorHeading(BattleNext_SettingsPage page, boolean cnText) throws Exception {
+	private void assertSimulatorHeading(BattleNext_SettingsPage page) throws Exception {
 		BattleNext_SimulatorWidget widget = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
 		CustomPanelAPI content = (CustomPanelAPI) children.get(widget.getPanel()).get(0);
 		String title = BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_heading");
@@ -406,6 +432,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 	}
 
 	private void installSettings(boolean initial) throws Exception {
+
 		savedSettings.set(new JSONObject().put("cnText", initial));
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -417,6 +444,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 				savedSettings.set(new JSONObject(((JSONObject) args[1]).toString()));
 				return null;
 			}
+
 			try {
 				return method.invoke(delegate, args);
 			} catch (InvocationTargetException exception) {

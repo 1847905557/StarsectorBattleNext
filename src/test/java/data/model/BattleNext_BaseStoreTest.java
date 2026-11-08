@@ -10,6 +10,7 @@ class BattleNext_BaseStoreTest {
 
 	@Test
 	void editRejectionsAreReadOnlyAndSaveUsesTheSameSourceAndIdentityRules() throws Exception {
+
 		MemoryStore store = new MemoryStore();
 		Entry source = new Entry("source");
 		source.setSourceType(BattleNext_LoadSource.STANDARD);
@@ -18,18 +19,22 @@ class BattleNext_BaseStoreTest {
 		store.reload();
 		store.save(new Entry("taken"));
 		long revision = store.getRevision();
-		var unavailable = store.editRejections(new Entry("source"), "source");
+
+		List<BattleNext_BaseStore.EditRejection> unavailable = store.editRejections(new Entry("source"), "source");
 		assertEquals(1, unavailable.size());
 		assertEquals(BattleNext_BaseStore.EditRejectionReason.SOURCE_UNAVAILABLE, unavailable.get(0).getReason());
 		assertEquals("source", unavailable.get(0).getIdentity());
 		assertThrows(UnsupportedOperationException.class, unavailable::clear);
-		var conflicts = store.editRejections(new Entry("taken"), "source");
+
+		List<BattleNext_BaseStore.EditRejection> conflicts = store.editRejections(new Entry("taken"), "source");
 		assertEquals(1, conflicts.size());
 		assertEquals(BattleNext_BaseStore.EditRejectionReason.DUPLICATE_ID, conflicts.get(0).getReason());
 		assertEquals(revision, store.getRevision());
 		assertSame(source, store.get("source"));
-		var failure = assertThrows(BattleNext_BaseStore.EditRejection.class, () -> store.saveEdited(new Entry("taken"), "source"));
+
+		BattleNext_BaseStore.EditRejection failure = assertThrows(BattleNext_BaseStore.EditRejection.class, () -> store.saveEdited(new Entry("taken"), "source"));
 		assertEquals(BattleNext_BaseStore.EditRejectionReason.DUPLICATE_ID, failure.getReason());
+
 		store.saveEdited(new Entry("copy"), "source");
 		assertEquals("saved/copy.json", store.get("copy").getSourcePath());
 		assertSame(source, store.get("source"));
@@ -45,7 +50,7 @@ class BattleNext_BaseStoreTest {
 		store.failure = new IOException("second source failed");
 
 		store.reload();
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
 		assertTrue(store.isLoaded());
 		assertTrue(store.getErrors().get(0).diagnostic().contains("second source failed"));
 	}
@@ -58,6 +63,7 @@ class BattleNext_BaseStoreTest {
 		store.reload();
 		assertTrue(store.isLoaded());
 		assertEquals(IOException.class.getName(), store.getErrors().get(0).diagnostic());
+
 		store.save(new Entry("alpha"));
 		assertEquals("alpha", store.get("alpha").getId());
 	}
@@ -145,19 +151,22 @@ class BattleNext_BaseStoreTest {
 		assertThrows(IOException.class, store::reload);
 		assertSame(original, store.get("original"));
 		assertNull(store.get("replacement"));
+
 		store.failState = false;
 		store.reload();
 		assertNull(store.get("original"));
-		assertEquals("replacement", store.getAll().get(0).getId());
+		assertEquals("replacement", store.getAllCopy().get(0).getId());
 		assertEquals("", store.getLoadError());
 	}
 
 	@Test
 	void saveFailurePreservesPublishedEntryAndInputSourceMetadata() throws Exception {
+
 		MemoryStore store = new MemoryStore();
 		Entry original = new Entry("entry");
 		store.loaded = List.of(original);
 		store.reload();
+
 		Entry replacement = new Entry("entry");
 		replacement.setSourceType(BattleNext_LoadSource.STANDARD);
 		replacement.setSourcePath("original.json");
@@ -166,6 +175,7 @@ class BattleNext_BaseStoreTest {
 		assertSame(original, store.get("entry"));
 		assertEquals(BattleNext_LoadSource.STANDARD, replacement.getSourceType());
 		assertEquals("original.json", replacement.getSourcePath());
+
 		store.failSave = false;
 		store.save(replacement);
 		assertSame(replacement, store.get("entry"));
@@ -176,21 +186,24 @@ class BattleNext_BaseStoreTest {
 
 	@Test
 	void deletionPublishesAfterPersistenceAndInvokesTheRemovalHook() throws Exception {
+
 		MemoryStore store = new MemoryStore();
 		assertThrows(IllegalStateException.class, () -> store.delete("entry"));
 		Entry entry = new Entry("entry");
 		store.loaded = List.of(entry);
 		store.reload();
-		List<Entry> snapshot = store.getAll();
+		List<Entry> snapshot = store.getAllCopy();
 		assertThrows(UnsupportedOperationException.class, snapshot::clear);
+
 		store.failDelete = true;
 		assertThrows(IOException.class, () -> store.delete("entry"));
 		assertSame(entry, store.get("entry"));
 		assertEquals("", store.removedId);
+
 		store.failDelete = false;
 		store.delete("entry");
 		assertEquals("entry", store.removedId);
-		assertEquals(List.of(), store.getAll());
+		assertEquals(List.of(), store.getAllCopy());
 		assertEquals(List.of(entry), snapshot);
 		assertThrows(IllegalStateException.class, () -> store.delete("unknown"));
 	}

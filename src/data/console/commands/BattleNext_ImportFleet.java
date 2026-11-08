@@ -58,18 +58,20 @@ public class BattleNext_ImportFleet implements BaseCommand {
 			return CommandResult.ERROR;
 		}
 		if (!assembled.isComplete()) {
-			Console.showMessage("Unable to build fleet " + id + ": " + String.join("; ", assembled.getMemberErrors()));
+			Console.showMessage("Unable to build fleet " + id + ": " + String.join("; ", assembled.getMemberErrorsReadonly()));
 			return CommandResult.ERROR;
 		}
 
 		CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
 		FleetDataAPI fleetData = playerFleet.getFleetData();
 		List<PersonAPI> officers = new ArrayList<>();
-		for (int index = 0; index < assembled.getMembers().size(); index++) {
-			BattleNext_MemberModel member = definition.getMembers().get(index);
+		List<FleetMemberAPI> ships = assembled.getMembersReadonly();
+		List<BattleNext_MemberModel> members = definition.getMembersReadonly();
+		for (int index = 0; index < ships.size(); index++) {
+			BattleNext_MemberModel member = members.get(index);
 			if (!hasOfficerData(member)) continue;
 
-			FleetMemberAPI ship = assembled.getMembers().get(index);
+			FleetMemberAPI ship = ships.get(index);
 			PersonAPI officer = ship.getCaptain();
 			if (!member.getPortrait().isEmpty()) {
 				officer.setPortraitSprite(member.getPortrait());
@@ -81,24 +83,20 @@ public class BattleNext_ImportFleet implements BaseCommand {
 			officers.add(officer);
 		}
 
-		for (FleetMemberAPI member : assembled.getMembers()) {
-			fleetData.addFleetMember(member);
-		}
-		for (PersonAPI officer : officers) {
-			fleetData.addOfficer(officer);
-		}
+		for (FleetMemberAPI member : ships) fleetData.addFleetMember(member);
+		for (PersonAPI officer : officers) fleetData.addOfficer(officer);
 		playerFleet.forceSync();
-		for (FleetMemberAPI member : assembled.getMembers()) {
+		for (FleetMemberAPI member : ships) {
 			member.updateStats();
 			member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
 		}
 
 		Console.showMessage("Imported " + definition.getName() + " to player fleet: "
-				+ assembled.getMembers().size() + " ships, " + officers.size() + " officers.");
+				+ ships.size() + " ships, " + officers.size() + " officers.");
 		return CommandResult.SUCCESS;
 	}
 
 	private boolean hasOfficerData(BattleNext_MemberModel member) {
-		return !member.getPersonality().isEmpty() || !member.getPortrait().isEmpty() || !member.getSkills().isEmpty();
+		return !member.getPersonality().isEmpty() || !member.getPortrait().isEmpty() || !member.getSkillsReadonly().isEmpty();
 	}
 }

@@ -2,6 +2,7 @@ package data.scripts.ui.integration;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.model.fleet.BattleNext_FleetStore;
@@ -36,18 +37,19 @@ class BattleNext_VirtualSelectionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void releasingMemberRowsReadsOnlyThoseRowsAndFormattingIncludesUnmountedMembers() throws Exception {
+
 		registeredVariants.put("parent_variant", source().getApi());
 		List<BattleNext_MemberModel> members = IntStream.range(0, 128).mapToObj(index ->
 				new BattleNext_MemberModel("parent_variant", "Ship " + index, "", List.of(), "", "", List.of())).toList();
-		var editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		editor.open(new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), members), false);
 		attachEditor(editor, panel(1000f, 400f, new BaseCustomUIPanelPlugin()));
 		editor.buttonPressed("toggle_member:0");
 		Object first = ((List<?>) getField(editor, "memberFields")).get(0);
 		((TextFieldAPI) getField(first, "nameField")).setText("Draft row");
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
 		AtomicInteger distantReads = new AtomicInteger();
-		var distant = new BattleNext_MemberModel("parent_variant", "Distant", "", List.of(), "", "", List.of()) {
+		BattleNext_MemberModel distant = new BattleNext_MemberModel("parent_variant", "Distant", "", List.of(), "", "", List.of()) {
 			@Override
 			public String getName() {
 				distantReads.incrementAndGet();
@@ -58,21 +60,23 @@ class BattleNext_VirtualSelectionTest extends BattleNext_TestPageFixture {
 		VisibleRows visible = (VisibleRows) getField(editor, "visibleMembers");
 		visible.update(3000f, 400f);
 		assertEquals(0, distantReads.get());
-		assertEquals("Draft row", draft.getMembers().get(0).getName());
+		assertEquals("Draft row", draft.getMembersReadonly().get(0).getName());
 		assertNull(((List<?>) getField(editor, "memberFields")).get(127));
+
 		((TextFieldAPI) getField(editor, "variantPrefixField")).setText("audit");
 		editor.buttonPressed("format_ids");
 		draft = (BattleNext_FleetModel) getField(editor, "draft");
-		assertEquals(128, draft.getMembers().size());
-		assertTrue(draft.getMembers().stream().allMatch(member -> member.getVariantId().startsWith("audit_")), editor.getStatusText());
-		assertEquals("Draft row", draft.getMembers().get(0).getName());
+		assertEquals(128, draft.getMembersReadonly().size());
+		assertTrue(draft.getMembersReadonly().stream().allMatch(member -> member.getVariantId().startsWith("audit_")), editor.getStatusText());
+		assertEquals("Draft row", draft.getMembersReadonly().get(0).getName());
 		editor.close();
 		assertTrue(((Map<?, ?>) getField(editor, "memberHeights")).isEmpty());
 	}
 
 	@Test
 	void addingAcrossHullsAndPinnedPreservesCountsThroughNavigationUntilConfirmation() throws Exception {
-		var rootVariant = source().getApi();
+
+		ShipVariantAPI rootVariant = source().getApi();
 		registeredVariants.put("parent_variant", rootVariant);
 		registeredVariants.put("child_variant", rootVariant.getModuleVariant("module"));
 		SettingsAPI delegate = Global.getSettings();
@@ -102,6 +106,7 @@ class BattleNext_VirtualSelectionTest extends BattleNext_TestPageFixture {
 		popup.getPlugin().buttonPressed("browse:selected");
 		assertEquals(Map.of("parent_variant", 2, "child_variant", 1, pinned, 1), getField(picker, "selection"));
 		assertNull(added.get());
+
 		popup.getPlugin().buttonPressed(buttonIds.get("CONFIRM"));
 		assertEquals(4, added.get().size());
 		assertEquals(2, Collections.frequency(added.get(), "parent_variant"));
@@ -111,6 +116,7 @@ class BattleNext_VirtualSelectionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void longTableKeepsFocusedRowsAndRestoresOffscreenDraftAndCheckboxValues() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI owner = panel(1400f, 300f, new BaseCustomUIPanelPlugin());
 		List<BattleNext_QuickBattleModel> entries = IntStream.range(0, 100)
@@ -126,17 +132,19 @@ class BattleNext_VirtualSelectionTest extends BattleNext_TestPageFixture {
 		display.attach(owner);
 		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(display, "tableWidget");
 		VisibleRows visible = (VisibleRows) getField(table, "visibleRows");
-		var first = display.getRows().get(0);
+		BattleNext_QuickBattleDisplay.Row first = display.getRowsReadonly().get(0);
 		first.getField(Column.MAP).setText("pending");
 		first.setEnabled(false);
 		first.getField(Column.MAP).grabFocus(false);
 		visible.update(2500f, 250f);
 		assertNotNull(first.getField(Column.MAP));
+
 		router.releaseFocus();
 		visible.update(2500f, 250f);
 		assertNull(first.getField(Column.MAP));
 		assertEquals("pending", first.text(Column.MAP));
 		assertFalse(first.isEnabled());
+
 		visible.update(0f, 250f);
 		assertEquals("pending", first.getField(Column.MAP).getText());
 		assertFalse(first.isEnabled());

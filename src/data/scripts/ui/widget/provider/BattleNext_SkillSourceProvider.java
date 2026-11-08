@@ -28,6 +28,7 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 	private static final float AUTHOR_GAP = 5f;
 	private static final float EFFECT_GROUP_GAP = 8f;
 	private static final float EFFECT_GAP = 5f;
+
 	private final BattleNext_I18nSection commonStrings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 
 	@Override
@@ -87,9 +88,11 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.getId());
-		addHeader(tooltip, option.getLabel(), option.getId());
+
+		SkillSpecAPI spec = Global.getSettings().getSkillSpec(option.id());
+		addHeader(tooltip, option.label(), option.id());
 		if (spec == null) return;
+
 		String scope = String.join(" - ", Stream.of(spec.getScopeStr(), spec.getScopeStr2())
 				.filter(value -> value != null && !value.isBlank()).toList());
 		addDescription(tooltip, spec.getDescription());
@@ -99,9 +102,11 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 		if (author != null && !author.isBlank()) {
 			tooltip.addPara(author, BattleNext_UiTheme.TEXT, AUTHOR_GAP).setAlignment(Alignment.RMID);
 		}
+
 		if (!scope.isEmpty()) {
 			tooltip.addPara(scope, BattleNext_UiTheme.TEXT, SCOPE_GAP);
 		}
+
 		addEffects(tooltip, spec);
 	}
 
@@ -126,7 +131,7 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 			String group = Objects.requireNonNullElse(effect.getName(), "");
 			try {
 				if (previousLevel != requiredLevel || !Objects.equals(previousGroup, group)) {
-					String heading = group == null || group.isBlank()
+					String heading = group.isBlank()
 							? commonStrings.format("skill_effect_level", BattleNext_I18nSection.buildFactor(previewLevel)) : group;
 					Color headingColor = "Elite".equals(group) ? Misc.getStoryOptionColor() : BattleNext_UiTheme.ACCENT;
 					tooltip.addPara(heading, headingColor, EFFECT_GROUP_GAP);

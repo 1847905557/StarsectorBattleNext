@@ -6,6 +6,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
@@ -36,6 +37,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void templateCreationAndInstanceActivationFollowSelectionAndPreserveBrowseState() throws Exception {
+
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
 				(instance, method, args) -> {
@@ -83,6 +85,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 			}
 			assertEquals("", getField(selector, "selectedInstanceId"));
 		}
+
 		BattleNext_TournamentDisplay templateDisplay = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
 		assertTrue(templateDisplay.isEditable());
 		selector.buttonPressed("tournament:create");
@@ -91,8 +94,8 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "cup",
 				String.format(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_minimum_fleets"), 2))), selector.getStatusText());
 		instances.reload();
-		assertTrue(instances.getAll().isEmpty());
-		var templates = (Map<String, BattleNext_TournamentTemplate>) getField(selector, "templates");
+		assertTrue(instances.getAllCopy().isEmpty());
+		Map<String, BattleNext_TournamentTemplate> templates = (Map<String, BattleNext_TournamentTemplate>) getField(selector, "templates");
 		templates.get("cup").select(0, "alpha");
 		templates.get("cup").select(1, "alpha");
 		selector.buttonPressed("tournament:create");
@@ -101,8 +104,9 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "cup",
 				BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"))), selector.getStatusText());
 		instances.reload();
-		assertTrue(instances.getAll().isEmpty());
-		assertEquals(List.of("alpha", "alpha"), templates.get("cup").getFleetIds());
+		assertTrue(instances.getAllCopy().isEmpty());
+		assertEquals(List.of("alpha", "alpha"), templates.get("cup").getFleetIdsReadonly());
+
 		templates.get("cup").select(1, "beta");
 		selector.refreshContent();
 		templateDisplay = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
@@ -116,17 +120,19 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		instances.reload();
 		assertTrue(instances.getActiveId().isEmpty());
 		assertEquals("cup", instances.get(first).getSourceTournamentId());
-		assertEquals(List.of("alpha", "beta"), instances.get(first).getFleetIds());
+		assertEquals(List.of("alpha", "beta"), instances.get(first).getFleetIdsReadonly());
 		assertFalse(((BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay")).isEditable());
 		selector.buttonPressed("tournament:create");
 		instances.reload();
-		assertEquals(List.of(first), instances.getAll().stream().map(BattleNext_StartedTournament::getId).toList());
+		assertEquals(List.of(first), instances.getAllCopy().stream().map(BattleNext_StartedTournament::getId).toList());
 		selector.buttonPressed("tournament:active");
 		instances.reload();
 		assertEquals(first, instances.getActiveId());
+
 		selectInstance(selector, "");
 		assertEquals(List.of("tournament:create", "tournament:check"), actionIds(selector));
 		assertEquals(templateState, ((BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay")).captureState());
+
 		selector.buttonPressed("tournament:create");
 		String second = (String) getField(selector, "selectedInstanceId");
 		assertNotEquals(first, second);
@@ -180,33 +186,34 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void templateCheckRereadsAssetsPreservesCameraAndCreationUsesItsQualification() throws Exception {
+
 		quickBattles("alpha,beta,0,1\n");
-		var sources = new BattleNext_BattleSourceProvider();
+		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
-		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 3);
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 3);
 		sources.getTournamentStore().save(configuration);
-		var selector = new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin());
+		BattleNext_BattleSelectorPage selector = new BattleNext_BattleSelectorPage(() -> {}, new BaseCustomUIPanelPlugin());
 		selector.attach(panel(1200f, 900f, new BaseCustomUIPanelPlugin()));
 		selector.selectSource("cup");
 		selector.refreshContent();
-		var templates = (Map<String, BattleNext_TournamentTemplate>) getField(selector, "templates");
+		Map<String, BattleNext_TournamentTemplate> templates = (Map<String, BattleNext_TournamentTemplate>) getField(selector, "templates");
 		templates.get("cup").select(0, "alpha");
 		templates.get("cup").select(2, "beta");
 		selector.refreshContent();
-		var display = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
-		var chart = (BattleNext_TournamentView) getField(display, "chart");
+		BattleNext_TournamentDisplay display = (BattleNext_TournamentDisplay) getField(selector, "tournamentDisplay");
+		BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
 		chart.zoomAt(90f, 90f, 2);
 		chart.panBy(10f, 20f);
-		var state = display.captureState();
+		BattleNext_TournamentDisplay.ViewState state = display.captureState();
 		selector.buttonPressed("tournament:check");
 		assertSame(display, getField(selector, "tournamentDisplay"));
 		assertEquals(state, display.captureState());
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_check_passed")));
-		var instances = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		instances.reload();
-		assertTrue(instances.getAll().isEmpty());
+		assertTrue(instances.getAllCopy().isEmpty());
 		assertTrue(instances.getActiveId().isEmpty());
-		var result = getField(selector, "checkResult");
+		Object result = getField(selector, "checkResult");
 		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50, 0);
 		selector.refreshContent();
 		assertSame(result, getField(selector, "checkResult"));
@@ -216,11 +223,11 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_check_failed")));
 		selector.buttonPressed("tournament:create");
 		instances.reload();
-		assertTrue(instances.getAll().isEmpty());
+		assertTrue(instances.getAllCopy().isEmpty());
 		standard("beta", "beta", "child_variant");
 		selector.buttonPressed("tournament:create");
 		instances.reload();
-		assertEquals(List.of("alpha", "", "beta"), instances.getAll().get(0).getFleetIds());
+		assertEquals(List.of("alpha", "", "beta"), instances.getAllCopy().get(0).getFleetIdsReadonly());
 		assertTrue(instances.getActiveId().isEmpty());
 		selector.selectSource("");
 		assertNull(getField(selector, "checkResult"));
@@ -229,11 +236,12 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void fleetSummaryListsFilledSeatsInOrderAndUpdatesWhenASeatIsCleared() throws Exception {
-		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.DOUBLE_ELIMINATION, 1, 4);
+
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.DOUBLE_ELIMINATION, 1, 4);
 		List<String> slots = new ArrayList<>(List.of("", "alpha", "", "beta"));
-		var details = new BattleNext_TournamentDisplay.Details(Map.of("alpha", "Alpha 50%", "beta", "风风雨雨"), true, null, "", List.of());
-		var root = panel(1200f, 900f, new BaseCustomUIPanelPlugin());
-		var display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(), configuration, null, details, List.of(), ignored -> {});
+		BattleNext_TournamentDisplay.Details details = new BattleNext_TournamentDisplay.Details(Map.of("alpha", "Alpha 50%", "beta", "风风雨雨"), true, null, "", List.of());
+		CustomPanelAPI root = panel(1200f, 900f, new BaseCustomUIPanelPlugin());
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(), configuration, null, details, List.of(), ignored -> {});
 		display.enableTemplateEditing(root, new BattleNext_FleetSourceProvider(new BattleNext_FleetStore()), () -> slots, slots::set);
 		display.attach(root);
 		assertEquals(List.of("Alpha 50%", "风风雨雨"), fleetSummary(display));
@@ -248,28 +256,29 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void expandedCheckDiagnosticsUpdateScrollExtentAndKeepTheFinalActionsReachable() throws Exception {
-		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
-		var details = new BattleNext_TournamentDisplay.Details(Map.of(), true, null, "", List.of());
-		var actions = List.of(new BattleNext_TournamentDisplay.Action(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "create", true, List.of(), "create"),
+
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
+		BattleNext_TournamentDisplay.Details details = new BattleNext_TournamentDisplay.Details(Map.of(), true, null, "", List.of());
+		List<BattleNext_TournamentDisplay.Action> actions = List.of(new BattleNext_TournamentDisplay.Action(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_create"), "create", true, List.of(), "create"),
 				new BattleNext_TournamentDisplay.Action(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_check_fleets"), "check", true, List.of(), "create"));
-		var display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(), configuration, null, details, actions, ignored -> {});
+		BattleNext_TournamentDisplay display = new BattleNext_TournamentDisplay(new BattleNext_UiInputRouter(), configuration, null, details, actions, ignored -> {});
 		display.attach(panel(650f, 350f, new BaseCustomUIPanelPlugin()));
-		var content = (TooltipMakerAPI) getField(display, "content");
-		var scroller = content.getExternalScroller();
-		var chart = (BattleNext_TournamentView) getField(display, "chart");
+		TooltipMakerAPI content = (TooltipMakerAPI) getField(display, "content");
+		ScrollPanelAPI scroller = content.getExternalScroller();
+		BattleNext_TournamentView chart = (BattleNext_TournamentView) getField(display, "chart");
 		chart.panBy(12f, 8f);
-		var camera = chart.captureState();
+		BattleNext_TournamentView.ViewState camera = chart.captureState();
 		scroller.setYOffset(30f);
 		float offset = scroller.getYOffset();
 		float originalHeight = content.getPosition().getHeight();
-		var previousViewport = (CustomPanelAPI) getField(display, "viewport");
+		CustomPanelAPI previousViewport = (CustomPanelAPI) getField(display, "viewport");
 		List<BattleNext_BattleValidation.Failure> failures = new ArrayList<>();
 		for (int index = 0; index < 8; index++) {
 			failures.add(new BattleNext_BattleValidation.Failure(BattleNext_BattleValidation.FailureKind.RULE, "fleet-" + index,
 					"Complete diagnosis 50% " + "long restriction details ".repeat(4)));
 		}
 		display.update(configuration, null, details.withCheckResult(new BattleNext_BattleValidation.Result(failures)), actions);
-		var updatedContent = (TooltipMakerAPI) getField(display, "content");
+		TooltipMakerAPI updatedContent = (TooltipMakerAPI) getField(display, "content");
 		assertNotSame(content, updatedContent);
 		assertTrue(removedComponents.contains(previousViewport));
 		content = updatedContent;
@@ -280,6 +289,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 		assertEquals(offset, scroller.getYOffset());
 		assertSame(chart, getField(display, "chart"));
 		assertEquals(camera, chart.captureState());
+
 		scroller.setYOffset(Float.MAX_VALUE);
 		assertEquals(content.getHeightSoFar() - scroller.getPosition().getHeight(), scroller.getYOffset());
 		assertTrue(buttonPositions.get("check").getY() >= scroller.getPosition().getY() - 0.001f);
@@ -294,7 +304,7 @@ class BattleNext_StartedTournamentUiTest extends BattleNext_TestFleetIoFixture {
 	}
 
 	private List<String> fleetSummary(BattleNext_TournamentDisplay display) throws Exception {
-		var summary = (CustomPanelAPI) getField(display, "summaryPanel");
+		CustomPanelAPI summary = (CustomPanelAPI) getField(display, "summaryPanel");
 		List<TooltipMakerAPI> contents = children.get(summary).stream().map(TooltipMakerAPI.class::cast).toList();
 		TooltipMakerAPI title = contents.stream().filter(content -> tooltips.get(content).getComponents().stream()
 				.anyMatch(component -> component instanceof LabelAPI label && label.getText().equals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")))).findFirst().orElseThrow();

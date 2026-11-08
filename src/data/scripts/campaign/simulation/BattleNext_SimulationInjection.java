@@ -1,6 +1,9 @@
 package data.scripts.campaign.simulation;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.combat.CombatEngineAPI;
+import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
+import com.fs.starfarer.api.plugins.SimulatorPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
@@ -67,7 +70,7 @@ public class BattleNext_SimulationInjection {
 			category.iconName = Global.getSettings().getSpriteName("icon", "BattleNext_Crest");
 			category.nonFactionCategory = true;
 			category.faction = SimulatorPluginImpl.createCustomFaction();
-			category.variants = new ArrayList<>(store.getAll().stream()
+			category.variants = new ArrayList<>(store.getAllCopy().stream()
 					.sorted(Comparator.comparing(BattleNext_PinnedVariantModel::getDisplayName)
 							.thenComparing(BattleNext_PinnedVariantModel::getPinId))
 					.map(BattleNext_PinnedVariantModel::getPinId).toList());
@@ -134,7 +137,7 @@ public class BattleNext_SimulationInjection {
 		Object list = field(screen, "O\u00d2\u00d6000", type("com.fs.starfarer.campaign.ui.S"));
 		invoke(list, "clear");
 		int side = ((Number) invoke(screen, "getOwnerId")).intValue();
-		var manager = Global.getCombatEngine().getFleetManager(side);
+		CombatFleetManagerAPI manager = Global.getCombatEngine().getFleetManager(side);
 		for (FleetMemberAPI member : manager.getReservesCopy()) {
 			manager.removeFromReserves(member);
 		}
@@ -252,15 +255,15 @@ public class BattleNext_SimulationInjection {
 		if (members.isEmpty()) return;
 		@SuppressWarnings("unchecked")
 		Map<String, String> settings = (Map<String, String>) invoke(options, "getSettings");
-		var plugin = Misc.getSimulatorPlugin();
+		SimulatorPlugin plugin = Misc.getSimulatorPlugin();
 		plugin.applySettingsToFleetMembers(members, plugin.getCustomCategory(), settings);
 		for (FleetMemberAPI member : members) {
 			member.updateStats();
 			member.getRepairTracker().setCR(member.getRepairTracker().getMaxCR());
 		}
 		int side = ((Number) invoke(screen, "getOwnerId")).intValue();
-		var engine = Global.getCombatEngine();
-		var manager = engine.getFleetManager(side);
+		CombatEngineAPI engine = Global.getCombatEngine();
+		CombatFleetManagerAPI manager = engine.getFleetManager(side);
 		if (side != engine.getPlayerShip().getOwner()) {
 			manager.setDeploymentYOffset(-8500f);
 		}

@@ -23,7 +23,7 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 	@ParameterizedTest
 	@MethodSource("prefixProblems")
 	void prefixValidationReportsTheExistingIdReasonBeforeResolvingSources(String prefix, String reason) {
-		var result = BattleNext_FleetVariantFormatter.preview(fleet(List.of("source")), prefix,
+		BattleNext_FleetVariantFormatter.Result result = BattleNext_FleetVariantFormatter.preview(fleet(List.of("source")), prefix,
 				id -> { throw new AssertionError("Invalid prefixes must finish before source resolution"); });
 		assertNull(result.candidate());
 		assertEquals(1, result.errors().size());
@@ -46,12 +46,12 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 		hull("lasher", "Lasher", List.of());
 		List<String> ids = new ArrayList<>(Collections.nCopies(10000, "wolf_999"));
 		ids.addAll(List.of("other_wolf", "lasher_old", "ctb_custom", "CTB_old", "ctb_bad?"));
-		var fleet = fleet(ids);
+		BattleNext_FleetModel fleet = fleet(ids);
 		for (String id : List.of("wolf_999", "other_wolf", "ctb_custom", "CTB_old", "ctb_bad?", "ctb_wolf_1", "CTB_WOLF_2")) {
 			fleet.putVariant(builder(id, "wolf"));
 		}
 		fleet.putVariant(builder("lasher_old", "lasher"));
-		var result = BattleNext_FleetVariantFormatter.preview(fleet, " \u3000ctb\t", id -> null);
+		BattleNext_FleetVariantFormatter.Result result = BattleNext_FleetVariantFormatter.preview(fleet, " \u3000ctb\t", id -> null);
 		assertTrue(result.errors().isEmpty(), result.errors().toString());
 		assertEquals(4, result.renamedIds());
 		assertEquals(10003, result.affectedMembers());
@@ -59,13 +59,13 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 		assertEquals("ctb_wolf_4", result.mapping().get("other_wolf"));
 		assertEquals("ctb_lasher_1", result.mapping().get("lasher_old"));
 		assertEquals("ctb_wolf_5", result.mapping().get("CTB_old"));
-		assertTrue(result.candidate().getMembers().subList(0, 10000).stream().allMatch(member -> member.getVariantId().equals("ctb_wolf_3")));
-		assertEquals("ctb_custom", result.candidate().getMembers().get(10002).getVariantId());
-		assertEquals("ctb_bad?", result.candidate().getMembers().get(10004).getVariantId());
+		assertTrue(result.candidate().getMembersReadonly().subList(0, 10000).stream().allMatch(member -> member.getVariantId().equals("ctb_wolf_3")));
+		assertEquals("ctb_custom", result.candidate().getMembersReadonly().get(10002).getVariantId());
+		assertEquals("ctb_bad?", result.candidate().getMembersReadonly().get(10004).getVariantId());
 		assertSame(fleet.getVariant("CTB_WOLF_2"), result.candidate().getVariant("CTB_WOLF_2"));
-		assertEquals("wolf_999", fleet.getMembers().get(0).getVariantId());
+		assertEquals("wolf_999", fleet.getMembersReadonly().get(0).getVariantId());
 		assertEquals("wolf_999", fleet.getVariant("wolf_999").toJson().getString("variantId"));
-		var repeated = BattleNext_FleetVariantFormatter.preview(result.candidate(), "ctb", id -> null);
+		BattleNext_FleetVariantFormatter.Result repeated = BattleNext_FleetVariantFormatter.preview(result.candidate(), "ctb", id -> null);
 		assertTrue(repeated.errors().isEmpty());
 		assertEquals(0, repeated.renamedIds());
 		assertEquals(0, repeated.affectedMembers());
@@ -83,12 +83,12 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 		JSONObject other = builder("shared", "wolf").toJson().put("fluxVents", 19);
 		Object modules = array ? new JSONArray().put(new JSONObject().put("a", shared)).put(new JSONObject().put("b", other))
 				: new JSONObject().put("b", other).put("a", shared);
-		var root = BattleNext_VariantBuilder.fromJson(builder("ctb_carrier_custom", "carrier").toJson().put("modules", modules), "");
-		var fleet = fleet(List.of("ctb_carrier_custom", "shared"));
+		BattleNext_VariantBuilder root = BattleNext_VariantBuilder.fromJson(builder("ctb_carrier_custom", "carrier").toJson().put("modules", modules), "");
+		BattleNext_FleetModel fleet = fleet(List.of("ctb_carrier_custom", "shared"));
 		fleet.putVariant(root);
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(shared, ""));
 		fleet.putVariant(builder("unreferenced", "unavailable_hull"));
-		var result = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> id.equals("external") ? builder("external", "lasher") : null);
+		BattleNext_FleetVariantFormatter.Result result = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> id.equals("external") ? builder("external", "lasher") : null);
 		assertTrue(result.errors().isEmpty(), result.errors().toString());
 		assertEquals(Map.of("ctb_carrier_custom", "ctb_carrier_custom", "shared", "ctb_wolf_1", "external", "ctb_lasher_1"), result.mapping());
 		assertEquals(2, result.renamedIds());
@@ -101,7 +101,7 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 		assertEquals(7, a.getInt("fluxVents"));
 		assertEquals(19, b.getInt("fluxVents"));
 		assertEquals("ctb_lasher_1", a.getJSONObject("modules").getJSONObject("nested").getString("variantId"));
-		assertEquals("ctb_wolf_1", result.candidate().getMembers().get(1).getVariantId());
+		assertEquals("ctb_wolf_1", result.candidate().getMembersReadonly().get(1).getVariantId());
 		assertNull(result.candidate().getVariant("shared"));
 		assertSame(fleet.getVariant("unreferenced"), result.candidate().getVariant("unreferenced"));
 		assertEquals("shared", fleet.getVariant("shared").toJson().getString("variantId"));
@@ -112,15 +112,15 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 
 		hull("wolf", "Wolf", List.of());
 		hull("lasher", "Lasher", List.of());
-		var modules = new JSONObject().put("a_missing", "missing")
+		JSONObject modules = new JSONObject().put("a_missing", "missing")
 				.put("b_cycle", "parent")
 				.put("c_conflict", builder("parent", "lasher").toJson())
 				.put("d_hull", builder("child", "missing_hull").toJson())
 				.put("e_structure", 42);
-		var fleet = fleet(List.of("parent", "missing_root"));
+		BattleNext_FleetModel fleet = fleet(List.of("parent", "missing_root"));
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(builder("parent", "wolf").toJson().put("modules", modules), ""));
 		String original = fleet.getVariant("parent").toJson().toString();
-		var result = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
+		BattleNext_FleetVariantFormatter.Result result = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
 		assertNull(result.candidate());
 		assertEquals(6, result.errors().size(), result.errors().toString());
 		for (int index = 0; index < 5; index++) {
@@ -130,26 +130,26 @@ class BattleNext_FleetVariantFormatterTest extends BattleNext_TestGameFixture {
 		assertTrue(result.errors().get(1).contains("parent -> parent"));
 		assertTrue(result.errors().get(2).contains("both hull wolf and hull lasher"));
 		assertEquals(original, fleet.getVariant("parent").toJson().toString());
-		assertEquals(List.of("parent", "missing_root"), fleet.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
+		assertEquals(List.of("parent", "missing_root"), fleet.getMembersReadonly().stream().map(BattleNext_MemberModel::getVariantId).toList());
 	}
 
 	@Test
 	void generatedIdsAndFinalCaseInsensitiveFilenamesAreCheckedBeforeApplication() throws Exception {
 
 		hull("bad/hull", "Bad hull", List.of());
-		var fleet = fleet(List.of("source"));
+		BattleNext_FleetModel fleet = fleet(List.of("source"));
 		fleet.putVariant(builder("source", "bad/hull"));
-		var invalid = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
+		BattleNext_FleetVariantFormatter.Result invalid = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
 		assertNull(invalid.candidate());
 		assertEquals(1, invalid.errors().size());
 		assertTrue(invalid.errors().get(0).contains("ctb_bad/hull_1"));
 		hull("wolf", "Wolf", List.of());
 		fleet.setVariants(List.of(builder("source", "wolf"), builder("ctb_keep", "wolf"), builder("CTB_KEEP", "wolf")));
-		var collision = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
+		BattleNext_FleetVariantFormatter.Result collision = BattleNext_FleetVariantFormatter.preview(fleet, "ctb", id -> null);
 		assertNull(collision.candidate());
 		assertEquals(1, collision.errors().size());
 		assertTrue(collision.errors().get(0).contains("CTB_KEEP"));
-		assertEquals("source", fleet.getMembers().get(0).getVariantId());
+		assertEquals("source", fleet.getMembersReadonly().get(0).getVariantId());
 	}
 
 	private BattleNext_FleetModel fleet(List<String> ids) {

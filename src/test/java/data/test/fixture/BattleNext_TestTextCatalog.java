@@ -14,7 +14,9 @@ import java.util.*;
 
 public class BattleNext_TestTextCatalog {
 
-	public record TextKey(String category, String id) { }
+	public record TextKey(String category, String id) {
+
+	}
 
 	private static final Path PATH = Path.of("data/strings/strings.json");
 	private static final Map<TextKey, String> ENTRIES = load();

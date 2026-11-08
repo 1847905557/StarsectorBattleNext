@@ -39,16 +39,19 @@ class BattleNext_RttPluginTest {
 	@ParameterizedTest
 	@CsvSource({"false,false", "false,true", "true,false", "true,true"})
 	void clickAndBoxSelectionUseTheConfiguredStrafeControlAtGestureStart(boolean additive, boolean dragging) throws ReflectiveOperationException {
+
 		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		ShipAPI second = commandShip(new AtomicInteger(), new AtomicInteger());
 		second.getLocation().set(100f, 0f);
 		plugin.init(commandEngine(List.of(first, second), false, new AtomicInteger()));
 		select(plugin, first);
+
 		plugin.processInputPreCoreControls(0f, List.of(
 				mouseEvent("down", dragging ? 90 : 100, dragging ? -10 : 0, additive),
 				mouseEvent("move", dragging ? 110 : 100, dragging ? 10 : 0, false),
 				mouseEvent("up", dragging ? 110 : 100, dragging ? 10 : 0, false)));
+
 		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
 		selected.setAccessible(true);
 		assertEquals(additive ? Set.of(first, second) : Set.of(second), selected.get(plugin));
@@ -65,6 +68,7 @@ class BattleNext_RttPluginTest {
 		select(plugin, ship);
 		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("down", -10, -10, true),
 				mouseEvent("move", 10, 10, true)));
+
 		commandUi.set(covered);
 		plugin.advance(0f, List.of());
 		for (String name : List.of("pressing", "dragging", "addSelection")) {
@@ -72,6 +76,7 @@ class BattleNext_RttPluginTest {
 			field.setAccessible(true);
 			assertEquals(!covered, field.getBoolean(plugin), name);
 		}
+
 		Field selected = BattleNext_RttPlugin.class.getDeclaredField("selected");
 		selected.setAccessible(true);
 		assertEquals(Set.of(ship), selected.get(plugin));
@@ -156,7 +161,7 @@ class BattleNext_RttPluginTest {
 	@Test
 	void allSevenGroupsKeepIndependentSnapshotsAndRecallTheirOwnMembers() throws ReflectiveOperationException {
 
-		var plugin = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		ShipAPI second = commandShip(new AtomicInteger(), new AtomicInteger());
 		second.getLocation().set(100f, 0f);
@@ -165,6 +170,7 @@ class BattleNext_RttPluginTest {
 			select(plugin, number % 2 == 0 ? second : first);
 			pressGroup(plugin, "SHIP_TOGGLE_GROUP_" + number, false);
 		}
+
 		for (int number = 7; number >= 1; number--) {
 			pressGroup(plugin, "SHIP_SELECT_GROUP_" + number, false);
 			assertEquals(List.of(number % 2 == 0 ? second : first), new ArrayList<>(selection(plugin)));
@@ -174,7 +180,7 @@ class BattleNext_RttPluginTest {
 	@Test
 	void groupsOverwriteShareShipsAndMergeSelectionsWithoutAliasing() throws ReflectiveOperationException {
 
-		var plugin = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		AtomicInteger firstCommands = new AtomicInteger();
 		AtomicInteger secondCommands = new AtomicInteger();
 		ShipAPI first = commandShip(firstCommands, new AtomicInteger());
@@ -187,14 +193,18 @@ class BattleNext_RttPluginTest {
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_2", false);
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", false);
 		assertEquals(List.of(first, second), new ArrayList<>(selection(plugin)));
+
 		select(plugin, first);
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		pressGroup(plugin, "SHIP_SELECT_GROUP_2", false);
 		assertEquals(Set.of(second), selection(plugin));
+
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", true);
 		assertEquals(List.of(second, first), new ArrayList<>(selection(plugin)));
+
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", true);
 		assertEquals(List.of(second, first), new ArrayList<>(selection(plugin)));
+
 		AtomicBoolean consumed = new AtomicBoolean();
 		plugin.processInputPreCoreControls(0f, List.of(controlEvent("SHIP_VENT_FLUX", false, false, consumed)));
 		assertTrue(consumed.get());
@@ -204,18 +214,22 @@ class BattleNext_RttPluginTest {
 
 	@Test
 	void emptyAssignmentAndRecallPreserveTheSavedGroupAndCurrentSelection() throws ReflectiveOperationException {
-		var plugin = new BattleNext_RttPlugin();
+
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		plugin.init(commandEngine(List.of(first), false, new AtomicInteger()));
 		select(plugin, first);
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("down", 500, 500, false), mouseEvent("up", 500, 500, false)));
 		assertTrue(selection(plugin).isEmpty());
+
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", false);
 		assertEquals(Set.of(first), selection(plugin));
+
 		pressGroup(plugin, "SHIP_SELECT_GROUP_7", false);
 		assertEquals(Set.of(first), selection(plugin));
+
 		pressGroup(plugin, "SHIP_SELECT_GROUP_7", true);
 		assertEquals(Set.of(first), selection(plugin));
 	}
@@ -223,13 +237,15 @@ class BattleNext_RttPluginTest {
 	@ParameterizedTest
 	@ValueSource(strings = {"SHIP_TOGGLE_GROUP_2", "SHIP_SELECT_GROUP_1"})
 	void groupShortcutsEndPendingGesturesBeforeMouseRelease(String control) throws ReflectiveOperationException {
-		var plugin = new BattleNext_RttPlugin();
+
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		ShipAPI second = commandShip(new AtomicInteger(), new AtomicInteger());
 		second.getLocation().set(100f, 0f);
 		plugin.init(commandEngine(List.of(first, second), false, new AtomicInteger()));
 		select(plugin, first);
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
+
 		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("down", 90, -10, true), mouseEvent("move", 110, 10, true)));
 		pressGroup(plugin, control, false);
 		plugin.processInputPreCoreControls(0f, List.of(mouseEvent("up", 110, 10, false)));
@@ -244,19 +260,20 @@ class BattleNext_RttPluginTest {
 	@Test
 	void invalidMembersArePrunedAndBattleEndReleasesEveryGroup() throws ReflectiveOperationException {
 
-		var plugin = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		List<ShipAPI> ships = new ArrayList<>();
 		for (int index = 0; index < 5; index++) {
 			ShipAPI ship = commandShip(new AtomicInteger(), new AtomicInteger());
 			ship.getLocation().set(index * 100f, 0f);
 			ships.add(ship);
 		}
-		var engine = commandEngine(ships, false, new AtomicInteger());
+		CombatEngineAPI engine = commandEngine(ships, false, new AtomicInteger());
 		plugin.init(engine);
 		select(plugin, ships.get(0), ships.get(1), ships.get(2), ships.get(3));
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		ShipAPI survivor = ships.get(3);
 		ShipAPI other = ships.get(4);
+
 		shipStates.put(ships.get(0), "destroyed");
 		shipStates.put(ships.get(1), "expired");
 		ships.remove(2);
@@ -264,11 +281,13 @@ class BattleNext_RttPluginTest {
 		select(plugin, other);
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", false);
 		assertEquals(Set.of(survivor), selection(plugin));
+
 		shipStates.put(survivor, "destroyed");
 		plugin.advance(0f, List.of());
 		select(plugin, other);
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", false);
 		assertEquals(Set.of(other), selection(plugin));
+
 		combatOver = true;
 		plugin.advance(0f, List.of());
 		assertTrue(selection(plugin).isEmpty());
@@ -276,8 +295,9 @@ class BattleNext_RttPluginTest {
 		groups.setAccessible(true);
 		assertTrue(((Map<?, ?>) groups.get(plugin)).isEmpty());
 		assertEquals(1, removals);
+
 		combatOver = false;
-		var nextBattle = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin nextBattle = new BattleNext_RttPlugin();
 		nextBattle.init(engine);
 		select(nextBattle, other);
 		pressGroup(nextBattle, "SHIP_SELECT_GROUP_1", false);
@@ -289,7 +309,7 @@ class BattleNext_RttPluginTest {
 	@ValueSource(strings = {"camera", "player", "command", "deployment", "dialog"})
 	void inactiveRttPreservesGroupsAndLeavesTheirEventsForCoreControls(String reason) throws ReflectiveOperationException {
 
-		var plugin = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		ShipAPI second = commandShip(new AtomicInteger(), new AtomicInteger());
 		second.getLocation().set(100f, 0f);
@@ -298,6 +318,7 @@ class BattleNext_RttPluginTest {
 		select(plugin, first);
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		select(plugin, second);
+
 		freeCamera = !reason.equals("camera");
 		playerPlaying = reason.equals("player");
 		commandUi.set(reason.equals("command"));
@@ -309,6 +330,7 @@ class BattleNext_RttPluginTest {
 			assertFalse(consumed.get());
 			assertEquals(Set.of(second), selection(plugin));
 		}
+
 		freeCamera = true;
 		playerPlaying = false;
 		commandUi.set(false);
@@ -320,7 +342,7 @@ class BattleNext_RttPluginTest {
 	@Test
 	void pauseAllowsGroupsAndRepeatOrConsumedEventsPreserveTheirContents() throws ReflectiveOperationException {
 
-		var plugin = new BattleNext_RttPlugin();
+		BattleNext_RttPlugin plugin = new BattleNext_RttPlugin();
 		ShipAPI first = commandShip(new AtomicInteger(), new AtomicInteger());
 		ShipAPI second = commandShip(new AtomicInteger(), new AtomicInteger());
 		second.getLocation().set(100f, 0f);
@@ -329,15 +351,18 @@ class BattleNext_RttPluginTest {
 		select(plugin, first);
 		pressGroup(plugin, "SHIP_TOGGLE_GROUP_1", false);
 		select(plugin, second);
+
 		for (String key : List.of("SHIP_TOGGLE_GROUP_1", "SHIP_SELECT_GROUP_1")) {
 			AtomicBoolean repeated = new AtomicBoolean();
 			plugin.processInputPreCoreControls(0f, List.of(controlEvent(key, true, false, repeated)));
 			assertFalse(repeated.get());
 			assertEquals(Set.of(second), selection(plugin));
+
 			AtomicBoolean consumed = new AtomicBoolean(true);
 			plugin.processInputPreCoreControls(0f, List.of(controlEvent(key, false, false, consumed)));
 			assertEquals(Set.of(second), selection(plugin));
 		}
+
 		pressGroup(plugin, "SHIP_SELECT_GROUP_1", false);
 		assertEquals(Set.of(first), selection(plugin));
 	}
@@ -410,11 +435,13 @@ class BattleNext_RttPluginTest {
 	}
 
 	private CombatEngineAPI commandEngine(List<ShipAPI> ships, AtomicBoolean commandUi, AtomicInteger conversions) {
+
 		ShipAPI player = proxy(ShipAPI.class, name -> switch (name) {
 			case "isShuttlePod" -> !playerPlaying;
 			case "isAlive" -> playerPlaying;
 			default -> null;
 		});
+
 		ViewportAPI viewport = (ViewportAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{ViewportAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "isExternalControl" -> freeCamera;
@@ -424,11 +451,13 @@ class BattleNext_RttPluginTest {
 					}
 					default -> null;
 				});
+
 		CombatUIAPI ui = proxy(CombatUIAPI.class, name -> switch (name) {
 			case "isShowingCommandUI" -> commandUi.get();
 			case "isShowingDeploymentDialog" -> deployment;
 			default -> null;
 		});
+
 		return proxy(CombatEngineAPI.class, name -> switch (name) {
 			case "getPlayerShip" -> player;
 			case "getViewport" -> viewport;
@@ -463,11 +492,13 @@ class BattleNext_RttPluginTest {
 	}
 
 	private CombatEngineAPI engine(boolean freeCamera, boolean commandUi, boolean deployment, boolean dialog) {
+
 		ShipAPI player = proxy(ShipAPI.class, (name) -> switch (name) {
 			case "isAlive" -> false;
 			case "isShuttlePod" -> true;
 			default -> null;
 		});
+
 		ViewportAPI viewport = proxy(ViewportAPI.class, (name) ->
 				"isExternalControl".equals(name) && freeCamera);
 		CombatUIAPI ui = proxy(CombatUIAPI.class, (name) -> switch (name) {
@@ -475,6 +506,7 @@ class BattleNext_RttPluginTest {
 			case "isShowingDeploymentDialog" -> deployment;
 			default -> null;
 		});
+
 		return proxy(CombatEngineAPI.class, (name) -> switch (name) {
 			case "getPlayerShip" -> player;
 			case "getViewport" -> viewport;

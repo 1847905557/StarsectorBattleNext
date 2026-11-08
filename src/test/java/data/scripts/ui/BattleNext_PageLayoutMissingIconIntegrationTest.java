@@ -28,7 +28,10 @@ class BattleNext_PageLayoutMissingIconIntegrationTest {
 					case "getCenterX" -> centerX[0];
 					case "getCenterY" -> centerY[0];
 					case "getAlphaMult" -> alpha[0];
-					case "setColor" -> { color[0] = (Color) args[0]; yield null; }
+					case "setColor" -> {
+						color[0] = (Color) args[0];
+						yield null;
+					}
 					case "setSize" -> {
 						width[0] = (Float) args[0];
 						height[0] = (Float) args[1];
@@ -39,7 +42,10 @@ class BattleNext_PageLayoutMissingIconIntegrationTest {
 						centerY[0] = (Float) args[1];
 						yield null;
 					}
-					case "setAlphaMult" -> { alpha[0] = (Float) args[0]; yield null; }
+					case "setAlphaMult" -> {
+						alpha[0] = (Float) args[0];
+						yield null;
+					}
 					case "renderAtCenter" -> {
 						assertEquals(TINT, color[0]);
 						assertEquals(32f, width[0]);
@@ -91,7 +97,10 @@ class BattleNext_PageLayoutMissingIconIntegrationTest {
 						centerY[0] = (Float) args[1];
 						yield null;
 					}
-					case "setAlphaMult" -> { alpha[0] = (Float) args[0]; yield null; }
+					case "setAlphaMult" -> {
+						alpha[0] = (Float) args[0];
+						yield null;
+					}
 					case "renderAtCenter" -> {
 						assertEquals(12f, width[0]);
 						assertEquals(24f, height[0]);
@@ -130,13 +139,19 @@ class BattleNext_PageLayoutMissingIconIntegrationTest {
 					case "getWidth" -> width[0];
 					case "getHeight" -> height[0];
 					case "getAlphaMult" -> alpha[0];
-					case "setColor" -> { color[0] = (Color) args[0]; yield null; }
+					case "setColor" -> {
+						color[0] = (Color) args[0];
+						yield null;
+					}
 					case "setSize" -> {
 						width[0] = (Float) args[0];
 						height[0] = (Float) args[1];
 						yield null;
 					}
-					case "setAlphaMult" -> { alpha[0] = (Float) args[0]; yield null; }
+					case "setAlphaMult" -> {
+						alpha[0] = (Float) args[0];
+						yield null;
+					}
 					case "renderAtCenter" -> {
 						assertEquals(TINT, color[0]);
 						assertEquals(32f, width[0]);

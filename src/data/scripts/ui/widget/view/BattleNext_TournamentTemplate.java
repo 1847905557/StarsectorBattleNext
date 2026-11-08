@@ -16,12 +16,10 @@ public class BattleNext_TournamentTemplate {
 		if (fleetIds.size() > capacity) {
 			fleetIds.subList(capacity, fleetIds.size()).clear();
 		}
-		while (fleetIds.size() < capacity) {
-			fleetIds.add("");
-		}
+		while (fleetIds.size() < capacity) fleetIds.add("");
 	}
 
-	public List<String> getFleetIds() {
+	public List<String> getFleetIdsReadonly() {
 		return Collections.unmodifiableList(fleetIds);
 	}
 

@@ -23,15 +23,17 @@ class BattleNext_SimulatorBudgetServiceTest extends BattleNext_SimulatorServiceF
 			socket.setSoTimeout(5000);
 			OwnedProcess worker = new OwnedProcess();
 			attachWorker(new BattleNext_SimulatorProtocol(client, "session"), worker);
-			var config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
+			BattleNext_SimulationConfig config = new BattleNext_SimulationConfig(BattleNext_SimulationConfig.Strategy.AGGRESSIVE,
 					12000f, 12000f, 500f, 3600f, 0.01f, 32, true, false, 0);
-			var task = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), config));
+			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), config));
 			assertEquals(task.getRequest().id(), peer.receive().getJSONObject("payload").getString("id"));
+
 			peer.send("STATUS", new JSONObject().put("id", task.getRequest().id()).put("state", "RUNNING"));
-			long deadline = System.nanoTime() + 12000000000L;
-			while (readField("active") != null && System.nanoTime() < deadline) {
+			long deadlineNanos = System.nanoTime() + 12000000000L;
+			while (readField("active") != null && System.nanoTime() < deadlineNanos) {
 				Thread.sleep(10L);
 			}
+
 			assertEquals(BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED, task.getResult().outcome());
 			assertEquals("Worker exceeded execution deadline", task.getResult().diagnostic());
 			assertTrue(task.getResult().reportJson().isEmpty());

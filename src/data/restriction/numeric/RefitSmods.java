@@ -15,7 +15,7 @@ public class RefitSmods implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		int count = 0;
-		for (FleetMemberAPI member : assembledFleet.getMembers()) {
+		for (FleetMemberAPI member : assembledFleet.getMembersReadonly()) {
 			Set<String> fitted = new HashSet<>(member.getVariant().getSMods());
 			fitted.addAll(member.getVariant().getSModdedBuiltIns());
 			count += fitted.size();

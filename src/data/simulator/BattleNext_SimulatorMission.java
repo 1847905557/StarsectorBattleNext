@@ -27,28 +27,33 @@ import java.util.List;
 public class BattleNext_SimulatorMission {
 
 	private BattleNext_SimulatorMission() {
+
 	}
 
 	public static BattleNext_ScorekeeperPlugin define(MissionDefinitionAPI api, BattleNext_SimulationRequest request) {
 
 		if (request.kind() == BattleNext_SimulationRequest.Kind.VARIANTS) return define(api, request.player(), request.enemy(), request.config());
 		if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) throw new UnsupportedOperationException("Tournament simulation is not supported");
+
 		try {
 			JSONObject source = request.source();
 			BattleNext_AssembledFleet player = assemble(source.getJSONObject("player"));
 			BattleNext_AssembledFleet enemy = assemble(source.getJSONObject("enemy"));
+
 			BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
 			builder.addToMission(api, FleetSide.PLAYER, player, player.getDefinition().getName());
 			builder.addToMission(api, FleetSide.ENEMY, enemy, enemy.getDefinition().getName());
 			BattleNext_MissionBattleMap.apply(api, source.getInt("actualMap"), (float) source.getJSONObject("match").getDouble("mapScale"));
+
+			BattleNext_FleetOrderBehavior.FleetOrderMode playerMode = BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTagsReadonly());
+			BattleNext_FleetOrderBehavior.FleetOrderMode enemyMode = BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTagsReadonly());
 			api.addPlugin(new BattleNext_DeploymentPlugin(request.config().deploymentPointLimit(),
-					BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
-					BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
+					playerMode == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
+					enemyMode == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
 			BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(player, enemy);
 			api.addPlugin(scorekeeper);
 			api.addPlugin(new BattleNext_BattleClockPlugin(request.config().assaultAfterSeconds(), scorekeeper));
-			api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(player.getDefinition().getTags()),
-					BattleNext_FleetOrderBehavior.fromTags(enemy.getDefinition().getTags()), player, enemy));
+			api.addPlugin(new BattleNext_FleetOrderBehavior(playerMode, enemyMode, player, enemy));
 			return scorekeeper;
 		} catch (JSONException exception) {
 			throw new IllegalArgumentException("Invalid match simulation snapshot: " + request.id(), exception);
@@ -62,15 +67,18 @@ public class BattleNext_SimulatorMission {
 		fleet.setFolderName(snapshot.getString("folderName"));
 		fleet.setSourceType(BattleNext_LoadSource.valueOf(snapshot.getString("sourceType")));
 		fleet.setSourcePath(snapshot.getString("sourcePath"));
+
 		JSONObject variants = snapshot.getJSONObject("variants");
-		for (int index = 0; index < fleet.getMembers().size(); index++) {
-			String id = fleet.getMembers().get(index).getVariantId();
+		List<BattleNext_MemberModel> members = fleet.getMembersReadonly();
+		for (int index = 0; index < members.size(); index++) {
+			String id = members.get(index).getVariantId();
 			JSONObject variant = variants.getJSONObject(Integer.toString(index));
 			variant.put("variantId", id);
 			fleet.putVariant(BattleNext_VariantBuilder.fromJson(variant, id));
 		}
+
 		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
-		if (!assembled.isComplete() || assembled.getMembers().isEmpty()) throw new IllegalArgumentException("Incomplete simulation fleet: " + fleet.getId() + ": " + assembled.getMemberErrors());
+		if (!assembled.isComplete() || assembled.getMembersReadonly().isEmpty()) throw new IllegalArgumentException("Incomplete simulation fleet: " + fleet.getId() + ": " + assembled.getMemberErrorsReadonly());
 		return assembled;
 	}
 
@@ -89,6 +97,7 @@ public class BattleNext_SimulatorMission {
 	private static List<FleetMemberAPI> buildSide(MissionDefinitionAPI api, FleetSide side, List<String> ids) {
 		api.initFleet(side, "", FleetGoal.ATTACK, true, 999);
 		api.setFleetTagline(side, String.join(", ", ids));
+
 		BattleNext_MemberBuilder builder = new BattleNext_MemberBuilder();
 		List<FleetMemberAPI> members = new ArrayList<>();
 		for (String id : ids) {
@@ -99,11 +108,13 @@ public class BattleNext_SimulatorMission {
 				throw new IllegalArgumentException("Unable to assemble simulation variant " + id, exception);
 			}
 			if (variant.getHullSpec().getHullSize() == HullSize.FIGHTER) throw new IllegalArgumentException("Expected a registered root ship variant: " + id);
+
 			BattleNext_MemberModel definition = new BattleNext_MemberModel(id, variant.getHullSpec().getHullName(), "", List.of(), "", "", List.of());
 			FleetMemberAPI member = builder.build(definition, variant);
 			api.addFleetMember(side, member);
 			members.add(member);
 		}
+
 		return members;
 	}
 }

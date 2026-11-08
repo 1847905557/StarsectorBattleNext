@@ -133,14 +133,17 @@ public class BattleNext_VariantPreview {
 
 		private void addVariant(Node node) {
 			if (!visiting.add(node.json)) throw new IllegalArgumentException("Cyclic preview modules: " + node.path);
+
 			try {
 				List<Node> modules = modules(node);
 				for (Node module : modules) {
 					if (!module.underParent) continue;
 					addVariant(module);
 				}
+
 				addHullSprite(node);
 				addWeapons(node);
+
 				for (Node module : modules) {
 					if (module.underParent) continue;
 					addVariant(module);
@@ -178,7 +181,7 @@ public class BattleNext_VariantPreview {
 					}
 				}
 			}
-			for (var entry : weapons.entrySet()) {
+			for (Map.Entry<String, String> entry : weapons.entrySet()) {
 				String slotId = entry.getKey();
 				String id = entry.getValue();
 				if (id.isEmpty()) continue;
@@ -228,6 +231,7 @@ public class BattleNext_VariantPreview {
 				BattleNext_SpriteSpec spriteSpec = BattleNext_SpriteSpec.read(missile.getHullSpec());
 				List<Vector2f> offsets = slot.isHardpoint() ? spec.getHardpointFireOffsets() : spec.getTurretFireOffsets();
 				List<Float> angles = slot.isHardpoint() ? spec.getHardpointAngleOffsets() : spec.getTurretAngleOffsets();
+
 				for (int index = 0; index < offsets.size(); index++) {
 					float angle = facing + (angles.isEmpty() ? 0f : angles.get(index));
 					Vector2f location = Vector2f.add(position, rotate(offsets.get(index), facing), new Vector2f());
@@ -241,6 +245,7 @@ public class BattleNext_VariantPreview {
 		private List<Node> modules(Node node) {
 			List<Node> result = new ArrayList<>();
 			Object raw = node.json.opt("modules");
+
 			try {
 				if (raw instanceof JSONObject object) {
 					addModules(result, object, node);
@@ -258,6 +263,7 @@ public class BattleNext_VariantPreview {
 			} catch (Exception exception) {
 				failed(node, "", "", "module.resolve", "", exception);
 			}
+
 			return result;
 		}
 

@@ -4,6 +4,9 @@ import com.fs.starfarer.api.combat.CombatEntityAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import data.scripts.order.BattleNext_OrderThread;
+import data.order.BattleNext_OrderRegistry.BattleNext_OrderSpec;
+import data.order.BattleNext_OrderParser.OrderParseResult;
+import data.scripts.order.BattleNext_OrderThread.OrderScriptExecutionException;
 import data.test.fixture.BattleNext_TestOrderFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,7 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 		assertTrue(filtered(id, List.of((percent - 1) + "%"), source, candidates).isEmpty());
 		assertEquals(candidates, filtered(id, List.of("150%"), source, candidates));
 		assertTrue(filtered(id, List.of("0"), source, candidates).isEmpty());
+
 		source.setHp(0f, 0f);
 		source.setFlux(0f, 0f);
 		target.setHp(0f, 0f);
@@ -53,6 +57,7 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 
 	@Test
 	void numericFiltersRemoveEveryViolatingTargetAndIncludeBothEndpoints() {
+
 		ShipState source = world.ship(0, 0f);
 		ShipState low = world.ship(1, 20f);
 		ShipState middle = world.ship(1, 40f);
@@ -64,6 +69,7 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 		middle.setFlux(500f, 0.5f);
 		high.setFlux(900f, 0.9f);
 		List<CombatEntityAPI> candidates = List.of(low.getApi(), middle.getApi(), high.getApi());
+
 		assertEquals(List.of(middle.getApi()), filtered("targetHp", List.of("30%", "70%"), source, candidates));
 		assertEquals(List.of(middle.getApi()), filtered("targetFlux", List.of("30%", "70%"), source, candidates));
 		assertEquals(List.of(low.getApi(), middle.getApi()),
@@ -108,7 +114,7 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 		ShipState cruiser = world.ship(1, 30f);
 		destroyer.setHullSize(ShipAPI.HullSize.DESTROYER);
 		cruiser.setHullSize(ShipAPI.HullSize.CRUISER);
-		var selected = filtered("hullsize", List.of("frigate", "cruiser", extremum), source,
+		List<CombatEntityAPI> selected = filtered("hullsize", List.of("frigate", "cruiser", extremum), source,
 				List.of(frigate.getApi(), destroyer.getApi(), cruiser.getApi()));
 		assertEquals(1, selected.size());
 		assertEquals(ShipAPI.HullSize.valueOf(size), ((ShipAPI) selected.get(0)).getHullSize());
@@ -154,10 +160,10 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 			"engage.nearest.priority(1,2)|priority|Expected 1..1 parameters",
 			"engage.nearest.persist(1)|persist|Expected 0..0 parameters"})
 	void compilationRejectsInvalidParametersAndTargetKinds(String expression, String script, String reason) {
-		var registry = BattleNext_OrderRegistry.getInstance();
-		var parsed = BattleNext_OrderParser.parse(expression, registry);
+		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		OrderParseResult parsed = BattleNext_OrderParser.parse(expression, registry);
 		assertTrue(parsed.isValid(), parsed.getError());
-		var error = assertThrows(BattleNext_OrderThread.OrderScriptExecutionException.class,
+		OrderScriptExecutionException error = assertThrows(OrderScriptExecutionException.class,
 				() -> new BattleNext_OrderThread(parsed.getCommand(), registry));
 		assertEquals(script, error.getScriptId());
 		assertInstanceOf(IllegalArgumentException.class, error.getCause());
@@ -166,20 +172,20 @@ class BattleNext_OrderScriptsIntegrationTest extends BattleNext_TestOrderFixture
 
 	@Test
 	void registeredStarterKindsAndActionsCompileAgainstEveryPicker() {
-		var registry = BattleNext_OrderRegistry.getInstance();
-		for (var starter : registry.getByType("starter")) {
-			for (var picker : registry.getByType("picker")) {
+		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
+		for (BattleNext_OrderSpec starter : registry.getByType("starter")) {
+			for (BattleNext_OrderSpec picker : registry.getByType("picker")) {
 				assertDoesNotThrow(() -> new BattleNext_OrderThread(
-						BattleNext_OrderParser.parse(starter.getId() + "." + picker.getId()).getCommand(), registry));
+						BattleNext_OrderParser.parse(starter.id() + "." + picker.id()).getCommand(), registry));
 			}
 		}
 	}
 
 	private List<CombatEntityAPI> filtered(String id, List<String> params, ShipState source,
 			List<? extends CombatEntityAPI> candidates) {
-		var filter = (BattleNext_OrderFilter) BattleNext_OrderRegistry.getInstance().create(id);
+		BattleNext_OrderFilter filter = (BattleNext_OrderFilter) BattleNext_OrderRegistry.getInstance().create(id);
 		filter.configure(params);
-		var result = new ArrayList<CombatEntityAPI>(candidates);
+		List<CombatEntityAPI> result = new ArrayList<>(candidates);
 		filter.filterTargets(source.getApi(), result, world.getEngine());
 		return result;
 	}

@@ -26,6 +26,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	private Supplier<JSONObject> detailSource;
 
 	public void fromDirectory(JSONObject metadata, int members, Supplier<JSONObject> source) throws JSONException {
+
 		int version = metadata.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
 		id = metadata.optString("id", "");
@@ -59,6 +60,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
+
 		int version = json.optInt("formatVersion", FORMAT_VERSION);
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
 		String parsedId = json.optString("id", "");
@@ -72,12 +74,12 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		List<BattleNext_MemberReport> parsedPlayers = readCollection("playerMembers", players, BattleNext_MemberReport::fromJson);
 		List<BattleNext_MemberReport> parsedEnemies = readCollection("enemyMembers", enemies, BattleNext_MemberReport::fromJson);
 		for (BattleNext_MemberReport member : parsedPlayers) {
-			for (String error : member.getLoadErrors()) {
+			for (String error : member.getLoadErrorsCopy()) {
 				addLoadError("Player member " + member.getName() + ": " + error);
 			}
 		}
 		for (BattleNext_MemberReport member : parsedEnemies) {
-			for (String error : member.getLoadErrors()) {
+			for (String error : member.getLoadErrorsCopy()) {
 				addLoadError("Enemy member " + member.getName() + ": " + error);
 			}
 		}
@@ -95,6 +97,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	@Override
 	public JSONObject toJson() throws JSONException {
 		loadDetails();
+
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
@@ -104,6 +107,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		json.put("createdAt", createdAt);
 		json.put("playerMembers", writeCollection("playerMembers", membersToJson(playerMembers)));
 		json.put("enemyMembers", writeCollection("enemyMembers", membersToJson(enemyMembers)));
+
 		return json;
 	}
 
@@ -148,12 +152,12 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		this.createdAt = Math.max(0L, createdAt);
 	}
 
-	public List<BattleNext_MemberReport> getPlayerMembers() {
+	public List<BattleNext_MemberReport> getPlayerMembersReadonly() {
 		loadDetails();
 		return Collections.unmodifiableList(playerMembers);
 	}
 
-	public List<BattleNext_MemberReport> getEnemyMembers() {
+	public List<BattleNext_MemberReport> getEnemyMembersReadonly() {
 		loadDetails();
 		return Collections.unmodifiableList(enemyMembers);
 	}
@@ -170,9 +174,7 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 
 	private JSONArray membersToJson(List<BattleNext_MemberReport> members) throws JSONException {
 		JSONArray array = new JSONArray();
-		for (BattleNext_MemberReport member : members) {
-			array.put(member.toJson());
-		}
+		for (BattleNext_MemberReport member : members) array.put(member.toJson());
 		return array;
 	}
 }

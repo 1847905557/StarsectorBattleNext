@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixture {
@@ -20,28 +21,28 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 	@Test
 	void unavailableDirectoryPublishesAnEmptyCatalogWithSourceDiagnosticsAndReloadsAfterRepair() throws Exception {
 
-		var root = directory.resolve("tournament/_pinnedVariants");
+		Path root = directory.resolve("tournament/_pinnedVariants");
 		Files.createDirectories(root);
 		Files.writeString(root.resolve("broken.json"), "broken", StandardCharsets.UTF_8);
-		var loader = new BattleNext_PinnedVariantStandardLoader();
+		BattleNext_PinnedVariantStandardLoader loader = new BattleNext_PinnedVariantStandardLoader();
 		loader.load();
-		var initialCatalog = loader.getCatalog();
-		var initialErrors = loader.getLoadErrors();
-		var previous = Global.getSettings();
+		List<BattleNext_PinnedVariantStandardLoader.CatalogEntry> initialCatalog = loader.getCatalog();
+		List<String> initialErrors = loader.getLoadErrorsCopy();
+		SettingsAPI previous = Global.getSettings();
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> {
 			throw new IllegalStateException("injected directory failure");
 		}));
 		try {
 			assertTrue(loader.load().isEmpty());
 			assertTrue(loader.getCatalog().isEmpty());
-			assertTrue(loader.getLoadErrors().get(0).contains("injected directory failure"));
+			assertTrue(loader.getLoadErrorsCopy().get(0).contains("injected directory failure"));
 		} finally {
 			Global.setSettings(previous);
 		}
 		Files.writeString(root.resolve("broken.json"), new BattleNext_PinnedVariantModel("broken", "Fixed",
 				BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson()).toJson().toString(), StandardCharsets.UTF_8);
 		assertEquals(1, loader.load().size());
-		assertEquals(List.of(), loader.getLoadErrors());
+		assertEquals(List.of(), loader.getLoadErrorsCopy());
 		assertEquals(1, initialErrors.size());
 		assertEquals(List.of("tournament/_pinnedVariants/broken.json"), initialCatalog.stream().map(entry -> entry.path()).toList());
 		assertEquals("broken", initialCatalog.get(0).raw());
@@ -52,7 +53,7 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		store.reload();
-		var pin = store.saveVariant("First", source().getApi());
+		BattleNext_PinnedVariantModel pin = store.saveVariant("First", source().getApi());
 		String path = pin.getSourcePath();
 		BattleNext_PinnedVariantStandardLoader loader = new BattleNext_PinnedVariantStandardLoader();
 		assertEquals("First", loader.parse(BattleNext_ModFileManager.readJson(getClass(), path, "AI_Battles_Next")).getDisplayName());
@@ -64,7 +65,7 @@ class BattleNext_PinnedVariantStandardLoaderTest extends BattleNext_TestGameFixt
 		Files.writeString(directory.resolve("tournament/_pinnedVariants/broken.json"), "broken", StandardCharsets.UTF_8);
 		assertEquals(1, loader.load().size());
 		assertEquals(2, loader.getCatalog().size());
-		assertEquals(1, loader.getLoadErrors().size());
-		assertTrue(loader.getLoadErrors().get(0).contains("broken.json"));
+		assertEquals(1, loader.getLoadErrorsCopy().size());
+		assertTrue(loader.getLoadErrorsCopy().get(0).contains("broken.json"));
 	}
 }

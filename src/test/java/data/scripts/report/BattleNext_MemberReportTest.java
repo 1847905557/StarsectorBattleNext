@@ -18,7 +18,7 @@ class BattleNext_MemberReportTest {
 		member.addDamageTaken("weapon", "heavyblaster", 1d, 2d, 3d, 4d);
 		member.setFinalState(0.25f, 0.7f, "retreated");
 
-		assertEquals(2, member.getDealtBySource().size());
+		assertEquals(2, member.getDealtBySourceCopy().size());
 		assertEquals(90d, member.getDamageDealt());
 		assertEquals(30d, member.getArmorDamageDealt());
 		assertEquals(54d, member.getEmpDamageDealt());
@@ -34,30 +34,31 @@ class BattleNext_MemberReportTest {
 		assertEquals(0.25f, loaded.getFinalHullFraction());
 		assertEquals(0.7f, loaded.getFinalCr());
 		assertEquals("retreated", loaded.getStatus());
-		assertEquals(2, loaded.getDealtBySource().size());
-		assertEquals("lightmg", loaded.getDealtBySource().get(0).getId());
-		assertEquals("weapon", loaded.getDealtBySource().get(0).getKind());
-		assertEquals(15d, loaded.getDealtBySource().get(0).getHull());
-		assertEquals(26d, loaded.getDealtBySource().get(0).getArmor());
-		assertEquals(37d, loaded.getDealtBySource().get(0).getShields());
-		assertEquals(48d, loaded.getDealtBySource().get(0).getEmp());
-		assertEquals("fighter_wing", loaded.getDealtBySource().get(1).getKind());
-		assertEquals("talon_wing", loaded.getDealtBySource().get(1).getId());
-		assertEquals(12d, loaded.getDealtBySource().get(1).getTotal());
-		assertEquals("heavyblaster", loaded.getTakenBySource().get(0).getId());
+		List<BattleNext_DamageSourceReport> dealt = loaded.getDealtBySourceCopy();
+		assertEquals(2, dealt.size());
+		assertEquals("lightmg", dealt.get(0).getId());
+		assertEquals("weapon", dealt.get(0).getKind());
+		assertEquals(15d, dealt.get(0).getHull());
+		assertEquals(26d, dealt.get(0).getArmor());
+		assertEquals(37d, dealt.get(0).getShields());
+		assertEquals(48d, dealt.get(0).getEmp());
+		assertEquals("fighter_wing", dealt.get(1).getKind());
+		assertEquals("talon_wing", dealt.get(1).getId());
+		assertEquals(12d, dealt.get(1).getTotal());
+		assertEquals("heavyblaster", loaded.getTakenBySourceCopy().get(0).getId());
 		assertEquals(member.toJson().toString(), loaded.toJson().toString());
 	}
 
 	@Test
 	void malformedAndConflictingDamageSourcesRetainRawStatisticsAndPublishHealthySources() throws Exception {
-		var member = new BattleNext_MemberReport("wolf_CS", "wolf", "Wolf");
+		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", "wolf", "Wolf");
 		member.addDamageDealt("weapon", "laser", 1, 2, 3, 4);
 		JSONObject laser = member.toJson().getJSONArray("dealtBySource").getJSONObject(0);
 		JSONObject healthy = new BattleNext_DamageSourceReport("weapon", "healthy").toJson();
 		JSONObject raw = member.toJson().put("dealtBySource", new JSONArray().put(laser).put("malformed").put(laser).put(healthy));
-		var loaded = BattleNext_MemberReport.fromJson(raw);
-		assertEquals(List.of("healthy"), loaded.getDealtBySource().stream().map(BattleNext_DamageSourceReport::getId).toList());
-		assertEquals(3, loaded.getLoadErrors().size());
+		BattleNext_MemberReport loaded = BattleNext_MemberReport.fromJson(raw);
+		assertEquals(List.of("healthy"), loaded.getDealtBySourceCopy().stream().map(BattleNext_DamageSourceReport::getId).toList());
+		assertEquals(3, loaded.getLoadErrorsCopy().size());
 		assertEquals(raw.toString(), loaded.toJson().toString());
 		loaded.toJson().getJSONArray("dealtBySource").put("external mutation");
 		assertEquals(raw.toString(), loaded.toJson().toString());
@@ -65,9 +66,9 @@ class BattleNext_MemberReportTest {
 
 	@Test
 	void undeployedStateRoundTripsActualHullAndReadiness() throws Exception {
-		var member = new BattleNext_MemberReport("wolf_CS", "wolf", "Reserve");
+		BattleNext_MemberReport member = new BattleNext_MemberReport("wolf_CS", "wolf", "Reserve");
 		member.setFinalState(0.6f, 0.4f, "undeployed");
-		var loaded = BattleNext_MemberReport.fromJson(member.toJson());
+		BattleNext_MemberReport loaded = BattleNext_MemberReport.fromJson(member.toJson());
 		assertEquals("undeployed", loaded.getStatus());
 		assertEquals(0.6f, loaded.getFinalHullFraction());
 		assertEquals(0.4f, loaded.getFinalCr());

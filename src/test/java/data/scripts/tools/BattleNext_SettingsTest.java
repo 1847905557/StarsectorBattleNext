@@ -26,10 +26,12 @@ class BattleNext_SettingsTest {
 
 	@BeforeEach
 	void configureSettings() throws ReflectiveOperationException {
+
 		previousSettings = Global.getSettings();
 		valuesField = BattleNext_Settings.class.getDeclaredField("values");
 		valuesField.setAccessible(true);
 		previousValues = valuesField.get(null);
+
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "getBoolean" -> {
@@ -75,6 +77,7 @@ class BattleNext_SettingsTest {
 		assertEquals(limit, stored.get().getInt("deploymentPointLimit"));
 		BattleNext_Settings.load();
 		assertEquals(limit, BattleNext_Settings.getDeploymentPointLimit());
+
 		failWrite = true;
 		assertThrows(IllegalStateException.class, () -> BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, limit + 1));
 		assertEquals(limit, BattleNext_Settings.getDeploymentPointLimit());
@@ -107,6 +110,7 @@ class BattleNext_SettingsTest {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void missingCnTextUsesCurrentVanillaDefaultUntilExplicitlySaved(boolean enabled) throws Exception {
+
 		vanillaCnText = enabled;
 		vanillaCnReads = 0;
 		stored.set(new JSONObject().put("fullGraphicEffect", false));
@@ -115,11 +119,14 @@ class BattleNext_SettingsTest {
 		assertFalse(BattleNext_Settings.isFullGraphicEffect());
 		assertEquals(1, vanillaCnReads);
 		assertFalse(stored.get().has("cnText"));
+
 		vanillaCnText = !enabled;
 		BattleNext_Settings.load();
 		assertEquals(!enabled, BattleNext_Settings.isCnTextEnabled());
+
 		BattleNext_Settings.save(enabled, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertEquals(enabled, stored.get().getBoolean("cnText"));
+
 		vanillaCnReads = 0;
 		BattleNext_Settings.load();
 		assertEquals(enabled, BattleNext_Settings.isCnTextEnabled());

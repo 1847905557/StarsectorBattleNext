@@ -38,6 +38,7 @@ public class BattleNext_FleetVariantLoader {
 			for (String path : paths) {
 				if (!path.startsWith(prefix) || !path.endsWith(".variant")) continue;
 				if (path.indexOf('/', prefix.length()) >= 0) continue;
+
 				String fileId = path.substring(prefix.length(), path.length() - ".variant".length());
 				try {
 					BattleNext_VariantBuilder variant = BattleNext_VariantBuilder.fromJson(
@@ -53,6 +54,7 @@ public class BattleNext_FleetVariantLoader {
 					BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.item.rejected", BattleNext_Logger.fields().put("path", path).build(), exception);
 				}
 			}
+
 			for (Map.Entry<String, JSONObject> entry : variants.entrySet()) {
 				if (conflicts.contains(entry.getKey())) continue;
 				try {
@@ -64,8 +66,10 @@ public class BattleNext_FleetVariantLoader {
 					BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.resolve.rejected", BattleNext_Logger.fields().put("path", sources.get(entry.getKey())).build(), exception);
 				}
 			}
+
 			if (fleet.hasLocalVariants()) {
-				for (String variantId : fleet.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList()) {
+				for (BattleNext_MemberModel member : fleet.getMembersReadonly()) {
+					String variantId = member.getVariantId();
 					if (fleet.getVariant(variantId) == null && !registeredVariant.test(variantId)) {
 						BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.missing",
 					BattleNext_Logger.fields().put("fleet_id", fleet.getId()).put("variant_id", variantId).put("path", source).build());
@@ -73,6 +77,7 @@ public class BattleNext_FleetVariantLoader {
 					}
 				}
 			}
+
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
 					() -> BattleNext_Logger.fields().put("fleet", fleet).build());
 		} catch (RuntimeException exception) {
@@ -86,6 +91,7 @@ public class BattleNext_FleetVariantLoader {
 			throws IOException, JSONException {
 		String id = json.getString("variantId");
 		if (!visiting.add(id)) throw new IOException("Cyclic module variant: " + String.join(" -> ", visiting) + " -> " + id);
+
 		Object modules = json.opt("modules");
 		if (modules instanceof JSONObject object) {
 			resolveModules(object, variants, conflicts, visiting);

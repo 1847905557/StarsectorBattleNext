@@ -1,6 +1,8 @@
 package data.scripts.battle;
 
 import data.model.BattleNext_BaseStore;
+import data.model.BattleNext_BaseLoader.LoadError;
+import data.simulator.BattleNext_SimulationTask;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
@@ -74,6 +76,7 @@ public class BattleNext_BattleSourceProvider {
 	}
 
 	private List<String> reloadStores(List<BattleNext_BaseStore<?>> stores) {
+
 		List<String> errors = new ArrayList<>();
 		for (BattleNext_BaseStore<?> store : stores) {
 			try {
@@ -85,12 +88,14 @@ public class BattleNext_BattleSourceProvider {
 						BattleNext_Logger.fields().put("store", store.getClass()).build(), exception);
 			}
 		}
+
 		try {
 			if (sharedCatalogs) startedStore.ensureLoaded();
 			else startedStore.reload();
 		} catch (Exception exception) {
 			errors.add(startedStore.getLoadError());
 		}
+
 		catalogErrors = List.copyOf(errors);
 		return catalogErrors;
 	}
@@ -152,7 +157,7 @@ public class BattleNext_BattleSourceProvider {
 		String activeId = startedStore.getActiveId();
 		warnings.addAll(fleetStore.getErrors().stream().map(error -> error.path() + " / " + error.id() + ": " + error.diagnostic()).toList());
 		warnings.addAll(tournamentStore.getErrors().stream().map(error -> error.path() + " / " + error.id() + ": " + error.diagnostic()).toList());
-		warnings.addAll(startedStore.getLoadErrors());
+		warnings.addAll(startedStore.getLoadErrorsCopy());
 		if (!activeId.isEmpty()) {
 			BattleNext_StartedTournament tournament = startedStore.get(activeId);
 			if (tournament == null) {
@@ -179,16 +184,18 @@ public class BattleNext_BattleSourceProvider {
 				warnings.add("Missing tournament configuration: " + tournament.getSourceTournamentId());
 				return List.of();
 			}
+
 			if (!configuration.getRuleId().isEmpty()) {
 				try {
 					ruleStore.reload();
 				} catch (Exception exception) {
 					BattleNext_Logger.error(BattleNext_BattleSourceProvider.class, "battle.sources.load.failed",
 				BattleNext_Logger.fields().put("active_tournament", activeTournament).put("fleet_load_error", fleetStore.getLoadError()).put("tournament_load_error", tournamentStore.getLoadError()).build(), exception);
-			warnings.add("Unable to load tournament rules: " + exception.getMessage());
+					warnings.add("Unable to load tournament rules: " + exception.getMessage());
 					return List.of();
 				}
 			}
+
 			BattleNext_Match next = tournamentEngine.getNextMatch(tournament);
 			return next == null ? List.of() : validate(List.of(next), "tournament " + activeId);
 		}
@@ -212,11 +219,13 @@ public class BattleNext_BattleSourceProvider {
 	}
 
 	private List<BattleNext_Match> loadQuickBattleMatches() {
-		for (var error : fleetStore.getErrors()) {
+
+		for (LoadError error : fleetStore.getErrors()) {
 			String diagnostic = error.path() + " / " + error.id() + ": " + error.diagnostic();
 			if (warnings.contains(diagnostic)) continue;
 			warnings.add(diagnostic);
 		}
+
 		try {
 			quickBattleStore.reload();
 		} catch (Exception exception) {
@@ -224,22 +233,24 @@ public class BattleNext_BattleSourceProvider {
 				BattleNext_Logger.fields().put("active_tournament", activeTournament).put("fleet_load_error", fleetStore.getLoadError()).put("tournament_load_error", tournamentStore.getLoadError()).build(), exception);
 			warnings.add("Unable to load quick battle list: " + exception.getMessage());
 		}
+
 		List<BattleNext_Match> matches = new ArrayList<>();
 		warnings.addAll(quickBattleStore.getErrors().stream().map(error -> error.path() + ": " + error.diagnostic()).toList());
-		for (BattleNext_QuickBattleModel model : quickBattleStore.getAll()) {
+		for (BattleNext_QuickBattleModel model : quickBattleStore.getAllCopy()) {
 			if (!model.isEnabled() || model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 				continue;
 			}
 			matches.add(BattleNext_Match.fromQuickBattle(model));
 		}
+
 		return validate(matches, "quick battle");
 	}
 
-	public List<String> getWarnings() {
+	public List<String> getWarningsReadonly() {
 		return Collections.unmodifiableList(warnings);
 	}
 
-	public List<String> getRuleWarnings() {
+	public List<String> getRuleWarningsReadonly() {
 		return Collections.unmodifiableList(ruleWarnings);
 	}
 
@@ -265,7 +276,7 @@ public class BattleNext_BattleSourceProvider {
 	}
 
 	public BattleNext_StartedTournament getInstance(String id) {
-		var task = BattleNext_SimulatorService.tournament(id);
+		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(id);
 		return task == null ? startedStore.get(id) : task.getStartedTournament();
 	}
 
@@ -285,6 +296,7 @@ public class BattleNext_BattleSourceProvider {
 		BattleNext_BattleValidation.Result ruleState = validation.ruleResult(ruleId, ruleStore);
 		warnings.addAll(ruleState.messages());
 		if (ruleState.isBlocking()) return result;
+
 		for (BattleNext_Match match : source) {
 			BattleNext_FleetModel player = fleetStore.get(match.getPlayer());
 			BattleNext_FleetModel enemy = fleetStore.get(match.getEnemy());
@@ -295,21 +307,16 @@ public class BattleNext_BattleSourceProvider {
 						+ " " + match.getId() + ": missing player/enemy fleet reference");
 				continue;
 			}
+
 			List<BattleNext_BattleValidation.Failure> failures = new ArrayList<>();
 			failures.addAll(validation.fleetRuleResult(match.getPlayer(), ruleId, ruleStore).failures());
 			failures.addAll(validation.fleetRuleResult(match.getEnemy(), ruleId, ruleStore).failures());
 			BattleNext_BattleValidation.Result qualification = new BattleNext_BattleValidation.Result(failures);
 			for (BattleNext_BattleValidation.Failure failure : qualification.failures()) {
-				if (failure.kind() == BattleNext_BattleValidation.FailureKind.RULE) {
-					ruleWarnings.add(failure.message());
-					warnings.add(failure.message());
-				} else {
-					warnings.add(failure.message());
-				}
+				if (failure.kind() == BattleNext_BattleValidation.FailureKind.RULE) ruleWarnings.add(failure.message());
+				warnings.add(failure.message());
 			}
-			if (qualification.failures().isEmpty()) {
-				result.add(match);
-			}
+			if (qualification.failures().isEmpty()) result.add(match);
 		}
 		return result;
 	}

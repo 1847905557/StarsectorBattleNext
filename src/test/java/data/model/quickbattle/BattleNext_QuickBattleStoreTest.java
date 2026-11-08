@@ -18,7 +18,7 @@ class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 		store.reload();
 		assertTrue(store.isLoaded());
-		assertEquals(List.of(), store.getAll());
+		assertEquals(List.of(), store.getAllCopy());
 	}
 
 	@Test
@@ -27,15 +27,15 @@ class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 		write("tournament/quick_battle.csv", "player,enemy,map,size\na,b,1,1\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n01,02,3,1\n# note\n");
 		byte[] standard = Files.readAllBytes(directory.resolve("tournament/quick_battle.csv"));
-		var store = new BattleNext_QuickBattleStore();
+		BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 		store.reload();
-		var edited = store.get("pvp-legacy-0").copy();
+		BattleNext_QuickBattleModel edited = store.get("pvp-legacy-0").copy();
 		edited.setMap(4);
 		store.save(edited);
 		assertEquals(BattleNext_LoadSource.LEGACY, edited.getSourceType());
 		assertEquals("tournament/PvP_matches.csv", edited.getSourcePath());
 		assertArrayEquals(standard, Files.readAllBytes(directory.resolve("tournament/quick_battle.csv")));
-		var added = new BattleNext_QuickBattleModel("c", "d", 2, 1);
+		BattleNext_QuickBattleModel added = new BattleNext_QuickBattleModel("c", "d", 2, 1);
 		added.setId("new");
 		byte[] numberedSource = Files.readAllBytes(directory.resolve("tournament/PvP_matches.csv"));
 		store.save(added);
@@ -44,17 +44,17 @@ class BattleNext_QuickBattleStoreTest extends BattleNext_TestFleetIoFixture {
 		store.delete("pvp-legacy-0");
 		assertEquals(List.of("player,enemy,map,size", "# note"), Files.readAllLines(directory.resolve("tournament/PvP_matches.csv"), StandardCharsets.UTF_8));
 		store.reload();
-		assertEquals(3, store.getAll().size());
+		assertEquals(3, store.getAllCopy().size());
 		assertEquals("c", store.get("quick-standard-1").getPlayer());
 	}
 
 	@Test
 	void failedFileWriteKeepsPublishedRowsAndReplacementSource() throws Exception {
 		write("tournament/quick_battle.csv", "player,enemy,map,size\na,b,1,1\n");
-		var store = new BattleNext_QuickBattleStore();
+		BattleNext_QuickBattleStore store = new BattleNext_QuickBattleStore();
 		store.reload();
-		var original = store.get("quick-standard-0");
-		var replacement = original.copy();
+		BattleNext_QuickBattleModel original = store.get("quick-standard-0");
+		BattleNext_QuickBattleModel replacement = original.copy();
 		replacement.setPlayer("replacement");
 		Files.delete(directory.resolve("tournament/quick_battle.csv"));
 		Files.createDirectory(directory.resolve("tournament/quick_battle.csv"));

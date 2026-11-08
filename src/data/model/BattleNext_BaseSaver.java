@@ -8,7 +8,9 @@ import java.io.IOException;
 
 public abstract class BattleNext_BaseSaver<T extends BattleNext_BaseModel> {
 
-	protected BattleNext_BaseSaver() {}
+	protected BattleNext_BaseSaver() {
+
+	}
 
 	public abstract String save(T model) throws IOException, JSONException;
 

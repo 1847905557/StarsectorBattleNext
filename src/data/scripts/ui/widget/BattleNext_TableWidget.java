@@ -65,12 +65,14 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+
 		float tableWidth = panel.getPosition().getWidth();
 		float availableHeight = Math.max(0f, panel.getPosition().getHeight() - BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
 		if (!headerBuilt) {
 			createHeader();
 			headerBuilt = true;
 		}
+
 		rowsBounds = new UIRect(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
 				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
@@ -80,6 +82,7 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 				if (visibleRows != null) visibleRows.update(content.getExternalScroller().getYOffset(), availableHeight);
 			}
 		}).getPanel());
+
 		content = rowsPanel.createUIElement(rowsBounds.getWidth(), availableHeight, true);
 		float rowWidth = rowsBounds.getWidth() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
 		UIRect[] cells = columns(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
@@ -99,12 +102,15 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 			content.setHeightSoFar(visibleRows.height());
 			visibleRows.update(scrollOffset, availableHeight);
 		}
+
 		contentBuilder.accept(rowWidth, content);
 		float visibleHeight = Math.min(availableHeight,
 				content.getHeightSoFar() + BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING);
 		rowsPanel.getPosition().setSize(rowsBounds.getWidth(), visibleHeight);
 		content.getPosition().setSize(rowsBounds.getWidth(), visibleHeight);
+
 		rowsPanel.addUIElement(content).inTL(0f, 0f);
+
 		if (content.getExternalScroller() != null) {
 			float limit = Math.max(0f, content.getHeightSoFar() - availableHeight);
 			content.getExternalScroller().setYOffset(Math.min(limit, scrollOffset));
@@ -141,6 +147,7 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 	}
 
 	private void createHeader() {
+
 		float tableWidth = panel.getPosition().getWidth();
 		TooltipMakerAPI headerBackground = panel.createUIElement(tableWidth,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT, false);
@@ -149,7 +156,9 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 				tableWidth - BattleNext_PageLayout.SECTION_HEADING_EXTRA_WIDTH, 0f);
 		headerStrip.getPosition().inTL(0f, 0f);
 		headerBackground.setHeightSoFar(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
+
 		panel.addUIElement(headerBackground).inTL(0f, 0f);
+
 		float stripHeight = Math.min(BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
 				headerStrip.getPosition().getHeight());
 		UIRect[] headingCells = columns(tableWidth, stripHeight);

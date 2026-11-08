@@ -25,8 +25,6 @@ public class SelfHpFilter implements BattleNext_OrderFilter {
 
 	@Override
 	public void filterTargets(ShipAPI source, List<? extends CombatEntityAPI> targets, CombatEngineAPI engine) {
-		if (!range.contains(source.getHitpoints(), source.getHullLevel(), 0f)) {
-			targets.clear();
-		}
+		if (!range.contains(source.getHitpoints(), source.getHullLevel(), 0f)) targets.clear();
 	}
 }

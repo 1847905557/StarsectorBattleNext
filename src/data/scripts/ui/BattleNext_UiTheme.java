@@ -18,6 +18,7 @@ public class BattleNext_UiTheme {
 	public static final Color MUTED = Misc.getGrayColor();
 
 	private BattleNext_UiTheme() {
+
 	}
 
 	public static void configure(TooltipMakerAPI content) {

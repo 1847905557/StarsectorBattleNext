@@ -20,36 +20,41 @@ public class BattleNext_MissionBattleMap {
 	}
 
 	public static void apply(MissionDefinitionAPI api, int map, float mapScale) {
+
 		map = resolve(map);
 		float scale = Math.max(MIN_MAP_SCALE, mapScale);
 		float width;
 		float height;
+
 		switch (Math.floorMod(map, MAP_COUNT)) {
 			case 0 -> {
 				width = 8000f;
 				height = 8000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, 0f, "comm_relay");
 				nebulaCorners(api, scaledWidth, scaledHeight, 500f * scale);
-				addAsteroidField(api, 0f, 0f, 0f, 500f * scale, 10f, 15f, Math.max(1, Math.round(15 * scale)));
+				api.addAsteroidField(0f, 0f, 0f, 500f * scale, 10f, 15f, Math.max(1, Math.round(15 * scale)));
 			}
 			case 1 -> {
 				width = 12000f;
 				height = 8000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				objectives(api, scaledWidth, scaledHeight);
-				addAsteroidField(api, -0.4f * scaledWidth, 0f, 90f, 1000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
-				addAsteroidField(api, 0.4f * scaledWidth, 0f, -90f, 1000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
+				api.addAsteroidField(-0.4f * scaledWidth, 0f, 90f, 1000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
+				api.addAsteroidField(0.4f * scaledWidth, 0f, -90f, 1000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
 			}
 			case 2 -> {
 				width = 12000f;
 				height = 9000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				objectives(api, scaledWidth, scaledHeight);
 				nebulaColumns(api, scaledWidth, scaledHeight, 1000f * scale);
@@ -59,6 +64,7 @@ public class BattleNext_MissionBattleMap {
 				height = 11000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				objectives(api, scaledWidth, scaledHeight);
 				for (int index = 0; index < 10; index++) {
@@ -73,6 +79,7 @@ public class BattleNext_MissionBattleMap {
 				height = 12000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, -0.25f * scaledHeight, "comm_relay");
 				api.addObjective(0f, 0.25f * scaledHeight, "comm_relay");
@@ -83,6 +90,7 @@ public class BattleNext_MissionBattleMap {
 				height = 6000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(-0.25f * scaledWidth, 0f, "sensor_array");
 				api.addObjective(0.25f * scaledWidth, 0f, "sensor_array");
@@ -93,6 +101,7 @@ public class BattleNext_MissionBattleMap {
 				height = 12000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, 0f, "sensor_array");
 				api.addObjective(-0.25f * scaledWidth, -0.25f * scaledHeight, "nav_buoy");
@@ -104,17 +113,19 @@ public class BattleNext_MissionBattleMap {
 				height = 16000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, 0f, "nav_buoy");
 				api.addObjective(-0.2f * scaledWidth, -0.35f * scaledHeight, "comm_relay");
 				api.addObjective(0.2f * scaledWidth, 0.35f * scaledHeight, "comm_relay");
-				addAsteroidField(api, 0f, 0f, 30f, 1600f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
+				api.addAsteroidField(0f, 0f, 30f, 1600f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
 			}
 			case 8 -> {
 				width = 16000f;
 				height = 12000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, 0f, "comm_relay");
 				api.addObjective(-0.15f * scaledWidth, 0f, "nav_buoy");
@@ -125,6 +136,7 @@ public class BattleNext_MissionBattleMap {
 				height = 14000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(-0.25f * scaledWidth, 0.15f * scaledHeight, "nav_buoy");
 				api.addObjective(0.25f * scaledWidth, -0.15f * scaledHeight, "nav_buoy");
@@ -136,10 +148,11 @@ public class BattleNext_MissionBattleMap {
 				height = 16000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(0f, 0.35f * scaledHeight, "nav_buoy");
 				api.addObjective(0f, -0.35f * scaledHeight, "nav_buoy");
-				addAsteroidField(api, 0f, 0f, 60f, 2000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
+				api.addAsteroidField(0f, 0f, 60f, 2000f * scale, 20f, 25f, Math.max(1, Math.round(40 * scale)));
 				api.addNebula(0f, 0f, 3200f * scale);
 			}
 			case 11 -> {
@@ -147,6 +160,7 @@ public class BattleNext_MissionBattleMap {
 				height = 14000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 				api.addObjective(-0.05f * scaledWidth, 0.15f * scaledHeight, "nav_buoy");
 				api.addObjective(0.05f * scaledWidth, 0.15f * scaledHeight, "sensor_array");
@@ -159,6 +173,7 @@ public class BattleNext_MissionBattleMap {
 				height = 6000f;
 				float scaledWidth = width * scale;
 				float scaledHeight = height * scale;
+
 				initMap(api, scaledWidth, scaledHeight);
 			}
 		}
@@ -195,8 +210,4 @@ public class BattleNext_MissionBattleMap {
 		api.addNebula(-0.05f * width, -0.3f * height, radius);
 	}
 
-	private static void addAsteroidField(MissionDefinitionAPI api, float x, float y, float angle,
-			float width, float minSize, float maxSize, int count) {
-		api.addAsteroidField(x, y, angle, width, minSize, maxSize, count);
-	}
 }

@@ -51,11 +51,11 @@ class BattleNext_ProximityDamageAttributionTest extends BattleNext_TestGameFixtu
 				if (scriptedEffects.containsKey(name)) return scriptedEffects.get(name);
 				ProximityExplosionEffect effect = new ProximityExplosionEffect() {
 					@Override
-					public void onExplosion(DamagingProjectileAPI explosion, DamagingProjectileAPI original) {
-						assertEquals(original.getWeapon() == null ? null : BattleNext_DamageAttribution.weaponKey(original.getWeapon()),
+					public void onExplosion(DamagingProjectileAPI explosion, DamagingProjectileAPI originalProjectile) {
+						assertEquals(originalProjectile.getWeapon() == null ? null : BattleNext_DamageAttribution.weaponKey(originalProjectile.getWeapon()),
 								BattleNext_ProximityDamageAttribution.sourceKey(explosion));
 						forwarded.add(explosion);
-						forwarded.add(original);
+						forwarded.add(originalProjectile);
 						if (effectFailure != null) throw effectFailure;
 					}
 				};
@@ -190,9 +190,7 @@ class BattleNext_ProximityDamageAttributionTest extends BattleNext_TestGameFixtu
 		weapons.add(weaponSpec("gun", spec));
 		BattleNext_ProximityDamageAttribution.register();
 		behavior.effect = "effect.later";
-		for (int reload = 0; reload < 16; reload++) {
-			BattleNext_ProximityDamageAttribution.register();
-		}
+		for (int reload = 0; reload < 16; reload++) BattleNext_ProximityDamageAttribution.register();
 
 		assertEquals("effect.later", behavior.effect);
 		assertEquals(1, behavior.writes);

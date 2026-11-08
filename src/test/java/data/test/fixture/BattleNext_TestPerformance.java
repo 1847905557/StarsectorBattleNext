@@ -13,6 +13,7 @@ import java.util.Arrays;
 public final class BattleNext_TestPerformance {
 
 	private BattleNext_TestPerformance() {
+
 	}
 
 	@FunctionalInterface

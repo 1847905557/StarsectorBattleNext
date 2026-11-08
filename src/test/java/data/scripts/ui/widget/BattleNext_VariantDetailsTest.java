@@ -11,6 +11,7 @@ import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -117,6 +118,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 	@Test
 	void moduleSummariesRetainIdentityAndIsolateErrors() throws Exception {
+
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
 		json.getJSONObject("modules").put("broken", new JSONObject().put("hullId", "missing"));
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
@@ -124,11 +126,11 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		details.attach(panel(600f, 700f, new BaseCustomUIPanelPlugin()));
 		assertTrue(labels.stream().anyMatch(value -> value.contains("Child")));
 		TooltipState modules = tooltips.get(lists(details).get("modules"));
-		for (var component : modules.getComponents()) {
+		for (UIComponentAPI component : modules.getComponents()) {
 			if (!(component instanceof CustomPanelAPI row)) continue;
 			for (Object item : children.get(row)) {
-				var card = (CustomPanelAPI) item;
-				var caption = tooltips.get(children.get(card).get(0));
+				CustomPanelAPI card = (CustomPanelAPI) item;
+				TooltipState caption = tooltips.get(children.get(card).get(0));
 				attachedTooltips.get(caption.getComponents().get(0)).createTooltip(tooltip(600f, 400f, false), false, null);
 			}
 		}
@@ -144,7 +146,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		store.reload();
-		var pin = store.saveVariant("Original", source().getApi());
+		BattleNext_PinnedVariantModel pin = store.saveVariant("Original", source().getApi());
 		BattleNext_PinnedVariantPage page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 		page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("pin:" + pin.getSourcePath());
@@ -155,16 +157,18 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		toggle.run();
 		assertEquals("Unsaved module name", ((TextFieldAPI) getField(getField(page, "editor"), "nameField")).getText());
 		assertTrue(page.hasUnsavedChanges());
-		var router = (BattleNext_UiInputRouter) getField(page, "inputRouter");
-		var overlay = new BattleNext_UiInputRouter.Overlay() {
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(page, "inputRouter");
+		BattleNext_UiInputRouter.Overlay overlay = new BattleNext_UiInputRouter.Overlay() {
 			@Override
 			public PositionAPI getBounds() {
 				return position(500f, 500f);
 			}
+
 			@Override
 			public boolean handleGlobalInput(List<InputEventAPI> events) {
 				return true;
 			}
+
 			@Override
 			public void close() {
 
@@ -179,6 +183,7 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 	@Test
 	void previewTitleUsesHullNameAndEmptySectionsHaveCompleteMountedContents() throws Exception {
+
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
 		for (String key : List.of("hullMods", "permaMods", "sMods", "sModdedBuiltIns",
 				"suppressedMods", "weaponGroups", "wings")) {
@@ -208,8 +213,8 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 		CustomPanelAPI owner = panel(width, 601f, new BaseCustomUIPanelPlugin());
 		details.setVariantJson(json);
 		details.attach(owner);
-			CustomPanelAPI root = details.getPanel();
-			List<PositionAPI> frames = children.get(root).stream().map(CustomPanelAPI.class::cast)
+		CustomPanelAPI root = details.getPanel();
+		List<PositionAPI> frames = children.get(root).stream().map(CustomPanelAPI.class::cast)
 				.map(CustomPanelAPI::getPosition).toList();
 		assertEquals(5, frames.size());
 		assertEquals(8f, frames.get(1).getX() - frames.get(0).getX() - frames.get(0).getWidth());
@@ -256,7 +261,10 @@ class BattleNext_VariantDetailsTest extends BattleNext_TestVariantFixture {
 
 		JSONObject json = equipmentJson();
 		BattleNext_VariantDetails[] details = new BattleNext_VariantDetails[1];
-		Runnable refresh = () -> { details[0].setVariantJson(json); details[0].attach(panel(640f, 601f, new BaseCustomUIPanelPlugin())); };
+		Runnable refresh = () -> {
+			details[0].setVariantJson(json);
+			details[0].attach(panel(640f, 601f, new BaseCustomUIPanelPlugin()));
+		};
 		details[0] = new BattleNext_VariantDetails(refresh);
 		refresh.run();
 		Map<String, Float> offsets = new LinkedHashMap<>();

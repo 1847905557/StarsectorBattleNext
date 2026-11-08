@@ -12,6 +12,6 @@ public class FleetMaxShips implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		return BattleNext_RestrictionUtils.maximum(restriction, assembledFleet.getDefinition().getId(),
-				assembledFleet.getDefinition().getMembers().size());
+				assembledFleet.getDefinition().getMembersReadonly().size());
 	}
 }

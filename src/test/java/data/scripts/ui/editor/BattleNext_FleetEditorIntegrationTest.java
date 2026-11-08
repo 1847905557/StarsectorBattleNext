@@ -31,7 +31,7 @@ class BattleNext_FleetEditorIntegrationTest extends BattleNext_TestVariantFixtur
 		assertEquals(true, editor.save(), editor.getStatusText());
 		store.reload();
 		BattleNext_FleetModel saved = store.get("fleet");
-		assertEquals(pin.getPinId(), saved.getMembers().get(0).getVariantId());
+		assertEquals(pin.getPinId(), saved.getMembersReadonly().get(0).getVariantId());
 		pins.delete(pin.getPinId());
 		assertEquals("Unsubmitted", saved.getVariant(pin.getPinId()).build().getDisplayName());
 		assertNotNull(saved.getVariant(pin.getPinId()).build().getModuleVariant("module"));

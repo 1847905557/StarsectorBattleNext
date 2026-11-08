@@ -4,6 +4,8 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel.HeaderLayout;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,11 +47,11 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 			assertEquals(40f, top.getPosition().getHeight());
 			assertEquals(4f, owner.getPosition().getY() + owner.getPosition().getHeight() - 13f
 					- root.getPosition().getY() - root.getPosition().getHeight());
-			var layout = BattleNext_ExpandablePanel.headerLayout(width, portrait, summary);
+			HeaderLayout layout = BattleNext_ExpandablePanel.headerLayout(width, portrait, summary);
 			TooltipMakerAPI names = (TooltipMakerAPI) children.get(top).get(0);
 			TooltipState nameState = tooltips.get(names);
 			assertEquals(portrait ? 84f : 48f, layout.textX());
-			for (var label : nameState.getComponents()) {
+			for (UIComponentAPI label : nameState.getComponents()) {
 				assertEquals(top.getPosition().getX() + layout.textX(), label.getPosition().getX());
 			}
 			assertEquals(3f, top.getPosition().getY() + 40f
@@ -60,7 +62,7 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 				assertEquals(8f, top.getPosition().getX() + width
 						- metrics.getViewport().getX() - metrics.getViewport().getWidth());
 				assertEquals(8f, layout.metricsX() - layout.textX() - layout.textWidth());
-				for (var label : metrics.getComponents()) {
+				for (UIComponentAPI label : metrics.getComponents()) {
 					assertEquals(metrics.getViewport().getX(), label.getPosition().getX());
 				}
 			} else {
@@ -83,12 +85,15 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 			}
 			AtomicBoolean consumed = new AtomicBoolean();
 			AtomicBoolean toggled = new AtomicBoolean();
-			var event = proxy(InputEventAPI.class, (name, args) -> switch (name) {
+			InputEventAPI event = proxy(InputEventAPI.class, (name, args) -> switch (name) {
 				case "isConsumed" -> consumed.get();
 				case "isLMBDownEvent" -> true;
 				case "getX" -> (int) top.getPosition().getX() + 1;
 				case "getY" -> (int) top.getPosition().getCenterY();
-				case "consume" -> { consumed.set(true); yield null; }
+				case "consume" -> {
+					consumed.set(true);
+					yield null;
+				}
 				default -> null;
 			});
 			assertTrue(BattleNext_ExpandablePanel.handleHeaderInput(List.of(event), top.getPosition(),

@@ -78,12 +78,15 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 				area.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT - BattleNext_PageLayout.FOOTER_MARGIN);
 		simulatorRect = new UIRect(area.getX() + columnWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, area.getY(),
 				area.getWidth() - columnWidth - BattleNext_PageLayout.EDITOR_COLUMN_GAP, area.getHeight());
+
 		float width = BattleNext_PageLayout.managementFooterButtonWidth(footer, 1);
 		BattleNext_PageLayout.fixedButton(panel, BattleNext_PageLayout.managementFooterButtonRect(footer, width, 0),
 				strings.get("save"), "settings_save", CutStyle.ALL, true);
+
 		TooltipMakerAPI status = panel.createUIElement(footer.getWidth() - width - 10f, footer.getHeight(), false);
 		statusLabel = status.addPara("", 0f);
 		status.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), status.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
+
 		panel.addUIElement(status).inTL(footer.getX() + width + 10f, footer.getY());
 	}
 
@@ -92,6 +95,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		contentRect.removeLatestSubPanel();
 		simulatorRect.removeLatestSubPanel();
 		attachEditor(contentRect.createSubPanel(panel, panel.getPlugin()).getPanel());
+
 		simulatorWidget = new BattleNext_SimulatorWidget(inputRouter, overlayHost == null ? panel : overlayHost,
 				() -> simulatorUnlocked, simulatorBrowser, simulatorSources, reports);
 		simulatorWidget.attach(simulatorRect.createSubPanel(panel, panel.getPlugin()).getPanel());
@@ -110,6 +114,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		if ("settings_save".equals(action)) {
 			save();
 		}
+
 		if ("simulator_enable".equals(action) && !simulatorUnlocked) {
 			confirmation.accept(() -> {
 				simulatorUnlocked = true;
@@ -128,9 +133,11 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 
 	@Override
 	protected boolean savePage() {
+
 		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		boolean result = editor.save();
 		setStatus(editor.getStatusText());
+
 		if (result && cnText != BattleNext_Settings.isCnTextEnabled()) {
 			try {
 				BattleNextModPlugin.reloadCsvRegistry();
@@ -142,6 +149,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 						BattleNext_Logger.fields().put("input_state", editor.serializeState()).build(), exception);
 			}
 		}
+
 		return result;
 	}
 

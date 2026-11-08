@@ -14,6 +14,7 @@ import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.model.fleet.BattleNext_FleetModel;
 import data.scripts.fleet.BattleNext_FleetBuilder;
+import data.scripts.fleet.BattleNext_AssembledFleet;
 import data.scripts.order.BattleNext_FleetOrderBehavior;
 import data.test.fixture.BattleNext_TestOrderFixture;
 import org.json.JSONArray;
@@ -69,14 +70,14 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 				}
 			};
 		}));
-		var playerDefinition = definition("player", "engage.nearest");
-		var enemyDefinition = definition("enemy", "harass.nearest");
-		var builder = new BattleNext_FleetBuilder();
-		var playerFleet = builder.build(playerDefinition);
-		var enemyFleet = builder.build(enemyDefinition);
-		assertTrue(playerFleet.isComplete(), playerFleet.getMemberErrors().toString());
-		assertTrue(enemyFleet.isComplete(), enemyFleet.getMemberErrors().toString());
-		assertTrue(playerDefinition.getTags().isEmpty());
+		BattleNext_FleetModel playerDefinition = definition("player", "engage.nearest");
+		BattleNext_FleetModel enemyDefinition = definition("enemy", "harass.nearest");
+		BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
+		BattleNext_AssembledFleet playerFleet = builder.build(playerDefinition);
+		BattleNext_AssembledFleet enemyFleet = builder.build(enemyDefinition);
+		assertTrue(playerFleet.isComplete(), playerFleet.getMemberErrorsReadonly().toString());
+		assertTrue(enemyFleet.isComplete(), enemyFleet.getMemberErrorsReadonly().toString());
+		assertTrue(playerDefinition.getTagsReadonly().isEmpty());
 		List<FleetMemberAPI> added = new ArrayList<>();
 		List<Boolean> defaultAi = new ArrayList<>();
 		MissionDefinitionAPI api = proxy(MissionDefinitionAPI.class, (method, args) -> switch (method) {
@@ -89,8 +90,8 @@ class BattleNext_OrderMissionIntegrationTest extends BattleNext_TestOrderFixture
 		builder.addToMission(api, FleetSide.ENEMY, enemyFleet, enemyDefinition.getName());
 		assertEquals(List.of(player.getMember(), enemy.getMember()), added);
 		assertEquals(List.of(true, true), defaultAi);
-		var plugin = new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(playerDefinition.getTags()),
-				BattleNext_FleetOrderBehavior.fromTags(enemyDefinition.getTags()), playerFleet, enemyFleet);
+		BattleNext_FleetOrderBehavior plugin = new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(playerDefinition.getTagsReadonly()),
+				BattleNext_FleetOrderBehavior.fromTags(enemyDefinition.getTagsReadonly()), playerFleet, enemyFleet);
 		plugin.init(world.getEngine());
 		plugin.advance(0.16f, List.of());
 		assertEquals(CombatAssignmentType.ENGAGE, world.side(0, false).current(player).getType());

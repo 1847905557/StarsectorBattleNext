@@ -13,7 +13,8 @@ import java.util.function.Supplier;
 
 public class BattleNext_SaveErrors {
 
-	private static final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+	private static final BattleNext_I18nSection STRINGS = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
+
 	private final List<String> messages = new ArrayList<>();
 
 	public void clear() {
@@ -24,12 +25,12 @@ public class BattleNext_SaveErrors {
 		return messages.isEmpty();
 	}
 
-	public List<String> getMessages() {
+	public List<String> getMessagesCopy() {
 		return List.copyOf(messages);
 	}
 
 	public String summary() {
-		return messages.isEmpty() ? "" : strings.format("errors_summary", messages.size(), messages.get(0));
+		return messages.isEmpty() ? "" : STRINGS.format("errors_summary", messages.size(), messages.get(0));
 	}
 
 	public void add(String message) {
@@ -45,7 +46,7 @@ public class BattleNext_SaveErrors {
 				visible.appendCodePoint(letter);
 			}
 		});
-		messages.add(strings.format("field_error", subject, field, visible.toString(), reason));
+		messages.add(STRINGS.format("field_error", subject, field, visible.toString(), reason));
 	}
 
 	public void id(String subject, String field, String input) {
@@ -64,13 +65,13 @@ public class BattleNext_SaveErrors {
 		int position = problem.position();
 		String character = String.format("U+%04X", problem.codePoint());
 		String reason = switch (problem.reason()) {
-			case REQUIRED -> strings.get("error_required");
-			case NUMERIC -> strings.get("error_id_numeric");
-			case CONTROL -> strings.format("error_id_control", position, character);
-			case WHITESPACE -> strings.format("error_id_whitespace", position, character);
-			case CHARACTER -> strings.format("error_id_character", position, character);
-			case TRAILING_DOT -> strings.get("error_id_trailing_dot");
-			case RESERVED -> strings.get("error_id_reserved");
+			case REQUIRED -> STRINGS.get("error_required");
+			case NUMERIC -> STRINGS.get("error_id_numeric");
+			case CONTROL -> STRINGS.format("error_id_control", position, character);
+			case WHITESPACE -> STRINGS.format("error_id_whitespace", position, character);
+			case CHARACTER -> STRINGS.format("error_id_character", position, character);
+			case TRAILING_DOT -> STRINGS.get("error_id_trailing_dot");
+			case RESERVED -> STRINGS.get("error_id_reserved");
 		};
 		field(subject, field, input, reason);
 	}
@@ -81,8 +82,8 @@ public class BattleNext_SaveErrors {
 
 	private String rejectionReason(EditRejection rejection) {
 		return switch (rejection.getReason()) {
-			case DUPLICATE_ID -> strings.get("duplicate_id");
-			case SOURCE_UNAVAILABLE -> strings.get("source_unavailable");
+			case DUPLICATE_ID -> STRINGS.get("duplicate_id");
+			case SOURCE_UNAVAILABLE -> STRINGS.get("source_unavailable");
 			case DUPLICATE_FOLDER -> BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_").get("duplicate_folder");
 		};
 	}
@@ -92,11 +93,11 @@ public class BattleNext_SaveErrors {
 		try {
 			result = Integer.parseInt(input.trim());
 		} catch (NumberFormatException exception) {
-			field(subject, field, input, strings.get("error_integer"));
+			field(subject, field, input, STRINGS.get("error_integer"));
 			return null;
 		}
 		if (result < minimum || result > maximum) {
-			field(subject, field, input, strings.format("error_integer_range", minimum, maximum));
+			field(subject, field, input, STRINGS.format("error_integer_range", minimum, maximum));
 			return null;
 		}
 		return result;
@@ -104,7 +105,7 @@ public class BattleNext_SaveErrors {
 
 	public Float number(String subject, String field, String input, boolean positive) {
 		float result;
-		String reason = strings.get(positive ? "error_positive" : "error_nonnegative");
+		String reason = STRINGS.get(positive ? "error_positive" : "error_nonnegative");
 		try {
 			result = Float.parseFloat(input.trim());
 		} catch (NumberFormatException exception) {
@@ -131,18 +132,18 @@ public class BattleNext_SaveErrors {
 			if (!reason.contains(detail)) reason += " / " + detail;
 			cause = cause.getCause();
 		}
-		messages.add(strings.format("operation_error", operation, target, reason));
+		messages.add(STRINGS.format("operation_error", operation, target, reason));
 	}
 
 	public static BaseTooltipCreator tooltip(Supplier<List<String>> source) {
 		return new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return 480f;
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				List<String> errors = source.get();
 				for (int index = 0; index < errors.size(); index++) {
 					tooltip.addPara((index + 1) + ". " + errors.get(index), index == 0 ? 0f : 5f);

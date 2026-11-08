@@ -40,9 +40,11 @@ class BattleNext_SimulatorProtocolTest {
 			byte[] header = ByteBuffer.allocate(4).putInt(payload.length).array();
 			client.getOutputStream().write(header, 0, 2);
 			assertThrows(SocketTimeoutException.class, receiver::receive);
+
 			client.getOutputStream().write(header, 2, 2);
 			client.getOutputStream().write(payload, 0, 3);
 			assertThrows(SocketTimeoutException.class, receiver::receive);
+
 			client.getOutputStream().write(payload, 3, payload.length - 3);
 			assertEquals("中文 50%", receiver.receive().getJSONObject("payload").getString("name"));
 		}

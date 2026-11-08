@@ -35,6 +35,7 @@ public class BattleNext_PinnedVariantModel extends BattleNext_JsonModel {
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
 		if (!pinId.isEmpty()) throw new IllegalStateException("Pinned variant snapshot is already initialized");
+
 		int version = json.getInt("formatVersion");
 		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported pinned variant formatVersion: " + version);
 		String id = json.getString("pinId");
@@ -54,6 +55,7 @@ public class BattleNext_PinnedVariantModel extends BattleNext_JsonModel {
 		json.put("pinId", pinId);
 		json.put("displayName", displayName);
 		json.put("variantJson", copyJson(variantJson));
+
 		return json;
 	}
 
@@ -80,7 +82,7 @@ public class BattleNext_PinnedVariantModel extends BattleNext_JsonModel {
 		return displayName;
 	}
 
-	public JSONObject getVariantJson() {
+	public JSONObject getVariantJsonCopy() {
 		return copyJson(variantJson);
 	}
 

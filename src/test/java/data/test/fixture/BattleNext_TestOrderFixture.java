@@ -36,7 +36,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 	void installOrders() throws Exception {
 		previousEngine = Global.getCombatEngine();
 		Global.setCombatEngine(world.getEngine());
-		var registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
 		previousEntries = state(registry, "entries");
 		previousFactory = state(registry, "scriptFactory");
 		previousLoadErrors = state(registry, "loadErrors");
@@ -46,7 +46,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 	@AfterEach
 	void restoreOrders() throws Exception {
 		Global.setCombatEngine(previousEngine);
-		var registry = BattleNext_OrderRegistry.getInstance();
+		BattleNext_OrderRegistry registry = BattleNext_OrderRegistry.getInstance();
 		setState(registry, "entries", previousEntries);
 		setState(registry, "scriptFactory", previousFactory);
 		setState(registry, "loadErrors", previousLoadErrors);
@@ -70,6 +70,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 			}
 			sourceRows = List.copyOf(parsed);
 		}
+
 		JSONArray rows = new JSONArray();
 		for (List<String> fields : sourceRows) {
 			rows.put(new JSONObject().put("id", fields.get(0)).put("name", fields.get(1)).put("type", fields.get(2))
@@ -96,7 +97,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 			members.add(new BattleNext_MemberModel("variant_" + index, "Ship " + index, "", List.of(), "",
 					scripts.get(index), List.of()));
 		}
-		var definition = new BattleNext_FleetModel("fleet_" + owner, "Fleet " + owner,
+		BattleNext_FleetModel definition = new BattleNext_FleetModel("fleet_" + owner, "Fleet " + owner,
 				List.of(), List.of(), members);
 		return new BattleNext_AssembledFleet(definition, null, ships.stream().map(ShipState::getMember).toList(), List.of());
 	}
@@ -232,7 +233,10 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 				case "isAlive" -> alive;
 				case "isExpired" -> expired;
 				case "isRetreating" -> retreating;
-				case "setRetreating" -> { retreating = (Boolean) args[0]; yield null; }
+				case "setRetreating" -> {
+					retreating = (Boolean) args[0];
+					yield null;
+				}
 				case "getFleetMember" -> member;
 				case "getLocation" -> location;
 				case "getHullSize" -> hullSize;
@@ -251,41 +255,53 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		public ShipAPI getApi() {
 			return api;
 		}
+
 		public FleetMemberAPI getMember() {
 			return member;
 		}
+
 		public void setMember(FleetMemberAPI value) {
 			member = value;
 		}
+
 		public void setOwner(int value) {
 			owner = value;
 		}
+
 		public void setAlly(boolean value) {
 			ally = value;
 		}
+
 		public void setAlive(boolean value) {
 			alive = value;
 		}
+
 		public void setExpired(boolean value) {
 			expired = value;
 		}
+
 		public void setOverloaded(boolean value) {
 			overloaded = value;
 		}
+
 		public void setHp(float value, float level) {
 			hp = value;
 			hullLevel = level;
 		}
+
 		public void setFlux(float value, float level) {
 			flux = value;
 			fluxLevel = level;
 		}
+
 		public void setSpeed(float value) {
 			speed = value;
 		}
+
 		public void setHullSize(ShipAPI.HullSize value) {
 			hullSize = value;
 		}
+
 		public Set<ShipHullSpecAPI.ShipTypeHints> getHints() {
 			return hints;
 		}
@@ -306,8 +322,14 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 				yield List.copyOf(assignments);
 			}
 			case "createAssignment" -> assignment((CombatAssignmentType) args[0], (AssignmentTargetAPI) args[1]);
-			case "giveAssignment" -> { if (!refuse) assigned.put(((DeployedFleetMemberAPI) args[0]).getShip(), (AssignmentInfo) args[1]); yield null; }
-			case "orderSearchAndDestroy" -> { assigned.remove(((DeployedFleetMemberAPI) args[0]).getShip()); yield null; }
+			case "giveAssignment" -> {
+				if (!refuse) assigned.put(((DeployedFleetMemberAPI) args[0]).getShip(), (AssignmentInfo) args[1]);
+				yield null;
+			}
+			case "orderSearchAndDestroy" -> {
+				assigned.remove(((DeployedFleetMemberAPI) args[0]).getShip());
+				yield null;
+			}
 			case "orderRetreat" -> {
 				ShipAPI ship = ((DeployedFleetMemberAPI) args[0]).getShip();
 				ship.setRetreating(true, false);
@@ -315,9 +337,16 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 				retreats++;
 				yield null;
 			}
-			case "removeAssignment" -> { assignments.remove(args[0]); assigned.values().removeIf(value -> value == args[0]); yield null; }
+			case "removeAssignment" -> {
+				assignments.remove(args[0]);
+				assigned.values().removeIf(value -> value == args[0]);
+				yield null;
+			}
 			case "isFullAssault" -> fullAssault;
-			case "setFullAssault" -> { fullAssault = (Boolean) args[0]; yield null; }
+			case "setFullAssault" -> {
+				fullAssault = (Boolean) args[0];
+				yield null;
+			}
 			case "isInFullRetreat" -> fullRetreat;
 			default -> null;
 		});
@@ -325,27 +354,35 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		public CombatTaskManagerAPI getTasks() {
 			return tasks;
 		}
+
 		public int getAssignmentReads() {
 			return assignmentReads;
 		}
+
 		public List<AssignmentInfo> getAssignments() {
 			return assignments;
 		}
+
 		public int getRetreats() {
 			return retreats;
 		}
+
 		public void setRefuse(boolean value) {
 			refuse = value;
 		}
+
 		public void setFullRetreat(boolean value) {
 			fullRetreat = value;
 		}
+
 		public void setFullAssault(boolean value) {
 			fullAssault = value;
 		}
+
 		public AssignmentInfo current(ShipState ship) {
 			return assigned.get(ship.getApi());
 		}
+
 		public void give(ShipState ship, AssignmentInfo assignment) {
 			assigned.put(ship.getApi(), assignment);
 		}
@@ -356,10 +393,12 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 				public CombatAssignmentType getType() {
 					return type;
 				}
+
 				@Override
 				public AssignmentTargetAPI getTarget() {
 					return target;
 				}
+
 				@Override
 				public List<DeployedFleetMemberAPI> getAssignedMembers() {
 					return assigned.entrySet().stream().filter(entry -> entry.getValue() == this)

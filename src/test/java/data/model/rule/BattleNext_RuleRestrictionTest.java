@@ -22,7 +22,7 @@ class BattleNext_RuleRestrictionTest {
 
 	@BeforeEach
 	void configureRegistry() throws Exception {
-		var registry = BattleNext_RestrictionRegistry.getInstance();
+		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		Field entryField = BattleNext_RestrictionRegistry.class.getDeclaredField("entries");
 		Field factoryField = BattleNext_RestrictionRegistry.class.getDeclaredField("scriptFactory");
 		Field errorsField = BattleNext_RestrictionRegistry.class.getDeclaredField("loadErrors");
@@ -32,7 +32,7 @@ class BattleNext_RuleRestrictionTest {
 		entries = entryField.get(registry);
 		factory = factoryField.get(registry);
 		loadErrors = errorsField.get(registry);
-		var row = new JSONObject().put("id", "testRegisteredNumber").put("name", "testRegisteredNumber").put("type", "number")
+		JSONObject row = new JSONObject().put("id", "testRegisteredNumber").put("name", "testRegisteredNumber").put("type", "number")
 				.put("script", "data.restriction.numeric.FleetMaxShips").put("desc", "Test");
 		registry.load(new JSONArray().put(row), name -> new FleetMaxShips());
 	}
@@ -53,7 +53,7 @@ class BattleNext_RuleRestrictionTest {
 	@Test
 	void registeredValuesUseTheDeclaredTypeAndRejectConflictingPayloads() throws Exception {
 		JSONObject json = new JSONObject().put("id", "testRegisteredNumber").put("enabled", true).put("value", 3.5);
-		var restriction = BattleNext_RuleRestriction.fromJson(json);
+		BattleNext_RuleRestriction restriction = BattleNext_RuleRestriction.fromJson(json);
 		assertEquals("number", restriction.getType());
 		assertEquals(3.5, restriction.getValue());
 		assertTrue(restriction.isEnabled());
@@ -71,7 +71,7 @@ class BattleNext_RuleRestrictionTest {
 	@ParameterizedTest
 	@ValueSource(doubles = {-1, Double.NaN})
 	void invalidNumbersPreserveThePublishedValue(double value) {
-		var restriction = new BattleNext_RuleRestriction("number", "number");
+		BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction("number", "number");
 		restriction.setValue(2.5);
 		assertThrows(IllegalArgumentException.class, () -> restriction.setValue(value));
 		assertEquals(2.5, restriction.getValue());
@@ -79,22 +79,22 @@ class BattleNext_RuleRestrictionTest {
 
 	@Test
 	void listsNormalizeAndRejectDuplicateOrEmptyItemsWithoutChangingThePublishedList() {
-		var restriction = new BattleNext_RuleRestriction("list", "list");
+		BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction("list", "list");
 		restriction.setItems(List.of(" a ", "b"));
-		assertEquals(List.of("a", "b"), restriction.getItems());
+		assertEquals(List.of("a", "b"), restriction.getItemsReadonly());
 		assertThrows(IllegalArgumentException.class, () -> restriction.setItems(List.of("a", " a ")));
 		assertThrows(IllegalArgumentException.class, () -> restriction.setItems(List.of("")));
-		assertEquals(List.of("a", "b"), restriction.getItems());
-		assertThrows(UnsupportedOperationException.class, () -> restriction.getItems().clear());
-		restriction.setItems(restriction.getItems());
-		assertEquals(List.of("a", "b"), restriction.getItems());
+		assertEquals(List.of("a", "b"), restriction.getItemsReadonly());
+		assertThrows(UnsupportedOperationException.class, () -> restriction.getItemsReadonly().clear());
+		restriction.setItems(restriction.getItemsReadonly());
+		assertEquals(List.of("a", "b"), restriction.getItemsReadonly());
 	}
 
 	@Test
 	void unknownRestrictionPreservesExtensionJsonUntilAnExplicitEdit() throws Exception {
 		JSONObject json = new JSONObject().put("id", "testUnknown").put("enabled", false).put("value", 4)
 				.put("extension", new JSONObject().put("text", "keep"));
-		var restriction = BattleNext_RuleRestriction.fromJson(json);
+		BattleNext_RuleRestriction restriction = BattleNext_RuleRestriction.fromJson(json);
 		json.getJSONObject("extension").put("text", "changed");
 		assertEquals("keep", restriction.toJson().getJSONObject("extension").getString("text"));
 		JSONObject exported = restriction.toJson();

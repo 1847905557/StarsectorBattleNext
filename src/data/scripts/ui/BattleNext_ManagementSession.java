@@ -71,16 +71,20 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 
 	public boolean isReady() {
 		if (!preparation.isDone()) return false;
+
 		preparation.join();
 		loading = "variants";
-		long deadline = System.nanoTime() + 2_000_000L;
+		long deadlineNanos = System.nanoTime() + 2_000_000L;
+
 		if (!gameReady) {
-			if (pinValidation == null) pinValidation = data.pins().getAll().iterator();
-			while (pinValidation.hasNext() && System.nanoTime() < deadline) data.pins().validateDefinition(pinValidation.next().getPinId());
+			if (pinValidation == null) pinValidation = data.pins().getAllCopy().iterator();
+			while (pinValidation.hasNext() && System.nanoTime() < deadlineNanos) data.pins().validateDefinition(pinValidation.next().getPinId());
 			gameReady = !pinValidation.hasNext();
 		}
-		long remaining = deadline - System.nanoTime();
-		if (!variantsReady && remaining > 0) variantsReady = data.variants().advance(remaining);
+
+		long remainingNanos = deadlineNanos - System.nanoTime();
+		if (!variantsReady && remainingNanos > 0) variantsReady = data.variants().advance(remainingNanos);
+
 		return gameReady && variantsReady;
 	}
 
@@ -88,7 +92,7 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 		return loading;
 	}
 
-	public List<String> errors() {
+	public List<String> errorsCopy() {
 		return List.copyOf(errors);
 	}
 
@@ -100,8 +104,10 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 			load("quick_battles", data.quickBattles());
 			load("rules", data.rules());
 			load("tournaments", data.tournaments());
+
 			loading = "instances";
 			if (!closed) data.instances().reload();
+
 			load("reports", data.reports());
 			return null;
 		});
@@ -116,6 +122,7 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 			reportsDirty = true;
 			return;
 		}
+
 		pendingReports = files.submit(() -> {
 			files.invalidateDirectory("tournament/_reports");
 			BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
@@ -126,6 +133,7 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 
 	public boolean advance() {
 		if (pendingReports == null || !pendingReports.isDone()) return false;
+
 		try {
 			data.reports().publish(pendingReports.join());
 			return true;
@@ -143,6 +151,7 @@ public final class BattleNext_ManagementSession implements AutoCloseable {
 
 	private void load(String label, BattleNext_BaseStore<?> store) {
 		if (closed) return;
+
 		loading = label;
 		try {
 			store.reload();

@@ -7,7 +7,7 @@ import com.fs.starfarer.api.input.*;
 import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.missions.BattleNext_lab.MissionDefinition;
 import data.scripts.ai.rtt.BattleNext_RttShipAI;
-import data.scripts.battlesnext.util.BattleNext_FontData;
+import data.scripts.battlesnext.util.BattleNext_FontData.TextObject;
 import data.scripts.tools.BattleNext_CombatInput;
 import data.simulator.BattleNext_SimulatorLaunch;
 import data.simulator.BattleNext_SimulatorNative;
@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.jar.JarEntry;
 
 public class BattleNext_RttGroupsSmoke {
 
@@ -36,6 +37,10 @@ public class BattleNext_RttGroupsSmoke {
 	private static final float DEPLOYMENT_SETTLE_SECONDS = 4f;
 	private static volatile boolean verified;
 	private static Path output;
+
+	private BattleNext_RttGroupsSmoke() {
+
+	}
 
 	public static void main(String[] arguments) throws Throwable {
 
@@ -58,6 +63,7 @@ public class BattleNext_RttGroupsSmoke {
 			System.out.println(SUCCESS + "; reports=" + report);
 			return;
 		}
+
 		output = Path.of(arguments[0]);
 		System.setProperty("launchDirect", "true");
 		System.setProperty("startRes", "800x600");
@@ -67,6 +73,7 @@ public class BattleNext_RttGroupsSmoke {
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);
+
 		Thread driver = new Thread(BattleNext_RttGroupsSmoke::drive, "RTT lab verification");
 		driver.setDaemon(true);
 		driver.start();
@@ -79,14 +86,15 @@ public class BattleNext_RttGroupsSmoke {
 	private static void drive() {
 
 		try {
-			long deadline = System.nanoTime() + 180000000000L;
+			long deadlineNanos = System.nanoTime() + 180000000000L;
 			while (Global.getSettings() == null || Global.getCurrentState() != GameState.TITLE || Global.getCombatEngine() == null) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native title startup timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native title startup timed out");
 				Thread.sleep(20L);
 			}
 			Thread.sleep(1000L);
+
 			Global.getSettings().setBoolean("idleWhileWindowNotVisible", false);
-			var access = new BattleNext_SimulatorNative(BattleNext_RttGroupsSmoke.class.getClassLoader());
+			BattleNext_SimulatorNative access = new BattleNext_SimulatorNative(BattleNext_RttGroupsSmoke.class.getClassLoader());
 			access.configureGraphics();
 			MissionDefinitionAPI mission = access.createMission();
 			Verification verifier = new Verification();
@@ -102,12 +110,13 @@ public class BattleNext_RttGroupsSmoke {
 			new MissionDefinition().defineMission(observed);
 			mission.addPlugin(verifier);
 			access.submitMission(mission);
+
 			while (!verified) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native RTT lab verification timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native RTT lab verification timed out");
 				Thread.sleep(20L);
 			}
 			while (Global.getCurrentState() != GameState.TITLE) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native lab title return timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native lab title return timed out");
 				Thread.sleep(20L);
 			}
 			access.exit();
@@ -143,6 +152,7 @@ public class BattleNext_RttGroupsSmoke {
 			try {
 				if (BattleNext_CombatInput.isUiCovered(engine)) return;
 				if (engine.getTotalElapsedTime(false) < DEPLOYMENT_SETTLE_SECONDS) return;
+
 				ships = engine.getShips().stream().filter(ship -> ship.getOwner() == 0 && !ship.isShuttlePod() && !ship.isFighter()).limit(4).toList();
 				if (ships.size() != 4) throw new AssertionError("Lab must deploy its four player Wolves");
 				for (int index = 0; index < ships.size(); index++) {
@@ -152,11 +162,13 @@ public class BattleNext_RttGroupsSmoke {
 					ship.getLocation().set(-300f + index * 200f, 0f);
 					ship.getVelocity().set(0f, 0f);
 				}
+
 				if (BattleNext_CombatInput.isPlayerPlaying(engine)) throw new AssertionError("Lab RTT requires the player shuttle");
 				engine.setPaused(true);
 				engine.getViewport().set(-800f, -600f, 1600f, 1200f);
 				engine.getViewport().setCenter(new Vector2f());
 				engine.getViewport().setExternalControl(true);
+
 				try (NativeBindings bindings = new NativeBindings()) {
 					eventType = bindings.eventType;
 					bindings.hold(-1);
@@ -169,6 +181,7 @@ public class BattleNext_RttGroupsSmoke {
 								secondary[number - 1], false, true, false);
 					}
 					bindings.bind("SHIP_STRAFE_KEY", Keyboard.KEY_B, false, false, false, Keyboard.KEY_C, false, false, false);
+
 					for (int number = 1; number <= 7; number++) {
 						click(ships.get((number - 1) % 2));
 						key(Keyboard.KEY_F1 + number - 1, true, false);
@@ -181,6 +194,7 @@ public class BattleNext_RttGroupsSmoke {
 						key(Keyboard.KEY_F1 + number - 1, false, false);
 						expect(List.of(ships.get(2)));
 					}
+
 					click(ships.get(0));
 					key(Keyboard.KEY_F1, true, false);
 					key(Keyboard.KEY_F3, true, false);
@@ -194,6 +208,7 @@ public class BattleNext_RttGroupsSmoke {
 					key(Keyboard.KEY_F1, false, false);
 					expect(List.of(ships.get(1), ships.get(0)));
 				}
+
 				InputEventAPI move = event(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_DOWN,
 						(int) engine.getViewport().convertWorldXtoScreenX(0f), (int) engine.getViewport().convertWorldYtoScreenY(300f), 1);
 				rtt.processInputPreCoreControls(0f, List.of(move));
@@ -248,8 +263,9 @@ public class BattleNext_RttGroupsSmoke {
 				rtt.renderInUICoords(viewport);
 				Field textField = BattleNext_RttPlugin.class.getDeclaredField("groupText");
 				textField.setAccessible(true);
-				var text = (BattleNext_FontData.TextObject) textField.get(rtt);
+				TextObject text = (TextObject) textField.get(rtt);
 				if (!text.getTextDataList().get(0).text.equals("1,3,5")) throw new AssertionError("Native group labels must list every membership in ascending order");
+
 				BufferedImage image = capture(output.resolve(captureStage == 0 ? "selected-groups.png" : "selected-groups-zoomed-out.png"));
 				for (ShipAPI ship : List.of(ships.get(0), ships.get(1))) {
 					float diagonal = (ship.getCollisionRadius() * 1.2f + 30f) / (float) Math.sqrt(2f);
@@ -265,11 +281,13 @@ public class BattleNext_RttGroupsSmoke {
 					if (pixels == 0) throw new AssertionError("Native group number must draw cyan glyphs below and right of the selection circle");
 					System.out.println("RTT label pixels: zoom=" + captureStage + ", ship=" + ship.getId() + ", count=" + pixels);
 				}
+
 				if (captureStage++ == 0) {
 					viewport.set(-1600f, -1200f, 3200f, 2400f);
 					viewport.setCenter(new Vector2f());
 					return;
 				}
+
 				finished = true;
 				System.out.println(SUCCESS);
 				verified = true;
@@ -296,12 +314,13 @@ public class BattleNext_RttGroupsSmoke {
 
 			List<Class<?>> types = new ArrayList<>();
 			try (JarFile jar = new JarFile(Path.of("starfarer_obf.jar").toFile())) {
-				for (var entry : Collections.list(jar.entries())) {
+				for (JarEntry entry : Collections.list(jar.entries())) {
 					String name = entry.getName();
 					if (!name.endsWith(".class") || !(name.startsWith("com/fs/starfarer/title/") || name.startsWith("com/fs/starfarer/util/"))) continue;
 					types.add(Class.forName(name.substring(0, name.length() - 6).replace('/', '.'), false, BattleNext_RttGroupsSmoke.class.getClassLoader()));
 				}
 			}
+
 			eventType = types.stream().filter(type -> InputEventAPI.class.isAssignableFrom(type) && !type.isInterface()).findFirst().orElseThrow();
 			actionType = types.stream().filter(type -> type.isEnum() && Arrays.stream(type.getEnumConstants())
 					.anyMatch(value -> ((Enum<?>) value).name().equals("SHIP_SELECT_GROUP_1"))).findFirst().orElseThrow();
@@ -314,21 +333,21 @@ public class BattleNext_RttGroupsSmoke {
 				field.setAccessible(true);
 				maps.add((Map<Object, Object>) field.get(null));
 			}
+
 			mappings = maps.stream().filter(map -> map.containsKey(action("SHIP_SELECT_GROUP_1"))).findFirst().orElseThrow();
 			index = maps.stream().filter(map -> map.keySet().stream().anyMatch(Integer.class::isInstance)).findFirst().orElseThrow();
-			for (var entry : index.entrySet()) {
+			for (Map.Entry<Object, Object> entry : index.entrySet()) {
 				Map<Object, Object> categories = new HashMap<>();
 				((Map<?, ?>) entry.getValue()).forEach((category, values) -> categories.put(category, new ArrayList<>((List<?>) values)));
 				originalIndex.put(entry.getKey(), categories);
 			}
 			index.clear();
+
 			Field buffer = Keyboard.class.getDeclaredField("keyDownBuffer");
 			buffer.setAccessible(true);
 			keyboard = (ByteBuffer) buffer.get(null);
 			originalKeys = new byte[keyboard.capacity()];
-			for (int i = 0; i < originalKeys.length; i++) {
-				originalKeys[i] = keyboard.get(i);
-			}
+			for (int i = 0; i < originalKeys.length; i++) originalKeys[i] = keyboard.get(i);
 		}
 
 		private Object action(String name) {
@@ -345,19 +364,22 @@ public class BattleNext_RttGroupsSmoke {
 			Object first = one.get(pair);
 			Object second = two.get(pair);
 			originals.put(action, new Object[]{first, second});
+
 			for (Object categories : index.values()) {
 				for (Object values : ((Map<?, ?>) categories).values()) {
 					((List<?>) values).removeIf(value -> value == first || value == second);
 				}
 			}
+
 			Constructor<?> constructor = first.getClass().getConstructor(actionType, int.class, boolean.class, boolean.class, boolean.class);
 			Object newFirst = constructor.newInstance(action, primary, ctrl, alt, shift);
 			Object newSecond = constructor.newInstance(action, secondary, secondaryCtrl, secondaryAlt, secondaryShift);
 			one.set(pair, newFirst);
 			two.set(pair, newSecond);
+
 			Field categories = Arrays.stream(actionType.getDeclaredFields()).filter(field -> EnumSet.class.isAssignableFrom(field.getType())).findFirst().orElseThrow();
 			categories.setAccessible(true);
-			for (var entry : Map.of(primary, newFirst, secondary, newSecond).entrySet()) {
+			for (Map.Entry<Integer, Object> entry : Map.of(primary, newFirst, secondary, newSecond).entrySet()) {
 				Map<Object, Object> byCategory = (Map<Object, Object>) index.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
 				for (Object category : (Set<?>) categories.get(action)) {
 					((List<Object>) byCategory.computeIfAbsent(category, key -> new ArrayList<>())).add(entry.getValue());
@@ -366,23 +388,21 @@ public class BattleNext_RttGroupsSmoke {
 		}
 
 		private void hold(int key) {
-			for (int i = 0; i < keyboard.capacity(); i++) {
-				keyboard.put(i, (byte) (i == key ? 1 : 0));
-			}
+			for (int i = 0; i < keyboard.capacity(); i++) keyboard.put(i, (byte) (i == key ? 1 : 0));
 		}
 
 		@Override
 		public void close() throws ReflectiveOperationException {
-			for (var entry : originals.entrySet()) {
+			for (Map.Entry<Object, Object[]> entry : originals.entrySet()) {
 				Object pair = mappings.get(entry.getKey());
 				pair.getClass().getField("one").set(pair, entry.getValue()[0]);
 				pair.getClass().getField("two").set(pair, entry.getValue()[1]);
 			}
+
 			index.clear();
 			index.putAll(originalIndex);
-			for (int i = 0; i < originalKeys.length; i++) {
-				keyboard.put(i, originalKeys[i]);
-			}
+
+			for (int i = 0; i < originalKeys.length; i++) keyboard.put(i, originalKeys[i]);
 		}
 	}
 
@@ -400,6 +420,7 @@ public class BattleNext_RttGroupsSmoke {
 						| (pixels.get(index + 1) & 0xff) << 8 | pixels.get(index + 2) & 0xff);
 			}
 		}
+
 		ImageIO.write(image, "png", path.toFile());
 		return image;
 	}

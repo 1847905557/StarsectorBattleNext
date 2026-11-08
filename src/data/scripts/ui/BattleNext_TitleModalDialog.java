@@ -76,6 +76,7 @@ class BattleNext_TitleModalDialog {
 			logFailure(exception);
 			return;
 		}
+
 		try {
 			access.detach(screen, dialog);
 		} catch (Throwable exception) {
@@ -134,8 +135,10 @@ class BattleNext_TitleModalDialog {
 
 		@Override
 		public void prepare(Class<?> titleClass) throws Throwable {
+
 			Class<?> dialogClass = Class.forName(TITLE_DIALOG_CLASS, false, titleClass.getClassLoader());
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+
 			backgroundDim = lookup.findVirtual(dialogClass, "setBackgroundDimAmount",
 					MethodType.methodType(void.class, float.class));
 			instantOption = lookup.findVirtual(dialogClass, "makeOptionInstant",
@@ -149,6 +152,7 @@ class BattleNext_TitleModalDialog {
 			rightClickCancel = lookup.findVirtual(dialogClass, "setRightClickOutsideCancels",
 					MethodType.methodType(void.class, boolean.class));
 			dismiss = lookup.findVirtual(dialogClass, "dismiss", MethodType.methodType(void.class, int.class));
+
 			show = MethodHandles.privateLookupIn(titleClass, MethodHandles.lookup())
 					.findVirtual(titleClass, "showMessageDialog", MethodType.methodType(void.class, String.class));
 		}

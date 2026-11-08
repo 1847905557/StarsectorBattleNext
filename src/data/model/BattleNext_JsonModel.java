@@ -19,6 +19,10 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 		T parse(JSONObject json) throws JSONException;
 	}
 
+	public abstract void fromJson(JSONObject json) throws JSONException;
+
+	public abstract JSONObject toJson() throws JSONException;
+
 	protected void beginParse() {
 		loadErrors.clear();
 		incompleteCollections.clear();
@@ -27,9 +31,7 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 	protected <T> List<T> readCollection(String key, JSONArray values, ItemParser<T> parser) {
 		int previousErrors = loadErrors.size();
 		List<T> parsed = parseCollection(key, values, parser, loadErrors);
-		if (loadErrors.size() != previousErrors) {
-			retainCollection(key, values);
-		}
+		if (loadErrors.size() != previousErrors) retainCollection(key, values);
 		return parsed;
 	}
 
@@ -42,6 +44,7 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 				errors.add(key + "[" + index + "] " + values.opt(index) + ": " + exception);
 			}
 		}
+
 		return parsed;
 	}
 
@@ -54,6 +57,7 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 			if (id.isEmpty()) continue;
 			counts.merge(id, 1, Integer::sum);
 		}
+
 		return readCollection(key, values, json -> {
 			String id = json.getString("id");
 			if (counts.getOrDefault(id, 0) > 1) throw new IllegalArgumentException("Duplicate ID: " + id);
@@ -77,15 +81,14 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 	protected List<String> readStringCollection(String key, JSONArray values) {
 		int previousErrors = loadErrors.size();
 		List<String> parsed = parseStrings(key, values, loadErrors);
-		if (loadErrors.size() != previousErrors) {
-			retainCollection(key, values);
-		}
+		if (loadErrors.size() != previousErrors) retainCollection(key, values);
 		return parsed;
 	}
 
 	public static List<String> parseStrings(String key, JSONArray values, List<String> errors) {
 		List<String> parsed = new ArrayList<>();
 		if (values == null) return parsed;
+
 		for (int index = 0; index < values.length(); index++) {
 			try {
 				if (!(values.get(index) instanceof String value)) throw new JSONException("Expected a string");
@@ -94,6 +97,7 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 				errors.add(key + "[" + index + "] " + values.opt(index) + ": " + exception);
 			}
 		}
+
 		return parsed;
 	}
 
@@ -101,11 +105,7 @@ public abstract class BattleNext_JsonModel extends BattleNext_BaseModel {
 		loadErrors.add(error);
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
-
-	public abstract void fromJson(JSONObject json) throws JSONException;
-
-	public abstract JSONObject toJson() throws JSONException;
 }

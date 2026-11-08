@@ -16,9 +16,8 @@ public class FleetMaxSameHull implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		Map<String, Integer> counts = new HashMap<>();
-		for (FleetMemberAPI member : assembledFleet.getMembers()) {
-			counts.merge(member.getVariant().getHullSpec().getHullId(), 1, Integer::sum);
-		}
+		for (FleetMemberAPI member : assembledFleet.getMembersReadonly()) counts.merge(member.getVariant().getHullSpec().getHullId(), 1, Integer::sum);
+
 		List<String> reasons = new ArrayList<>();
 		for (Map.Entry<String, Integer> entry : counts.entrySet()) {
 			reasons.addAll(BattleNext_RestrictionUtils.maximum(restriction,

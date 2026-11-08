@@ -25,20 +25,20 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 
 		quickBattles("alpha,beta,0,1\n");
 		pveFactionRows.put(new JSONObject().put("id", "hidden"));
-		var hidden = new MissionState();
+		MissionState hidden = new MissionState();
 		new MissionDefinition().defineMission(hidden.getApi());
 		assertEquals("hidden", generatedParameters.get(0).factionId);
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 3, 1, 2), hidden.getBriefing().get(1));
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_enemy_tagline"),
 				"hidden", 100, 45), hidden.getNames().get(FleetSide.ENEMY));
 		keys.add(Keyboard.KEY_RIGHT);
-		var next = new MissionState();
+		MissionState next = new MissionState();
 		new MissionDefinition().defineMission(next.getApi());
 		assertEquals("mod_faction", generatedParameters.get(1).factionId);
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 3, 1, 2), next.getBriefing().get(1));
 		keys.clear();
 		pveFactionRows.put(0, new JSONObject().put("id", "hegemony"));
-		var reloaded = new MissionState();
+		MissionState reloaded = new MissionState();
 		new MissionDefinition().defineMission(reloaded.getApi());
 		assertEquals("hegemony", generatedParameters.get(2).factionId);
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 2, 2, 1, 2), reloaded.getBriefing().get(1));
@@ -49,7 +49,7 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 		quickBattles("alpha,beta,0,1\n");
 		factionSpecs.removeIf(faction -> faction.isShowInIntelTab());
 		pveFactionRows.put(new JSONObject().put("id", "hidden"));
-		var mission = new MissionState();
+		MissionState mission = new MissionState();
 		new MissionDefinition().defineMission(mission.getApi());
 		assertEquals("hidden", generatedParameters.get(0).factionId);
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_selection_summary"), 1, 1, 1, 2), mission.getBriefing().get(1));
@@ -69,7 +69,7 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 				default -> new IllegalStateException("Injected faction CSV runtime failure");
 			};
 		}
-		var blocked = new MissionState();
+		MissionState blocked = new MissionState();
 		new MissionDefinition().defineMission(blocked.getApi());
 		if (failure.equals("runtime")) {
 			assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_factions_load_failed"), blocked.getBriefing().get(0));
@@ -83,7 +83,7 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 		}
 		pveFactionReadFailure = null;
 		pveFactionRows.put(0, new JSONObject().put("id", "hidden"));
-		var recovered = new MissionState();
+		MissionState recovered = new MissionState();
 		new MissionDefinition().defineMission(recovered.getApi());
 		assertEquals("hidden", generatedParameters.get(generatedParameters.size() - 1).factionId);
 	}
@@ -104,7 +104,7 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 			default -> throw new IllegalStateException("Generation failed");
 		};
 		keys.addAll(List.of(Keyboard.KEY_RIGHT, Keyboard.KEY_UP, Keyboard.KEY_D));
-		var blocked = new MissionState();
+		MissionState blocked = new MissionState();
 		new MissionDefinition().defineMission(blocked.getApi());
 		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_generation_failed"), blocked.getNames().get(FleetSide.ENEMY));
 		assertTrue(blocked.getBriefing().get(1).startsWith("hegemony: "));
@@ -112,7 +112,7 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 		assertTrue(blocked.getMembers().get(FleetSide.PLAYER).isEmpty());
 		generator = original;
 		keys.clear();
-		var retry = new MissionState();
+		MissionState retry = new MissionState();
 		new MissionDefinition().defineMission(retry.getApi());
 		assertEquals("child_variant", retry.getMembers().get(FleetSide.PLAYER).get(0).getVariant().getHullVariantId());
 		assertEquals("hegemony", generatedParameters.get(1).factionId);
@@ -122,13 +122,13 @@ class MissionGenerationTest extends BattleNext_TestMissionFixture {
 	@Test
 	void emptySourcesAndFactionsUseBlockedMissionPresentation() throws Exception {
 		quickBattles("# alpha,beta,0,1\n");
-		var noRows = new MissionState();
+		MissionState noRows = new MissionState();
 		new MissionDefinition().defineMission(noRows.getApi());
 		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_no_valid_battle"), noRows.getBriefing().get(0));
 		assertTrue(noRows.getPlugins().isEmpty());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,0,1\n");
 		factionSpecs.removeIf(faction -> faction.isShowInIntelTab());
-		var noFactions = new MissionState();
+		MissionState noFactions = new MissionState();
 		new MissionDefinition().defineMission(noFactions.getApi());
 		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_pve_no_factions"), noFactions.getBriefing().get(0));
 		assertTrue(generatedParameters.isEmpty());

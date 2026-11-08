@@ -93,6 +93,7 @@ public class BattleNext_RttShipAI extends BattleNext_BasicShipAI {
 
 	@Override
 	public void advance(float amount) {
+
 		if (target != null) {
 			if (!activeTarget()) {
 				if (commandType == CommandType.FOLLOW) destination = followPoint(ship, target);
@@ -105,6 +106,7 @@ public class BattleNext_RttShipAI extends BattleNext_BasicShipAI {
 				destination = new Vector2f(target.getLocation());
 			}
 		}
+
 		if (commandType == CommandType.ENGAGE) setTargetOverride(target);
 		if (commandType != CommandType.ENGAGE) {
 			Vector2f point = getDestination();
@@ -116,6 +118,7 @@ public class BattleNext_RttShipAI extends BattleNext_BasicShipAI {
 				cancelCurrentManeuver();
 			}
 		}
+
 		super.advance(amount);
 		manualSystemControl.rttAdvance(amount);
 	}
@@ -161,6 +164,7 @@ public class BattleNext_RttShipAI extends BattleNext_BasicShipAI {
 			response.forcedTarget = target;
 			return response;
 		}
+
 		Vector2f point = getDestination();
 		if (point == null) return null;
 		if (Vector2f.sub(point, ship.getLocation(), null).length() <= ARRIVAL_RANGE) {

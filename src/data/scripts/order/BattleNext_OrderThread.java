@@ -18,38 +18,41 @@ public class BattleNext_OrderThread {
 
 	public BattleNext_OrderThread(BattleNext_OrderParser.ParsedOrderCommand command, BattleNext_OrderRegistry registry) {
 
-		starterId = command.getStarter();
+		starterId = command.starter();
 		try {
 			starter = (BattleNext_OrderStarter) registry.create(starterId);
 		} catch (RuntimeException exception) {
 			throw new OrderScriptExecutionException(starterId, exception);
 		}
-		for (BattleNext_OrderParser.OrderScriptInvocation part : command.getFilters()) {
+
+		for (BattleNext_OrderParser.OrderScriptInvocation part : command.filters()) {
 			try {
-				BattleNext_OrderFilter filter = (BattleNext_OrderFilter) registry.create(part.getId());
+				BattleNext_OrderFilter filter = (BattleNext_OrderFilter) registry.create(part.id());
 				if (filter.getTargetKind() != TargetKind.ANY && filter.getTargetKind() != starter.getTargetKind()) {
 					throw new IllegalArgumentException("Filter requires " + filter.getTargetKind()
 							+ " targets, starter supplies " + starter.getTargetKind());
 				}
-				filter.configure(part.getParams());
-				filters.add(new OrderScriptBinding<>(part.getId(), filter));
+				filter.configure(part.params());
+				filters.add(new OrderScriptBinding<>(part.id(), filter));
 			} catch (RuntimeException exception) {
-				throw new OrderScriptExecutionException(part.getId(), exception);
+				throw new OrderScriptExecutionException(part.id(), exception);
 			}
 		}
-		pickerId = command.getPicker();
+
+		pickerId = command.picker();
 		try {
 			picker = (BattleNext_OrderPicker) registry.create(pickerId);
 		} catch (RuntimeException exception) {
 			throw new OrderScriptExecutionException(pickerId, exception);
 		}
-		for (BattleNext_OrderParser.OrderScriptInvocation part : command.getSuffixes()) {
+
+		for (BattleNext_OrderParser.OrderScriptInvocation part : command.suffixes()) {
 			try {
-				BattleNext_OrderSuffix suffix = (BattleNext_OrderSuffix) registry.create(part.getId());
-				suffix.configure(part.getParams());
-				suffixes.add(new OrderScriptBinding<>(part.getId(), suffix));
+				BattleNext_OrderSuffix suffix = (BattleNext_OrderSuffix) registry.create(part.id());
+				suffix.configure(part.params());
+				suffixes.add(new OrderScriptBinding<>(part.id(), suffix));
 			} catch (RuntimeException exception) {
-				throw new OrderScriptExecutionException(part.getId(), exception);
+				throw new OrderScriptExecutionException(part.id(), exception);
 			}
 		}
 	}
@@ -64,6 +67,7 @@ public class BattleNext_OrderThread {
 		} catch (RuntimeException exception) {
 			throw new OrderScriptExecutionException(starterId, exception);
 		}
+
 		for (OrderScriptBinding<BattleNext_OrderFilter> step : filters) {
 			if (targets.isEmpty()) return false;
 			try {
@@ -73,6 +77,7 @@ public class BattleNext_OrderThread {
 			}
 		}
 		if (targets.isEmpty()) return false;
+
 		AssignmentTargetAPI target;
 		try {
 			target = picker.pick(ship, targets, type, engine);
@@ -80,6 +85,7 @@ public class BattleNext_OrderThread {
 			throw new OrderScriptExecutionException(pickerId, exception);
 		}
 		if (target == null) return false;
+
 		AssignmentTargetAPI previous = field.getCommandTarget(ship, this);
 		float priority = 0f;
 		for (OrderScriptBinding<BattleNext_OrderSuffix> step : suffixes) {
@@ -91,6 +97,7 @@ public class BattleNext_OrderThread {
 				throw new OrderScriptExecutionException(step.id, exception);
 			}
 		}
+
 		try {
 			return field.apply(ship, starter.getAction(), type, target, priority, this);
 		} catch (RuntimeException exception) {
@@ -98,7 +105,9 @@ public class BattleNext_OrderThread {
 		}
 	}
 
-	private record OrderScriptBinding<T>(String id, T script) { }
+	private record OrderScriptBinding<T>(String id, T script) {
+
+	}
 
 	public static class OrderScriptExecutionException extends RuntimeException {
 

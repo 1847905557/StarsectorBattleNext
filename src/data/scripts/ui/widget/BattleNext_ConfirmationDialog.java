@@ -47,6 +47,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	}
 
 	private final ConfirmationDialogHost host;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 
 	private CustomPanelAPI parent;
@@ -57,7 +58,9 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 	private DialogOverlay overlay;
 
 	private record ConfirmationRequest(String title, String message, String description,
-			String confirmId, String confirmLabel, String cancelId, Runnable onConfirmed) { }
+			String confirmId, String confirmLabel, String cancelId, Runnable onConfirmed) {
+
+	}
 
 	public BattleNext_ConfirmationDialog(ConfirmationDialogHost host, BattleNext_UiInputRouter inputRouter) {
 		super(inputRouter);
@@ -154,9 +157,11 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 
 	private void showConfirmation() {
 		if (confirmation != null) return;
+
 		float width = Math.min(DIALOG_MAX_WIDTH, parent.getPosition().getWidth() - DIALOG_PARENT_WIDTH_RESERVE);
 		ConfirmationDialogPlugin plugin = new ConfirmationDialogPlugin();
 		confirmation = ownPanel(parent, parent.createCustomPanel(width, DIALOG_HEIGHT, plugin));
+
 		UIRect dialogRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_MESSAGE_TOP,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_MESSAGE_HEIGHT);
 		TooltipMakerAPI dialog = dialogRect.beginTooltip(confirmation, false);
@@ -166,6 +171,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		if (!request.description().isEmpty()) {
 			dialog.addPara(request.description(), DIALOG_MESSAGE_GAP);
 		}
+
 		float extraHeight = Math.max(0f, dialog.getHeightSoFar() - DIALOG_MESSAGE_HEIGHT);
 		float height = DIALOG_HEIGHT + extraHeight;
 		confirmation.getPosition().setSize(width, height);
@@ -174,6 +180,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		plugin.borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - DIALOG_BORDER_INSET;
 		dialog.getPosition().setSize(dialogRect.getWidth(), DIALOG_MESSAGE_HEIGHT + extraHeight);
 		dialogRect.addTooltip();
+
 		UIRect statusRect = new UIRect(DIALOG_SIDE_INSET, DIALOG_STATUS_TOP + extraHeight,
 				width - DIALOG_SIDE_INSET * 2f, DIALOG_STATUS_HEIGHT);
 		confirmationStatusContent = statusRect.beginTooltip(confirmation, false);
@@ -181,6 +188,7 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		confirmationStatusContent.addTooltipTo(BattleNext_SaveErrors.tooltip(host::getSaveErrors), confirmationStatusContent.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 		confirmationStatusContent.setHeightSoFar(statusRect.getHeight());
 		statusRect.addTooltip();
+
 		String[] actions = request.confirmId().isEmpty()
 				? new String[]{"confirm_save", "confirm_discard", "confirm_cancel"} : new String[]{request.confirmId(), request.cancelId()};
 		String[] labels = request.confirmId().isEmpty()
@@ -197,7 +205,9 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 					labels[index],
 					actions[index], CutStyle.ALL, false);
 		}
+
 		parent.addComponent(confirmation).inMid();
+
 		overlay = new DialogOverlay(confirmation);
 		inputRouter.push(overlay);
 	}

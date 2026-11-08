@@ -27,11 +27,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture {
 
 	@Test
 	void failedWorkerStartupCompletesTasksAndContinuesTheFifoQueue() throws Exception {
+
 		BattleNext_SimulationTask first = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 		BattleNext_SimulationTask second = service.submit(BattleNext_SimulationRequest.fromVariants(List.of("wolf_CS"), List.of("wolf_CS"), BattleNext_SimulationConfig.defaults()));
 		long deadline = System.nanoTime() + 15000000000L;
@@ -44,6 +46,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 		assertEquals(BattleNext_SimulationResult.Outcome.FAILED, second.getResult().outcome());
 		assertEquals(BattleNext_SimulationTask.State.FINISHED, second.getState());
 		assertTrue(first.getResult().diagnostic().contains("cold start"));
+
 		service.close();
 		for (BattleNext_SimulationTask task : List.of(first, second)) {
 			assertEquals(task.getRequest().id(), task.getResult().id());
@@ -52,7 +55,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 		}
 		assertNull(readField("process"));
 		assertNull(readField("channel"));
-		try (var paths = Files.list(directory.resolve("tournament/_simulations"))) {
+		try (Stream<Path> paths = Files.list(directory.resolve("tournament/_simulations"))) {
 			assertEquals(List.of(), paths.toList());
 		}
 	}
@@ -80,11 +83,11 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			widget.attach(root);
 			BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 			List<CustomPanelAPI> rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
-			String invalid = "simulator:quick:" + display.getRows().get(2).getModel().getId();
+			String invalid = "simulator:quick:" + display.getRowsReadonly().get(2).getModel().getId();
 			rows.get(2).getPlugin().buttonPressed(invalid);
 			assertEquals(BattleNext_SimulatorService.Phase.IDLE, BattleNext_SimulatorService.status().phase());
-			String action = "simulator:quick:" + display.getRows().get(1).getModel().getId();
-			assertFalse(display.getRows().get(1).getModel().isEnabled());
+			String action = "simulator:quick:" + display.getRowsReadonly().get(1).getModel().getId();
+			assertFalse(display.getRowsReadonly().get(1).getModel().isEnabled());
 			rows.get(1).getPlugin().buttonPressed(action);
 			BattleNext_SimulationRequest first = BattleNext_SimulationRequest.fromJson(peer.receive().getJSONObject("payload"));
 			rows.get(1).getPlugin().buttonPressed(action);
@@ -150,7 +153,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			rows.get(1).getPlugin().buttonPressed(action);
 			assertEquals("IllegalStateException: Simulator service is closed", browser.getStatusError());
 			assertEquals("", browser.getSelectedId());
-			assertEquals("alpha", display.getRows().get(1).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
+			assertEquals("alpha", display.getRowsReadonly().get(1).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
 			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
 			widget.close();
 			assertFalse(router.getSession().hasInputState());
@@ -161,6 +164,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 
 	@Test
 	void resourceReloadCommitsTheRoundBeforeRestartingAtTheNextRoundBoundary() throws Exception {
+
 		quickBattles("alpha,beta,0,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
 		sources.reloadCatalogs();
@@ -179,6 +183,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			socket.setTcpNoDelay(true);
 			BattleNext_SimulationTask task = service.submit(BattleNext_SimulationRequest.fromTournament(configuration, List.of("alpha", "beta"), sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.defaults()));
 			BattleNext_SimulationRequest round = nextRequest(peer);
+
 			withServiceMetadata(BattleNext_SimulatorService::resourcesReloaded);
 			completeRound(peer, round, "player");
 			awaitTournamentState(task, BattleNext_SimulationTask.State.PAUSED);
@@ -186,11 +191,11 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			assertFalse(Files.exists(runtime));
 			BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 			instances.reload();
-			assertEquals(round.id(), task.getStartedTournament().getMatches().get(0).getRounds().get(0).getReportId());
+			assertEquals(round.id(), task.getStartedTournament().getMatchesReadonly().get(0).getRoundsReadonly().get(0).getReportId());
 			assertNotEquals(round.id(), task.getCurrentRound().id());
 			assertTrue(task.getImportError().contains("cold start"));
-			assertEquals(1, task.getStartedTournament().getMatches().get(0).getRounds().size());
-			assertEquals("alpha", task.getStartedTournament().getMatches().get(0).getRounds().get(0).getWinnerFleetId());
+			assertEquals(1, task.getStartedTournament().getMatchesReadonly().get(0).getRoundsReadonly().size());
+			assertEquals("alpha", task.getStartedTournament().getMatchesReadonly().get(0).getRoundsReadonly().get(0).getWinnerFleetId());
 			assertEquals(new BattleNext_SimulationTask.Metrics(10f, 100000000L, 600L, 1024L), task.getMetrics());
 			assertNull(readField("process"));
 			assertNull(readField("channel"));
@@ -208,6 +213,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			Path runtime = attachWorker(channel, process);
 			Path diagnostic = runtime.resolve("hs_err_pid1.log");
 			Files.writeString(diagnostic, "Worker crash diagnostic", StandardCharsets.UTF_8);
+
 			channel.close();
 			service.close();
 			assertFalse(process.isAlive());

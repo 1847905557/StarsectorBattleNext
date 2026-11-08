@@ -37,17 +37,17 @@ class BattleNext_QuickBattleDisplayTest extends BattleNext_TestPageFixture {
 		BattleNext_QuickBattleDisplay display = new BattleNext_QuickBattleDisplay(router, List.of(normal, raw), presentation,
 				entry -> entry.getId(), row -> row.getRawField() == null ? List.of() : List.of("Raw row"), new BattleNext_FleetStore(), root);
 		display.attach(root);
-		var fleetLabels = (Map<Column, LabelAPI>) getField(display.getRows().get(0), "fleetLabels");
+		Map<Column, LabelAPI> fleetLabels = (Map<Column, LabelAPI>) getField(display.getRowsReadonly().get(0), "fleetLabels");
 		LabelAPI player = fleetLabels.get(Column.PLAYER);
 		LabelAPI enemy = fleetLabels.get(Column.ENEMY);
 		assertEquals(16f, player.getPosition().getWidth());
 		assertEquals(16f, enemy.getPosition().getWidth());
 		assertEquals(28f, enemy.getPosition().getX() - player.getPosition().getX());
 		assertEquals(52f, buttonPositions.get("simulate:0").getWidth());
-		assertEquals(92f, display.getRows().get(1).getRawField().getPosition().getWidth());
+		assertEquals(92f, display.getRowsReadonly().get(1).getRawField().getPosition().getWidth());
 		assertEquals("first", player.getText());
 		assertEquals("second", enemy.getText());
-		assertEquals("# note", display.getRows().get(1).getRawField().getText());
+		assertEquals("# note", display.getRowsReadonly().get(1).getRawField().getText());
 		assertNull(openQuickBattleFleet(display, 0, Column.PLAYER));
 		assertTrue(router.isEmpty());
 		assertTrue(buttons.get("simulate:0").get());

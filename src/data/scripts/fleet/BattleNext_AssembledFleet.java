@@ -30,15 +30,15 @@ public class BattleNext_AssembledFleet {
 		return commander;
 	}
 
-	public List<FleetMemberAPI> getMembers() {
+	public List<FleetMemberAPI> getMembersReadonly() {
 		return Collections.unmodifiableList(members);
 	}
 
-	public List<String> getMemberErrors() {
+	public List<String> getMemberErrorsReadonly() {
 		return Collections.unmodifiableList(memberErrors);
 	}
 
 	public boolean isComplete() {
-		return memberErrors.isEmpty() && members.size() == definition.getMembers().size();
+		return memberErrors.isEmpty() && members.size() == definition.getMembersReadonly().size();
 	}
 }

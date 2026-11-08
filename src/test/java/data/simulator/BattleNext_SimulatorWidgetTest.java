@@ -8,6 +8,8 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.rule.BattleNext_RuleModel;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
+import java.util.stream.Stream;
 import data.model.rule.BattleNext_RuleRestriction;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -63,7 +65,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		assertArrayEquals(new String[]{BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_player_fleet_id_label"), BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_enemy_fleet_id_label"),
 				BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_label"), BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_scale_label"), BattleNext_TestTextCatalog.text("Common", "BattleNext_common_status"), BattleNext_TestTextCatalog.text("Common", "BattleNext_common_actions")},
 				(String[]) getField(table, "headers"));
-		var entries = sources.getQuickBattleStore().getAll();
+		List<BattleNext_QuickBattleModel> entries = sources.getQuickBattleStore().getAllCopy();
 		assertEquals(List.of(FIRST_ID, FIRST_ID, FIRST_ID, "", FIRST_ID), entries.stream().map(entry -> entry.getPlayer()).toList());
 		assertFalse(entries.get(1).isEnabled());
 		assertEquals(entries.get(0).toCsvLine(), entries.get(4).toCsvLine());
@@ -80,11 +82,11 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 			assertFalse(field.isEditable());
 			assertFalse(field.appendCharIfPossible('X', false));
 		}
-		assertEquals(FIRST_ID, display.getRows().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
+		assertEquals(FIRST_ID, display.getRowsReadonly().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
 		assertNull(openQuickBattleFleet(display, 0, BattleNext_QuickBattleDisplay.Column.PLAYER));
 		assertTrue(router.isEmpty());
 		assertTrue(sources.quickBattleErrors(entries.get(2)).contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_invalid_enemy_fleet")));
-		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_raw_row_status"), ((LabelAPI) getField(display.getRows().get(3), "statusLabel")).getText());
+		assertEquals(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_raw_row_status"), ((LabelAPI) getField(display.getRowsReadonly().get(3), "statusLabel")).getText());
 		widget.close();
 		assertTrue(children.get(root).isEmpty());
 		assertFalse(router.getSession().hasInputState());
@@ -177,14 +179,14 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		assertEquals(reads, dataReads.size());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nsecond,second,8,2\n");
 		widget.refreshContent();
-		assertEquals(FIRST_ID, sources.getQuickBattleStore().getAll().get(0).getPlayer());
+		assertEquals(FIRST_ID, sources.getQuickBattleStore().getAllCopy().get(0).getPlayer());
 		widget.close();
 		sources.reloadCatalogs();
 		assertTrue(dataReads.size() > reads);
 		widget.attach(root);
 		display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
 		fields = (Map<List<String>, BattleNext_TextField>) getField(display, "fields");
-		assertEquals("second", display.getRows().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
+		assertEquals("second", display.getRowsReadonly().get(0).getFleetId(BattleNext_QuickBattleDisplay.Column.PLAYER));
 		select(widget, "cup");
 		widget.close();
 		tournaments.reload();
@@ -269,7 +271,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		assertSame(page, getField(manager, "settingsPage"));
 		assertEquals("cup", browser.getSelectedId());
 		assertEquals("1.5", ((BattleNext_TextField) getField(getField(page, "editor"), "defaultTimeMultField")).getText());
-		assertEquals(List.of(FIRST_ID, "second"), browser.template(tournaments.get("cup")).getFleetIds());
+		assertEquals(List.of(FIRST_ID, "second"), browser.template(tournaments.get("cup")).getFleetIdsReadonly());
 		assertEquals(BattleNext_TestTextCatalog.text("Simulator", "BattleNext_simulator_simulate_tournament"), buttonLabels.get("simulator:tournament:cup"));
 		tournaments.reload();
 		instances.reload();
@@ -289,6 +291,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 
 	@Test
 	void catalogFailureKeepsTheSelectedSourceAndShowsItsDiagnosticWithAnUnavailableAction() throws Exception {
+
 		catalog();
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
@@ -302,6 +305,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		widget.attach(root);
 		select(widget, "cup");
 		widget.close();
+
 		write(sources.getTournamentStore().get("cup").getSourcePath(), "{ invalid json");
 		sources.reloadCatalogs();
 		widget.attach(root);
@@ -408,7 +412,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 
 	private Map<Path, String> storedFiles() throws Exception {
 		Map<Path, String> result = new LinkedHashMap<>();
-		try (var paths = Files.walk(directory)) {
+		try (Stream<Path> paths = Files.walk(directory)) {
 			for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
 				result.put(path, Files.readString(path, StandardCharsets.UTF_8));
 			}
@@ -425,11 +429,11 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		browser.template(first).select(3, "b");
 		browser.template(second).select(0, "c");
 		first.setMaxFleet(6);
-		assertEquals(List.of("", "a", "", "b", "", ""), browser.template(first).getFleetIds());
+		assertEquals(List.of("", "a", "", "b", "", ""), browser.template(first).getFleetIdsReadonly());
 		first.setMaxFleet(2);
-		assertEquals(List.of("", "a"), browser.template(first).getFleetIds());
+		assertEquals(List.of("", "a"), browser.template(first).getFleetIdsReadonly());
 		first.setMaxFleet(4);
-		assertEquals(List.of("", "a", "", ""), browser.template(first).getFleetIds());
-		assertEquals(List.of("c", ""), browser.template(second).getFleetIds());
+		assertEquals(List.of("", "a", "", ""), browser.template(first).getFleetIdsReadonly());
+		assertEquals(List.of("c", ""), browser.template(second).getFleetIdsReadonly());
 	}
 }

@@ -11,6 +11,7 @@ import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,7 +47,7 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 			if (model == null || !BattleNext_EntryId.isValidPathSegment(model.getPinId())) throw new IllegalArgumentException("Invalid pin ID");
 			if (model.getDisplayName().isEmpty()) throw new IllegalArgumentException("Pinned variant display name is required");
 			BattleNext_PinnedVariantModel existing = get(model.getPinId());
-			if (existing != null && !existing.getVariantJson().toString().equals(model.getVariantJson().toString())) {
+			if (existing != null && !existing.getVariantJsonCopy().toString().equals(model.getVariantJsonCopy().toString())) {
 				throw new IllegalArgumentException("Pinned variant snapshot cannot be replaced: " + model.getPinId());
 			}
 			if (existing == null && BattleNext_ModFileManager.exists("tournament/_pinnedVariants/" + model.getPinId() + ".json")) {
@@ -84,7 +85,7 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 			requireLoaded();
 			BattleNext_PinnedVariantModel model = get(pinId);
 			if (model == null) throw new IllegalArgumentException("Unknown pinned variant: " + pinId);
-			BattleNext_PinnedVariantModel renamed = new BattleNext_PinnedVariantModel(pinId, displayName, model.getVariantJson());
+			BattleNext_PinnedVariantModel renamed = new BattleNext_PinnedVariantModel(pinId, displayName, model.getVariantJsonCopy());
 			super.save(renamed);
 			BattleNext_Logger.operationSucceeded(BattleNext_PinnedVariantStore.class, "variant.pin.rename",
 					() -> BattleNext_Logger.fields().put("pin_id", pinId).put("display_name", displayName).build());
@@ -121,23 +122,28 @@ public class BattleNext_PinnedVariantStore extends BattleNext_BaseStore<BattleNe
 		return model != null && model.getSourcePath().equals("tournament/_pinnedVariants/" + model.getPinId() + ".json");
 	}
 
-	public List<String> getLoadErrors() {
-		return loader.getLoadErrors();
+	public List<String> getLoadErrorsCopy() {
+		return loader.getLoadErrorsCopy();
 	}
 
 	public List<CatalogEntry> getCatalog() {
 		if (catalogRevision == getRevision()) return catalog;
-		List<CatalogEntry> entries = new ArrayList<>(loader.getCatalog().stream().map(entry -> {
+
+		List<CatalogEntry> entries = new ArrayList<>();
+		for (CatalogEntry entry : loader.getCatalog()) {
 			BattleNext_PinnedVariantModel current = get(entry.pinId());
-			return current == null || entry.model() == null ? entry : new CatalogEntry(
-					entry.path(), current.getDisplayName(), entry.pinId(), entry.hullId(), current, entry.error(), entry.raw());
-		}).toList());
-		Set<String> known = new HashSet<>(entries.stream().map(CatalogEntry::pinId).toList());
-		for (BattleNext_PinnedVariantModel model : getAll()) {
-			if (!known.add(model.getPinId())) continue;
-			entries.add(new CatalogEntry(model.getSourcePath(), model.getDisplayName(),
-					model.getPinId(), model.getVariantJson().optString("hullId"), model, "", model.getVariantJson().toString()));
+			entries.add(current == null || entry.model() == null ? entry : new CatalogEntry(
+					entry.path(), current.getDisplayName(), entry.pinId(), entry.hullId(), current, entry.error(), entry.raw()));
 		}
+		Set<String> known = new HashSet<>();
+		for (CatalogEntry entry : entries) known.add(entry.pinId());
+		for (BattleNext_PinnedVariantModel model : getAllCopy()) {
+			if (!known.add(model.getPinId())) continue;
+			JSONObject variant = model.getVariantJsonCopy();
+			entries.add(new CatalogEntry(model.getSourcePath(), model.getDisplayName(),
+					model.getPinId(), variant.optString("hullId"), model, "", variant.toString()));
+		}
+
 		catalog = List.copyOf(entries);
 		catalogRevision = getRevision();
 		return catalog;

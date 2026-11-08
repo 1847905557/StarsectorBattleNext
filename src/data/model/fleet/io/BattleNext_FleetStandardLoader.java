@@ -35,6 +35,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<BattleNext_FleetModel> result = new ArrayList<>();
 		List<String> paths = paths(BASE_FOLDER, 2,
 				path -> !BattleNext_EntryId.isReservedFolder(path.substring(path.lastIndexOf('/') + 1)));
@@ -53,6 +54,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 				reject(path, -1, id, raw, exception);
 			}
 		}
+
 		return finishLoad(result);
 	}
 
@@ -86,6 +88,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	private static boolean isFleetDataPath(String path) {
 		String normalized = path.replace("\\", "/");
 		if (!normalized.startsWith(BASE_ROOT)) return false;
+
 		String relative = normalized.substring(BASE_ROOT.length());
 		int separator = relative.indexOf('/');
 		return separator > 0 && !BattleNext_EntryId.isReservedFolder(relative.substring(0, separator))

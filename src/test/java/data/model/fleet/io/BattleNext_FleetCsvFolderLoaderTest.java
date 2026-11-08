@@ -2,6 +2,9 @@ package data.model.fleet.io;
 
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.test.fixture.BattleNext_TestFleetIoFixture;
 import org.json.JSONArray;
@@ -21,18 +24,18 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		variant("中文目录", "local_parent", "parent", 21, new JSONArray().put(new JSONObject().put("module", "local_child")));
 		variant("中文目录", "local_child", "child", 17, null);
 		registeredVariants.put("local_child", selectedVariant.getModules().get("module"));
-		var fleets = new BattleNext_FleetLegacyFolderLoader().load();
+		List<BattleNext_FleetModel> fleets = new BattleNext_FleetLegacyFolderLoader().load();
 		assertEquals(List.of("02", "1"), fleets.stream().map(fleet -> fleet.getId()).toList());
-		var fleet = fleets.get(1);
+		BattleNext_FleetModel fleet = fleets.get(1);
 		assertEquals("中文目录", fleet.getFolderName());
 		assertEquals("tournament/中文目录/player1_data.csv", fleet.getSourcePath());
 		assertEquals(BattleNext_LoadSource.LEGACY, fleet.getSourceType());
-		assertEquals(2, fleet.getVariants().size());
-		assertTrue(fleet.getLoadErrors().isEmpty());
-		var assembled = new BattleNext_FleetBuilder().build(fleet);
-		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
-		assertEquals(17, assembled.getMembers().get(0).getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
-		assertEquals("parent_variant", assembled.getMembers().get(1).getVariant().getHullVariantId());
+		assertEquals(2, fleet.getVariantsCopy().size());
+		assertTrue(fleet.getLoadErrorsCopy().isEmpty());
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
+		assertTrue(assembled.isComplete(), assembled.getMemberErrorsReadonly().toString());
+		assertEquals(17, assembled.getMembersReadonly().get(0).getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
+		assertEquals("parent_variant", assembled.getMembersReadonly().get(1).getVariant().getHullVariantId());
 	}
 
 	@Test
@@ -48,7 +51,7 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		assertEquals(List.of("2"), new BattleNext_FleetLegacyFolderLoader().load().stream().map(fleet -> fleet.getId()).toList());
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		assertEquals(3, store.getAll().size());
+		assertEquals(3, store.getAllCopy().size());
 		assertNotNull(store.get("standard_id"));
 	}
 
@@ -78,7 +81,7 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 				.put("modules", new JSONObject().put("nested", "child_local"));
 		variant("nested", "parent_local", "parent", 0, new JSONObject().put("module", inline));
 		variant("nested", "child_local", "child", 31, null);
-		var parent = new BattleNext_FleetLegacyFolderLoader().load().get(0).getVariant("parent_local").build();
+		ShipVariantAPI parent = new BattleNext_FleetLegacyFolderLoader().load().get(0).getVariant("parent_local").build();
 		assertEquals(31, parent.getModuleVariant("module").getModuleVariant("nested").toJSONObject().getInt("fluxVents"));
 		variant("nested", "parent_local", "parent", 0, new JSONObject().put("module", "child_variant"));
 		parent = new BattleNext_FleetLegacyFolderLoader().load().get(0).getVariant("parent_local").build();
@@ -91,14 +94,14 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 		csvFleet("cycle", "1", "1,parent_local,,,,,,\n");
 		variant("cycle", "parent_local", "parent", 0, new JSONObject().put("module", "child_local"));
 		variant("cycle", "child_local", "child", 0, new JSONObject().put("back", "parent_local"));
-		var cyclic = new BattleNext_FleetLegacyFolderLoader().load().get(0);
-		assertTrue(String.join(";", cyclic.getLoadErrors()).contains("Cyclic module variant"));
-		assertTrue(String.join(";", cyclic.getLoadErrors()).contains("tournament/cycle/"));
+		BattleNext_FleetModel cyclic = new BattleNext_FleetLegacyFolderLoader().load().get(0);
+		assertTrue(String.join(";", cyclic.getLoadErrorsCopy()).contains("Cyclic module variant"));
+		assertTrue(String.join(";", cyclic.getLoadErrorsCopy()).contains("tournament/cycle/"));
 		variant("cycle", "child_local", "child", 0, null);
 		write("tournament/cycle/duplicate.variant", "{\"variantId\":\"child_local\",\"hullId\":\"child\"}");
-		var duplicate = new BattleNext_FleetLegacyFolderLoader().load().get(0);
-		assertTrue(String.join(";", duplicate.getLoadErrors()).contains("child_local.variant"));
-		assertTrue(String.join(";", duplicate.getLoadErrors()).contains("duplicate.variant"));
+		BattleNext_FleetModel duplicate = new BattleNext_FleetLegacyFolderLoader().load().get(0);
+		assertTrue(String.join(";", duplicate.getLoadErrorsCopy()).contains("child_local.variant"));
+		assertTrue(String.join(";", duplicate.getLoadErrorsCopy()).contains("duplicate.variant"));
 		assertNull(duplicate.getVariant("child_local"));
 	}
 
@@ -107,13 +110,13 @@ class BattleNext_FleetCsvFolderLoaderTest extends BattleNext_TestFleetIoFixture 
 
 		csvFleet("missing", "1", "1,parent_local,,,,,,\n2,unknown_member,,,,,,\n");
 		variant("missing", "parent_local", "parent", 0, new JSONObject().put("module", "unknown_module"));
-		var fleet = new BattleNext_FleetLegacyFolderLoader().load().get(0);
-		assertEquals(1, fleet.getLoadErrors().size());
-		assertTrue(fleet.getLoadErrors().get(0).contains("unknown_member"));
-		var assembled = new BattleNext_FleetBuilder().build(fleet);
-		assertEquals(3, assembled.getMemberErrors().size());
-		assertTrue(assembled.getMemberErrors().get(0).contains("unknown_member"));
-		assertTrue(assembled.getMemberErrors().get(1).contains("unknown_module"));
-		assertTrue(assembled.getMemberErrors().get(2).contains("unknown_member"));
+		BattleNext_FleetModel fleet = new BattleNext_FleetLegacyFolderLoader().load().get(0);
+		assertEquals(1, fleet.getLoadErrorsCopy().size());
+		assertTrue(fleet.getLoadErrorsCopy().get(0).contains("unknown_member"));
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
+		assertEquals(3, assembled.getMemberErrorsReadonly().size());
+		assertTrue(assembled.getMemberErrorsReadonly().get(0).contains("unknown_member"));
+		assertTrue(assembled.getMemberErrorsReadonly().get(1).contains("unknown_module"));
+		assertTrue(assembled.getMemberErrorsReadonly().get(2).contains("unknown_member"));
 	}
 }

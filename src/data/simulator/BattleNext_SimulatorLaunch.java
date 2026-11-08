@@ -2,6 +2,7 @@ package data.simulator;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 public class BattleNext_SimulatorLaunch {
 
 	private BattleNext_SimulatorLaunch() {
+
 	}
 
 	public static List<String> javaCommand(Path core) {
@@ -31,7 +33,7 @@ public class BattleNext_SimulatorLaunch {
 		try {
 			Class<?> file = Class.forName("java.io.File", false, null);
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-			var constructor = lookup.findConstructor(file, MethodType.methodType(void.class, String.class));
+			MethodHandle constructor = lookup.findConstructor(file, MethodType.methodType(void.class, String.class));
 			Object workingDirectory = constructor.invoke(directory.toString());
 			ProcessBuilder builder = new ProcessBuilder(command).redirectErrorStream(true);
 			lookup.findVirtual(ProcessBuilder.class, "directory", MethodType.methodType(ProcessBuilder.class, file)).invoke(builder, workingDirectory);

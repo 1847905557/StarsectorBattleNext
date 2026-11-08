@@ -31,8 +31,10 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	private final Runnable closeAction;
 	private final BattleNext_PinnedVariantStore store;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private final BattleNext_VariantDetails details = new BattleNext_VariantDetails(
 			() -> refreshContents(this.name.getText()), () -> !this.closed && inputRouter.isEmpty());
 	private BattleNext_VariantBuilder snapshot;
@@ -182,8 +184,9 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			BattleNext_PinnedVariantModel pin = store.saveVariant(displayName, snapshot.build());
 			saved = true;
 			status = variantStrings.format("pin_saved", pin.getDisplayName());
-			if (!store.getLoadErrors().isEmpty()) {
-				status += "\n" + variantStrings.get("pin_load_warnings") + "\n" + String.join("\n", store.getLoadErrors());
+			List<String> errors = store.getLoadErrorsCopy();
+			if (!errors.isEmpty()) {
+				status += "\n" + variantStrings.get("pin_load_warnings") + "\n" + String.join("\n", errors);
 			}
 		} catch (Exception exception) {
 			status = strings.get("save_failed") + ": " + exception;
@@ -244,7 +247,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 	}
 
 	public List<String> getSaveErrors() {
-		return saveErrors.getMessages();
+		return saveErrors.getMessagesCopy();
 	}
 
 	private static class FramePlugin extends BaseCustomUIPanelPlugin {

@@ -43,7 +43,9 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	private final BattleNext_QuickBattleStore store;
 	private final BattleNext_FleetStore fleetStore;
 	private final BattleNext_BattleValidation validation;
+
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
 	private final Map<BattleNext_QuickBattleModel, Object> rowKeys = new IdentityHashMap<>();
 	private BattleNext_QuickBattleDisplay display;
@@ -126,13 +128,13 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		List<String> errors = store.isLoaded() ? provider.getCatalogErrors() : provider.reloadQuickBattleCatalog();
 		statusText = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		entries.clear();
-		entries.addAll(store.getAll().stream().map(BattleNext_QuickBattleModel::copy).toList());
+		for (BattleNext_QuickBattleModel entry : store.getAllCopy()) entries.add(entry.copy());
 		loaded = true;
 		rowKeys.clear();
 	}
 
 	private boolean promoteEditedRawRows() {
-		for (Row row : display.getRows()) {
+		for (Row row : display.getRowsReadonly()) {
 			if (row.getModel().getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW || row.getRawField() != null && row.getRawField().hasFocus()) {
 				continue;
 			}
@@ -164,10 +166,8 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	private void deleteRemovedEntries() throws IOException, JSONException {
 		List<String> keptIds = new ArrayList<>();
-		for (BattleNext_QuickBattleModel entry : entries) {
-			keptIds.add(entry.getId());
-		}
-		for (BattleNext_QuickBattleModel stored : store.getAll()) {
+		for (BattleNext_QuickBattleModel entry : entries) keptIds.add(entry.getId());
+		for (BattleNext_QuickBattleModel stored : store.getAllCopy()) {
 			if (keptIds.contains(stored.getId())) continue;
 			store.delete(stored.getId());
 		}
@@ -219,7 +219,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	@Override
 	protected String draftState() {
 		StringBuilder value = new StringBuilder();
-		for (Row row : display.getRows()) {
+		for (Row row : display.getRowsReadonly()) {
 			value.append(row.getModel().getRowType()).append(row.isEnabled());
 			for (Column column : List.of(Column.PLAYER, Column.ENEMY)) {
 				String id = row.getFleetId(column);
@@ -234,6 +234,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	@Override
 	protected boolean submitDraft() {
+
 		if (!fleetStore.isLoaded()) {
 			saveErrors.add(strings.get("load_failed") + " / tournament / " + fleetStore.getLoadError());
 		}
@@ -244,6 +245,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 			setStatus(saveErrors.summary());
 			return false;
 		}
+
 		try {
 			return persist(() -> {
 				deleteRemovedEntries();
@@ -270,14 +272,16 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	private boolean captureFields() {
 
 		List<BattleNext_QuickBattleModel> parsed = new ArrayList<>();
-		for (int index = 0; index < display.getRows().size(); index++) {
-			Row row = display.getRows().get(index);
+		List<Row> rows = display.getRowsReadonly();
+		for (int index = 0; index < rows.size(); index++) {
+			Row row = rows.get(index);
 			BattleNext_QuickBattleModel model = row.getModel().copy();
 			if (row.isRaw()) {
 				model.promoteRaw(row.rawText());
 				parsed.add(model);
 				continue;
 			}
+
 			String subject = strings.format("row", index + 1);
 			for (Column column : List.of(Column.PLAYER, Column.ENEMY)) {
 				if (row.getFleetId(column).isEmpty()) {
@@ -297,19 +301,22 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 			model.setRowType(model.isEnabled() ? BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE : model.getRowType());
 			parsed.add(model);
 		}
+
 		if (!saveErrors.isEmpty()) return false;
 		entries.clear();
 		entries.addAll(parsed);
+
 		boolean changedShape = false;
 		int target = 0;
-		for (int index = 0; index < display.getRows().size(); index++) {
-			Row row = display.getRows().get(index);
+		for (int index = 0; index < rows.size(); index++) {
+			Row row = rows.get(index);
 			BattleNext_QuickBattleModel next = parsed.get(target++);
 			changedShape |= row.isRaw() != (next.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW);
 			rowKeys.put(next, rowKeys.get(row.getModel()));
 			rowKeys.remove(row.getModel());
 			row.setModel(next);
 		}
+
 		if (changedShape) {
 			refreshContent();
 		}

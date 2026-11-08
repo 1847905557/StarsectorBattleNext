@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoader<BattleNext_TournamentModel> {
 
@@ -16,9 +17,13 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return paths(RESOURCE_FOLDER, false).stream().filter(path -> path.endsWith(".json"))
-				.filter(path -> !path.substring(path.lastIndexOf('/') + 1).equalsIgnoreCase(STARTED_FILE))
-				.toList();
+		List<String> result = new ArrayList<>();
+		for (String path : paths(RESOURCE_FOLDER, false)) {
+			if (!path.endsWith(".json")) continue;
+			if (path.substring(path.lastIndexOf('/') + 1).equalsIgnoreCase(STARTED_FILE)) continue;
+			result.add(path);
+		}
+		return List.copyOf(result);
 	}
 
 	@Override
@@ -37,5 +42,4 @@ public class BattleNext_TournamentStandardLoader extends BattleNext_CatalogLoade
 	protected String kind() {
 		return "tournament";
 	}
-
 }

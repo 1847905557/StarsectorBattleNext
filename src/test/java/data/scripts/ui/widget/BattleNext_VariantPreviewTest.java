@@ -16,8 +16,14 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.Alignment;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import data.scripts.ui.page.BattleNext_PinnedVariantPage;
+import data.scripts.campaign.luna.BattleNext_LunaPinnedVariantPanel;
+import java.lang.reflect.Method;
 import data.scripts.ui.BattleNext_RefitPanelPlugin;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestVariantPreviewFixture;
@@ -82,6 +88,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	@ParameterizedTest
 	@ValueSource(strings = {"turret", "hardpoint"})
 	void loadedHullCenterPlacesEveryWeaponAtItsSocketInsteadOfTheImageCenter(String mount) throws Exception {
+
 		ShipHullSpecAPI hull = previewHull("root", Map.of(
 				"first", previewSlot("first", mount, new Vector2f(-2f, 35f), 45f),
 				"second", previewSlot("second", mount, new Vector2f(148f, -25f), 0f)), Map.of(), null, false);
@@ -105,6 +112,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 
 	@Test
 	void rotatedModuleUsesItsOwnLoadedCenterAndDimensionSnapshot() throws Exception {
+
 		ShipHullSpecAPI hull = previewHull("root", Map.of("module",
 				previewSlot("module", "module", new Vector2f(50f, 0f), 90f)), Map.of(), null, false);
 		previewHull("child", Map.of("gun", previewSlot("gun", "turret", new Vector2f(10f, 0f), 0f)),
@@ -124,9 +132,11 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		assertEquals(0f, spriteCenters.get(gun)[1] - spriteCenters.get(child)[1], 0.001f);
 		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
 		assertEquals(90f, spriteRenderTransforms.get(child)[0]);
+
 		spriteSpecs.put("child", createSpriteSpec("graphics/child.png", 140f, 180f, 61f, 83f, 0f, null));
 		renderPreview(preview, 1000f, 1000f);
 		assertArrayEquals(new float[]{80f, 100f, 19f, 77f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
+
 		BattleNext_VariantPreview refreshed = new BattleNext_VariantPreview(json, hull, Global.getSettings());
 		renderPreview(refreshed, 1000f, 1000f);
 		assertArrayEquals(new float[]{140f, 180f, 61f, 83f}, Arrays.copyOf(spriteRenderStates.get(child), 4));
@@ -151,6 +161,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	@ParameterizedTest
 	@ValueSource(strings = {"root", "child", "gun_missile"})
 	void loadedSpriteSpecFailureIsReportedOnceAndKeepsOtherParts(String id) throws Exception {
+
 		ShipHullSpecAPI hull = previewHull("root", Map.of(
 				"module", previewSlot("module", "module", new Vector2f(), 0f),
 				"gun", previewSlot("gun", "turret", new Vector2f(), 0f)), Map.of(), null, false);
@@ -241,6 +252,7 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	@ParameterizedTest
 	@ValueSource(strings = {"inline", "registered", "array"})
 	void moduleFormsAndRepeatedVariantIdsKeepEachModuleInstance(String form) throws Exception {
+
 		ShipHullSpecAPI hull = previewHull("root", Map.of(
 				"left", previewSlot("left", "module", new Vector2f(0f, 60f), 0f),
 				"right", previewSlot("right", "module", new Vector2f(0f, -60f), 0f)), Map.of(), null, false);
@@ -488,20 +500,20 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 		if (entry.equals("catalog")) {
 			BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 			store.reload();
-			var pin = store.saveVariant("Example", variant.getApi());
-			var page = page(store, Runnable::run, (description, action) -> {}, () -> {});
+			BattleNext_PinnedVariantModel pin = store.saveVariant("Example", variant.getApi());
+			BattleNext_PinnedVariantPage page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 			page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 			page.buttonPressed("pin:" + pin.getSourcePath());
 			details = (BattleNext_VariantDetails) getField(getField(page, "editor"), "details");
 			refresh = page::refreshContent;
 			close = page::close;
 		} else if (entry.equals("campaign")) {
-			var display = open(variant, new BattleNext_PinnedVariantStore(), 1000);
+			BattleNext_LunaPinnedVariantPanel display = open(variant, new BattleNext_PinnedVariantStore(), 1000);
 			details = (BattleNext_VariantDetails) getField(display, "details");
 			refresh = () -> display.buttonPressed("pin_save");
 			close = () -> {
 				try {
-					var method = display.getClass().getDeclaredMethod("close");
+					Method method = display.getClass().getDeclaredMethod("close");
 					method.setAccessible(true);
 					method.invoke(display);
 				} catch (ReflectiveOperationException exception) {
@@ -533,9 +545,9 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 			for (String mode : List.of("ALTERNATING", "LINKED")) {
 				snapshot.getJSONArray("weaponGroups").getJSONObject(0).put("mode", mode);
 				details.refreshContent();
-				var currentGroup = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
-				var header = (CustomPanelAPI) children.get(currentGroup).get(0);
-				var sprite = (SpriteAPI) getField(plugins.get(header), "primarySprite");
+				CustomPanelAPI currentGroup = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+				CustomPanelAPI header = (CustomPanelAPI) children.get(currentGroup).get(0);
+				SpriteAPI sprite = (SpriteAPI) getField(plugins.get(header), "primarySprite");
 				assertEquals(mode.equals("LINKED") ? "graphics/icons/jump-point.png" : "graphics/icons/jump-point2.png",
 						spritePaths.get(sprite));
 				assertEquals(BattleNext_UiTheme.ACCENT, getField(plugins.get(header), "primaryTint"));
@@ -619,44 +631,45 @@ class BattleNext_VariantPreviewTest extends BattleNext_TestVariantPreviewFixture
 	}
 
 	private void assertConsumerDisplay(BattleNext_VariantDetails details) throws Exception {
-		var group = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
-		var container = (CustomPanelAPI) children.get(group).get(1);
-		var body = (CustomPanelAPI) children.get(container).get(0);
-		var rows = tooltips.get(children.get(body).get(0)).getComponents();
+		CustomPanelAPI group = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+		CustomPanelAPI container = (CustomPanelAPI) children.get(group).get(1);
+		CustomPanelAPI body = (CustomPanelAPI) children.get(container).get(0);
+		List<UIComponentAPI> rows = tooltips.get(children.get(body).get(0)).getComponents();
 		assertEquals(1, rows.size());
-		var row = (CustomPanelAPI) rows.get(0);
+		CustomPanelAPI row = (CustomPanelAPI) rows.get(0);
 		assertEquals(40f, row.getPosition().getHeight());
-		var image = tooltips.get(children.get(row).get(0)).getComponents().get(0);
+		UIComponentAPI image = tooltips.get(children.get(row).get(0)).getComponents().get(0);
 		assertEquals("graphics/laser_turret.png", imagePaths.get(image));
+
 		for (String section : List.of("modules", "wings")) {
-			var tileRow = (CustomPanelAPI) tooltips.get(lists(details).get(section)).getComponents().get(0);
-			var tile = (CustomPanelAPI) children.get(tileRow).get(0);
+			CustomPanelAPI tileRow = (CustomPanelAPI) tooltips.get(lists(details).get(section)).getComponents().get(0);
+			CustomPanelAPI tile = (CustomPanelAPI) children.get(tileRow).get(0);
 			assertEquals(tile.getPosition().getWidth(), tile.getPosition().getHeight());
-			var caption = tooltips.get(children.get(tile).get(0));
-			var name = (LabelAPI) caption.getComponents().get(1);
+			TooltipState caption = tooltips.get(children.get(tile).get(0));
+			LabelAPI name = (LabelAPI) caption.getComponents().get(1);
 			assertEquals(section.equals("modules") ? "Child" : "Wing wing", name.getText());
 			assertEquals(Alignment.MID, labelAlignments.get(name.getPosition()));
-			var hover = tooltip(360f, 0f, false);
+			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(caption.getComponents().get(0)).createTooltip(hover, false, null);
-			var identifier = (LabelAPI) tooltips.get(hover).getComponents().get(1);
+			LabelAPI identifier = (LabelAPI) tooltips.get(hover).getComponents().get(1);
 			assertEquals(section.equals("modules") ? "child" : "wing", identifier.getText());
 			assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(identifier.getPosition()));
 		}
-		var mod = tooltips.get(lists(details).get("plugins")).getComponents().stream()
+		UIComponentAPI mod = tooltips.get(lists(details).get("plugins")).getComponents().stream()
 				.filter(component -> attachedTooltips.containsKey(component))
 				.filter(component -> tooltips.get(children.get((CustomPanelAPI) component).get(0)).getComponents().stream()
 						.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast)
 						.anyMatch(label -> label.getText().equals("Alpha installed"))).findFirst().orElseThrow();
-		var hover = tooltip(360f, 0f, false);
+		TooltipMakerAPI hover = tooltip(360f, 0f, false);
 		assertEquals(360f, attachedTooltips.get(mod).getTooltipWidth(null));
 		attachedTooltips.get(mod).createTooltip(hover, false, null);
-		var text = tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
+		List<String> text = tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
 				.map(LabelAPI.class::cast).map(LabelAPI::getText).toList();
 		assertEquals("installed", text.get(1));
 		assertTrue(text.contains("First: FRIGATE 20%.\nSecond: Literal %s, %d and 50%."));
 		assertTrue(text.contains("Custom post 50%"));
 		assertTrue(text.contains("Enhanced: FRIGATE 30%.\nComplete extra effect 40%."));
-		var description = tooltips.get(hover).getComponents().get(2).getPosition();
+		PositionAPI description = tooltips.get(hover).getComponents().get(2).getPosition();
 		assertEquals("First: %s.\nSecond: %s.", labelPatterns.get(description));
 		assertEquals(List.of(Misc.getHighlightColor()), labelHighlightColors.get(description));
 	}

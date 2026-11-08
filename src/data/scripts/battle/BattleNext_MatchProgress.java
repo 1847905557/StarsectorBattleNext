@@ -25,7 +25,7 @@ public final class BattleNext_MatchProgress {
 	}
 
 	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, BattleNext_Match match) {
-		return tournament(configuration, tournament, match, match.getRounds().size() + 1);
+		return tournament(configuration, tournament, match, match.getRoundsReadonly().size() + 1);
 	}
 
 	public static BattleNext_MatchProgress tournament(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, BattleNext_Match match,

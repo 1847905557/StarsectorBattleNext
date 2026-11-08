@@ -53,10 +53,12 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		keyboardInput.setAccessible(true);
 		previousKeyboardInput = keyboardInput.get(null);
 		keyboardInput.set(null, (IntPredicate) keys::contains);
+
 		settingsValues = BattleNext_Settings.class.getDeclaredField("values");
 		settingsValues.setAccessible(true);
 		previousValues = settingsValues.get(null);
 		settingsValues.set(null, new JSONObject().put("defaultTimeMult", 1f).put("boostTimeMult", 3f));
+
 		ShipAPI player = proxy(ShipAPI.class, (method, args) -> switch (method) {
 			case "isAlive" -> playing;
 			case "isShuttlePod" -> !playing;
@@ -131,13 +133,14 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		AtomicBoolean wheelConsumed = new AtomicBoolean();
 		AtomicBoolean altConsumed = new AtomicBoolean();
 		camera.processInputPreCoreControls(0.1f, List.of(wheel(1, wheelConsumed), alt(altConsumed)));
+
 		assertFalse(external);
 		assertFalse(wheelConsumed.get());
 		assertFalse(altConsumed.get());
 		assertFalse(BattleNext_RttPlugin.acceptsMouseInput(engine));
-		for (int frame = 0; frame < 10; frame++) {
-			camera.advance(0.1f, List.of());
-		}
+
+		for (int frame = 0; frame < 10; frame++) camera.advance(0.1f, List.of());
+
 		assertEquals(previousGeometryWrites, geometryWrites);
 		assertEquals(previousCenterWrites, centerWrites);
 		assertEquals(List.of(true, false), controlChanges);
@@ -153,6 +156,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		toggleCamera();
 		overlays.add(overlay);
 		camera.processInputPreCoreControls(0f, List.of());
+
 		width = 3200f;
 		height = 1600f;
 		center.set(300f, -100f);
@@ -160,6 +164,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		AtomicBoolean consumed = new AtomicBoolean();
 		camera.processInputPreCoreControls(0f, List.of(wheel(1, consumed)));
 		camera.advance(0f, List.of());
+
 		assertTrue(consumed.get());
 		assertTrue(external);
 		assertTrue(BattleNext_RttPlugin.acceptsMouseInput(engine));
@@ -184,6 +189,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		Vector2f savedCenter = new Vector2f(center);
 		float savedWidth = width;
 		float savedHeight = height;
+
 		camera.processInputPreCoreControls(0f, List.of());
 		overlays.add("command");
 		center.set(0f, 0f);
@@ -196,6 +202,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			center.set(frame * 10f, -frame * 10f);
 			camera.advance(0f, List.of());
 		}
+
 		overlays.clear();
 		center.set(0f, 0f);
 		if (resumeInAdvance) {
@@ -203,6 +210,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		} else {
 			camera.processInputPreCoreControls(0f, List.of());
 		}
+
 		assertTrue(external);
 		assertEquals(savedWidth, width);
 		assertEquals(savedHeight, height);
@@ -215,12 +223,14 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void advanceUsesOwnedCenterWhenNativeViewChangesOnTheClosingFrame() {
+
 		center.set(1000f, -500f);
 		toggleCamera();
 		overlays.add("command");
 		camera.advance(0f, List.of());
 		overlays.clear();
 		camera.processInputPreCoreControls(0f, List.of());
+
 		center.set(0f, 0f);
 		width = 1600f;
 		height = 900f;
@@ -247,6 +257,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			}
 		}
 		assertFalse(external);
+
 		center.set(-900f, 400f);
 		width = 3200f;
 		height = 1800f;
@@ -284,6 +295,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			float savedWidth = width;
 			float savedHeight = height;
 			Vector2f savedCenter = new Vector2f(center);
+
 			overlays.addAll(List.of("command", "deployment"));
 			camera.processInputPreCoreControls(0f, List.of());
 			int previousWrites = geometryWrites;
@@ -291,6 +303,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			camera.advance(0f, List.of());
 			assertFalse(external);
 			assertEquals(previousWrites, geometryWrites);
+
 			width = 2400f + iteration;
 			height = 1350f + iteration;
 			center.set(iteration, -iteration);
@@ -301,10 +314,12 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 			assertEquals(savedHeight, height);
 			assertEquals(savedCenter.x, center.x);
 			assertEquals(savedCenter.y, center.y);
+
 			camera.advance(0f, List.of());
 			assertEquals(savedCenter.x, center.x);
 			assertEquals(savedCenter.y, center.y);
 		}
+
 		assertEquals(201, controlChanges.size());
 	}
 
@@ -321,9 +336,11 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		camera.processInputPreCoreControls(0f, List.of());
 		camera.advance(0f, List.of());
 		assertTrue(external);
+
 		keys.remove(Keyboard.KEY_RCONTROL);
 		camera.advance(0f, List.of());
 		assertTrue(external);
+
 		toggleCamera();
 		assertFalse(external);
 	}
@@ -335,9 +352,11 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		keys.add(Keyboard.KEY_D);
 		camera.advance(4f, List.of());
 		Vector2f savedCenter = new Vector2f(center);
+
 		overlays.add("command");
 		camera.processInputPreCoreControls(0f, List.of());
 		camera.advance(1f, List.of());
+
 		width = 3200f;
 		height = 1600f;
 		center.set(300f, -100f);
@@ -360,6 +379,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		assertTrue(external);
 		assertTrue(controlChanges.isEmpty());
 		assertFalse(consumed.get());
+
 		external = false;
 		overlays.clear();
 		keys.clear();
@@ -376,6 +396,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		keys.add(Keyboard.KEY_LSHIFT);
 		camera.advance(0f, List.of());
 		assertEquals(3f, timeMult.getModifiedValue());
+
 		playing = true;
 		AtomicBoolean consumed = new AtomicBoolean();
 		camera.processInputPreCoreControls(0f, List.of(wheel(1, consumed)));
@@ -383,6 +404,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		assertFalse(external);
 		assertFalse(consumed.get());
 		assertEquals(1f, timeMult.getModifiedValue());
+
 		playing = false;
 		keys.clear();
 		camera.advance(0f, List.of());
@@ -400,15 +422,13 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		camera.advance(0.1f, List.of());
 		assertTrue(consumed.get());
 		assertTrue(center.x > 0f);
-		for (int step = 0; step < 100; step++) {
-			camera.processInputPreCoreControls(0f, List.of(wheel(1, new AtomicBoolean())));
-		}
+
+		for (int step = 0; step < 100; step++) camera.processInputPreCoreControls(0f, List.of(wheel(1, new AtomicBoolean())));
 		camera.advance(0f, List.of());
 		assertEquals(800f, width);
 		assertEquals(450f, height);
-		for (int step = 0; step < 100; step++) {
-			camera.processInputPreCoreControls(0f, List.of(wheel(-1, new AtomicBoolean())));
-		}
+
+		for (int step = 0; step < 100; step++) camera.processInputPreCoreControls(0f, List.of(wheel(-1, new AtomicBoolean())));
 		camera.advance(0f, List.of());
 		assertEquals(16000f, width);
 		assertEquals(9000f, height);
@@ -435,6 +455,7 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 		camera.advance(0f, List.of());
 		assertEquals(2400f, width);
 		assertEquals(1350f, height);
+
 		combatOver = true;
 		AtomicBoolean consumed = new AtomicBoolean();
 		camera.processInputPreCoreControls(0f, List.of(wheel(1, consumed)));

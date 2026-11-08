@@ -4,8 +4,8 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import checks.project.ProjectRule;
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 import checks.project.support.AstSupport;
 
@@ -19,9 +19,7 @@ public class ColorAllocationRule implements ProjectRule {
 	public List<Violation> check(SourceFile sourceFile, RuleContext context) {
 		List<Violation> violations = new ArrayList<>();
 		for (ObjectCreationExpr creation : sourceFile.unit().findAll(ObjectCreationExpr.class)) {
-			if (!isColorType(creation.getType()) || !hasOnlyLiteralArguments(creation) || AstSupport.isInsideStaticFinalField(creation)) {
-				continue;
-			}
+			if (!isColorType(creation.getType()) || !hasOnlyLiteralArguments(creation) || AstSupport.isInsideStaticFinalField(creation)) continue;
 			violations.add(new Violation(sourceFile.path(), AstSupport.lineOf(creation), NAME,
 					"Do not create literal Color outside static final fields; move this Color to a static final constant."));
 		}

@@ -70,7 +70,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	@ValueSource(ints = {640, 1001})
 	void weaponRowsHaveFixedGeometrySortedSlotsAndCompleteHoverText(int width) throws Exception {
 
-		var details = details(width, List.of("turret", "hardpoint", "broken", "both", "unknown", ""));
+		BattleNext_VariantDetails details = details(width, List.of("turret", "hardpoint", "broken", "both", "unknown", ""));
 		CustomPanelAPI body = groupBody(details);
 		TooltipState state = tooltips.get(children.get(body).get(0));
 		assertEquals(276f, body.getPosition().getHeight());
@@ -114,7 +114,7 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 				assertEquals(bounds.getCenterY(), spriteCenters.get(0)[1]);
 			} else {
 				TooltipState icon = tooltips.get(children.get(row).get(0));
-				var image = icon.getComponents().get(0);
+				UIComponentAPI image = icon.getComponents().get(0);
 				assertEquals(32f, image.getPosition().getWidth());
 				assertEquals(32f, image.getPosition().getHeight());
 				assertEquals(bounds.getCenterY(), image.getPosition().getCenterY());
@@ -136,27 +136,28 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	@ParameterizedTest
 	@ValueSource(strings = {"broken", "unknown"})
 	void reportAndVariantSelectTheSameWorkingWeaponImage(String id) throws Exception {
-		var details = details(1000, List.of(id));
-		var variantRow = (CustomPanelAPI) tooltips.get(children.get(groupBody(details)).get(0)).getComponents().get(0);
-		var model = new BattleNext_BattleReportModel();
-		var member = new BattleNext_MemberReport("parent_variant", "parent", "Parent");
+
+		BattleNext_VariantDetails details = details(1000, List.of(id));
+		CustomPanelAPI variantRow = (CustomPanelAPI) tooltips.get(children.get(groupBody(details)).get(0)).getComponents().get(0);
+		BattleNext_BattleReportModel model = new BattleNext_BattleReportModel();
+		BattleNext_MemberReport member = new BattleNext_MemberReport("parent_variant", "parent", "Parent");
 		member.addDamageDealt("weapon", id, 1d, 2d, 3d, 4d);
 		model.addPlayerMember(member);
 		AtomicReference<BattleNext_ReportDetails> owner = new AtomicReference<>();
-		var report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(model),
+		BattleNext_ReportDetails report = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(model),
 				() -> owner.get().refreshContent());
 		owner.set(report);
-		var body = panel(600f, 400f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI body = panel(600f, 400f, new BaseCustomUIPanelPlugin());
 		report.attach(body);
 		report.buttonPressed("member:0");
-		var reportRow = plugins.keySet().stream().filter(panel -> plugins.get(panel).getClass().getSimpleName().equals("SourceRowPlugin"))
+		CustomPanelAPI reportRow = plugins.keySet().stream().filter(panel -> plugins.get(panel).getClass().getSimpleName().equals("SourceRowPlugin"))
 				.findFirst().orElseThrow();
 		boolean missing = id.equals("unknown");
 		assertEquals(missing, getField(plugins.get(variantRow), "missingIcon"));
 		assertEquals(missing, getField(plugins.get(reportRow), "missingIcon"));
 		if (!missing) {
-			var variantImage = tooltips.get(children.get(variantRow).get(0)).getComponents().get(0);
-			var reportImage = tooltips.get(children.get(reportRow).get(0)).getComponents().get(0);
+			UIComponentAPI variantImage = tooltips.get(children.get(variantRow).get(0)).getComponents().get(0);
+			UIComponentAPI reportImage = tooltips.get(children.get(reportRow).get(0)).getComponents().get(0);
 			assertEquals("graphics/broken_hardpoint.png", imagePaths.get(variantImage));
 			assertEquals("graphics/broken_hardpoint.png", imagePaths.get(reportImage));
 			assertEquals(32f, reportImage.getPosition().getHeight());
@@ -169,9 +170,9 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	@ParameterizedTest
 	@ValueSource(ints = {0, 1, 4})
 	void expandedBodyHeightTracksFixedRowsAndEmptyGroupPrompt(int count) throws Exception {
-		var ids = Collections.nCopies(count, "turret");
-		var details = details(1000, ids);
-		var body = groupBody(details);
+		List<String> ids = Collections.nCopies(count, "turret");
+		BattleNext_VariantDetails details = details(1000, ids);
+		CustomPanelAPI body = groupBody(details);
 		assertEquals(count == 0 ? 31f : 16f + count * 40f + (count - 1) * 4f,
 				body.getPosition().getHeight());
 		if (count == 0) assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_none")));
@@ -180,19 +181,21 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 
 	@Test
 	void imageFailuresAndRepeatedRefreshKeepGroupStateAndScrollOffsets() throws Exception {
+
 		List<String> ids = new ArrayList<>(Collections.nCopies(12, "turret"));
 		ids.set(0, "broken");
-		var details = details(640, ids);
+		BattleNext_VariantDetails details = details(640, ids);
 		int frameCount = children.get(details.getPanel()).size();
 		lists(details).get("groups").getExternalScroller().setYOffset(90f);
 		for (int cycle = 0; cycle < 3; cycle++) {
 			details.refreshContent();
 			assertEquals(Set.of(0), getField(details, "expanded"));
 			assertEquals(90f, lists(details).get("groups").getExternalScroller().getYOffset());
-			var content = tooltips.get(children.get(groupBody(details)).get(0));
+			TooltipState content = tooltips.get(children.get(groupBody(details)).get(0));
 			assertEquals(12, content.getComponents().size());
 			assertEquals(frameCount, children.get(details.getPanel()).size());
 		}
+
 		((Set<Integer>) getField(details, "expanded")).clear();
 		details.refreshContent();
 		((Set<Integer>) getField(details, "expanded")).add(0);
@@ -202,14 +205,14 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	}
 
 	private BattleNext_VariantDetails details(int width, List<String> ids) throws Exception {
-		var json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
-		var weapons = new JSONObject();
+		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
+		JSONObject weapons = new JSONObject();
 		for (int index = ids.size() - 1; index >= 0; index--) {
 			weapons.put("slot_" + index, ids.get(index));
 		}
 		json.put("weaponGroups", new JSONArray().put(new JSONObject().put("mode", "LINKED")
 				.put("autofire", true).put("weapons", weapons)));
-		var details = new BattleNext_VariantDetails(() -> {});
+		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		((Set<Integer>) getField(details, "expanded")).add(0);
 		details.setVariantJson(json);
 		details.attach(panel(width, 601f, new BaseCustomUIPanelPlugin()));
@@ -217,8 +220,8 @@ class BattleNext_VariantWeaponRowsIntegrationTest extends BattleNext_TestVariant
 	}
 
 	private CustomPanelAPI groupBody(BattleNext_VariantDetails details) throws Exception {
-		var root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
-		var container = (CustomPanelAPI) children.get(root).get(1);
+		CustomPanelAPI root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+		CustomPanelAPI container = (CustomPanelAPI) children.get(root).get(1);
 		return (CustomPanelAPI) children.get(container).get(0);
 	}
 

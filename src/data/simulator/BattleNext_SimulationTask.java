@@ -9,7 +9,9 @@ import java.util.List;
 
 public class BattleNext_SimulationTask {
 
-	public enum State { QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED, PAUSED }
+	public enum State {
+		QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED, PAUSED
+	}
 
 	private final BattleNext_SimulationRequest request;
 	private final BattleNext_SimulatorService service;
@@ -36,7 +38,6 @@ public class BattleNext_SimulationTask {
 		this.service = service;
 	}
 
-
 	public BattleNext_SimulationRequest getRequest() {
 		return request;
 	}
@@ -49,7 +50,9 @@ public class BattleNext_SimulationTask {
 		return version;
 	}
 
-	public record Summary(String id, String sourceTournamentId, long startedAt, long version, State state, Metrics metrics) { }
+	public record Summary(String id, String sourceTournamentId, long startedAt, long version, State state, Metrics metrics) {
+
+	}
 
 	public synchronized Summary getSummary() {
 		Summary current = summary;
@@ -62,13 +65,15 @@ public class BattleNext_SimulationTask {
 		return current;
 	}
 
-	public record Metrics(float simulationSeconds, long executionNanos, long steps, long peakHeapBytes) { }
+	public record Metrics(float simulationSeconds, long executionNanos, long steps, long peakHeapBytes) {
+
+	}
 
 	public synchronized Metrics getMetrics() {
 		return new Metrics(simulationSeconds, executionNanos, steps, peakHeapBytes);
 	}
 
-	public synchronized List<BattleNext_SimulationResult> getRoundResults() {
+	public synchronized List<BattleNext_SimulationResult> getRoundResultsCopy() {
 		return List.copyOf(rounds);
 	}
 
@@ -152,7 +157,7 @@ public class BattleNext_SimulationTask {
 		importError = "";
 	}
 
-	public synchronized List<State> getStateHistory() {
+	public synchronized List<State> getStateHistoryCopy() {
 		return List.copyOf(history);
 	}
 

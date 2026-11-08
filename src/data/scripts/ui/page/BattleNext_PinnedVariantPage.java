@@ -1,6 +1,7 @@
 package data.scripts.ui.page;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
@@ -17,6 +18,7 @@ import java.util.function.Consumer;
 public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private final BattleNext_PinnedVariantStore store;
 	private final BattleNext_PinnedVariantEditor editor;
 
@@ -68,17 +70,17 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 			addListItem(listContent, (entry.error().isEmpty() ? "" : variantStrings.get("error_marker") + " ")
 					+ entry.name(), "pin:" + entry.path(), new BaseTooltipCreator() {
 				@Override
-				public float getTooltipWidth(Object ignored) {
+				public float getTooltipWidth(Object tooltipParam) {
 					return 400f;
 				}
 
 				@Override
-				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					tooltip.addTitle(entry.name());
 					BattleNext_PageLayout.addMutedIdLine(tooltip, entry.pinId(), 5f);
 					String hull = entry.hullId();
 					try {
-						var spec = Global.getSettings().getHullSpec(hull);
+						ShipHullSpecAPI spec = Global.getSettings().getHullSpec(hull);
 						if (spec != null) hull = spec.getHullName();
 					} catch (RuntimeException exception) {
 						hull += " / " + exception;

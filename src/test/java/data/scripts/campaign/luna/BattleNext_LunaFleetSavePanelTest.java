@@ -95,7 +95,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		assertTrue(name.hasFocus());
 		assertEquals("Frozen fleet", name.getText());
 		assertEquals(Set.of(1), getField(display, "expandedMembers"));
-		assertEquals(42, store.getAll().get(0).getVariants().get(0).toJson().getInt("fluxVents"));
+		assertEquals(42, store.getAllCopy().get(0).getVariantsCopy().get(0).toJson().getInt("fluxVents"));
 		membersContent(display).getExternalScroller().setYOffset(Float.MAX_VALUE);
 		display.buttonPressed(1);
 		TooltipMakerAPI list = membersContent(display);
@@ -216,11 +216,12 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		((BattleNext_TextField) getField(display, "name")).setText("  " + fullName + "  ");
 		display.buttonPressed("fleet_capture_save");
 		display.buttonPressed("fleet_capture_save");
-		assertEquals(1, store.getAll().size());
-		assertEquals(id, store.getAll().get(0).getId());
-		assertEquals(fullName, store.getAll().get(0).getName());
-		assertEquals("Player", store.getAll().get(0).getAuthor());
-		assertEquals(42, store.getAll().get(0).getVariants().get(0).toJson().getInt("fluxVents"));
+		assertEquals(1, store.getAllCopy().size());
+		BattleNext_FleetModel saved = store.getAllCopy().get(0);
+		assertEquals(id, saved.getId());
+		assertEquals(fullName, saved.getName());
+		assertEquals("Player", saved.getAuthor());
+		assertEquals(42, saved.getVariantsCopy().get(0).toJson().getInt("fluxVents"));
 		assertFalse(buttons.get("fleet_capture_save").get());
 		assertEquals(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_saved"), buttonLabels.get("fleet_capture_save"));
 		assertEquals("  " + fullName + "  ", ((BattleNext_TextField) getField(display, "name")).getText());
@@ -233,8 +234,8 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		BattleNext_LunaFleetSavePanel second = open(store, width);
 		((BattleNext_TextField) getField(second, "name")).setText(fullName);
 		second.buttonPressed("fleet_capture_save");
-		assertEquals(2, store.getAll().size());
-		assertTrue(store.getAll().stream().allMatch(snapshot -> fullName.equals(snapshot.getName())));
+		assertEquals(2, store.getAllCopy().size());
+		assertTrue(store.getAllCopy().stream().allMatch(snapshot -> fullName.equals(snapshot.getName())));
 		assertNotEquals(id, ((BattleNext_FleetModel) getField(second, "snapshot")).getId());
 		second.close();
 	}
@@ -244,6 +245,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		for (int index = 0; index < 20; index++) {
 			fleetMembers.add(member("Long ship name ".repeat(12) + index, otherVariant.getApi(), null, false));
 		}
+
 		shortenLabels = true;
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		BattleNext_LunaFleetSavePanel display = open(store, 320);
@@ -258,6 +260,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		PositionAPI field = name.getPosition();
 		float fieldY = field.getY();
 		float buttonY = buttonPositions.get("fleet_capture_save").getY();
+
 		display.buttonPressed(5);
 		TooltipMakerAPI list = membersContent(display);
 		TooltipState state = tooltips.get(list);
@@ -285,6 +288,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 	@ParameterizedTest
 	@ValueSource(strings = {"load", "write"})
 	void saveFailureRetainsNameSnapshotAndIdentityForRetry(String failure) throws Exception {
+
 		fleetMembers.subList(1, fleetMembers.size()).clear();
 		FailingFleetStore store = new FailingFleetStore();
 		store.setFailLoad("load".equals(failure));
@@ -296,7 +300,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		display.buttonPressed(0);
 		membersContent(display).getExternalScroller().setYOffset(80f);
 		display.buttonPressed("fleet_capture_save");
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
 		assertSame(snapshot, getField(display, "snapshot"));
 		assertEquals("Retry fleet", ((BattleNext_TextField) getField(display, "name")).getText());
 		assertTrue(buttons.get("fleet_capture_save").get());
@@ -304,19 +308,21 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		assertEquals(80f, membersContent(display).getExternalScroller().getYOffset());
 		assertTrue(((String) getField(display, "status")).contains("Injected fleet " + failure + " failure"));
 		assertFalse(Files.exists(directory.resolve("tournament/" + id + "/fleet_data.json")));
+
 		store.setFailLoad(false);
 		store.setFailWrite(false);
 		display.buttonPressed("fleet_capture_save");
-		assertEquals(1, store.getAll().size());
-		assertEquals(id, store.getAll().get(0).getId());
-		assertEquals("Retry fleet", store.getAll().get(0).getName());
+		assertEquals(1, store.getAllCopy().size());
+		BattleNext_FleetModel saved = store.getAllCopy().get(0);
+		assertEquals(id, saved.getId());
+		assertEquals("Retry fleet", saved.getName());
 		assertEquals(Set.of(0), getField(display, "expandedMembers"));
 		assertEquals(80f, membersContent(display).getExternalScroller().getYOffset());
-		assertEquals(42, store.getAll().get(0).getVariants().get(0).toJson().getInt("fluxVents"));
+		assertEquals(42, saved.getVariantsCopy().get(0).toJson().getInt("fluxVents"));
 		assertTrue(Files.exists(directory.resolve("tournament/" + id + "/fleet_data.json")));
 		assertJsonEquals(snapshot.toJson(), new JSONObject(Files.readString(directory.resolve(snapshot.getSourcePath()))));
-		assertJsonEquals(snapshot.getVariants().get(0).toJson(), new JSONObject(Files.readString(
-				directory.resolve("tournament/" + id + "/" + snapshot.getVariants().get(0).getId() + ".variant"))));
+		assertJsonEquals(snapshot.getVariantsCopy().get(0).toJson(), new JSONObject(Files.readString(
+				directory.resolve("tournament/" + id + "/" + snapshot.getVariantsCopy().get(0).getId() + ".variant"))));
 		display.close();
 	}
 
@@ -326,6 +332,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		if ("cycle".equals(failure) || "missing".equals(failure)) {
 			activeVariant.getApi().setModuleVariant("module", "cycle".equals(failure) ? activeVariant.getApi() : null);
 		}
+
 		failBuild = "hull".equals(failure);
 		BattleNext_LunaFleetSavePanel display = new BattleNext_LunaFleetSavePanel(() -> {});
 		display.open(selected, activeVariant.getApi(), "context".equals(failure) ? "Specific context error" : "");
@@ -341,6 +348,7 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 			default -> "Unknown hull: parent";
 		};
 		assertTrue(((String) getField(display, "status")).contains(reason));
+
 		display.buttonPressed("fleet_capture_save");
 		assertFalse(Files.exists(directory.resolve("tournament")));
 		display.close();

@@ -1,7 +1,5 @@
 package checks.integrity.support;
 
-import checks.integrity.model.RuleRegistry;
-
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -17,12 +15,17 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 public final class ProjectRuleRegistryReader {
-	private ProjectRuleRegistryReader() {
+	public record Registry(Set<String> ruleClasses, Map<String, String> classRuleNames) {
+
 	}
 
-	public static RuleRegistry read(Path rulesDir) throws IOException {
+	private ProjectRuleRegistryReader() {
+
+	}
+
+	public static Registry read(Path rulesDir) throws IOException {
 		Set<String> ruleClasses = listRuleClasses(rulesDir);
-		return new RuleRegistry(ruleClasses, readRuleNames(ruleClasses));
+		return new Registry(ruleClasses, readRuleNames(ruleClasses));
 	}
 
 	public static Set<String> listRuleClasses(Path rulesDir) throws IOException {

@@ -4,6 +4,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
 import data.model.quickbattle.BattleNext_QuickBattleModel;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
@@ -22,7 +23,9 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		NUMBER, PLAYER, ENEMY, MAP, SCALE, STATUS, ENABLED, ACTIONS
 	}
 
-	public record Action(String label, Object id, boolean enabled) { }
+	public record Action(String label, Object id, boolean enabled) {
+
+	}
 
 	public record Presentation(List<Column> columns, List<Float> columnShares, boolean editable,
 			Function<Row, Action> action, Consumer<Object> onAction) {
@@ -165,11 +168,13 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+
 		for (int index = 0; index < entries.size(); index++) rows.add(new Row(index, identity.apply(entries.get(index)), entries.get(index)));
 
 		CustomPanelAPI tablePanel = ownPanel(panel, panel.createCustomPanel(panel.getPosition().getWidth(),
 				panel.getPosition().getHeight(), panel.getPlugin()));
 		panel.addComponent(tablePanel).inTL(0f, 0f);
+
 		String[] headers = presentation.columns().stream().map(column -> switch (column) {
 			case NUMBER -> "#";
 			case PLAYER -> battleStrings.get("player_fleet_id_label");
@@ -185,6 +190,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		for (int index = 0; index < shares.length; index++) {
 			shares[index] = (float) (presentation.columnShares().get(index) / total);
 		}
+
 		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), headers, shares, entries.size(), this::addRow);
 		tableWidget.virtualize(this::releaseRow, index -> rows.get(index).hasFocus());
 		tableWidget.attach(tablePanel);
@@ -200,6 +206,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		for (int column = 0; column < cells.length; column++) {
 			columns.put(presentation.columns().get(column), cells[column]);
 		}
+
 		CustomPanelAPI rowPanel = panel.createCustomPanel(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, new RowActionPlugin(row));
 		new UIRect(0f, 0f, rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT).addBorder(rowPanel,
 				BattleNext_UiTheme.PANEL, BattleNext_PageLayout.TABLE_ROW_BORDER_THICKNESS);
@@ -207,6 +214,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			BattleNext_PageLayout.cellLabel(rowPanel, columns.get(Column.NUMBER), Integer.toString(index + 1),
 					true, null, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 		}
+
 		if (entry.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
 			UIRect first = columns.get(Column.PLAYER);
 			UIRect last = columns.get(Column.SCALE);
@@ -218,24 +226,26 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			row.mapField = addField(row, "map", rowPanel, columns.get(Column.MAP), row.mapText, viewport);
 			row.mapScaleField = addField(row, "scale", rowPanel, columns.get(Column.SCALE), row.scaleText, viewport);
 		}
+
 		row.statusLabel = BattleNext_PageLayout.cellLabel(rowPanel, columns.get(Column.STATUS), strings.get("unavailable"), true,
 				new BaseTooltipCreator() {
 					@Override
-					public float getTooltipWidth(Object ignored) {
+					public float getTooltipWidth(Object tooltipParam) {
 						return 260f;
 					}
 
 					@Override
-					public void createTooltip(TooltipMakerAPI target, boolean expanded, Object ignored) {
+					public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 						List<String> reasons = validation.apply(row);
 						if (reasons.isEmpty()) {
-							target.addPara(strings.get("available"), 0f);
+							tooltip.addPara(strings.get("available"), 0f);
 						}
 						for (String reason : reasons) {
-							target.addPara(reason, 4f);
+							tooltip.addPara(reason, 4f);
 						}
 					}
 				}, TooltipMakerAPI.TooltipLocation.LEFT, presentation.editable());
+
 		if (columns.containsKey(Column.ENABLED)) {
 			UIRect bounds = BattleNext_PageLayout.editorCheckboxCell(columns.get(Column.ENABLED));
 			TooltipMakerAPI checkboxContent = rowPanel.createUIElement(bounds.getWidth(), bounds.getHeight(), false);
@@ -245,34 +255,41 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			row.enabledCheckbox.setChecked(row.enabled);
 			row.enabledCheckbox.setEnabled(presentation.editable() && row.rawField == null);
 			checkboxContent.setHeightSoFar(bounds.getHeight());
+
 			rowPanel.addUIElement(checkboxContent).inTL(bounds.getX(), bounds.getY());
 		}
+
 		Action action = presentation.action().apply(row);
 		row.actionButton = BattleNext_PageLayout.fixedButton(rowPanel, BattleNext_PageLayout.editorActions(columns.get(Column.ACTIONS), 1)[0],
 				action.label(), action.id(), CutStyle.ALL, false);
 		row.actionButton.setEnabled(action.enabled());
+
 		content.addCustom(rowPanel, 0f);
 	}
 
 	private void releaseRow(int index) {
+
 		Row row = rows.get(index);
 		row.mapText = row.text(Column.MAP);
 		row.scaleText = row.text(Column.SCALE);
 		row.rawText = row.rawText();
 		row.enabled = row.isEnabled();
 		for (Column column : List.of(Column.PLAYER, Column.ENEMY)) row.fleets.put(column, row.getFleetId(column));
+
 		for (BattleNext_OptionField field : row.fleetFields.values()) {
 			rememberField((BattleNext_TextField) field.getField());
 			fields.values().remove(field.getField());
 			field.close();
 		}
 		row.fleetFields.clear();
+
 		for (BattleNext_TextField field : new BattleNext_TextField[]{row.mapField, row.mapScaleField, row.rawField}) {
 			if (field == null) continue;
 			rememberField(field);
 			fields.values().remove(field);
 			field.close();
 		}
+
 		row.mapField = null;
 		row.mapScaleField = null;
 		row.rawField = null;
@@ -282,7 +299,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	}
 
 	private void rememberField(BattleNext_TextField field) {
-		for (var entry : fields.entrySet()) {
+		for (Map.Entry<Object, BattleNext_TextField> entry : fields.entrySet()) {
 			if (entry.getValue() == field) savedInputs.put(entry.getKey(), field.captureEditState());
 		}
 	}
@@ -292,40 +309,45 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		String fleetId = row.getFleetId(column);
 		BaseTooltipCreator preview = new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return fleetSource.getTooltipWidth();
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI target, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				String id = row.getFleetId(column);
 				if (id.isEmpty()) {
-					target.addPara(strings.get("unavailable"), 0f);
+					tooltip.addPara(strings.get("unavailable"), 0f);
 					return;
 				}
-				var selectedFleet = fleetStore.get(id);
-				fleetSource.createTooltip(target, new BattleNext_OptionPicker.OptionChoice(id, selectedFleet == null ? id : selectedFleet.getName()));
+				BattleNext_FleetModel selectedFleet = fleetStore.get(id);
+				fleetSource.createTooltip(tooltip, new BattleNext_OptionPicker.OptionChoice(id, selectedFleet == null ? id : selectedFleet.getName()));
 			}
 		};
+
 		if (presentation.editable()) {
 			UIRect bounds = BattleNext_PageLayout.editorFieldCell(cell);
 			TooltipMakerAPI content = owner.createUIElement(bounds.getWidth(), bounds.getHeight(), false);
 			BattleNext_OptionField option = new BattleNext_OptionField(inputRouter, overlayHost, bounds.getWidth(),
 					fleetSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, viewport);
 			option.attach(content, owner);
+
 			BattleNext_TextField field = (BattleNext_TextField) option.getField();
 			field.setText(fleetId);
 			field.setMaxChars(-1);
 			content.getPrev().getPosition().inTL(0f, 0f);
 			content.addTooltipTo(preview, content.getPrev(), TooltipMakerAPI.TooltipLocation.RIGHT, true);
 			content.setHeightSoFar(bounds.getHeight());
+
 			owner.addUIElement(content).inTL(bounds.getX(), bounds.getY());
+
 			row.fleetFields.put(column, option);
 			fields.put(List.of(row.key, column.name()), field);
 			BattleNext_TextField.EditState state = savedInputs.get(List.of(row.key, column.name()));
 			if (state != null) field.restoreEditState(state);
 			return;
 		}
+
 		row.fleetLabels.put(column, BattleNext_PageLayout.cellLabel(owner, cell, fleetId, true,
 				preview, TooltipMakerAPI.TooltipLocation.RIGHT, true));
 	}
@@ -339,7 +361,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		return field;
 	}
 
-	public List<Row> getRows() {
+	public List<Row> getRowsReadonly() {
 		return Collections.unmodifiableList(rows);
 	}
 
@@ -348,6 +370,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	}
 
 	public ViewState captureState() {
+
 		Map<Object, Boolean> enabled = new LinkedHashMap<>();
 		Map<Object, Map<Column, String>> fleets = new LinkedHashMap<>();
 		for (Row row : rows) {
@@ -356,14 +379,17 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			}
 			enabled.put(row.key, row.isEnabled());
 		}
+
 		Map<Object, BattleNext_TextField.EditState> inputs = new LinkedHashMap<>(savedInputs);
 		inputs.putAll(inputRouter.getSession().captureFields(fields));
 		return new ViewState(getContent().getExternalScroller().getYOffset(), inputs, fleets, enabled);
 	}
 
 	public void restoreState(ViewState state) {
+
 		savedInputs.putAll(state.fields());
 		inputRouter.getSession().restoreFields(fields, state.fields(), presentation.editable());
+
 		for (Row row : rows) {
 			if (presentation.editable() && !row.isRaw() && state.fleets().containsKey(row.key)) {
 				row.fleets.putAll(state.fleets().get(row.key));
@@ -376,6 +402,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			if (raw != null) row.rawText = raw.text();
 			if (state.enabled().containsKey(row.key)) row.setEnabled(state.enabled().get(row.key));
 		}
+
 		getContent().getExternalScroller().setYOffset(state.scroll());
 		refreshRowStatuses();
 	}
@@ -383,6 +410,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	public void refreshRowStatuses() {
 		for (Row row : rows) {
 			if (row.statusLabel == null) continue;
+
 			boolean raw = row.rawField != null;
 			List<String> reasons = validation.apply(row);
 			row.statusLabel.setText(raw ? battleStrings.get("raw_row_status") : strings.get(reasons.isEmpty() ? "available" : "unavailable"));
@@ -429,6 +457,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	@Override
 	protected void clearContent() {
 		if (tableWidget != null) tableWidget.close();
+
 		for (Row row : rows) {
 			for (BattleNext_OptionField field : row.fleetFields.values()) {
 				fields.values().remove(field.getField());
@@ -438,6 +467,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		for (BattleNext_TextField field : fields.values()) {
 			field.close();
 		}
+
 		fields.clear();
 		savedInputs.clear();
 		rows.clear();

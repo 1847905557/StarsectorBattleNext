@@ -11,7 +11,11 @@ import java.util.*;
 
 public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
-	public enum EditRejectionReason { DUPLICATE_ID, SOURCE_UNAVAILABLE, DUPLICATE_FOLDER }
+	public enum EditRejectionReason {
+		DUPLICATE_ID,
+		SOURCE_UNAVAILABLE,
+		DUPLICATE_FOLDER
+	}
 
 	public static class EditRejection extends IllegalStateException {
 		private final EditRejectionReason reason;
@@ -42,6 +46,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	}
 
 	public void reload() throws IOException, JSONException {
+
 		BattleNext_Logger.operationStarted(getClass(), "catalog.reload",
 				() -> BattleNext_Logger.fields().put("previous_entries", entries.size()).build());
 		try {
@@ -49,6 +54,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			List<T> all = new ArrayList<>();
 			List<LoadError> failures = new ArrayList<>();
 			List<LoadError> inputs = new ArrayList<>();
+
 			for (BattleNext_BaseLoader<T> loader : sources()) {
 				BattleNext_Logger.operationStarted(loader.getClass(), "catalog.source.load",
 						() -> BattleNext_Logger.fields().put("store", getClass()).build());
@@ -61,20 +67,21 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 					failures.add(new LoadError("", -1, "", "", exception.toString()));
 					continue;
 				}
+
 				BattleNext_Logger.operationSucceeded(loader.getClass(), "catalog.source.load",
 						() -> BattleNext_Logger.fields().put("store", getClass()).put("models", models.size()).build());
 				all.addAll(models);
-				failures.addAll(loader.getErrors());
-				inputs.addAll(loader.getInputs());
+				failures.addAll(loader.getErrorsCopy());
+				inputs.addAll(loader.getInputsCopy());
 			}
+
 			Map<String, Integer> counts = new HashMap<>();
-			for (T model : all) {
-				counts.merge(model.getId(), 1, Integer::sum);
-			}
+			for (T model : all) counts.merge(model.getId(), 1, Integer::sum);
 			for (LoadError failure : failures) {
 				if (failure.id().isEmpty()) continue;
 				counts.merge(failure.id(), 1, Integer::sum);
 			}
+
 			for (T model : all) {
 				if (counts.get(model.getId()) > 1) {
 					LoadError input = inputs.stream().filter(value -> value.path().equals(model.getSourcePath())).findFirst()
@@ -84,10 +91,11 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 				}
 				mergeLoaded(loaded, model);
 			}
+
 			errors = List.copyOf(failures);
 			loadState();
 			replaceEntries(loaded);
-			succeedLoad();
+			loadError = "";
 			BattleNext_Logger.operationSucceeded(getClass(), "catalog.reload",
 					() -> BattleNext_Logger.fields().put("entries", entries.size()).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
@@ -107,7 +115,11 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			if (!BattleNext_EntryId.isValidPathSegment(model.getId())) {
 				throw new IllegalArgumentException("Entry id is required");
 			}
-			if (model instanceof BattleNext_JsonModel json && !json.getLoadErrors().isEmpty()) throw new IllegalArgumentException("Entry is incomplete: " + json.getLoadErrors());
+			if (model instanceof BattleNext_JsonModel json) {
+				List<String> loadErrors = json.getLoadErrorsCopy();
+				if (!loadErrors.isEmpty()) throw new IllegalArgumentException("Entry is incomplete: " + loadErrors);
+			}
+
 			boolean created = !entries.containsKey(model.getId());
 			register(model, saver().save(model));
 			BattleNext_Logger.operationSucceeded(getClass(), "store.save",
@@ -125,22 +137,26 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 	public void saveEdited(T model, String sourceId) throws IOException, JSONException {
 		List<EditRejection> rejections = editRejections(model, sourceId);
 		if (!rejections.isEmpty()) throw rejections.get(0);
+
 		save(model);
 	}
 
 	public List<EditRejection> editRejections(T model, String sourceId) {
 		requireLoaded();
+
 		List<EditRejection> rejections = new ArrayList<>();
-		for (T existing : getAll()) {
+		for (T existing : getAllCopy()) {
 			if (BattleNext_EntryId.sameFileName(model.getId(), existing.getId()) && !existing.getId().equals(sourceId)) {
 				rejections.add(new EditRejection(EditRejectionReason.DUPLICATE_ID, model.getId()));
 			}
 		}
+
 		T source = get(sourceId);
 		if (source != null && BattleNext_EntryId.sameFileName(model.getId(), sourceId)
 				&& !isManaged(source) && source.getSourceType() != BattleNext_LoadSource.CREATED) {
 			rejections.add(new EditRejection(EditRejectionReason.SOURCE_UNAVAILABLE, sourceId));
 		}
+
 		return List.copyOf(rejections);
 	}
 
@@ -154,6 +170,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			if (!isDeletable(model)) {
 				throw new IllegalStateException("Entry is not deletable: " + id);
 			}
+
 			saver().delete(model);
 			removeEntry(id);
 			onEntryRemoved(id);
@@ -178,7 +195,8 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public final void publish(BattleNext_BaseStore<T> prepared) {
 		Map<String, T> loaded = new LinkedHashMap<>();
-		for (T entry : prepared.getAll()) loaded.put(entry.getId(), entry);
+		for (T entry : prepared.getAllCopy()) loaded.put(entry.getId(), entry);
+
 		errors = prepared.getErrors();
 		loadError = prepared.getLoadError();
 		replaceEntries(loaded);
@@ -200,7 +218,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 		return entries.get(id);
 	}
 
-	public List<T> getAll() {
+	public List<T> getAllCopy() {
 		return List.copyOf(entries.values());
 	}
 
@@ -245,10 +263,6 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	protected final void removeSource(String path) {
 		errors = errors.stream().filter(error -> !error.path().equals(path)).toList();
-	}
-
-	private void succeedLoad() {
-		loadError = "";
 	}
 
 	private void recordFailure(Exception exception) {

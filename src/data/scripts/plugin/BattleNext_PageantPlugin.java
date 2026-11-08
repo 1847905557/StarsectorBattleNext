@@ -6,6 +6,7 @@ import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatEngineLayers;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
 import com.fs.starfarer.api.util.Misc;
@@ -77,10 +78,12 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			entity.getMaterialData().setColorAlpha(0f);
 			sprites.put(key, entity);
 		}
+
 		playerText = nameText(playerName, Misc.getPositiveHighlightColor(), 320f, 48f);
 		enemyText = nameText(enemyName, Misc.getNegativeHighlightColor(), 320f, 48f);
 		playerSidebarText = nameText(playerName, Misc.getPositiveHighlightColor(), 156f, 24f);
 		enemySidebarText = nameText(enemyName, Misc.getNegativeHighlightColor(), 156f, 24f);
+
 		drawText = BattleNext_FontData.getOrbitronBold();
 		drawText.setText(BattleNext_I18nSection.getInstance("Combat", "BattleNext_combat_").get("draw"));
 		drawText.setFontSize(90f);
@@ -166,8 +169,8 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void drawSidebar(float height, float alpha) {
-		drawPlate("plateSidebarPlayer", 100f, height * 0.5f + 40f, 180f, 40f, alpha);
-		drawPlate("plateSidebarEnemy", 100f, height * 0.5f - 40f, 180f, 40f, alpha);
+		drawSprite("plateSidebarPlayer", 100f, height * 0.5f + 40f, 180f, 40f, alpha);
+		drawSprite("plateSidebarEnemy", 100f, height * 0.5f - 40f, 180f, 40f, alpha);
 		drawName(playerSidebarText, 100f, height * 0.5f + 40f, alpha);
 		drawName(enemySidebarText, 100f, height * 0.5f - 40f, alpha);
 	}
@@ -178,8 +181,8 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			float alpha = elapsed < 1f ? 1f : fade(elapsed - 1f, 0f, 3.2f, 0.2f);
 			float playerX = width * 0.5f + PLATE_WIDTH * 1.2f + offset;
 			float enemyX = width * 0.5f - PLATE_WIDTH * 1.2f - offset;
-			drawPlate("plateOpeningPlayer", playerX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
-			drawPlate("plateOpeningEnemy", enemyX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+			drawSprite("plateOpeningPlayer", playerX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+			drawSprite("plateOpeningEnemy", enemyX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
 			drawName(playerText, playerX, height * 0.5f, alpha);
 			drawName(enemyText, enemyX, height * 0.5f, alpha);
 		}
@@ -196,20 +199,24 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
 	private void renderEnding(float time, float width, float height) {
 		if (time >= END_DURATION) return;
+
 		if (endingStart >= 4.4f && time < 1.5f) {
 			float sidebarAlpha = time <= 0.5f ? 1f : 1.5f - time;
 			drawSidebar(height, sidebarAlpha);
 		}
+
 		if ("draw".equals(endingKey)) {
 			drawText(drawText, width * 0.5f, height * 0.5f, fade(time, 0.25f, 10f, 0.5f));
 			return;
 		}
+
 		BattleNext_FontData.TextObject winnerText = playerWon
 				? playerText : enemyText;
 		float winnerY = height * 0.5f - 50f + time * 5f;
 		float alpha = fade(time, 0.25f, 10f, 1f);
-		drawPlate("plateWinner", width * 0.5f, winnerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+		drawSprite("plateWinner", width * 0.5f, winnerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
 		drawName(winnerText, width * 0.5f, winnerY, alpha);
+
 		float bannerTime = time;
 		String key = "shame".equals(endingKey) ? "BattleNext_shame" : "BattleNext_win";
 		float centerY = height * 0.5f + ("shame".equals(endingKey) ? 0f : 120f - bannerTime * 3f);
@@ -229,10 +236,10 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 		if ("draw".equals(report.getWinner())) return "draw";
 		FleetSide side = "player".equals(report.getWinner()) ? FleetSide.PLAYER : FleetSide.ENEMY;
 		int losses = 0;
-		for (var member : engine.getFleetManager(side).getDisabledCopy()) {
+		for (FleetMemberAPI member : engine.getFleetManager(side).getDisabledCopy()) {
 			if (!member.isFighterWing()) losses++;
 		}
-		for (var member : engine.getFleetManager(side).getDestroyedCopy()) {
+		for (FleetMemberAPI member : engine.getFleetManager(side).getDestroyedCopy()) {
 			if (!member.isFighterWing()) losses++;
 		}
 		return losses == 0 ? "shame" : report.getWinner();
@@ -252,10 +259,6 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			text.setText(shortened + "...");
 		}
 		return text;
-	}
-
-	private void drawPlate(String key, float x, float y, float width, float height, float alpha) {
-		drawSprite(key, x, y, width, height, alpha);
 	}
 
 	private void drawName(BattleNext_FontData.TextObject text, float x, float y, float alpha) {

@@ -26,6 +26,7 @@ class BattleNext_BaseSourceProviderTest {
 
 	@BeforeEach
 	void installSettings() {
+
 		previousSettings = Global.getSettings();
 		previousSector = Global.getSector();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -36,6 +37,7 @@ class BattleNext_BaseSourceProviderTest {
 					case "getInt" -> 1;
 					default -> null;
 				}));
+
 		FactionAPI faction = (FactionAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{FactionAPI.class}, (instance, method, args) -> Color.GRAY);
 		Global.setSector((SectorAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -71,11 +73,15 @@ class BattleNext_BaseSourceProviderTest {
 
 	@Test
 	void descriptionRendersCompleteFirstParagraphBeforeNativeBoundsAreAssigned() {
+
 		List<String> calls = new ArrayList<>();
 		String paragraph = "Shields absorb 50% of damage. " + "Complete %s description. ".repeat(100).strip();
 		TooltipMakerAPI tooltip = (TooltipMakerAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{TooltipMakerAPI.class}, (instance, method, args) -> switch (method.getName()) {
-					case "setParaFontDefault" -> { calls.add("default"); yield null; }
+					case "setParaFontDefault" -> {
+						calls.add("default");
+						yield null;
+					}
 					case "setParaFontColor" -> {
 						assertEquals(BattleNext_UiTheme.TEXT, args[0]);
 						calls.add("color");
@@ -91,6 +97,7 @@ class BattleNext_BaseSourceProviderTest {
 							throw new AssertionError("Native tooltip content is built before its bounds are assigned");
 					default -> null;
 				});
+
 		new TestProvider().renderDescription(tooltip, " \t" + paragraph + "\nSecond paragraph");
 		assertEquals(List.of("default", "color", paragraph), calls);
 	}
@@ -137,7 +144,7 @@ class BattleNext_BaseSourceProviderTest {
 
 		@Override
 		public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-			addHeader(tooltip, option.getLabel(), option.getId());
+			addHeader(tooltip, option.label(), option.id());
 		}
 	}
 }

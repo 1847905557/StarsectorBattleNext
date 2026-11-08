@@ -9,9 +9,9 @@ import java.util.*;
 
 public class BattleNext_MemberReport {
 
-	private String variantId;
-	private String hullId;
-	private String name;
+	private final String variantId;
+	private final String hullId;
+	private final String name;
 	private final List<BattleNext_DamageSourceReport> dealtBySource = new ArrayList<>();
 	private final List<BattleNext_DamageSourceReport> takenBySource = new ArrayList<>();
 	private float finalHullFraction;
@@ -35,14 +35,14 @@ public class BattleNext_MemberReport {
 		report.finalHullFraction = (float)json.optDouble("finalHullFraction", 0d);
 		report.finalCr = (float)json.optDouble("finalCr", 0d);
 		report.status = normalizeStatus(json.optString("status", "alive"));
-		if (!report.loadErrors.isEmpty()) {
-			report.incompleteJson = new JSONObject(json.toString());
-		}
+		if (!report.loadErrors.isEmpty()) report.incompleteJson = new JSONObject(json.toString());
+
 		return report;
 	}
 
 	public JSONObject toJson() throws JSONException {
 		if (incompleteJson != null) return new JSONObject(incompleteJson.toString());
+
 		JSONObject json = new JSONObject();
 		json.put("variantId", variantId);
 		json.put("hullId", hullId);
@@ -52,10 +52,11 @@ public class BattleNext_MemberReport {
 		json.put("finalHullFraction", finalHullFraction);
 		json.put("finalCr", finalCr);
 		json.put("status", status);
+
 		return json;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		return List.copyOf(loadErrors);
 	}
 
@@ -111,11 +112,11 @@ public class BattleNext_MemberReport {
 		return component(takenBySource, 1);
 	}
 
-	public List<BattleNext_DamageSourceReport> getDealtBySource() {
+	public List<BattleNext_DamageSourceReport> getDealtBySourceCopy() {
 		return List.copyOf(dealtBySource);
 	}
 
-	public List<BattleNext_DamageSourceReport> getTakenBySource() {
+	public List<BattleNext_DamageSourceReport> getTakenBySourceCopy() {
 		return List.copyOf(takenBySource);
 	}
 
@@ -165,9 +166,7 @@ public class BattleNext_MemberReport {
 
 	private static double total(List<BattleNext_DamageSourceReport> sources) {
 		double result = 0d;
-		for (BattleNext_DamageSourceReport source : sources) {
-			result += source.getTotal();
-		}
+		for (BattleNext_DamageSourceReport source : sources) result += source.getTotal();
 		return result;
 	}
 
@@ -186,9 +185,7 @@ public class BattleNext_MemberReport {
 
 	private static JSONArray writeSources(List<BattleNext_DamageSourceReport> sources) throws JSONException {
 		JSONArray array = new JSONArray();
-		for (BattleNext_DamageSourceReport source : sources) {
-			array.put(source.toJson());
-		}
+		for (BattleNext_DamageSourceReport source : sources) array.put(source.toJson());
 		return array;
 	}
 

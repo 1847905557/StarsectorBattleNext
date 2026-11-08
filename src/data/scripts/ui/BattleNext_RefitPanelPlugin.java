@@ -54,9 +54,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private final BattleNext_PinnedVariantStore pinnedStore = new BattleNext_PinnedVariantStore();
 	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, inputRouter);
 
@@ -155,15 +157,18 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	private void buildPinName() {
+
 		float width = pinButton.getPosition().getWidth();
 		float height = BattleNext_PageLayout.FORM_FIELD_HEIGHT;
 		float buttonTop = rightPanel.getPosition().getY() + rightPanel.getPosition().getHeight()
 				- pinButton.getPosition().getY() - pinButton.getPosition().getHeight();
+
 		pinNameHost = rightPanel.createUIElement(width, 0f, false);
 		BattleNext_UiTheme.configure(pinNameHost);
 		pinNameHost.setTextWidthOverride(width);
 		LabelAPI caption = pinNameHost.addPara(variantStrings.get("pin_name"), 0f);
 		caption.getPosition().inTL(0f, 0f);
+
 		float fieldTop = pinNameHost.getHeightSoFar();
 		pinName = new BattleNext_TextField(inputRouter, rightPanel, width, height, pinNameHost);
 		pinName.attach(pinNameHost, rightPanel);
@@ -171,6 +176,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		pinName.setMaxChars(-1);
 		float blockHeight = fieldTop + height;
 		pinNameHost.setHeightSoFar(blockHeight);
+
 		rightPanel.addUIElement(pinNameHost).inTL(0f, buttonTop - PIN_NAME_GAP - blockHeight);
 	}
 
@@ -182,16 +188,19 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	public void open(FleetMemberAPI member, Object refitScreen) {
+
 		saveErrors.clear();
 		closePickers();
 		if (pinName == null) buildPinName();
 		details.close();
 		details.clear();
 		details.setVariantJson(null);
+
 		this.member = member;
 		this.refitScreen = refitScreen;
 		saveError = "";
 		statusLabel.setText("");
+
 		try {
 			ShipVariantAPI current = currentVariant();
 			draft = current == null ? null : current.clone();
@@ -200,17 +209,20 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
 		}
+
 		savedSMods = draft == null ? Set.of() : sModsOf(draft);
 		savedDMods = draft == null ? Set.of() : dModsOf(draft);
 		pinName.setText(draft == null ? "" : draft.getHullSpec().getHullName() + " - " + draft.getDisplayName());
 		draftPinned = false;
 		pinnedName = "";
 		confirmationWasActive = false;
+
 		updateControls();
 		refreshDetails();
 	}
 
 	public void close() {
+
 		saveErrors.clear();
 		closePickers();
 		if (pinName != null) {
@@ -219,12 +231,15 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		}
 		pinName = null;
 		pinNameHost = null;
+
 		sModPicker.setEnabled(false);
 		dModPicker.setEnabled(false);
 		if (confirmation.isActive()) confirmation.handle("confirm_cancel");
+
 		details.close();
 		details.clear();
 		details.setVariantJson(null);
+
 		inputRouter.clear();
 		member = null;
 		refitScreen = null;
@@ -245,9 +260,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
+
 		if (sModPicker != null && sModPicker.handleGlobalInput(events)) return true;
 		if (dModPicker != null && dModPicker.handleGlobalInput(events)) return true;
 		if (inputRouter.handleGlobalInput(events)) return true;
+
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (!event.isKeyboardEvent() || !event.isKeyDownEvent()
@@ -264,6 +281,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	@Override
 	public boolean saveCurrentPage() {
+
 		saveErrors.clear();
 		if (draft == null || refitScreen == null || member == null) {
 			saveError = refitStrings.get("no_ship_selected");
@@ -271,6 +289,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			statusLabel.setText(saveErrors.summary());
 			return false;
 		}
+
 		BattleNext_Logger.operationStarted(BattleNext_RefitPanelPlugin.class, "refit.commit",
 				() -> BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build());
 		ShipVariantAPI original = null;
@@ -282,8 +301,10 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			display = BattleNext_TitleEntry.invokeNoArg(refitScreen, "getShipDisplay");
 			ShipVariantAPI current = (ShipVariantAPI) BattleNext_TitleEntry.invokeNoArg(display, "getCurrentVariant");
 			original = current.clone();
+
 			if (!savedDMods.equals(dModsOf(draft))) applyDMods(current, dModsOf(draft));
 			if (!savedSMods.equals(sModsOf(draft))) applySMods(current, sModsOf(draft));
+
 			MethodHandles.publicLookup().findVirtual(display.getClass(), "syncWithVariant",
 					MethodType.methodType(void.class, current.getClass())).invoke(display, current);
 			MethodHandles.publicLookup().findVirtual(refitScreen.getClass(), "syncWithCurrentVariant",
@@ -293,6 +314,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			committed = true;
 			BattleNext_Logger.operationSucceeded(BattleNext_RefitPanelPlugin.class, "refit.commit",
 				() -> BattleNext_Logger.fields().put("member", member).put("variant", current).put("scope", "Mission refit").build());
+
 			ShipVariantAPI saved = currentVariant();
 			draft = saved.clone();
 			savedSMods = sModsOf(draft);
@@ -306,6 +328,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				details.close();
 				details.clear();
 				details.setVariantJson(null);
+
 				savedSMods = sModsOf(draft);
 				savedDMods = dModsOf(draft);
 				saveError = "";
@@ -315,6 +338,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				statusLabel.setText(strings.get("saved") + " / " + saveErrors.summary());
 				return true;
 			}
+
 			if (original != null && display != null) {
 				try {
 					MethodHandles.publicLookup().findVirtual(display.getClass(), "syncWithVariant",
@@ -324,9 +348,10 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				} catch (Throwable rollback) {
 					BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "refit.rollback.failed",
 						BattleNext_Logger.fields().put("member", member).put("original", original).put("original_member", originalMember).build(), rollback);
-							exception.addSuppressed(rollback);
+					exception.addSuppressed(rollback);
 				}
 			}
+
 			if (originalMember != null) {
 				try {
 					member.setVariant(originalMember, false, true);
@@ -336,6 +361,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 					exception.addSuppressed(rollback);
 				}
 			}
+
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			saveErrors.failure(strings.get("save_failed"), member.getShipName() + " / " + draft.getHullVariantId(), exception);
 			statusLabel.setText(saveErrors.summary());
@@ -352,7 +378,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	@Override
 	public List<String> getSaveErrors() {
-		return saveErrors.getMessages();
+		return saveErrors.getMessagesCopy();
 	}
 
 	@Override
@@ -367,6 +393,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			details.close();
 			details.clear();
 			details.setVariantJson(null);
+
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
 			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "refit.discard.failed",
@@ -384,6 +411,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 
 	@Override
 	public void positionChanged(PositionAPI position) {
+
 	}
 
 	@Override
@@ -392,6 +420,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			confirmationWasActive = confirmation.isActive();
 			updateControls();
 		}
+
 		if (pinButton != null) pinButton.setEnabled(canPin());
 	}
 
@@ -402,6 +431,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			BattleNext_GeometryRenderer.texturedFullscreen(backdropTexture, backdropU, backdropV,
 					ShaderCore.getScreenScaleWidth(), ShaderCore.getScreenScaleHeight());
 		}
+
 		border.setAlpha(alphaMult);
 		border.render(borderX, borderY);
 	}
@@ -463,14 +493,17 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			statusLabel.setText(saveErrors.summary());
 			return;
 		}
+
 		try {
 			pinnedStore.reload();
 			BattleNext_PinnedVariantModel pin = pinnedStore.saveVariant(displayName, draft);
 			draftPinned = true;
 			pinnedName = displayName;
+
 			String status = variantStrings.format("pin_saved", pin.getDisplayName());
-			if (!pinnedStore.getLoadErrors().isEmpty()) {
-				status += "\n" + variantStrings.get("pin_load_warnings") + "\n" + String.join("\n", pinnedStore.getLoadErrors());
+			List<String> errors = pinnedStore.getLoadErrorsCopy();
+			if (!errors.isEmpty()) {
+				status += "\n" + variantStrings.get("pin_load_warnings") + "\n" + String.join("\n", errors);
 			}
 			statusLabel.setText(status);
 		} catch (Exception exception) {
@@ -479,6 +512,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			BattleNext_Logger.error(BattleNext_RefitPanelPlugin.class, "variant.pin.save.failed",
 					BattleNext_Logger.fields().put("member", member).put("draft", draft).put("display_name", displayName).build(), exception);
 		}
+
 		updateControls();
 	}
 
@@ -486,6 +520,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		if (draft == null) return;
 		Set<String> selected = new LinkedHashSet<>(ids);
 		if (selected.equals(sModsOf(draft))) return;
+
 		applySMods(draft, selected);
 		draftPinned = false;
 		statusLabel.setText("");
@@ -496,6 +531,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 		if (draft == null) return;
 		Set<String> selected = new LinkedHashSet<>(ids);
 		if (selected.equals(dModsOf(draft))) return;
+
 		ShipVariantAPI previous = draft.clone();
 		try {
 			applyDMods(draft, selected);
@@ -510,6 +546,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	static void applySMods(ShipVariantAPI variant, Set<String> selected) {
+
 		Set<String> existing = sModsOf(variant);
 		for (String id : existing) {
 			if (selected.contains(id)) continue;
@@ -524,6 +561,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 				}
 			}
 		}
+
 		for (String id : selected) {
 			if (existing.contains(id)) continue;
 			if (variant.getHullSpec().isBuiltInMod(id)) variant.getSModdedBuiltIns().add(id);
@@ -532,17 +570,20 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	static void applyDMods(ShipVariantAPI variant, Set<String> selected) {
+
 		Set<String> existing = dModsOf(variant);
 		for (String id : existing) {
 			if (selected.contains(id)) continue;
 			DModManager.removeDMod(variant, id);
 			if (variant.getHullSpec().isBuiltInMod(id)) variant.addSuppressedMod(id);
 		}
+
 		for (String id : selected) {
 			if (existing.contains(id)) continue;
 			variant.removeSuppressedMod(id);
 			variant.addPermaMod(id, false);
 		}
+
 		ShipHullSpecAPI hull = variant.getHullSpec();
 		if (hull.isDefaultDHull() && hull.getDParentHull() != null
 				&& hull.getDParentHull().isDHull()) {
@@ -576,6 +617,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			details.close();
 			details.clear();
 			details.setVariantJson(null);
+
 			saveError = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
 			statusLabel.setText(strings.get("save_failed") + ": " + saveError);
 			BattleNext_Logger.warn(BattleNext_RefitPanelPlugin.class, "refit.details.refresh.failed",
@@ -590,6 +632,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			details.setVariantJson(null);
 			return;
 		}
+
 		details.setVariantJson(BattleNext_VariantBuilder.fromVariant(draft).toJson());
 		if (details.getPanel() == null) {
 			details.attach(leftPanel);

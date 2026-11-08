@@ -3,6 +3,8 @@ package data.scripts.ui.widget.view;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -18,6 +20,7 @@ import data.scripts.ui.BattleNext_UiTheme;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.test.fixture.BattleNext_TestGlContext;
+import data.test.fixture.BattleNext_TestGlContext.State;
 import data.test.fixture.BattleNext_TestTournamentViewFixture;
 import data.test.fixture.BattleNext_TestTournamentViewFixture.Harness;
 import data.test.fixture.BattleNext_TestVariantFixture;
@@ -59,6 +62,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 
 	@Test
 	void fullscreenTextureFlushesEarlierGeometryBeforeChangingProjectionAndViewport() throws Exception {
+
 		context.reset(32, 32, 1f);
 		GL11.glClearColor(0f, 0f, 0f, 1f);
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
@@ -70,7 +74,8 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 			ByteBuffer black = BufferUtils.createByteBuffer(4);
 			black.put(new byte[]{0, 0, 0, (byte) 255}).flip();
 			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, black);
-			var caller = context.captureState();
+
+			State caller = context.captureState();
 			BattleNext_GeometryRenderer.beginBatch();
 			try {
 				BattleNext_GeometryRenderer.fillRect(20f, 20f, 8f, 8f, Color.WHITE, 1f);
@@ -78,6 +83,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 			} finally {
 				BattleNext_GeometryRenderer.endBatch();
 			}
+
 			ByteBuffer pixel = BufferUtils.createByteBuffer(4);
 			GL11.glReadPixels(24, 24, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
 			assertEquals(255, pixel.get(0) & 255);
@@ -135,7 +141,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				GL11.glEnable(GL11.GL_SCISSOR_TEST);
 				for (int primitive = 0; primitive < 4; primitive++) {
 					GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-					var callerState = context.captureState();
+					State callerState = context.captureState();
 					switch (primitive) {
 						case 0 -> BattleNext_GeometryRenderer.fillRect(4f, 4f, 24f, 24f, foreground, alphaMult);
 						case 1 -> BattleNext_GeometryRenderer.lineLoop(new float[]{4f, 4f, 28f, 4f, 28f, 28f, 4f, 28f}, foreground, alphaMult, 2f);
@@ -174,10 +180,11 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 					callerState.assertRestored();
 				}
 			}
+
 			Method withState = BattleNext_GeometryRenderer.class.getDeclaredMethod("withState", Runnable.class);
 			withState.setAccessible(true);
 			IllegalStateException failure = new IllegalStateException("Injected geometry callback failure");
-			var failureState = context.captureState();
+			State failureState = context.captureState();
 			InvocationTargetException thrown = assertThrows(InvocationTargetException.class, () -> withState.invoke(null, (Runnable) () -> {
 				GL11.glDisable(GL11.GL_BLEND);
 				GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ZERO);
@@ -218,7 +225,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 		Field panelField = BattleNext_TextField.class.getDeclaredField("panel");
 		panelField.setAccessible(true);
 		CustomPanelAPI fieldPanel = (CustomPanelAPI) panelField.get(field);
-		var plugin = plugins.get(fieldPanel);
+		CustomUIPanelPlugin plugin = plugins.get(fieldPanel);
 		try {
 			GL11.glDisable(GL11.GL_SCISSOR_TEST);
 			GL11.glDisable(GL11.GL_BLEND);
@@ -238,7 +245,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				if (phase == 5) field.grabFocus(false);
 				if (phase == 6) router.getSession().finish(true);
 				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-				var callerState = context.captureState();
+				State callerState = context.captureState();
 				plugin.render(1f);
 				callerState.assertRestored();
 				GL11.glReadPixels(horizontal, vertical, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
@@ -263,7 +270,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 		paragraphLineHeight = 15f;
 		Variant originalVariant = source();
 		JSONObject snapshot = BattleNext_VariantBuilder.fromVariant(originalVariant.getApi()).toJson();
-		var registeredModule = originalVariant.getModules().get("module");
+		ShipVariantAPI registeredModule = originalVariant.getModules().get("module");
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {
@@ -283,8 +290,8 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
 		CustomPanelAPI row = (CustomPanelAPI) tooltips.get(lists(details).get("modules")).getComponents().get(0);
 		CustomPanelAPI card = (CustomPanelAPI) children.get(row).get(0);
-		var plugin = plugins.get(card);
-		var bounds = position(120f, 120f);
+		CustomUIPanelPlugin plugin = plugins.get(card);
+		PositionAPI bounds = position(120f, 120f);
 		bounds.inTL(32f, -32f);
 		setField(plugin, "position", bounds);
 		try {
@@ -296,7 +303,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				GL11.glClearColor(1f, 0f, 1f, 1f);
 				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 				GL11.glLineWidth(7f);
-				var callerState = context.captureState();
+				State callerState = context.captureState();
 				plugin.renderBelow(1f);
 				callerState.assertRestored();
 				assertEquals(7f, GL11.glGetFloat(GL11.GL_LINE_WIDTH));
@@ -321,6 +328,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 					}
 				}
 				assertEquals(2, borderPixels);
+
 				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 				GL11.glEnable(GL11.GL_SCISSOR_TEST);
 				GL11.glScissor(edge + 3, 0, 384 - edge - 3, 384);
@@ -356,7 +364,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		chart.attach(harness.getPanel(), harness.getHost(), harness.getViewport().getApi(), router, 700f);
 		try {
-			var callerState = context.captureState();
+			State callerState = context.captureState();
 			chart.renderBelow(1f);
 			chart.render(1f);
 			callerState.assertRestored();
@@ -376,8 +384,9 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				assertEquals(expected.getGreen(), pixels.get(offset + 1) & 255, "Frame green at x=" + x);
 				assertEquals(expected.getBlue(), pixels.get(offset + 2) & 255, "Frame blue at x=" + x);
 			}
+
 			BattleNext_TournamentView.Node node = chart.nodes.get(0);
-			float[] center = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
+			float[] center = chart.project(node.x() + node.width() * 0.5f, node.y() + node.height() * 0.5f);
 			int centerOffset = ((int) center[1] * 800 + (int) center[0]) * 4;
 			assertEquals(0, pixels.get(centerOffset) & 255);
 			assertEquals(0, pixels.get(centerOffset + 1) & 255);
@@ -395,6 +404,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				}
 			}
 			assertTrue(nodePixels >= 100, "Visible node outline pixels: " + nodePixels);
+
 			BattleNext_TournamentView.ViewState camera = chart.captureState();
 			PositionAPI frame = harness.getChartBounds().getApi();
 			float left = frame.getX();
@@ -405,7 +415,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 					{left, bottom + frame.getHeight() * 0.5f}, {right, bottom + frame.getHeight() * 0.5f},
 					{left + frame.getWidth() * 0.5f, top - 40f}}) {
 				chart.restoreState(camera);
-				float[] projected = chart.project(node.x + node.width * 0.5f, node.y + node.height * 0.5f);
+				float[] projected = chart.project(node.x() + node.width() * 0.5f, node.y() + node.height() * 0.5f);
 				float scale = frame.getWidth() / BattleNext_TournamentView.CANVAS_WIDTH;
 				chart.panBy((target[0] - projected[0]) / scale, (projected[1] - target[1]) / scale);
 				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
@@ -426,6 +436,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				assertEquals(800, clip.get(2));
 				assertEquals(800, clip.get(3));
 			}
+
 			chart.restoreState(camera);
 			BattleNext_StartedTournament started = engine.start(cup, fleetIds, ExecutionKind.MANUAL);
 			for (boolean completed : List.of(false, true)) {
@@ -440,7 +451,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 				callerState.assertRestored();
 				GL11.glReadPixels(0, 0, 800, 800, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
 				Color expected = completed ? BattleNext_UiTheme.ACCENT : Misc.getHighlightColor();
-				float[] border = chart.project(node.x + node.width * 0.5f, node.y);
+				float[] border = chart.project(node.x() + node.width() * 0.5f, node.y());
 				boolean found = false;
 				for (int y = (int) border[1] - 3; y <= (int) border[1] + 3; y++) {
 					for (int x = (int) border[0] - 3; x <= (int) border[0] + 3; x++) {

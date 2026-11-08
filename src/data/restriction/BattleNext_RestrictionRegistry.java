@@ -29,6 +29,10 @@ public class BattleNext_RestrictionRegistry {
 	private Function<String, Object> scriptFactory;
 	private List<LoadError> loadErrors = List.of();
 
+	public record BattleNext_RestrictionSpec(String id, String name, String type, String script, String description) {
+
+	}
+
 	@LifecycleEntry
 	public static BattleNext_RestrictionRegistry getInstance() {
 		return INSTANCE;
@@ -53,10 +57,9 @@ public class BattleNext_RestrictionRegistry {
 			JSONObject row = rows.optJSONObject(index);
 			if (row == null) continue;
 			String id = row.optString("id", "").trim();
-			if (!id.isEmpty()) {
-				counts.merge(id, 1, Integer::sum);
-			}
+			if (!id.isEmpty()) counts.merge(id, 1, Integer::sum);
 		}
+
 		Map<String, BattleNext_RestrictionSpec> parsed = new LinkedHashMap<>();
 		List<LoadError> errors = new ArrayList<>();
 		for (int index = 0; index < rows.length(); index++) {
@@ -82,6 +85,7 @@ public class BattleNext_RestrictionRegistry {
 				errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
 			}
 		}
+
 		entries = parsed;
 		loadErrors = List.copyOf(errors);
 		this.scriptFactory = scriptFactory;
@@ -100,7 +104,7 @@ public class BattleNext_RestrictionRegistry {
 	public Object create(String id) {
 		BattleNext_RestrictionSpec spec = entries.get(id);
 		try {
-			return scriptFactory.apply(spec.getScript());
+			return scriptFactory.apply(spec.script);
 		} catch (RuntimeException exception) {
 			throw new IllegalStateException("Unable to instantiate restriction " + id, exception);
 		}
@@ -110,11 +114,15 @@ public class BattleNext_RestrictionRegistry {
 		return entries.get(id);
 	}
 
-	public List<BattleNext_RestrictionSpec> getAll() {
+	public List<BattleNext_RestrictionSpec> getAllCopy() {
 		return List.copyOf(entries.values());
 	}
 
 	public List<BattleNext_RestrictionSpec> getByType(String type) {
-		return entries.values().stream().filter(entry -> entry.getType().equals(type)).toList();
+		List<BattleNext_RestrictionSpec> result = new ArrayList<>();
+		for (BattleNext_RestrictionSpec entry : entries.values()) {
+			if (entry.type.equals(type)) result.add(entry);
+		}
+		return List.copyOf(result);
 	}
 }

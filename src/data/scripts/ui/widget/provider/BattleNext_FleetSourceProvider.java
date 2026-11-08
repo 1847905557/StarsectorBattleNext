@@ -10,6 +10,7 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Logger;
+import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip.FleetMemberLine;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
@@ -19,6 +20,7 @@ import java.util.*;
 public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final BattleNext_FleetStore fleetStore;
+
 	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection commonStrings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 
@@ -29,7 +31,7 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 	@Override
 	public List<OptionChoice> getOptions() {
 		List<OptionChoice> options = new ArrayList<>();
-		for (BattleNext_FleetModel fleet : fleetStore.getAll()) {
+		for (BattleNext_FleetModel fleet : fleetStore.getAllCopy()) {
 			options.add(new OptionChoice(fleet.getId(), fleet.getName()));
 		}
 		return options;
@@ -53,28 +55,29 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 
-		BattleNext_FleetModel fleet = fleetStore.get(option.getId());
+		BattleNext_FleetModel fleet = fleetStore.get(option.id());
 		if (fleet == null) {
-			IllegalArgumentException exception = new IllegalArgumentException("Unknown fleet: " + option.getId());
+			IllegalArgumentException exception = new IllegalArgumentException("Unknown fleet: " + option.id());
 			BattleNext_Logger.warn(BattleNext_FleetSourceProvider.class, "fleet.tooltip.unavailable",
-					BattleNext_Logger.fields().put("fleet_id", option.getId()).build(), exception);
+					BattleNext_Logger.fields().put("fleet_id", option.id()).build(), exception);
 			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
-					option.getLabel(), option.getId(), "", List.of(commonStrings.get("unavailable"))));
+					option.label(), option.id(), "", List.of(commonStrings.get("unavailable"))));
 			return;
 		}
 		Preview preview = new Preview();
 		Map<String, String> personalities = new LinkedHashMap<>();
-		if (!fleet.getMembers().isEmpty()) {
+		List<BattleNext_MemberModel> members = fleet.getMembersReadonly();
+		if (!members.isEmpty()) {
 			try {
 				for (OptionChoice personality : new BattleNext_PersonalitySourceProvider().getOptions()) {
-					personalities.put(personality.getId(), personality.getLabel());
+					personalities.put(personality.id(), personality.label());
 				}
 			} catch (RuntimeException exception) {
 				reportFailure(preview, fleet, -1, "", "personalities", exception);
 			}
 		}
-		for (int index = 0; index < fleet.getMembers().size(); index++) {
-			BattleNext_MemberModel member = fleet.getMembers().get(index);
+		for (int index = 0; index < members.size(); index++) {
+			BattleNext_MemberModel member = members.get(index);
 			String hullName = commonStrings.get("unavailable") + ": " + member.getVariantId();
 			ShipVariantAPI variant;
 			try {
@@ -110,9 +113,7 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 				countWings(preview, fleet, index, variant, "", Collections.newSetFromMap(new IdentityHashMap<>()));
 			}
 			Map<String, Integer> skills = new LinkedHashMap<>();
-			for (String skill : member.getSkills()) {
-				skills.merge(skill, 1, Integer::sum);
-			}
+			for (String skill : member.getSkillsReadonly()) skills.merge(skill, 1, Integer::sum);
 			String personalityId = skills.isEmpty() || member.getPersonality().isEmpty() ? "steady" : member.getPersonality();
 			String personality = personalities.get(personalityId);
 			if (personality == null) {
@@ -126,13 +127,13 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 			preview.members.add(new FleetMemberLine(hullName, officer, elite, personality));
 		}
 		String partial = " (" + fleetStrings.get("partial") + ")";
-		List<String> summary = List.of(fleetStrings.get("ships") + ": " + fleet.getMembers().size() + " - "
+		List<String> summary = List.of(fleetStrings.get("ships") + ": " + members.size() + " - "
 						+ fleetStrings.get("fighter_wings") + ": " + preview.wings + (preview.partialWings ? partial : ""),
 				fleetStrings.get("base_dp") + ": " + BattleNext_I18nSection.buildFactor(preview.dp)
 						+ (preview.partialDp ? partial : "") + " - " + fleetStrings.get("base_fp") + ": "
 						+ preview.fp + (preview.partialFp ? partial : ""));
 		BattleNext_EquipmentTooltip.renderFleet(tooltip, new BattleNext_EquipmentTooltip.Content(
-				option.getLabel(), option.getId(), "", preview.errors), summary,
+				option.label(), option.id(), "", preview.errors), summary,
 				fleetStrings.get("members_heading"), preview.members);
 	}
 
@@ -184,7 +185,7 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 		if (phase.equals("variant") || phase.equals("wings") || phase.equals("modules")) {
 			preview.partialWings = true;
 		}
-		String variantId = index < 0 ? "" : fleet.getMembers().get(index).getVariantId();
+		String variantId = index < 0 ? "" : fleet.getMembersReadonly().get(index).getVariantId();
 		BattleNext_Logger.warn(BattleNext_FleetSourceProvider.class, "fleet.tooltip.preview.degraded",
 				BattleNext_Logger.fields().put("fleet_id", fleet.getId()).put("member_index", index)
 						.put("variant_id", variantId).put("module_path", path).put("phase", phase).build(), exception);
@@ -192,14 +193,15 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 				+ (index < 0 ? fleet.getId() : variantId) + (path.isEmpty() ? "" : "/" + path) + " - " + exception.getMessage());
 	}
 
+	@PublicData
 	private static class Preview {
-		private float dp;
-		private int fp;
-		private int wings;
-		private boolean partialDp;
-		private boolean partialFp;
-		private boolean partialWings;
-		private final List<FleetMemberLine> members = new ArrayList<>();
-		private final List<String> errors = new ArrayList<>();
+		public float dp;
+		public int fp;
+		public int wings;
+		public boolean partialDp;
+		public boolean partialFp;
+		public boolean partialWings;
+		public final List<FleetMemberLine> members = new ArrayList<>();
+		public final List<String> errors = new ArrayList<>();
 	}
 }

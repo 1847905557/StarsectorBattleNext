@@ -17,9 +17,17 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 	private final List<LoadError> errors = new ArrayList<>();
 	private final List<LoadError> inputs = new ArrayList<>();
 
-	public record LoadError(String path, int position, String id, String raw, String diagnostic) { }
+	public record LoadError(String path, int position, String id, String raw, String diagnostic) {
 
-	public List<LoadError> getErrors() {
+	}
+
+	protected BattleNext_BaseLoader() {
+
+	}
+
+	public abstract List<T> load() throws IOException, JSONException;
+
+	public List<LoadError> getErrorsCopy() {
 		return List.copyOf(errors);
 	}
 
@@ -32,7 +40,7 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 		inputs.add(new LoadError(path, position, id, raw, ""));
 	}
 
-	public List<LoadError> getInputs() {
+	public List<LoadError> getInputsCopy() {
 		return List.copyOf(inputs);
 	}
 
@@ -49,13 +57,12 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 
 	protected List<T> finishLoad(List<T> models) {
 		Map<String, Integer> counts = new HashMap<>();
-		for (T model : models) {
-			counts.merge(model.getId(), 1, Integer::sum);
-		}
+		for (T model : models) counts.merge(model.getId(), 1, Integer::sum);
 		for (LoadError error : errors) {
 			if (error.id().isEmpty()) continue;
 			counts.merge(error.id(), 1, Integer::sum);
 		}
+
 		List<T> accepted = new ArrayList<>();
 		for (T model : models) {
 			if (counts.get(model.getId()) > 1) {
@@ -66,10 +73,9 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 			}
 			accepted.add(model);
 		}
+
 		return accepted;
 	}
-
-	protected BattleNext_BaseLoader() {}
 
 	protected List<String> paths(String directory, boolean recursive) {
 		return paths(directory, recursive ? Integer.MAX_VALUE : 1, path -> true);
@@ -83,8 +89,6 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 			return List.of();
 		}
 	}
-
-	public abstract List<T> load() throws IOException, JSONException;
 
 	protected abstract BattleNext_LoadSource source();
 

@@ -13,6 +13,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
+
 	private static final float RULE_LIST_ERROR_TOP_GAP = 5f;
 	private static final float RULE_LIST_EMPTY_TOP_GAP = 8f;
 	private final BattleNext_RuleStore store;
@@ -63,7 +64,7 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		addCatalogDiagnostics(listContent, store.getErrors());
-		for (BattleNext_RuleModel rule : store.getAll()) {
+		for (BattleNext_RuleModel rule : store.getAllCopy()) {
 			addListItem(listContent, rule.getName(), "rules:select:" + rule.getId());
 		}
 	}

@@ -16,6 +16,10 @@ public class BattleNext_TestTournamentViewFixture {
 
 	private static final Color SEMITRANSPARENT_GRAY = new Color(175, 175, 175, 180);
 
+	private BattleNext_TestTournamentViewFixture() {
+
+	}
+
 	public static SettingsAPI settings() {
 		return proxy(SettingsAPI.class, (name, args) -> switch (name) {
 			case "getString" -> BattleNext_TestTextCatalog.lookup(args[0], args[1]);
@@ -128,6 +132,7 @@ public class BattleNext_TestTournamentViewFixture {
 			}
 			default -> null;
 		});
+
 		public Bounds getBounds() {
 			return bounds;
 		}
@@ -188,9 +193,7 @@ public class BattleNext_TestTournamentViewFixture {
 
 		private float textWidth(String value) {
 			float width = 0f;
-			for (int point : value.codePoints().toArray()) {
-				width += point == '1' ? 4f : 8f;
-			}
+			for (int point : value.codePoints().toArray()) width += point == '1' ? 4f : 8f;
 			return width;
 		}
 	}
@@ -401,6 +404,7 @@ public class BattleNext_TestTournamentViewFixture {
 		public CustomPanelAPI detailHost(float width, float height) {
 			Bounds bounds = new Bounds();
 			bounds.api.setSize(width, height);
+
 			return proxy(CustomPanelAPI.class, (name, args) -> switch (name) {
 				case "getPosition" -> bounds.api;
 				case "getPlugin" -> new BaseCustomUIPanelPlugin();
@@ -457,6 +461,7 @@ public class BattleNext_TestTournamentViewFixture {
 					TextBlock block = new TextBlock();
 					block.bounds.width = (Float) args[0];
 					block.layoutWidth = (Float) args[0];
+
 					summaryBlocks.add(block);
 					yield block.api;
 				}
@@ -474,6 +479,7 @@ public class BattleNext_TestTournamentViewFixture {
 					label.text = (String) args[0];
 					label.color = (Color) args[1];
 					label.bounds.width = (Float) args[2];
+
 					nodeLabels.add(label);
 					yield label.api;
 				}

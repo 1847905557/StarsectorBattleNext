@@ -33,6 +33,7 @@ class BattleNext_RttMoveManeuverTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void rttHoldFacesEnemyIndependentlyOfDestination() {
+
 		List<ShipCommand> commands = new ArrayList<>();
 		ShipwideAIFlags flags = new ShipwideAIFlags();
 		ShipAPI ship = proxy(ShipAPI.class, (method, args) -> switch (method) {

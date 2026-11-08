@@ -52,6 +52,7 @@ class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {72, 180, 360})
 	void explicitWidthLocalPositionsAndClosePreserveTheirContracts(int width) throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI overlay = panel(800f, 700f, new BaseCustomUIPanelPlugin());
@@ -81,10 +82,12 @@ class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
 		assertEquals(30f, tooltips.get(host).getUsedHeight());
 		assertSame(overlay, getField(picker, "overlayHost"));
 		owner.addUIElement(host).inTL(0f, 0f);
+
 		option.closeOverlays();
 		assertSame(field, option.getField().getPosition());
 		assertEquals("first", option.getField().getText());
 		assertTrue(router.getSession().hasInputState());
+
 		option.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
 		assertFalse(router.getSession().hasInputState());

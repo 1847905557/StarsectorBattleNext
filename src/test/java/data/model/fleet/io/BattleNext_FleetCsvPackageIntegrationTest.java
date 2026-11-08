@@ -2,6 +2,10 @@ package data.model.fleet.io;
 
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.fleet.BattleNext_FleetModel;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.battle.BattleNext_Match;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
 import data.scripts.fleet.BattleNext_FleetBuilder;
 import data.scripts.member.BattleNext_MemberModel;
@@ -37,8 +41,8 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 		for (int index = 0; index < inputs.size(); index++) {
 			BattleNext_MemberModel input = inputs.get(index);
 			memberRows.add(List.of(Integer.toString(index + 1), input.getVariantId(), input.getPersonality(),
-					String.join(",", input.getSkills()), input.getName(), input.getPortrait(), input.getOrders(),
-					String.join(",", input.getTags())).stream().map(BattleNext_CsvLine::escape)
+					String.join(",", input.getSkillsReadonly()), input.getName(), input.getPortrait(), input.getOrders(),
+					String.join(",", input.getTagsReadonly())).stream().map(BattleNext_CsvLine::escape)
 					.reduce((left, right) -> left + "," + right).orElseThrow());
 		}
 		csvFleet(folder, number, String.join("\n", memberRows) + "\n");
@@ -54,42 +58,42 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 				.put("fluxVents", 17).put("modules", new JSONObject().put("nested", "local_child")));
 		variants.put("local_child", new JSONObject().put("variantId", "local_child").put("hullId", "child").put("fluxVents", 13));
 		List<String> reads = new ArrayList<>();
-		for (var entry : variants.entrySet()) {
+		for (Map.Entry<String, JSONObject> entry : variants.entrySet()) {
 			String path = "tournament/" + folder + "/" + entry.getKey() + ".variant";
 			write(path, entry.getValue().toString());
 			reads.add("loadJSON:" + path);
 		}
 		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		var fleet = store.get(id);
-		assertEquals(List.of(id), store.getAll().stream().map(entry -> entry.getId()).toList());
+		BattleNext_FleetModel fleet = store.get(id);
+		assertEquals(List.of(id), store.getAllCopy().stream().map(entry -> entry.getId()).toList());
 		assertEquals(name, fleet.getName());
 		assertEquals(author, fleet.getAuthor());
-		assertEquals(skills, fleet.getSkills());
-		assertEquals(tags, fleet.getTags());
+		assertEquals(skills, fleet.getSkillsReadonly());
+		assertEquals(tags, fleet.getTagsReadonly());
 		assertEquals(inputs.stream().map(BattleNext_MemberModel::getVariantId).toList(),
-				fleet.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
+				fleet.getMembersReadonly().stream().map(BattleNext_MemberModel::getVariantId).toList());
 		assertEquals(inputs.stream().map(BattleNext_MemberModel::getName).toList(),
-				fleet.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
-		assertEquals(variants.keySet(), new HashSet<>(fleet.getVariants().stream().map(entry -> entry.getId()).toList()));
+				fleet.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(variants.keySet(), new HashSet<>(fleet.getVariantsCopy().stream().map(entry -> entry.getId()).toList()));
 		assertEquals(new HashSet<>(reads), new HashSet<>(dataReads));
-		assertTrue(fleet.getLoadErrors().isEmpty());
-		var assembled = new BattleNext_FleetBuilder().build(fleet);
-		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
+		assertTrue(fleet.getLoadErrorsCopy().isEmpty());
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
+		assertTrue(assembled.isComplete(), assembled.getMemberErrorsReadonly().toString());
 		assertEquals(inputs.stream().map(BattleNext_MemberModel::getName).toList(),
-				assembled.getMembers().stream().map(FleetMemberAPI::getShipName).toList());
+				assembled.getMembersReadonly().stream().map(FleetMemberAPI::getShipName).toList());
 		assertEquals(2f, assembled.getCommander().getStats().getSkillLevel(skills.get(0)));
 		for (int index = 0; index < inputs.size(); index++) {
-			var member = assembled.getMembers().get(index);
+			FleetMemberAPI member = assembled.getMembersReadonly().get(index);
 			BattleNext_MemberModel input = inputs.get(index);
 			assertEquals(input.getVariantId(), member.getVariant().getHullVariantId());
 			assertEquals(input.getPersonality(), member.getCaptain().getPersonalityAPI().getId());
 			assertEquals(input.getPortrait(), member.getCaptain().getPortraitSprite());
-			assertEquals(2f, member.getCaptain().getStats().getSkillLevel(input.getSkills().get(0)));
+			assertEquals(2f, member.getCaptain().getStats().getSkillLevel(input.getSkillsReadonly().get(0)));
 			if (input.getVariantId().equals("local_parent")) {
-				var middle = member.getVariant().getModuleVariant("module");
+				ShipVariantAPI middle = member.getVariant().getModuleVariant("module");
 				assertEquals("local_middle", middle.getHullVariantId());
-				var nested = middle.getModuleVariant("nested");
+				ShipVariantAPI nested = middle.getModuleVariant("nested");
 				assertEquals("local_child", nested.getHullVariantId());
 				assertEquals(variants.get("local_child").getInt("fluxVents"), nested.toJSONObject().getInt("fluxVents"));
 			}
@@ -106,9 +110,9 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 				.map(pair -> String.join(",", pair) + ",8,1").reduce((left, right) -> left + "\n" + right).orElseThrow() + "\n");
 		List<List<String>> expectedBattles = new ArrayList<>(quickBattles);
 		expectedBattles.addAll(numberedBattles);
-		var provider = new BattleNext_BattleSourceProvider();
-		var matches = provider.load();
-		assertTrue(provider.getWarnings().isEmpty(), provider.getWarnings().toString());
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
+		List<BattleNext_Match> matches = provider.load();
+		assertTrue(provider.getWarningsReadonly().isEmpty(), provider.getWarningsReadonly().toString());
 		assertEquals(expectedBattles, matches.stream().map(match -> List.of(match.getPlayer(), match.getEnemy())).toList());
 	}
 }

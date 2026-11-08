@@ -20,12 +20,14 @@ public class BattleNext_OrderProcessor {
 
 		this.shipLabel = shipLabel;
 		this.report = report;
+
 		for (BattleNext_OrderParser.OrderParseResult parsed : BattleNext_OrderParser.parseScript(script, registry)) {
 			String location = shipLabel + " instruction " + parsed.getInstructionNumber() + " line " + parsed.getLineNumber();
 			if (!parsed.isValid()) {
 				report.accept(location + ": " + parsed.getError());
 				continue;
 			}
+
 			try {
 				instructions.add(new Instruction(parsed.getInstructionNumber(), parsed.getLineNumber(),
 						new BattleNext_OrderThread(parsed.getCommand(), registry)));
@@ -42,6 +44,7 @@ public class BattleNext_OrderProcessor {
 	public void advance(ShipAPI ship, CombatEngineAPI engine, BattleNext_OrderField field) {
 
 		if (field.hasExternalAssignment(ship)) return;
+
 		Iterator<Instruction> iterator = instructions.iterator();
 		while (iterator.hasNext()) {
 			Instruction instruction = iterator.next();
@@ -54,8 +57,11 @@ public class BattleNext_OrderProcessor {
 				field.releaseShip(ship);
 			}
 		}
+
 		field.releaseShip(ship);
 	}
 
-	private record Instruction(int number, int line, BattleNext_OrderThread thread) { }
+	private record Instruction(int number, int line, BattleNext_OrderThread thread) {
+
+	}
 }

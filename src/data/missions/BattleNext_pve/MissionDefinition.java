@@ -33,6 +33,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 	private final BattleNext_FleetBuilder fleetBuilder = new BattleNext_FleetBuilder();
 	private final BattleNext_PveFleetGenerator enemyGenerator = new BattleNext_PveFleetGenerator();
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 
 	private static int expectedFp = 100;
@@ -45,7 +46,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		List<BattleNext_Match> matches = provider.loadQuickBattles();
 		if (matches.isEmpty()) {
-			showBlocked(api, strings.get("no_valid_battle"), provider.getWarnings());
+			showBlocked(api, strings.get("no_valid_battle"), provider.getWarningsReadonly());
 			return;
 		}
 		List<FactionSpecAPI> factions;
@@ -57,7 +58,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			return;
 		}
 		if (factions.isEmpty()) {
-			showBlocked(api, strings.get("pve_no_factions"), provider.getWarnings());
+			showBlocked(api, strings.get("pve_no_factions"), provider.getWarningsReadonly());
 			return;
 		}
 
@@ -71,7 +72,7 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		FactionSpecAPI faction = factions.get(factionIndex);
 		BattleNext_AssembledFleet assembledPlayerFleet = fleetBuilder.build(provider.getFleetStore().get(playerId));
 		if (!assembledPlayerFleet.isComplete()) {
-			showBlocked(api, strings.get("invalid_battle_assembly"), assembledPlayerFleet.getMemberErrors());
+			showBlocked(api, strings.get("invalid_battle_assembly"), assembledPlayerFleet.getMemberErrorsReadonly());
 			return;
 		}
 
@@ -83,11 +84,11 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 			return;
 		}
 
-		for (String warning : provider.getWarnings()) {
-			api.addBriefingItem(warning);
-		}
+		for (String warning : provider.getWarningsReadonly()) api.addBriefingItem(warning);
 
-		int actualPoints = assembledEnemyFleet.getMembers().stream().mapToInt(FleetMemberAPI::getFleetPointCost).sum();
+		int actualPoints = 0;
+		for (FleetMemberAPI member : assembledEnemyFleet.getMembersReadonly()) actualPoints += member.getFleetPointCost();
+		int generatedPoints = actualPoints;
 		int map = BattleNext_MissionBattleMap.resolve(source.getMap());
 		BattleNext_Match match = new BattleNext_Match(source.getId(), playerId, assembledEnemyFleet.getDefinition().getId(),
 				map, source.getMapScale());
@@ -104,16 +105,17 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 
 		float timeLimit = BattleNext_Settings.getBattleTimeLimit();
 		int deploymentPointLimit = BattleNext_Settings.getDeploymentPointLimit();
+		BattleNext_FleetOrderBehavior.FleetOrderMode playerMode = BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTagsReadonly());
+		BattleNext_FleetOrderBehavior.FleetOrderMode enemyMode = BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTagsReadonly());
 		api.addPlugin(new BattleNext_DeploymentPlugin(deploymentPointLimit,
-				BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
-				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()) == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
+				playerMode == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND,
+				enemyMode == BattleNext_FleetOrderBehavior.FleetOrderMode.AUTO_COMMAND));
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(assembledPlayerFleet, assembledEnemyFleet);
 		api.addPlugin(scorekeeper);
 		api.addPlugin(new BattleNext_BattleClockPlugin(timeLimit, scorekeeper));
 		api.addPlugin(new BattleNext_BattleResultRecorder(scorekeeper, match, null,
 				assembledPlayerFleet.getDefinition().getName(), assembledEnemyFleet.getDefinition().getName(), reportMarker));
-		api.addPlugin(new BattleNext_FleetOrderBehavior(BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()),
-				BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()), assembledPlayerFleet, assembledEnemyFleet));
+		api.addPlugin(new BattleNext_FleetOrderBehavior(playerMode, enemyMode, assembledPlayerFleet, assembledEnemyFleet));
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
 		api.addPlugin(new BattleNext_AllShipsStatusPlugin());
 		if (BattleNext_Settings.isRttInBattle()) {
@@ -125,9 +127,9 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		BattleNext_Logger.info(MissionDefinition.class, "battle.created",
 				() -> BattleNext_Logger.fields().put("mission", "pve").put("match", match).put("source", source)
 						.put("source_side", sourceSide).put("source_index", quickBattleMatchIndex).put("faction_id", faction.getId())
-						.put("budget", expectedFp).put("actual_points", actualPoints).put("player", assembledPlayerFleet.getDefinition())
-						.put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", BattleNext_FleetOrderBehavior.fromTags(assembledPlayerFleet.getDefinition().getTags()))
-						.put("enemy_mode", BattleNext_FleetOrderBehavior.fromTags(assembledEnemyFleet.getDefinition().getTags()))
+						.put("budget", expectedFp).put("actual_points", generatedPoints).put("player", assembledPlayerFleet.getDefinition())
+						.put("enemy", assembledEnemyFleet.getDefinition()).put("player_mode", playerMode)
+						.put("enemy_mode", enemyMode)
 						.put("time_limit", timeLimit).put("rtt", BattleNext_Settings.isRttInBattle()).put("marker", reportMarker).build());
 	}
 

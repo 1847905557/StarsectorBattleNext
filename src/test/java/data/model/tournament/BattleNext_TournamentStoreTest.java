@@ -17,7 +17,7 @@ class BattleNext_TournamentStoreTest extends BattleNext_TestGameFixture {
 		BattleNext_TournamentModel first = new BattleNext_TournamentModel("first", "First", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 		store.save(first);
 		store.reload();
-		assertEquals(List.of("first"), store.getAll().stream().map(BattleNext_TournamentModel::getId).toList());
+		assertEquals(List.of("first"), store.getAllCopy().stream().map(BattleNext_TournamentModel::getId).toList());
 		for (String id : List.of("started_tournament", "STARTED_TOURNAMENT")) {
 			assertThrows(IllegalArgumentException.class, () -> store.save(new BattleNext_TournamentModel(id, "Reserved",
 					BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2)));
@@ -25,6 +25,6 @@ class BattleNext_TournamentStoreTest extends BattleNext_TestGameFixture {
 		assertFalse(Files.exists(directory.resolve(BattleNext_StartedTournamentStore.PATH)));
 		store.delete("first");
 		store.reload();
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
 	}
 }

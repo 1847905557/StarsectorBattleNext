@@ -1,6 +1,7 @@
 package data.scripts.fleet;
 
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,12 +19,12 @@ class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
 	void jsonInstallsBothModulesIntoInitiallyEmptyVariants(boolean array) throws Exception {
 		hull("parent", "Parent", List.of("WS 026", "WS 027"));
 		hull("child", "Child", List.of());
-		var left = new JSONObject().put("variantId", "left").put("hullId", "child").put("fluxVents", 7);
-		var right = new JSONObject().put("variantId", "right").put("hullId", "child").put("fluxVents", 9);
+		JSONObject left = new JSONObject().put("variantId", "left").put("hullId", "child").put("fluxVents", 7);
+		JSONObject right = new JSONObject().put("variantId", "right").put("hullId", "child").put("fluxVents", 9);
 		Object modules = array ? new JSONArray().put(new JSONObject().put("WS 026", left)).put(new JSONObject().put("WS 027", right))
 				: new JSONObject().put("WS 026", left).put("WS 027", right);
-		var json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", modules);
-		var variant = BattleNext_VariantBuilder.fromJson(json, "parent").build();
+		JSONObject json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", modules);
+		ShipVariantAPI variant = BattleNext_VariantBuilder.fromJson(json, "parent").build();
 		assertEquals(2, variant.getModuleSlots().size());
 		assertEquals(7, variant.getModuleVariant("WS 026").toJSONObject().getInt("fluxVents"));
 		assertEquals(9, variant.getModuleVariant("WS 027").toJSONObject().getInt("fluxVents"));
@@ -33,9 +34,9 @@ class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
 	void regularWeaponSlotsCannotAcceptStationModules() throws Exception {
 		hull("parent", "Parent", List.of("module"));
 		hull("child", "Child", List.of());
-		var json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", new JSONObject()
+		JSONObject json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", new JSONObject()
 				.put("weapon", new JSONObject().put("variantId", "child").put("hullId", "child")));
-		var failure = assertThrows(IllegalArgumentException.class, () -> BattleNext_VariantBuilder.fromJson(json, "parent").build());
+		IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> BattleNext_VariantBuilder.fromJson(json, "parent").build());
 		assertEquals("Unknown module slot: weapon", failure.getMessage());
 	}
 
@@ -45,9 +46,9 @@ class BattleNext_VariantBuilderTest extends BattleNext_TestGameFixture {
 			case "getHullId" -> "parent";
 			default -> null;
 		}));
-		var json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", new JSONObject()
+		JSONObject json = new JSONObject().put("variantId", "parent").put("hullId", "parent").put("modules", new JSONObject()
 				.put("missing", new JSONObject().put("variantId", "child").put("hullId", "child")));
-		var failure = assertThrows(IllegalArgumentException.class, () -> BattleNext_VariantBuilder.fromJson(json, "parent").build());
+		IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> BattleNext_VariantBuilder.fromJson(json, "parent").build());
 		assertEquals("Unknown module slot: missing", failure.getMessage());
 	}
 }

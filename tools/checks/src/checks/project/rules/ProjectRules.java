@@ -6,6 +6,7 @@ import java.util.List;
 
 public final class ProjectRules {
 	private ProjectRules() {
+
 	}
 
 	public static List<ProjectRule> all() {
@@ -17,7 +18,6 @@ public final class ProjectRules {
 				new LifecycleTypeResolutionFailureRule(),
 				new LifecycleConstructorRule(),
 				new FieldAccessBoundaryRule(),
-				new PublicDataShapeRule()
-		);
+				new PublicDataShapeRule());
 	}
 }

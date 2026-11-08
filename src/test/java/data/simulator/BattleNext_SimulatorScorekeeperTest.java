@@ -11,6 +11,7 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.RepairTrackerAPI;
 import com.fs.starfarer.api.fleet.FleetMemberStatusAPI;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
+import data.model.report.BattleNext_BattleReportModel;
 import data.test.fixture.BattleNext_TestGameFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,6 +29,7 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void reservesKeepCombatRunningAcrossDeploymentAndLossAndReportTheirActualState() {
+
 		ShipHullSpecAPI hull = proxy(ShipHullSpecAPI.class, (method, args) -> method.equals("getHullId") ? "wolf" : null);
 		ShipVariantAPI variant = proxy(ShipVariantAPI.class, (method, args) -> switch (method) {
 			case "getHullVariantId" -> "wolf_CS";
@@ -75,6 +77,7 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 		try {
 			scorekeeper.advance(0.1f, List.of());
 			assertFalse(scorekeeper.isFrozen());
+
 			for (int side = 0; side < 2; side++) {
 				FleetMemberAPI member = reserves.get(side).remove(0);
 				deployed.get(side).add(member);
@@ -88,19 +91,21 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			}
 			scorekeeper.advance(0.1f, List.of());
 			assertFalse(scorekeeper.isFrozen());
+
 			destroyed.get(0).add(deployed.get(0).remove(0));
 			ships.remove(0);
 			scorekeeper.advance(0.1f, List.of());
 			assertFalse(scorekeeper.isFrozen());
+
 			combatOver[0] = true;
 			scorekeeper.advance(0.1f, List.of());
-			var report = scorekeeper.getFrozenReport();
+			BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 			assertEquals("enemy", report.getWinner());
-			assertEquals("destroyed", report.getPlayerMembers().get(0).getStatus());
-			assertEquals("undeployed", report.getPlayerMembers().get(1).getStatus());
-			assertEquals(0.6f, report.getPlayerMembers().get(1).getFinalHullFraction());
-			assertEquals(0.4f, report.getPlayerMembers().get(1).getFinalCr());
-			assertEquals("alive", report.getEnemyMembers().get(0).getStatus());
+			assertEquals("destroyed", report.getPlayerMembersReadonly().get(0).getStatus());
+			assertEquals("undeployed", report.getPlayerMembersReadonly().get(1).getStatus());
+			assertEquals(0.6f, report.getPlayerMembersReadonly().get(1).getFinalHullFraction());
+			assertEquals(0.4f, report.getPlayerMembersReadonly().get(1).getFinalCr());
+			assertEquals("alive", report.getEnemyMembersReadonly().get(0).getStatus());
 		} finally {
 			scorekeeper.cleanup();
 		}
@@ -169,6 +174,7 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 		try {
 			scorekeeper.advance(0f, List.of());
 			assertFalse(scorekeeper.isFrozen());
+
 			ships.add(roots.get(firstOwner));
 			alive[firstOwner] = true;
 			scorekeeper.advance(0.1f, List.of());
@@ -196,11 +202,12 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			}
 			elapsed[0] = 12f;
 			scorekeeper.advance(0.1f, List.of());
-			var report = scorekeeper.getFrozenReport();
+			BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 			assertEquals(winner, report.getWinner());
 			assertEquals(12000L, report.getDurationMillis());
-			assertEquals(2, report.getPlayerMembers().size());
-			assertEquals(1, report.getEnemyMembers().size());
+			assertEquals(2, report.getPlayerMembersReadonly().size());
+			assertEquals(1, report.getEnemyMembersReadonly().size());
+
 			alive[0] = !alive[0];
 			elapsed[0] = 20f;
 			scorekeeper.advance(0.1f, List.of());
@@ -271,20 +278,25 @@ class BattleNext_SimulatorScorekeeperTest extends BattleNext_TestGameFixture {
 			case "getTotalElapsedTime" -> 10f;
 			case "getListenerManager" -> listeners;
 			case "getCustomData" -> customData;
-			case "removePlugin" -> { lifecycle.add("removePlugin"); yield null; }
+			case "removePlugin" -> {
+				lifecycle.add("removePlugin");
+				yield null;
+			}
 			default -> null;
 		});
 		BattleNext_ScorekeeperPlugin scorekeeper = new BattleNext_ScorekeeperPlugin(List.of(playerMember), List.of(enemyMember));
 		scorekeeper.init(engine);
 		scorekeeper.advance(1f / 60f, List.of());
 		assertFalse(scorekeeper.isFrozen());
+
 		enemyAlive.set(false);
 		scorekeeper.advance(1f / 60f, List.of());
 		assertEquals("player", scorekeeper.getFrozenReport().getWinner());
 		assertEquals(10000L, scorekeeper.getFrozenReport().getDurationMillis());
-		assertEquals(1, scorekeeper.getFrozenReport().getEnemyMembers().size());
-		assertEquals("root_hull", scorekeeper.getFrozenReport().getPlayerMembers().get(0).getHullId());
-		assertEquals("root_hull", scorekeeper.getFrozenReport().getEnemyMembers().get(0).getHullId());
+		assertEquals(1, scorekeeper.getFrozenReport().getEnemyMembersReadonly().size());
+		assertEquals("root_hull", scorekeeper.getFrozenReport().getPlayerMembersReadonly().get(0).getHullId());
+		assertEquals("root_hull", scorekeeper.getFrozenReport().getEnemyMembersReadonly().get(0).getHullId());
+
 		scorekeeper.cleanup();
 		assertTrue(customData.isEmpty());
 		assertEquals(List.of("addListener", "removeListener", "removePlugin"), lifecycle);

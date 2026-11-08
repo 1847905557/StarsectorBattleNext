@@ -34,15 +34,18 @@ class BattleNext_KeyTuningTest {
 	void wrappingClampingAndOpposingKeysUseTheSharedKeyboardInput() {
 		keys.add(Keyboard.KEY_LEFT);
 		assertEquals(1, BattleNext_KeyTuning.adjustHorizontalWrapped(0, 2));
+
 		keys.clear();
 		keys.add(Keyboard.KEY_RIGHT);
 		assertEquals(0, BattleNext_KeyTuning.adjustHorizontalWrapped(1, 2));
 		keys.add(Keyboard.KEY_LEFT);
 		assertEquals(1, BattleNext_KeyTuning.adjustHorizontalWrapped(1, 2));
+
 		keys.clear();
 		keys.add(Keyboard.KEY_UP);
 		assertEquals(110, BattleNext_KeyTuning.adjustVerticalClamped(100, 10, 10, 2000));
 		assertEquals(2000, BattleNext_KeyTuning.adjustVerticalClamped(2000, 10, 10, 2000));
+
 		keys.clear();
 		keys.add(Keyboard.KEY_DOWN);
 		assertEquals(10, BattleNext_KeyTuning.adjustVerticalClamped(10, 10, 10, 2000));

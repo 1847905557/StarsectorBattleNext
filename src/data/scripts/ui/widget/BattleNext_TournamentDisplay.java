@@ -7,6 +7,7 @@ import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.report.BattleNext_BattleReportStore;
+import data.model.report.BattleNext_BattleReportModel;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.scripts.battle.BattleNext_Match;
@@ -34,10 +35,12 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 				String loadError, List<String> warnings, Set<String> reportIds) {
 			this(fleetNames, ruleAvailable, currentMatch, loadError, warnings, reportIds, null);
 		}
+
 		public Details(Map<String, String> fleetNames, boolean ruleAvailable, BattleNext_Match currentMatch,
 				String loadError, List<String> warnings) {
 			this(fleetNames, ruleAvailable, currentMatch, loadError, warnings, Set.of());
 		}
+
 		public Details {
 			fleetNames = Map.copyOf(fleetNames);
 			warnings = List.copyOf(warnings);
@@ -53,12 +56,15 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		public Action(String label, Object id, boolean enabled, List<String> reasons) {
 			this(label, id, enabled, reasons, "");
 		}
+
 		public Action {
 			reasons = List.copyOf(reasons);
 		}
 	}
 
-	public record ViewState(float scroll, BattleNext_TournamentView.ViewState chart) { }
+	public record ViewState(float scroll, BattleNext_TournamentView.ViewState chart) {
+
+	}
 
 	private static final float TITLE_GAP = 10f;
 	private static final float CONTENT_WIDTH_RESERVE = 12f;
@@ -75,6 +81,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	private Supplier<List<String>> saveErrors = List::of;
 	private final Consumer<Object> onAction;
 	private List<Action> actions;
+
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
@@ -107,7 +114,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	public static Details details(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started, BattleNext_FleetStore fleets,
 			BattleNext_RuleStore rules, String loadError, List<String> warnings) {
-		return details(tournament, started, started == null ? List.of() : started.getFleetIds(), fleets, rules, loadError, warnings);
+		return details(tournament, started, started == null ? List.of() : started.getFleetIdsReadonly(), fleets, rules, loadError, warnings);
 	}
 
 	public static Details details(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started, List<String> fleetIds,
@@ -127,7 +134,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		if (started != null) {
 			try {
 				reports.ensureLoaded();
-				reports.getAll().forEach(report -> reportIds.add(report.getId()));
+				for (BattleNext_BattleReportModel report : reports.getAllCopy()) reportIds.add(report.getId());
 			} catch (Exception exception) {
 				diagnostics.add(exception.toString());
 			}
@@ -228,7 +235,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 			fleetPicker = new BattleNext_OptionPicker(inputRouter, overlayHost, fleetSource,
 					BattleNext_OptionPicker.OptionSelectionMode.SINGLE, () -> {
 						String id = templateFleetIds.get().get(selectedSlot);
-						return fleetSource.getOptions().stream().anyMatch(option -> option.getId().equals(id)) ? List.of(id) : List.of();
+						return fleetSource.getOptions().stream().anyMatch(option -> option.id().equals(id)) ? List.of(id) : List.of();
 					}, ids -> onFleetSelected.accept(selectedSlot, ids.isEmpty() ? "" : ids.get(0)));
 		}
 		addSummary(viewport, content, availableWidth, canvas.getPosition().getWidth());
@@ -381,7 +388,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 				if (!action.reasons().isEmpty()) {
 					content.addTooltipToPrevious(new BaseTooltipCreator() {
 						@Override
-						public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+						public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 							for (String reason : action.reasons()) {
 								tooltip.addPara(reason, WARNING_GAP);
 							}
@@ -396,7 +403,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	public static int completedMatches(BattleNext_StartedTournament started) {
 		int completed = 0;
 		if (started == null) return 0;
-		for (BattleNext_Match match : started.getMatches()) {
+		for (BattleNext_Match match : started.getMatchesReadonly()) {
 			if (match.getEnemy().isEmpty()) continue;
 			if (match.getStatus() != BattleNext_Match.MatchStatus.COMPLETE) continue;
 
@@ -406,7 +413,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 	}
 
 	private List<String> participants() {
-		if (started != null) return started.getFleetIds();
+		if (started != null) return started.getFleetIdsReadonly();
 		if (templateFleetIds != null) return templateFleetIds.get();
 		return Collections.nCopies(tournament.getMaxFleet(), "");
 	}

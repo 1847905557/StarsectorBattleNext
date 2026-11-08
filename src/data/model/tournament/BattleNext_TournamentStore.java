@@ -31,7 +31,6 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 		return List.of(standardLoader);
 	}
 
-
 	@Override
 	public void save(BattleNext_TournamentModel configuration) throws IOException, JSONException {
 		requireEditable(configuration.getId());

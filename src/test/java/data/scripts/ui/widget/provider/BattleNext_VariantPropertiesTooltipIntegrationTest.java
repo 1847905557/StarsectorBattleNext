@@ -13,7 +13,10 @@ import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -41,6 +44,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
 
@@ -68,6 +72,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 				.put("mode", "LINKED").put("weapons", new JSONObject()
 						.put("builtin", "b").put("slot_1", "b").put("slot_2", "a"))));
 		root.getJson().put("wings", new JSONArray().put("b").put("").put("b").put("a").put(JSONObject.NULL));
+
 		Variant child = variant("first_module", childHull);
 		child.getApi().setNumFluxCapacitors(99);
 		child.getApi().setNumFluxVents(99);
@@ -78,6 +83,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		root.getApi().setModuleVariant("a", child.getApi());
 		root.getApi().setModuleVariant("b", variant("second_module", childHull).getApi());
 		root.getApi().setModuleVariant("c", variant("third_module", otherHull).getApi());
+
 		root.getApi().addMod("ordinary");
 		root.getApi().addMod("hidden");
 		root.getApi().addMod("picker_hidden");
@@ -118,6 +124,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 				throw exception.getCause();
 			}
 		}));
+
 		BattleNext_Logger.fields();
 		logger = Global.getLogger(BattleNext_Logger.class);
 		previousLevel = logger.getLevel();
@@ -156,10 +163,11 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();
 		store.reload();
-		var pin = store.saveVariant("Pinned properties", root.getApi());
+		BattleNext_PinnedVariantModel pin = store.saveVariant("Pinned properties", root.getApi());
 		BattleNext_VariantSourceProvider source = new BattleNext_VariantSourceProvider(store);
 		String id = BattleNext_VariantSourceProvider.PINNED_PREFIX + pin.getPinId();
 		List<String> registered = show(new BattleNext_VariantSourceProvider(), SELECTION);
+
 		root.getApi().setNumFluxCapacitors(99);
 		store.reload();
 		List<String> pinned = show(source, id);
@@ -239,7 +247,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertEquals("default", labelFonts.get(label.getPosition()));
 			assertEquals(footer ? BattleNext_UiTheme.MUTED : heading ? BattleNext_UiTheme.ACCENT : BattleNext_UiTheme.TEXT,
 					labelColors.get(label.getPosition()));
-			var previous = rendered.get(index - 1).getPosition();
+			PositionAPI previous = rendered.get(index - 1).getPosition();
 			float gap = previous.getY() - label.getPosition().getY() - label.getPosition().getHeight();
 			boolean row = index > 4 && !heading && !footer;
 			assertEquals(index == 4 || row ? 2f : 8f, gap);
@@ -250,7 +258,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 				assertTrue(rendered.get(rendered.size() - 1).getPosition().getHeight() > paragraphLineHeight);
 			}
 		}
-		var components = tooltips.get(hover).getComponents();
+		List<UIComponentAPI> components = tooltips.get(hover).getComponents();
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
 		assertTrue(appender.events.isEmpty());
 	}
@@ -295,7 +303,8 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
 			assertTrue(values.contains(unavailable + "missing ×1"));
 		}
-		var entries = new ArrayList<JSONObject>();
+
+		List<JSONObject> entries = new ArrayList<>();
 		for (LoggingEvent event : appender.events) {
 			JSONObject entry = new JSONObject(event.getRenderedMessage());
 			if (!entry.getString("source").equals(BattleNext_VariantSourceProvider.class.getName())) continue;
@@ -346,18 +355,18 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 		picker.attach(host, owner);
 		owner.addUIElement(host).inTL(0f, 0f);
 		for (int cycle = 0; cycle < 2; cycle++) {
-			CustomPanelAPI row = (CustomPanelAPI) field(picker, "row");
+			CustomPanelAPI row = (CustomPanelAPI) getField(picker, "row");
 			plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
-			CustomPanelAPI popup = (CustomPanelAPI) field(picker, "popup");
-			var browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
+			CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
+			Method browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
 			browse.setAccessible(true);
 			browse.invoke(picker, pinned ? "@pinned" : root.getApi().getHullSpec().getHullId(), false);
-			BattleNext_TextField search = (BattleNext_TextField) field(picker, "search");
+			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
 			search.setText(id);
 			plugins.get(popup).advance(0f);
-			CustomPanelAPI gridPanel = (CustomPanelAPI) field(picker, "gridPanel");
+			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			var tile = tooltips.get(grid).getComponents().get(0);
+			UIComponentAPI tile = tooltips.get(grid).getComponents().get(0);
 			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(tile).location());
 			assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
 			assertSame(tooltips.get(grid), tooltipBindings.get(tile).owner());
@@ -370,6 +379,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertEquals(id, currentText.get(1));
 			assertTrue(currentText.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ": 3"));
 			assertTrue(currentText.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 3"));
+
 			search.grabFocus(false);
 			assertTrue(search.hasFocus());
 			plugins.get(popup).buttonPressed(buttonIds.get("CANCEL"));
@@ -377,14 +387,9 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			assertTrue(router.isEmpty());
 			assertFalse(router.getSession().hasInputState());
 		}
+
 		picker.close();
 		assertTrue(tooltips.get(host).getComponents().isEmpty());
-	}
-
-	private Object field(Object target, String name) throws Exception {
-		var field = target.getClass().getDeclaredField(name);
-		field.setAccessible(true);
-		return field.get(target);
 	}
 
 	private Object failedResource() {

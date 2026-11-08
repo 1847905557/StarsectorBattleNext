@@ -21,6 +21,7 @@ public class BattleNext_ProximityDamageAttribution {
 	private static final Map<ShotBehaviorSpecAPI, String> ORIGINAL_EFFECTS = new WeakHashMap<>();
 
 	private BattleNext_ProximityDamageAttribution() {
+
 	}
 
 	@LifecycleEntry

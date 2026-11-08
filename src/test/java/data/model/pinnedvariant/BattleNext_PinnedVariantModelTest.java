@@ -16,22 +16,22 @@ class BattleNext_PinnedVariantModelTest {
 
 		JSONObject variant = new JSONObject().put("variantId", "original").put("hullId", "wolf")
 				.put("modules", new JSONObject().put("slot", new JSONObject().put("variantId", "child").put("hullId", "module")));
-		var pin = new BattleNext_PinnedVariantModel("pin", " Name ", variant);
+		BattleNext_PinnedVariantModel pin = new BattleNext_PinnedVariantModel("pin", " Name ", variant);
 		variant.getJSONObject("modules").getJSONObject("slot").put("hullId", "changed");
-		pin.getVariantJson().put("hullId", "changed");
+		pin.getVariantJsonCopy().put("hullId", "changed");
 		pin.toJson().getJSONObject("variantJson").put("hullId", "changed");
-		var loaded = new BattleNext_PinnedVariantModel();
+		BattleNext_PinnedVariantModel loaded = new BattleNext_PinnedVariantModel();
 		loaded.fromJson(pin.toJson());
 		assertEquals(pin.toJson().toString(), loaded.toJson().toString());
 		assertEquals("pin", loaded.getPinId());
 		assertEquals("Name", loaded.getDisplayName());
-		assertEquals("wolf", pin.getVariantJson().getString("hullId"));
-		assertEquals("module", loaded.getVariantJson().getJSONObject("modules").getJSONObject("slot").getString("hullId"));
-		assertEquals("wolf", loaded.getVariantJson().getString("hullId"));
-		assertEquals("original", loaded.getVariantJson().getString("variantId"));
-		assertEquals("child", loaded.getVariantJson().getJSONObject("modules").getJSONObject("slot").getString("variantId"));
+		assertEquals("wolf", pin.getVariantJsonCopy().getString("hullId"));
+		assertEquals("module", loaded.getVariantJsonCopy().getJSONObject("modules").getJSONObject("slot").getString("hullId"));
+		assertEquals("wolf", loaded.getVariantJsonCopy().getString("hullId"));
+		assertEquals("original", loaded.getVariantJsonCopy().getString("variantId"));
+		assertEquals("child", loaded.getVariantJsonCopy().getJSONObject("modules").getJSONObject("slot").getString("variantId"));
 		assertEquals("pin", pin.toBuilder().getId());
-		assertEquals("original", pin.getVariantJson().getString("variantId"));
+		assertEquals("original", pin.getVariantJsonCopy().getString("variantId"));
 		assertEquals("Name", pin.getDisplayName());
 	}
 
@@ -47,10 +47,10 @@ class BattleNext_PinnedVariantModelTest {
 			case "snapshot" -> invalid.put("variantJson", "invalid");
 			case "missing" -> invalid.remove("pinId");
 		}
-		var pin = new BattleNext_PinnedVariantModel();
+		BattleNext_PinnedVariantModel pin = new BattleNext_PinnedVariantModel();
 		Class<? extends Exception> exceptionType = failure.equals("snapshot") || failure.equals("missing")
 				? JSONException.class : IllegalArgumentException.class;
-		var exception = assertThrows(exceptionType, () -> pin.fromJson(invalid));
+		Exception exception = assertThrows(exceptionType, () -> pin.fromJson(invalid));
 		String identity = switch (failure) {
 			case "id" -> "Invalid pin ID: ../pin";
 			case "name" -> "Pinned variant display name is required";

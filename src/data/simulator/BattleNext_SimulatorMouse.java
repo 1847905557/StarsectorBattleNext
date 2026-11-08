@@ -64,6 +64,7 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public void createMouse() {
+
 	}
 
 	@Override
@@ -125,10 +126,12 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public void createKeyboard() {
+
 	}
 
 	@Override
 	public void destroyKeyboard() {
+
 	}
 
 	@Override
@@ -140,6 +143,7 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public void readKeyboard(ByteBuffer buffer) {
+
 	}
 
 	@Override
@@ -149,6 +153,7 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public void destroyCursor(Object cursor) {
+
 	}
 
 	@Override

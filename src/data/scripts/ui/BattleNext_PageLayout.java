@@ -85,6 +85,7 @@ public class BattleNext_PageLayout {
 	private static final float MANAGEMENT_LIST_MAX_SHARE = 0.4f;
 
 	private BattleNext_PageLayout() {
+
 	}
 
 	public static SpriteAPI missingIcon() {
@@ -330,12 +331,13 @@ public class BattleNext_PageLayout {
 		button.getPosition().inTL(0f, maker.getHeightSoFar() - FOOTER_HEIGHT);
 		maker.addTooltipToPrevious(tooltip == null ? new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH,
 						title.length() * TOOLTIP_WIDTH_PER_CHAR));
 			}
+
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				tooltip.addPara(title, 0f);
 			}
 		} : tooltip, TooltipLocation.RIGHT);
@@ -349,12 +351,12 @@ public class BattleNext_PageLayout {
 	public static void addMetadataTooltip(TooltipMakerAPI host, String title, String... lines) {
 		host.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
-			public float getTooltipWidth(Object ignored) {
+			public float getTooltipWidth(Object tooltipParam) {
 				return 320f;
 			}
 
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				tooltip.addTitle(title);
 				for (String line : lines) {
 					addMutedIdLine(tooltip, line, 5f);

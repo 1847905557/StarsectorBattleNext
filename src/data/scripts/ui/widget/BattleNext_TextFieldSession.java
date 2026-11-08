@@ -41,15 +41,13 @@ public class BattleNext_TextFieldSession {
 
 	public <K> Map<K, BattleNext_TextField.EditState> captureFields(Map<K, BattleNext_TextField> fields) {
 		Map<K, BattleNext_TextField.EditState> states = new LinkedHashMap<>();
-		for (var entry : fields.entrySet()) {
-			states.put(entry.getKey(), entry.getValue().captureEditState());
-		}
+		for (Map.Entry<K, BattleNext_TextField> entry : fields.entrySet()) states.put(entry.getKey(), entry.getValue().captureEditState());
 		return Collections.unmodifiableMap(states);
 	}
 
 	public <K> void restoreFields(Map<K, BattleNext_TextField> fields,
 			Map<K, BattleNext_TextField.EditState> states, boolean restoreText) {
-		for (var entry : fields.entrySet()) {
+		for (Map.Entry<K, BattleNext_TextField> entry : fields.entrySet()) {
 			BattleNext_TextField.EditState state = states.get(entry.getKey());
 			if (state == null) continue;
 			if (!restoreText && !state.text().equals(entry.getValue().getText())) continue;
@@ -195,7 +193,7 @@ public class BattleNext_TextFieldSession {
 	}
 
 	private BattleNext_TextField findTarget(InputEventAPI event) {
-		for (var registration : registrations.entrySet()) {
+		for (Map.Entry<BattleNext_TextField, List<TooltipMakerAPI>> registration : registrations.entrySet()) {
 			BattleNext_TextField field = registration.getKey();
 			if (field.isUsableForInput() && inputScope.test(field, event)
 					&& field.getPosition().containsEvent(event) && isInsideViewports(registration.getValue(), event)) {

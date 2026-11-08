@@ -10,6 +10,8 @@ import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Row;
+import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -33,29 +35,32 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void promotingAnEditedRawDraftKeepsTheSharedCatalogUnchangedUntilSave() throws Exception {
-		var catalogs = Catalogs.create();
+
+		Catalogs catalogs = Catalogs.create();
 		catalogs.fleets().reload();
 		catalogs.quickBattles().reload();
-		var original = BattleNext_QuickBattleModel.parseLine("# unfinished", false);
+		BattleNext_QuickBattleModel original = BattleNext_QuickBattleModel.parseLine("# unfinished", false);
 		original.setId("raw");
 		catalogs.quickBattles().save(original);
 		String stored = original.toSourceLine();
-		var editor = new BattleNext_QuickBattleEditor(() -> { }, new BaseCustomUIPanelPlugin(), catalogs.source());
+		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> { }, new BaseCustomUIPanelPlugin(), catalogs.source());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		assertTrue(editor.save(), editor.getStatusText());
 		original = catalogs.quickBattles().get("raw");
 		long revision = catalogs.quickBattles().getRevision();
-		var display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		var row = display.getRows().stream().filter(value -> value.getModel().getId().equals("raw")).findFirst().orElseThrow();
+		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
+		Row row = display.getRowsReadonly().stream().filter(value -> value.getModel().getId().equals("raw")).findFirst().orElseThrow();
 		assertNotSame(original, row.getModel());
+
 		row.getRawField().setText("alpha,beta,4,2");
 		editor.refreshRowStatuses();
 		assertEquals(stored, original.toSourceLine());
 		assertEquals(revision, catalogs.quickBattles().getRevision());
 		assertTrue(editor.hasUnsavedChanges());
+
 		editor.discard();
 		display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		row = display.getRows().stream().filter(value -> value.getModel().getId().equals("raw")).findFirst().orElseThrow();
+		row = display.getRowsReadonly().stream().filter(value -> value.getModel().getId().equals("raw")).findFirst().orElseThrow();
 		assertTrue(row.isRaw());
 		assertEquals(stored, row.getModel().toSourceLine());
 		editor.close();
@@ -63,22 +68,24 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void savingFocusedRawTextCreatesEditableCellsWithTheParsedValuesAndPreservesOtherDrafts() throws Exception {
-		var editor = new BattleNext_QuickBattleEditor(() -> { }, new BaseCustomUIPanelPlugin());
+
+		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> { }, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		var entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");
+		List<BattleNext_QuickBattleModel> entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");
 		entries.clear();
 		entries.add(BattleNext_QuickBattleModel.parseLine("# unfinished", false));
 		entries.add(new BattleNext_QuickBattleModel("other", "enemy", -1, 1f));
 		editor.refreshContent();
-		var display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		display.getRows().get(1).getField(Column.MAP).setText("3");
-		display.getRows().get(1).setEnabled(false);
-		var raw = display.getRows().get(0).getRawField();
+		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
+		display.getRowsReadonly().get(1).getField(Column.MAP).setText("3");
+		display.getRowsReadonly().get(1).setEnabled(false);
+		BattleNext_TextField raw = display.getRowsReadonly().get(0).getRawField();
 		raw.grabFocus(false);
 		raw.setText("alpha,beta,4,2");
 		assertTrue(editor.save(), editor.getStatusText());
+
 		display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		var promoted = display.getRows().get(0);
+		Row promoted = display.getRowsReadonly().get(0);
 		assertNull(promoted.getRawField());
 		assertEquals("alpha", promoted.getFleetId(Column.PLAYER));
 		assertEquals("beta", promoted.getFleetId(Column.ENEMY));
@@ -86,26 +93,28 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals("2.0", promoted.getField(Column.SCALE).getText());
 		assertFalse(promoted.isEnabled());
 		assertTrue(((ButtonAPI) getField(promoted, "enabledCheckbox")).isEnabled());
-		assertEquals("3", display.getRows().get(1).getField(Column.MAP).getText());
-		assertFalse(display.getRows().get(1).isEnabled());
+		assertEquals("3", display.getRowsReadonly().get(1).getField(Column.MAP).getText());
+		assertFalse(display.getRowsReadonly().get(1).isEnabled());
 		editor.close();
 	}
 
 	@Test
 	void saveAggregatesAllRowFieldsInRowOrderAndRetainsTheDraft() throws Exception {
-		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
+
+		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		List<BattleNext_QuickBattleModel> entries = (List<BattleNext_QuickBattleModel>) getField(editor, "entries");
 		entries.clear();
 		entries.add(new BattleNext_QuickBattleModel("", "", -1, 1f));
 		entries.add(new BattleNext_QuickBattleModel("first", "second", -1, 1f));
 		editor.refreshContent();
-		var display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		for (var row : display.getRows()) {
+		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
+		for (Row row : display.getRowsReadonly()) {
 			row.getField(Column.MAP).setText("pending");
 			row.getField(Column.SCALE).setText("0");
 		}
 		String draft = editor.serializeState();
+
 		assertFalse(editor.save());
 		assertEquals(6, editor.getSaveErrors().size());
 		for (int index = 0; index < 6; index++) {
@@ -117,6 +126,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(-1, entries.get(0).getMap());
 		assertEquals(1f, entries.get(0).getMapScale());
 		assertEquals(editor.getStatusText(), ((LabelAPI) getField(editor, "statusLabel")).getText());
+
 		editor.discard();
 		assertTrue(editor.getSaveErrors().isEmpty());
 		editor.close();
@@ -137,21 +147,21 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 						throw exception.getCause();
 					}
 				}));
-		var editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
+		BattleNext_QuickBattleEditor editor = new BattleNext_QuickBattleEditor(() -> {}, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
-		var fleets = (BattleNext_FleetStore) getField(editor, "fleetStore");
+		BattleNext_FleetStore fleets = (BattleNext_FleetStore) getField(editor, "fleetStore");
 		fleets.save(new BattleNext_FleetModel("first", "First fleet", List.of(), List.of(), List.of()));
 		fleets.save(new BattleNext_FleetModel("second", "Second fleet", List.of(), List.of(), List.of()));
 		((List<?>) getField(editor, "entries")).clear();
 		editor.refreshContent();
 		editor.buttonPressed("add");
-		var display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
+		BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
 		selectQuickBattleFleet(display, 0, Column.PLAYER, "first");
 		selectQuickBattleFleet(display, 0, Column.ENEMY, "second");
 		assertTrue(editor.hasUnsavedChanges());
-		assertEquals("first", display.getRows().get(0).getFleetId(Column.PLAYER));
-		assertEquals("second", display.getRows().get(0).getFleetId(Column.ENEMY));
-		var fleetFields = (Map<Column, BattleNext_OptionField>) getField(display.getRows().get(0), "fleetFields");
+		assertEquals("first", display.getRowsReadonly().get(0).getFleetId(Column.PLAYER));
+		assertEquals("second", display.getRowsReadonly().get(0).getFleetId(Column.ENEMY));
+		Map<Column, BattleNext_OptionField> fleetFields = (Map<Column, BattleNext_OptionField>) getField(display.getRowsReadonly().get(0), "fleetFields");
 		assertEquals("first", fleetFields.get(Column.PLAYER).getField().getText());
 		assertTrue(((BattleNext_TextField) fleetFields.get(Column.PLAYER).getField()).isEditable());
 		assertEquals("...", buttonLabels.get("TOGGLE"));
@@ -159,29 +169,29 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		fleetFields.get(Column.PLAYER).getField().setText("typed_id");
 		editor.refreshContent();
 		display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		fleetFields = (Map<Column, BattleNext_OptionField>) getField(display.getRows().get(0), "fleetFields");
-		assertEquals("typed_id", display.getRows().get(0).getFleetId(Column.PLAYER));
+		fleetFields = (Map<Column, BattleNext_OptionField>) getField(display.getRowsReadonly().get(0), "fleetFields");
+		assertEquals("typed_id", display.getRowsReadonly().get(0).getFleetId(Column.PLAYER));
 		fleetFields.get(Column.PLAYER).getField().setText("first");
 		TooltipMakerAPI hover = tooltip(400f, 0f, false);
 		attachedTooltips.get((CustomPanelAPI) getField(fleetFields.get(Column.PLAYER), "row")).createTooltip(hover, false, null);
 		assertTrue(tooltips.get(hover).getComponents().stream().filter(LabelAPI.class::isInstance)
 				.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(text -> text.contains("First fleet")));
-		var picker = openQuickBattleFleet(display, 0, Column.PLAYER);
+		BattleNext_OptionPicker picker = openQuickBattleFleet(display, 0, Column.PLAYER);
 		((CustomPanelAPI) getField(picker, "popup")).getPlugin().buttonPressed(buttonIds.get("CANCEL"));
-		assertEquals("first", display.getRows().get(0).getFleetId(Column.PLAYER));
+		assertEquals("first", display.getRowsReadonly().get(0).getFleetId(Column.PLAYER));
 		selectQuickBattleFleet(display, 0, Column.PLAYER, "first");
-		assertEquals("", display.getRows().get(0).getFleetId(Column.PLAYER));
+		assertEquals("", display.getRowsReadonly().get(0).getFleetId(Column.PLAYER));
 		assertFalse(editor.save());
 		selectQuickBattleFleet(display, 0, Column.PLAYER, "second");
 		editor.buttonPressed("add");
 		editor.buttonPressed("delete:1");
 		display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		assertEquals("second", display.getRows().get(0).getFleetId(Column.PLAYER));
-		assertEquals("second", display.getRows().get(0).getFleetId(Column.ENEMY));
+		assertEquals("second", display.getRowsReadonly().get(0).getFleetId(Column.PLAYER));
+		assertEquals("second", display.getRowsReadonly().get(0).getFleetId(Column.ENEMY));
 		assertTrue(editor.save());
 		editor.deserialize();
 		display = (BattleNext_QuickBattleDisplay) getField(editor, "display");
-		assertTrue(display.getRows().stream().anyMatch(row -> row.getModel().getPlayer().equals("second")
+		assertTrue(display.getRowsReadonly().stream().anyMatch(row -> row.getModel().getPlayer().equals("second")
 				&& row.getModel().getEnemy().equals("second")));
 		openQuickBattleFleet(display, 0, Column.ENEMY);
 		editor.close();
@@ -206,7 +216,7 @@ class BattleNext_QuickBattleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(BattleNext_QuickBattleModel.QuickBattleRowType.BATTLE, entries.get(0).getRowType());
 		assertEquals(3, entries.size());
 		assertEquals(-1, entries.get(1).getMap());
-		assertEquals("first", ((BattleNext_QuickBattleDisplay) getField(editor, "display")).getRows().get(0).getFleetId(Column.PLAYER));
+		assertEquals("first", ((BattleNext_QuickBattleDisplay) getField(editor, "display")).getRowsReadonly().get(0).getFleetId(Column.PLAYER));
 		assertDoesNotThrow(editor::refreshRowStatuses);
 		rows = (List<?>) getField(getField(editor, "display"), "rows");
 		assertEquals("first", ((BattleNext_QuickBattleDisplay.Row) rows.get(0)).getFleetId(Column.PLAYER));

@@ -30,6 +30,7 @@ public class BattleNext_TestSpriteCatalog {
 	}
 
 	public static String withoutHashComments(String text) {
+
 		StringBuilder result = new StringBuilder();
 		boolean quoted = false;
 		boolean escaped = false;
@@ -43,6 +44,7 @@ public class BattleNext_TestSpriteCatalog {
 				}
 				continue;
 			}
+
 			if (quoted) {
 				result.append(character);
 				if (escaped) {
@@ -54,6 +56,7 @@ public class BattleNext_TestSpriteCatalog {
 				}
 				continue;
 			}
+
 			if (character == '#') {
 				comment = true;
 			} else {
@@ -63,6 +66,7 @@ public class BattleNext_TestSpriteCatalog {
 				}
 			}
 		}
+
 		return result.toString();
 	}
 
@@ -81,6 +85,7 @@ public class BattleNext_TestSpriteCatalog {
 					}
 				}
 			}
+
 			return Map.copyOf(result);
 		} catch (Exception exception) {
 			throw new AssertionError("Unable to load sprite registrations", exception);

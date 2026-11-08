@@ -3,8 +3,8 @@ package checks.project.rules;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import checks.project.ProjectRule;
 import checks.project.analysis.LifecycleControllerAnalysis.LifecycleEntryMethod;
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 import checks.project.support.AstSupport;
 

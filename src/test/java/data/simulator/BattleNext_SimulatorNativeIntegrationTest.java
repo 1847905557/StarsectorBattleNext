@@ -18,6 +18,7 @@ import org.lwjgl.opengl.PixelFormat;
 import java.awt.Color;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 class BattleNext_SimulatorNativeIntegrationTest {
 
@@ -46,16 +48,18 @@ class BattleNext_SimulatorNativeIntegrationTest {
 	}
 
 	private String runProbe(Class<?> probe) throws Exception {
+
 		Path core = Path.of("../..", "starsector-core").toAbsolutePath().normalize();
 		List<String> classpath = new ArrayList<>();
 		classpath.add(Path.of(BattleNext_SimulatorNative.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
 		classpath.add(Path.of(Probe.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
-		try (var paths = Files.list(core)) {
+		try (Stream<Path> paths = Files.list(core)) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(Path::toString).toList());
 		}
-		try (var paths = Files.walk(Path.of("../BoxUtil/jars"))) {
+		try (Stream<Path> paths = Files.walk(Path.of("../BoxUtil/jars"))) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(path -> path.toAbsolutePath().toString()).toList());
 		}
+
 		Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin/java.exe").toString(), "-Xverify:none", "-cp",
 				String.join(System.getProperty("path.separator"), classpath), "-Djava.library.path=" + core.resolve("native/windows"), probe.getName()).redirectErrorStream(true).start();
 		String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -64,6 +68,10 @@ class BattleNext_SimulatorNativeIntegrationTest {
 	}
 
 	public static class Probe {
+		private Probe() {
+
+		}
+
 		public static void main(String[] arguments) throws Exception {
 			new BattleNext_SimulatorNative(Probe.class.getClassLoader());
 			System.out.println("Simulator native handles bound");
@@ -73,14 +81,17 @@ class BattleNext_SimulatorNativeIntegrationTest {
 	}
 
 	public static class MouseProbe {
+		private MouseProbe() {
+
+		}
 
 		public static void main(String[] arguments) throws Exception {
 
 			Display.setLocation(-20000, -20000);
-			var implementation = Mouse.class.getDeclaredField("implementation");
+			Field implementation = Mouse.class.getDeclaredField("implementation");
 			implementation.setAccessible(true);
 			Object original = implementation.get(null);
-			var displayImplementation = Display.class.getDeclaredMethod("getImplementation");
+			Method displayImplementation = Display.class.getDeclaredMethod("getImplementation");
 			displayImplementation.setAccessible(true);
 			Object desktop = displayImplementation.invoke(null);
 			Field desktopMouse = desktop.getClass().getDeclaredField("mouse");
@@ -128,6 +139,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 	}
 
 	public static class SandboxProbe {
+		private SandboxProbe() {
+
+		}
 
 		public static void main(String[] arguments) throws Exception {
 
@@ -158,7 +172,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			JSONObject nativeSettings = new JSONObject().put("devMode", false).put("baseMaxAdmins", 2)
 					.put("baseMaxOutposts", 2).put("startingCommandPoints", 5).put("baseNumOfficers", 8);
 			Map<Field, Object> previousNativeSettings = new LinkedHashMap<>();
-			for (var field : Class.forName("com.fs.starfarer.settings.StarfarerSettings").getDeclaredFields()) {
+			for (Field field : Class.forName("com.fs.starfarer.settings.StarfarerSettings").getDeclaredFields()) {
 				if (field.getType() != JSONObject.class || !Modifier.isStatic(field.getModifiers())) continue;
 				field.setAccessible(true);
 				previousNativeSettings.put(field, field.get(null));
@@ -183,19 +197,17 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				verifyService(loader, root);
 				System.out.println("Simulator script sandbox verified");
 			} finally {
-				for (var entry : previousNativeSettings.entrySet()) {
-					entry.getKey().set(null, entry.getValue());
-				}
+				for (Map.Entry<Field, Object> entry : previousNativeSettings.entrySet()) entry.getKey().set(null, entry.getValue());
+
 				Global.setSettings(previous);
 				if (saves == null) {
 					System.clearProperty("com.fs.starfarer.settings.paths.saves");
 				} else {
 					System.setProperty("com.fs.starfarer.settings.paths.saves", saves);
 				}
-				try (var paths = Files.walk(root)) {
-					for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
-						Files.delete(path);
-					}
+
+				try (Stream<Path> paths = Files.walk(root)) {
+					for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
 				}
 			}
 		}
@@ -239,6 +251,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		}
 
 		private static void verifyStorage(ClassLoader loader, Path root) throws Exception {
+
 			Class<?> type = loader.loadClass("data.simulator.BattleNext_SimulatorStorage");
 			Object storage = type.getConstructor(Path.class).newInstance(root.resolve("owned"));
 			String session = UUID.randomUUID().toString();
@@ -247,12 +260,14 @@ class BattleNext_SimulatorNativeIntegrationTest {
 			if (!Files.isDirectory(directory)) throw new AssertionError("Sandbox log directory creation");
 			List<?> listed = (List<?>) type.getMethod("listFiles", Path.class).invoke(storage, root.resolve("owned"));
 			if (!listed.equals(List.of(directory))) throw new AssertionError("Sandbox directory listing");
+
 			Path diagnostic = directory.resolve("hs_err_pid1.log");
 			Files.writeString(diagnostic, "Worker crash diagnostic", StandardCharsets.UTF_8);
 			type.getMethod("deleteEmptyDirectory", Path.class).invoke(storage, directory);
 			if (!Files.readString(diagnostic, StandardCharsets.UTF_8).equals("Worker crash diagnostic")) {
 				throw new AssertionError("Sandbox cleanup must retain worker diagnostics");
 			}
+
 			Path empty = (Path) type.getMethod("directory", String.class).invoke(storage, UUID.randomUUID().toString());
 			type.getMethod("deleteEmptyDirectory", Path.class).invoke(storage, empty);
 			if (Files.exists(empty)) throw new AssertionError("Sandbox cleanup must remove the empty worker directory");
@@ -284,9 +299,9 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				Object task = type.getMethod("submit", requestType).invoke(service, request);
 				String id = (String) requestType.getMethod("id").invoke(request);
 				Class<?> taskType = task.getClass();
-				long deadline = System.nanoTime() + 15000000000L;
+				long deadlineNanos = System.nanoTime() + 15000000000L;
 				Object result;
-				while ((result = taskType.getMethod("getResult").invoke(task)) == null && System.nanoTime() < deadline) {
+				while ((result = taskType.getMethod("getResult").invoke(task)) == null && System.nanoTime() < deadlineNanos) {
 					Thread.sleep(20L);
 				}
 				if (result == null) throw new AssertionError("Sandbox startup failure must resolve the task");
@@ -295,12 +310,13 @@ class BattleNext_SimulatorNativeIntegrationTest {
 				if (!result.getClass().getMethod("diagnostic").invoke(result).toString().contains("cold start")) throw new AssertionError("Sandbox startup failure phase");
 				if (!taskType.getMethod("getState").invoke(task).toString().equals("FINISHED")) throw new AssertionError("Sandbox startup terminal state");
 				service.close();
-				var output = type.getDeclaredField("workerOutput");
+
+				Field output = type.getDeclaredField("workerOutput");
 				output.setAccessible(true);
 				if (!output.get(service).toString().contains("ClassNotFoundException: data.simulator.BattleNext_SimulatorWorker")) {
 					throw new AssertionError("Expected isolated worker classpath diagnostic in memory");
 				}
-				try (var paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations"))) {
+				try (Stream<Path> paths = Files.list(root.resolve("game/mods/fixture/tournament/_simulations"))) {
 					if (paths.findAny().isPresent()) throw new AssertionError("Sandbox startup failure must release its empty worker directory");
 				}
 			}

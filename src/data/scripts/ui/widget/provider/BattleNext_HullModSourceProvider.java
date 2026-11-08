@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 public class BattleNext_HullModSourceProvider extends BattleNext_BaseSourceProvider {
 
 	private final Supplier<ShipVariantAPI> variantSupplier;
+
 	private final BattleNext_I18nSection refitStrings = BattleNext_I18nSection.getInstance("Refit", "BattleNext_refit_");
 
 	public BattleNext_HullModSourceProvider(Supplier<ShipVariantAPI> variantSupplier) {
@@ -31,12 +32,10 @@ public class BattleNext_HullModSourceProvider extends BattleNext_BaseSourceProvi
 
 	@Override
 	public List<OptionChoice> getOptions() {
-		List<OptionChoice> choices = new ArrayList<>();
-		for (HullModSpecAPI spec : getHullMods(variantSupplier.get())) {
-			choices.add(new OptionChoice(spec.getId(), spec.getDisplayName()));
-		}
-		choices.sort(Comparator.comparing(OptionChoice::getLabel).thenComparing(OptionChoice::getId));
-		return choices;
+		return getHullMods(variantSupplier.get()).stream()
+				.map(spec -> new OptionChoice(spec.getId(), spec.getDisplayName()))
+				.sorted(Comparator.comparing(OptionChoice::label).thenComparing(OptionChoice::id))
+				.collect(ArrayList::new, List::add, List::addAll);
 	}
 
 	@Override
@@ -67,19 +66,19 @@ public class BattleNext_HullModSourceProvider extends BattleNext_BaseSourceProvi
 		try {
 			variant = variantSupplier.get();
 			phase = "spec";
-			HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.getId());
-			if (spec == null) throw new IllegalArgumentException("Unknown hullmod: " + choice.getId());
+			HullModSpecAPI spec = Global.getSettings().getHullModSpec(choice.id());
+			if (spec == null) throw new IllegalArgumentException("Unknown hullmod: " + choice.id());
 			ShipVariantAPI context = variant;
-			BattleNext_EquipmentTooltip.renderHullmod(tooltip, spec.getDisplayName(), choice.getId(), spec,
+			BattleNext_EquipmentTooltip.renderHullmod(tooltip, spec.getDisplayName(), choice.id(), spec,
 					context == null ? null : context.getHullSize(), context == null ? null : context.getHullVariantId(),
 					() -> auxiliaryNotes(context, spec));
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_HullModSourceProvider.class, "hullmod.tooltip.degraded",
-					BattleNext_Logger.fields().put("hullmod_id", choice.getId()).put("title", choice.getLabel())
+					BattleNext_Logger.fields().put("hullmod_id", choice.id()).put("title", choice.label())
 							.put("variant_id", variant == null ? null : variant.getHullVariantId())
 							.put("phase", phase).build(), exception);
 			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
-					choice.getLabel(), choice.getId(), "", List.of(exception.toString())));
+					choice.label(), choice.id(), "", List.of(exception.toString())));
 		}
 	}
 

@@ -1,5 +1,6 @@
 public class LifecycleNonInterfaceGetInstanceOk {
 	private LifecycleNonInterfaceGetInstanceOk() {
+
 	}
 
 	public static LifecycleNonInterfaceGetInstanceOk getInstance(CombatEntityAPI entity) {

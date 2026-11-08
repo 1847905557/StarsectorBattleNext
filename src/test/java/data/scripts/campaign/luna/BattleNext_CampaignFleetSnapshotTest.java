@@ -3,6 +3,12 @@ package data.scripts.campaign.luna;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.characters.PersonAPI;
+import data.scripts.fleet.BattleNext_AssembledFleet;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.scripts.fleet.BattleNext_FleetBuilder;
@@ -44,11 +50,11 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		store.reload();
 		BattleNext_FleetModel saved = store.get(id);
 		assertEquals(List.of("", "", "\u3000", "Named ship"),
-				saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
-		var assembled = new BattleNext_FleetBuilder().build(saved);
-		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
+				saved.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(saved);
+		assertTrue(assembled.isComplete(), assembled.getMemberErrorsReadonly().toString());
 		assertEquals(List.of("Parent", "Parent", "Parent", "Named ship"),
-				assembled.getMembers().stream().map(memberApi -> memberApi.getShipName()).toList());
+				assembled.getMembersReadonly().stream().map(memberApi -> memberApi.getShipName()).toList());
 		editor.close();
 	}
 
@@ -57,16 +63,17 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 
 		String before = BattleNext_VariantBuilder.fromVariant(activeVariant.getApi()).toJson().toString();
 		BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
-		assertEquals(5, snapshot.getMembers().size());
+		List<BattleNext_MemberModel> members = snapshot.getMembersReadonly();
+		assertEquals(5, members.size());
 		assertEquals(List.of("Officer ship", "Player ship", "Core ship", "Civilian mothballed", "Unassigned"),
-				snapshot.getMembers().stream().map(member -> member.getName()).toList());
-		assertEquals(2, snapshot.getSkills().stream().filter("combat"::equals).count());
-		assertTrue(snapshot.getSkills().containsAll(List.of("fleet", "industry")));
-		assertFalse(snapshot.getSkills().contains("unlearned"));
-		assertEquals(5, snapshot.getVariants().size());
-		assertEquals(5, snapshot.getMembers().stream().map(member -> member.getVariantId()).distinct().count());
-		JSONObject first = snapshot.getVariants().get(0).toJson();
-		JSONObject second = snapshot.getVariants().get(1).toJson();
+				members.stream().map(member -> member.getName()).toList());
+		assertEquals(2, snapshot.getSkillsReadonly().stream().filter("combat"::equals).count());
+		assertTrue(snapshot.getSkillsReadonly().containsAll(List.of("fleet", "industry")));
+		assertFalse(snapshot.getSkillsReadonly().contains("unlearned"));
+		assertEquals(5, snapshot.getVariantsCopy().size());
+		assertEquals(5, members.stream().map(member -> member.getVariantId()).distinct().count());
+		JSONObject first = snapshot.getVariantsCopy().get(0).toJson();
+		JSONObject second = snapshot.getVariantsCopy().get(1).toJson();
 		assertEquals(42, first.getInt("fluxVents"));
 		assertEquals(13, second.getInt("fluxVents"));
 		assertEquals("ordinary", first.getJSONArray("hullMods").getString(0));
@@ -76,38 +83,38 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		assertEquals("active_dmod", first.getJSONArray("permaMods").getString(1));
 		assertEquals("wing", first.getJSONArray("wings").getString(0));
 		assertEquals("laser", first.getJSONArray("weaponGroups").getJSONObject(0).getJSONObject("weapons").getString("weapon"));
-		assertEquals("officer.png", snapshot.getMembers().get(0).getPortrait());
-		assertEquals("reckless", snapshot.getMembers().get(0).getPersonality());
-		assertEquals(2, snapshot.getMembers().get(0).getSkills().stream().filter("gunnery"::equals).count());
-		assertEquals("player.png", snapshot.getMembers().get(1).getPortrait());
-		assertEquals(snapshot.getSkills(), snapshot.getMembers().get(1).getSkills());
-		assertEquals("core.png", snapshot.getMembers().get(2).getPortrait());
-		assertEquals(List.of("core_skill", "core_skill"), snapshot.getMembers().get(2).getSkills());
+		assertEquals("officer.png", members.get(0).getPortrait());
+		assertEquals("reckless", members.get(0).getPersonality());
+		assertEquals(2, members.get(0).getSkillsReadonly().stream().filter("gunnery"::equals).count());
+		assertEquals("player.png", members.get(1).getPortrait());
+		assertEquals(snapshot.getSkillsReadonly(), members.get(1).getSkillsReadonly());
+		assertEquals("core.png", members.get(2).getPortrait());
+		assertEquals(List.of("core_skill", "core_skill"), members.get(2).getSkillsReadonly());
 		for (int index : List.of(3, 4)) {
-			assertEquals("", snapshot.getMembers().get(index).getPortrait());
-			assertEquals("", snapshot.getMembers().get(index).getPersonality());
-			assertTrue(snapshot.getMembers().get(index).getSkills().isEmpty());
+			assertEquals("", members.get(index).getPortrait());
+			assertEquals("", members.get(index).getPersonality());
+			assertTrue(members.get(index).getSkillsReadonly().isEmpty());
 		}
 		assertEquals(before, BattleNext_VariantBuilder.fromVariant(activeVariant.getApi()).toJson().toString());
 		activeVariant.getApi().setNumFluxVents(99);
 		officer.getStats().setSkillLevel("gunnery", 0f);
-		assertEquals(42, snapshot.getVariants().get(0).toJson().getInt("fluxVents"));
-		assertEquals(2, snapshot.getMembers().get(0).getSkills().stream().filter("gunnery"::equals).count());
+		assertEquals(42, snapshot.getVariantsCopy().get(0).toJson().getInt("fluxVents"));
+		assertEquals(2, members.get(0).getSkillsReadonly().stream().filter("gunnery"::equals).count());
 		assertEquals("Player", snapshot.getAuthor());
 		assertEquals("", snapshot.getDescription());
-		assertTrue(snapshot.getTags().isEmpty());
+		assertTrue(snapshot.getTagsReadonly().isEmpty());
 	}
 
 	@Test
 	void recursivelyRenamesModulesAndReloadsLocalSnapshotsWithEliteSkills() throws Exception {
 
-		var childHull = hulls.get("child");
+		ShipHullSpecAPI childHull = hulls.get("child");
 		moduleSlots.put(childHull, List.of("nested"));
-		var grandHull = hull("grandchild", "Grandchild", List.of());
+		ShipHullSpecAPI grandHull = hull("grandchild", "Grandchild", List.of());
 		ShipVariantAPI module = activeVariant.getModules().get("module");
 		module.setModuleVariant("nested", Global.getSettings().createEmptyVariant("parent_variant", grandHull));
 		BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi());
-		JSONObject root = snapshot.getVariants().get(0).toJson();
+		JSONObject root = snapshot.getVariantsCopy().get(0).toJson();
 		JSONObject child = root.getJSONObject("modules").getJSONObject("module");
 		JSONObject grandchild = child.getJSONObject("modules").getJSONObject("nested");
 		assertEquals(3, new HashSet<>(List.of(root.getString("variantId"), child.getString("variantId"),
@@ -118,7 +125,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		store.reload();
 		store.save(snapshot);
 		assertTrue(Files.exists(directory.resolve(snapshot.getSourcePath())));
-		try (var files = Files.list(directory.resolve("tournament/" + snapshot.getId()))) {
+		try (Stream<Path> files = Files.list(directory.resolve("tournament/" + snapshot.getId()))) {
 			assertEquals(5, files.filter(path -> path.toString().endsWith(".variant")).count());
 		}
 		store.reload();
@@ -126,17 +133,18 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		assertJsonEquals(snapshot.toJson(), loaded.toJson());
 		assertEquals(snapshot.getName(), loaded.getName());
 		assertEquals("Player", loaded.getAuthor());
-		assertJsonEquals(root, loaded.getVariants().get(0).toJson());
-		var assembled = new BattleNext_FleetBuilder().build(loaded);
-		assertTrue(assembled.isComplete(), assembled.getMemberErrors().toString());
+		assertJsonEquals(root, loaded.getVariantsCopy().get(0).toJson());
+		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(loaded);
+		assertTrue(assembled.isComplete(), assembled.getMemberErrorsReadonly().toString());
 		assertEquals(2f, assembled.getCommander().getStats().getSkillLevel("combat"));
 		assertEquals(1f, assembled.getCommander().getStats().getSkillLevel("industry"));
-		assertEquals(2f, assembled.getMembers().get(0).getCaptain().getStats().getSkillLevel("gunnery"));
-		assertEquals("officer.png", assembled.getMembers().get(0).getCaptain().getPortraitSprite());
-		assertEquals("reckless", assembled.getMembers().get(0).getCaptain().getPersonalityAPI().getId());
-		assertEquals("Officer ship", assembled.getMembers().get(0).getShipName());
-		assertEquals(7, assembled.getMembers().get(0).getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
-		assertNotNull(assembled.getMembers().get(0).getVariant().getModuleVariant("module").getModuleVariant("nested"));
+		FleetMemberAPI member = assembled.getMembersReadonly().get(0);
+		assertEquals(2f, member.getCaptain().getStats().getSkillLevel("gunnery"));
+		assertEquals("officer.png", member.getCaptain().getPortraitSprite());
+		assertEquals("reckless", member.getCaptain().getPersonalityAPI().getId());
+		assertEquals("Officer ship", member.getShipName());
+		assertEquals(7, member.getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
+		assertNotNull(member.getVariant().getModuleVariant("module").getModuleVariant("nested"));
 	}
 
 	@Test
@@ -144,17 +152,17 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 
 		Set<String> fleetIds = new HashSet<>();
 		Set<String> variantIds = new HashSet<>();
-		var commanders = List.of(player, player,
+		List<PersonAPI> commanders = List.of(player, player,
 				person("Jane Doe", "player.png", "aggressive", false, true, false, Map.of()),
 				person("玩家", "player.png", "aggressive", false, true, false, Map.of()));
-		for (var commander : commanders) {
+		for (PersonAPI commander : commanders) {
 			String playerName = commander.getNameString();
 			long before = System.currentTimeMillis() / 1000L;
 			BattleNext_FleetModel snapshot = BattleNext_CampaignFleetSnapshot.capture(fleet, commander, selected, activeVariant.getApi());
 			long after = System.currentTimeMillis() / 1000L;
 			assertTrue(fleetIds.add(snapshot.getId()));
 			assertEquals(snapshot.getId(), snapshot.getFolderName());
-			for (var variant : snapshot.getVariants()) {
+			for (BattleNext_VariantBuilder variant : snapshot.getVariantsCopy()) {
 				assertTrue(variantIds.add(variant.getId()));
 			}
 			assertTrue(snapshot.getName().startsWith(playerName + "-"));
@@ -176,7 +184,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 		} else {
 			activeVariant.getApi().setModuleVariant("module", "cycle".equals(failure) ? activeVariant.getApi() : null);
 		}
-		var exception = assertThrows(IllegalArgumentException.class,
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
 				() -> BattleNext_CampaignFleetSnapshot.capture(fleet, player, selected, activeVariant.getApi()));
 		assertEquals(switch (failure) {
 			case "cycle" -> "Cyclic variant modules";
@@ -188,7 +196,7 @@ class BattleNext_CampaignFleetSnapshotTest extends BattleNext_TestCampaignFleetF
 
 	@Test
 	void personSkillsRoundTripNormalAndEliteLevels() {
-		var target = person("Target", "", "steady", false, false, false, Map.of());
+		PersonAPI target = person("Target", "", "steady", false, false, false, Map.of());
 		BattleNext_PersonSkills.apply(target, BattleNext_PersonSkills.capture(player));
 		assertEquals(2f, target.getStats().getSkillLevel("combat"));
 		assertEquals(1f, target.getStats().getSkillLevel("fleet"));

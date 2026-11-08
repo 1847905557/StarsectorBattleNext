@@ -1,6 +1,7 @@
 package data.scripts.member;
 
 import com.fs.starfarer.api.characters.PersonAPI;
+import com.fs.starfarer.api.characters.MutableCharacterStatsAPI.SkillLevelAPI;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,25 +16,21 @@ public class BattleNext_PersonSkills {
 
 	public static List<String> capture(PersonAPI person) {
 		List<String> skills = new ArrayList<>();
-		for (var skill : person.getStats().getSkillsCopy()) {
+		for (SkillLevelAPI skill : person.getStats().getSkillsCopy()) {
 			if (skill.getLevel() <= 0f) continue;
 			String id = skill.getSkill().getId();
 			skills.add(id);
-			if (skill.getLevel() > 1f) {
-				skills.add(id);
-			}
+			if (skill.getLevel() > 1f) skills.add(id);
 		}
 		return skills;
 	}
 
 	public static void apply(PersonAPI person, List<String> skills) {
 		Map<String, Integer> counts = new LinkedHashMap<>();
-		for (String skill : skills) {
-			counts.put(skill, counts.getOrDefault(skill, 0) + 1);
-		}
+		for (String skill : skills) counts.put(skill, counts.getOrDefault(skill, 0) + 1);
 
 		person.getStats().setLevel(0);
-		for (var entry : counts.entrySet()) {
+		for (Map.Entry<String, Integer> entry : counts.entrySet()) {
 			person.getStats().setSkillLevel(entry.getKey(), entry.getValue() > 1 ? 2f : 1f);
 			person.getStats().setLevel(person.getStats().getLevel() + 1);
 		}

@@ -2,6 +2,7 @@ package data.scripts.order;
 
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
+import data.scripts.battlesnext.util.annotation.PublicData;
 
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
@@ -29,11 +30,13 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 			CombatTaskManagerAPI tasks, CombatEngineAPI engine) {
 		BattleNext_AssignmentIndex index = CURRENT.get();
 		if (index == null || index.engine != engine) return null;
+
 		TaskCounts counts = index.managers.get(tasks);
 		if (counts == null) {
 			counts = new TaskCounts(tasks, engine);
 			index.managers.put(tasks, counts);
 		}
+
 		TargetCounts selected = counts.targets.get(target);
 		if (selected == null) return 0;
 		return type == null ? selected.total : selected.types.getOrDefault(type, 0);
@@ -42,6 +45,7 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 	public static void changed(CombatTaskManagerAPI tasks, ShipAPI ship) {
 		BattleNext_AssignmentIndex index = CURRENT.get();
 		if (index == null) return;
+
 		TaskCounts counts = index.managers.get(tasks);
 		if (counts != null) counts.update(ship, tasks.getAssignmentFor(ship));
 	}
@@ -60,6 +64,7 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 	public static void removed(CombatTaskManagerAPI tasks, AssignmentInfo assignment) {
 		BattleNext_AssignmentIndex index = CURRENT.get();
 		if (index == null || !index.managers.containsKey(tasks)) return;
+
 		TaskCounts counts = index.managers.get(tasks);
 		counts.assignments.remove(assignment);
 		counts.ships.values().removeIf(previous -> {
@@ -94,6 +99,7 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 		private void update(ShipAPI ship, AssignmentInfo assignment) {
 			Assigned previous = ships.remove(ship);
 			if (previous != null) add(previous, -1);
+
 			if (assignment != null) {
 				track(assignment);
 				Assigned current = new Assigned(assignment, assignment.getTarget(), assignment.getType());
@@ -113,10 +119,13 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 		}
 	}
 
-	private record Assigned(AssignmentInfo assignment, AssignmentTargetAPI target, CombatAssignmentType type) { }
+	private record Assigned(AssignmentInfo assignment, AssignmentTargetAPI target, CombatAssignmentType type) {
 
+	}
+
+	@PublicData
 	private static final class TargetCounts {
-		private final Map<CombatAssignmentType, Integer> types = new EnumMap<>(CombatAssignmentType.class);
-		private int total;
+		public final Map<CombatAssignmentType, Integer> types = new EnumMap<>(CombatAssignmentType.class);
+		public int total;
 	}
 }

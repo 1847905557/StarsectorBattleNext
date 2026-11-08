@@ -1,5 +1,6 @@
 public class LifecyclePublicCandidateViolation extends BaseEveryFrameCombatPlugin {
 	public LifecyclePublicCandidateViolation() {
+
 	}
 
 	@LifecycleEntry

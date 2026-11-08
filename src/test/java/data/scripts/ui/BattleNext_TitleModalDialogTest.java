@@ -88,6 +88,7 @@ class BattleNext_TitleModalDialogTest {
 	}
 
 	private static class FakeDialog {
+
 	}
 
 	private static class FakeAccess implements BattleNext_TitleModalDialog.Access {

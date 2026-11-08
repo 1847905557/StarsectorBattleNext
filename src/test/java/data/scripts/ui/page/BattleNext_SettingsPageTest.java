@@ -6,7 +6,9 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import data.order.BattleNext_OrderRegistry;
+import data.order.BattleNext_OrderRegistry.BattleNext_OrderSpec;
 import data.restriction.BattleNext_RestrictionRegistry;
+import data.restriction.BattleNext_RestrictionRegistry.BattleNext_RestrictionSpec;
 import data.scripts.BattleNextModPlugin;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -210,7 +212,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		field.restoreEditState(new BattleNext_TextField.EditState("700.50", 4, 1, 0f, "500.0", true));
 		BattleNext_TextField.EditState input = field.captureEditState();
 		Map<?, ?> viewports = (Map<?, ?>) getField(editor, "viewports");
-		var scroller = ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller();
+		ScrollPanelAPI scroller = ((TooltipMakerAPI) viewports.get("settings")).getExternalScroller();
 		scroller.setYOffset(64f);
 		float offset = scroller.getYOffset();
 		assertTrue(offset > 0f);
@@ -244,6 +246,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void numericErrorsAggregateInDisplayOrderWithFullHoverAndClearOnDiscard(boolean language) throws Exception {
+
 		installSettings(new JSONObject().put("cnText", language), language);
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
@@ -275,6 +278,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 				tooltips.get(hover).getComponents().stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 		assertTrue(page.hasUnsavedChanges());
 		assertEquals(new JSONObject().put("cnText", language).toString(), savedSettings.get().toString());
+
 		page.discard();
 		assertTrue(page.getSaveErrors().isEmpty());
 		assertEquals("", page.getStatusText());
@@ -285,6 +289,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void rejectedSaveKeepsDraftLanguageCommittedTextAndInputState(boolean initial) throws Exception {
+
 		installSettings(new JSONObject().put("cnText", initial), !initial);
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		page.attach(panel(600f, 500f, new BaseCustomUIPanelPlugin()));
@@ -297,8 +302,9 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals("pending", field.getText());
 		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());
 		assertLanguageLabel((ButtonAPI) getField(editor, "cnTextCheckbox"), initial);
+
 		field.restoreEditState(new BattleNext_TextField.EditState("700.50", 4, 1, 0f, "500.0", true));
-		var input = field.captureEditState();
+		BattleNext_TextField.EditState input = field.captureEditState();
 		failSettingsWrite = true;
 		assertFalse(page.save());
 		assertTrue(csvReads.isEmpty());
@@ -313,6 +319,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertTrue(failure.contains(BattleNext_Settings.PATH));
 		assertTrue(failure.contains("Injected settings write failure"));
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"), 1, failure), page.getStatusText());
+
 		failSettingsWrite = false;
 		assertTrue(page.save(), page.getStatusText());
 		assertEquals(700.5f, BattleNext_Settings.getBattleTimeLimit());
@@ -325,6 +332,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void deploymentLimitValidatesIntegerInputAndPreservesDraftThroughSaveDiscardAndReopen() throws Exception {
+
 		installSettings(new JSONObject(), false);
 		BattleNext_SettingsPage page = new BattleNext_SettingsPage(action -> {});
 		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
@@ -341,6 +349,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 				page.attach(root);
 				assertEquals(input, ((TextFieldAPI) getField(editor, "deploymentPointLimitField")).getText());
 			}
+
 			for (String input : List.of("1.5", "pending", "2147483648")) {
 				((TextFieldAPI) getField(editor, "deploymentPointLimitField")).setText(input);
 				assertFalse(page.save());
@@ -356,6 +365,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	}
 
 	private void installSettings(JSONObject initial, boolean vanillaDefault) {
+
 		savedSettings.set(initial);
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -376,6 +386,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 				savedSettings.set(new JSONObject(((JSONObject) args[1]).toString()));
 				return null;
 			}
+
 			try {
 				return method.invoke(delegate, args);
 			} catch (InvocationTargetException exception) {
@@ -389,19 +400,20 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		JSONArray restrictions = readCsv(Path.of(chinese ? "data/config/BattleNext_restrictions_CN.csv" : "data/config/BattleNext_restrictions.csv"));
 		assertTrue(BattleNext_OrderRegistry.getInstance().getLoadErrors().isEmpty());
 		assertTrue(BattleNext_RestrictionRegistry.getInstance().getLoadErrors().isEmpty());
-		assertEquals(orders.length(), BattleNext_OrderRegistry.getInstance().getAll().size());
-		assertEquals(restrictions.length(), BattleNext_RestrictionRegistry.getInstance().getAll().size());
+		assertEquals(orders.length(), BattleNext_OrderRegistry.getInstance().getAllCopy().size());
+		assertEquals(restrictions.length(), BattleNext_RestrictionRegistry.getInstance().getAllCopy().size());
 		for (int index = 0; index < orders.length(); index++) {
 			JSONObject row = orders.getJSONObject(index);
-			var spec = BattleNext_OrderRegistry.getInstance().get(row.getString("id"));
-			assertEquals(row.getString("name"), spec.getName());
-			assertEquals(row.getString("desc"), spec.getDescription());
+			BattleNext_OrderSpec spec = BattleNext_OrderRegistry.getInstance().get(row.getString("id"));
+			assertEquals(row.getString("name"), spec.name());
+			assertEquals(row.getString("desc"), spec.description());
 		}
+
 		for (int index = 0; index < restrictions.length(); index++) {
 			JSONObject row = restrictions.getJSONObject(index);
-			var spec = BattleNext_RestrictionRegistry.getInstance().get(row.getString("id"));
-			assertEquals(row.getString("name"), spec.getName());
-			assertEquals(row.getString("desc"), spec.getDescription());
+			BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(row.getString("id"));
+			assertEquals(row.getString("name"), spec.name());
+			assertEquals(row.getString("desc"), spec.description());
 		}
 	}
 

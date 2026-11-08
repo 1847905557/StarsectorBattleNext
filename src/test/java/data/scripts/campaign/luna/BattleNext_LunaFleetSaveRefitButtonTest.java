@@ -98,7 +98,7 @@ class BattleNext_LunaFleetSaveRefitButtonTest extends BattleNext_TestCampaignFle
 		ParentHost background = proxy(ParentHost.class, (method, args) -> "getParent".equals(method) ? actual : null);
 		assertSame(actual, BattleNext_CampaignRefitContext.parentOf(background));
 		Refit refit = new Refit(selected, activeVariant.getApi());
-		var context = BattleNext_CampaignRefitContext.from(new Core(new Tab(List.of(refit))), actual);
+		BattleNext_CampaignRefitContext context = BattleNext_CampaignRefitContext.from(new Core(new Tab(List.of(refit))), actual);
 		assertSame(actual, context.host());
 		assertSame(selected, context.member());
 		assertSame(activeVariant.getApi(), context.variant());

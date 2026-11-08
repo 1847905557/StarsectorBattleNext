@@ -58,6 +58,7 @@ class BattleNext_TitleEntryTest {
 
 	@Test
 	void bothStatesRenderTheSameSpriteAndRestoreItsSharedState() {
+
 		AtomicReference<Color> color = new AtomicReference<>(Color.WHITE);
 		AtomicReference<Float> width = new AtomicReference<>(128f);
 		AtomicReference<Float> height = new AtomicReference<>(32f);
@@ -67,7 +68,10 @@ class BattleNext_TitleEntryTest {
 					case "getColor" -> color.get();
 					case "getWidth" -> width.get();
 					case "getHeight" -> height.get();
-					case "setColor" -> { color.set((Color) args[0]); yield null; }
+					case "setColor" -> {
+						color.set((Color) args[0]);
+						yield null;
+					}
 					case "setSize" -> {
 						width.set((Float) args[0]);
 						height.set((Float) args[1]);
@@ -128,9 +132,11 @@ class BattleNext_TitleEntryTest {
 			assertTrue(game.getEntry("com/fs/starfarer/ui/oo0O.class") != null);
 			assertTrue(game.getEntry("com/fs/starfarer/coreui/refit/void.class") != null);
 			assertTrue(game.getEntry("com/fs/starfarer/coreui/refit/U.class") != null);
+
 			String tabData = new String(game.getInputStream(
 					game.getEntry("com/fs/starfarer/ui/null$o.class")).readAllBytes(), StandardCharsets.UTF_8);
 			assertTrue(tabData.contains("\u00d200000"));
+
 			String refitScreen = new String(game.getInputStream(
 					game.getEntry("com/fs/starfarer/coreui/refit/U.class")).readAllBytes(), StandardCharsets.UTF_8);
 			String shipDisplay = new String(game.getInputStream(
@@ -149,6 +155,7 @@ class BattleNext_TitleEntryTest {
 			assertTrue(titleDialog.contains("dismiss"));
 			assertTrue(titleDialog.contains("makeOptionInstant"));
 			assertTrue(titleDialog.contains("getInterceptor"));
+
 			String missionWidget = new String(game.getInputStream(
 					game.getEntry("com/fs/starfarer/title/Object/E.class")).readAllBytes(), StandardCharsets.ISO_8859_1);
 			assertTrue(missionWidget.contains("getMissionList"));
@@ -164,21 +171,27 @@ class BattleNext_TitleEntryTest {
 		InputEventAPI event = (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "isConsumed" -> consumed.get();
-					case "consume" -> { consumed.set(true); yield null; }
+					case "consume" -> {
+						consumed.set(true);
+						yield null;
+					}
 					default -> null;
 				});
 		BattleNext_EmptyPanelPlugin plugin = new BattleNext_EmptyPanelPlugin(() -> closed.set(true));
 
 		plugin.processInput(List.of(event));
 		assertTrue(consumed.get());
+
 		plugin.buttonPressed("other");
 		assertFalse(closed.get());
+
 		plugin.buttonPressed("close");
 		assertTrue(closed.get());
 	}
 
 	@Test
 	void titleInputBeforeRefitPanelCreationKeepsTheEntryAvailable() throws Exception {
+
 		SettingsAPI previous = Global.getSettings();
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
@@ -191,9 +204,11 @@ class BattleNext_TitleEntryTest {
 		field.set(entry, configuration);
 		Field displayed = BattleNext_TitleEntry.class.getDeclaredField("displayedPanel");
 		displayed.setAccessible(true);
+
 		Global.setSettings(settings);
 		try {
 			assertDoesNotThrow(() -> entry.processInputPreCoreControls(0f, List.of()));
+
 			displayed.set(entry, configuration);
 			assertDoesNotThrow(() -> entry.processInputPreCoreControls(0f, List.of()));
 		} finally {
@@ -203,6 +218,7 @@ class BattleNext_TitleEntryTest {
 
 	@Test
 	void displayedPanelPreservesLayerOrderAndBlocksOutsideMouseEvents() throws Exception {
+
 		SettingsAPI previous = Global.getSettings();
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
@@ -230,12 +246,14 @@ class BattleNext_TitleEntryTest {
 		setField(entry, "configurationPanel", panel);
 		setField(entry, "displayedPanel", panel);
 		setField(entry, "screenPanel", screen);
+
 		Global.setSettings(settings);
 		try {
 			entry.processInputPreCoreControls(0f, List.of(outside, inside));
 		} finally {
 			Global.setSettings(previous);
 		}
+
 		assertEquals(List.of(), order);
 		assertTrue(outsideConsumed.get());
 		assertFalse(insideConsumed.get());
@@ -282,6 +300,7 @@ class BattleNext_TitleEntryTest {
 				order.add("modal");
 			}
 		});
+
 		Global.setSettings(settings);
 		try {
 			setField(entry, "configurationPlugin", new BattleNext_ConfigurationPanelPlugin(() -> {}) {
@@ -341,6 +360,7 @@ class BattleNext_TitleEntryTest {
 				setField(entry, "displayedPanel", displayed);
 				setField(entry, "screenPanel", screen);
 				if (refit) setField(entry, "refitPanel", displayed);
+
 				List<String> kinds = List.of("isMouseMoveEvent", "isMouseScrollEvent", "isMouseDownEvent", "isMouseUpEvent");
 				for (int frame = 0; frame < 120; frame++) {
 					AtomicBoolean consumed = new AtomicBoolean();
@@ -379,6 +399,7 @@ class BattleNext_TitleEntryTest {
 
 	@Test
 	void refitAndEmptyPanelsUseTheSameOutsideGate() throws Exception {
+
 		SettingsAPI previous = Global.getSettings();
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
@@ -416,6 +437,7 @@ class BattleNext_TitleEntryTest {
 
 	@Test
 	void refitCloseReturnsRemainingMouseInputInTheSameFrame() throws Exception {
+
 		SettingsAPI previous = Global.getSettings();
 		SettingsAPI settings = (SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) ->
@@ -439,13 +461,17 @@ class BattleNext_TitleEntryTest {
 		setField(entry, "refitPanel", refit);
 		setField(entry, "displayedPanel", refit);
 		setField(entry, "screenPanel", screen);
+
 		AtomicBoolean escapeConsumed = new AtomicBoolean();
 		InputEventAPI escape = (InputEventAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "isConsumed" -> escapeConsumed.get();
 					case "isKeyboardEvent", "isKeyDownEvent" -> true;
 					case "getEventValue" -> Keyboard.KEY_ESCAPE;
-					case "consume" -> { escapeConsumed.set(true); yield null; }
+					case "consume" -> {
+						escapeConsumed.set(true);
+						yield null;
+					}
 					default -> false;
 				});
 		AtomicBoolean mouseConsumed = new AtomicBoolean();
@@ -455,8 +481,16 @@ class BattleNext_TitleEntryTest {
 		} finally {
 			Global.setSettings(previous);
 		}
+
 		assertTrue(escapeConsumed.get());
 		assertFalse(mouseConsumed.get());
+	}
+
+	@Test
+	void cleanupBeforeAnyPanelIsDisplayedDoesNotRequireMouseInput() {
+		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
+
+		assertDoesNotThrow(() -> entry.advance(0f, List.of()));
 	}
 
 	private InputEventAPI mouseEvent(String kind, AtomicBoolean consumed) {
@@ -464,7 +498,10 @@ class BattleNext_TitleEntryTest {
 				new Class<?>[]{InputEventAPI.class}, (instance, method, args) -> switch (method.getName()) {
 					case "isConsumed" -> consumed.get();
 					case "isMouseEvent" -> true;
-					case "consume" -> { consumed.set(true); yield null; }
+					case "consume" -> {
+						consumed.set(true);
+						yield null;
+					}
 					default -> method.getName().equals(kind);
 				});
 	}
@@ -473,13 +510,6 @@ class BattleNext_TitleEntryTest {
 		Field field = owner.getClass().getDeclaredField(name);
 		field.setAccessible(true);
 		field.set(owner, value);
-	}
-
-	@Test
-	void cleanupBeforeAnyPanelIsDisplayedDoesNotRequireMouseInput() {
-		BattleNext_TitleEntry entry = new BattleNext_TitleEntry();
-
-		assertDoesNotThrow(() -> entry.advance(0f, List.of()));
 	}
 
 }

@@ -2,6 +2,8 @@ package data.scripts.tools;
 
 import com.fs.starfarer.api.Global;
 import data.model.report.BattleNext_BattleReportModel;
+import data.scripts.tools.BattleNext_Logger.Fields;
+import data.scripts.tools.BattleNext_Logger.Fields.Builder;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -33,10 +35,12 @@ class BattleNext_LoggerTest {
 
 	@BeforeEach
 	void configureLogging() throws Exception {
+
 		settingsValues = BattleNext_Settings.class.getDeclaredField("values");
 		settingsValues.setAccessible(true);
 		previousValues = settingsValues.get(null);
 		settingsValues.set(null, new JSONObject());
+
 		BattleNext_Logger.fields();
 		logger = Global.getLogger(BattleNext_Logger.class);
 		previousLevel = logger.getLevel();
@@ -56,11 +60,12 @@ class BattleNext_LoggerTest {
 
 	@Test
 	void disabledInfoLogKeepsWarningAndErrorEmission() {
-		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("id", "alpha").build();
+		Fields fields = BattleNext_Logger.fields().put("id", "alpha").build();
 		BattleNext_Logger.info(getClass(), "test.info", fields);
 		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
 		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
 		assertTrue(appender.events.isEmpty());
+
 		BattleNext_Logger.warn(getClass(), "test.warning", fields);
 		BattleNext_Logger.warn(getClass(), "test.warning.failure", fields, new IllegalArgumentException("Rejected"));
 		BattleNext_Logger.error(getClass(), "test.error", fields, new IllegalStateException("Failed"));
@@ -71,9 +76,10 @@ class BattleNext_LoggerTest {
 
 	@Test
 	void enabledInfoLogEmitsAllInfoEntrypointsAndStopsWhenDisabled() throws Exception {
+
 		JSONObject values = (JSONObject) settingsValues.get(null);
 		values.put("infoLog", true);
-		BattleNext_Logger.Fields fields = BattleNext_Logger.fields().put("id", "alpha").build();
+		Fields fields = BattleNext_Logger.fields().put("id", "alpha").build();
 		BattleNext_Logger.info(getClass(), "test.info", fields);
 		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
 		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
@@ -82,6 +88,7 @@ class BattleNext_LoggerTest {
 		assertEquals("observed", new JSONObject(appender.events.get(0).getRenderedMessage()).getString("phase"));
 		assertEquals("started", new JSONObject(appender.events.get(1).getRenderedMessage()).getString("phase"));
 		assertEquals("succeeded", new JSONObject(appender.events.get(2).getRenderedMessage()).getString("phase"));
+
 		values.put("infoLog", false);
 		BattleNext_Logger.info(getClass(), "test.info", fields);
 		BattleNext_Logger.operationStarted(getClass(), "test.operation", fields);
@@ -94,7 +101,7 @@ class BattleNext_LoggerTest {
 
 		AtomicInteger captures = new AtomicInteger();
 		JSONObject input = new JSONObject().put("value", "Before");
-		Supplier<BattleNext_Logger.Fields> fields = () -> {
+		Supplier<Fields> fields = () -> {
 			captures.incrementAndGet();
 			return BattleNext_Logger.fields().put("input", input).build();
 		};
@@ -103,6 +110,7 @@ class BattleNext_LoggerTest {
 		BattleNext_Logger.operationSucceeded(getClass(), "test.operation", fields);
 		assertEquals(0, captures.get());
 		assertTrue(appender.events.isEmpty());
+
 		JSONObject settings = (JSONObject) settingsValues.get(null);
 		settings.put("infoLog", true);
 		BattleNext_Logger.info(getClass(), "test.info", fields);
@@ -117,6 +125,7 @@ class BattleNext_LoggerTest {
 			assertEquals(List.of("observed", "started", "succeeded").get(index), entry.getString("phase"));
 			assertEquals(List.of("Before", "During", "After").get(index), entry.getJSONObject("fields").getJSONObject("input").getString("value"));
 		}
+
 		settings.put("infoLog", false);
 		BattleNext_Logger.info(getClass(), "test.info", fields);
 		assertEquals(3, captures.get());
@@ -136,12 +145,13 @@ class BattleNext_LoggerTest {
 	void fieldsFreezeNestedValuesAndKeepStructuredData() throws Exception {
 		Map<String, Object> nested = new LinkedHashMap<>();
 		nested.put("value", "中文 / quote \" / percent %");
-		var report = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setName("Frozen report");
-		var builder = BattleNext_Logger.fields()
+		Builder builder = BattleNext_Logger.fields()
 				.put("items", List.of("alpha", nested))
 				.put("report", report).put("empty", null);
-		BattleNext_Logger.Fields fields = builder.build();
+		Fields fields = builder.build();
+
 		nested.put("value", "Changed");
 		report.setName("Changed report");
 		builder.put("items", List.of("Changed")).put("empty", "Changed");
@@ -158,7 +168,7 @@ class BattleNext_LoggerTest {
 
 	@Test
 	void exceptionSummaryContainsOnlyTypeAndMessage() throws Exception {
-		var failure = new IllegalStateException("中文 failure", new IllegalArgumentException("Cause"));
+		IllegalStateException failure = new IllegalStateException("中文 failure", new IllegalArgumentException("Cause"));
 		failure.addSuppressed(new IllegalStateException("Suppressed"));
 		JSONObject entry = new JSONObject(BattleNext_Logger.format(BattleNext_LoggerTest.class,
 				"test.failed", "failed", BattleNext_Logger.fields().put("id", "alpha").build(),
@@ -172,20 +182,22 @@ class BattleNext_LoggerTest {
 
 	@Test
 	void snapshotAndOutputFailuresKeepTheirDiagnosticsWithoutChangingCallerControlFlow() throws Exception {
+
 		Iterable<String> broken = () -> {
 			throw new IllegalStateException("Snapshot failure");
 		};
-		var fields = BattleNext_Logger.fields().put("id", "alpha").put("broken", broken).build();
-		var entry = new JSONObject(BattleNext_Logger.format(getClass(), "test.snapshot.failure", "observed", fields, null));
+		Fields fields = BattleNext_Logger.fields().put("id", "alpha").put("broken", broken).build();
+		JSONObject entry = new JSONObject(BattleNext_Logger.format(getClass(), "test.snapshot.failure", "observed", fields, null));
 		assertEquals("alpha", entry.getJSONObject("fields").getString("id"));
-		var snapshotError = entry.getJSONObject("fields").getJSONObject("broken").getJSONObject("snapshot_error");
+		JSONObject snapshotError = entry.getJSONObject("fields").getJSONObject("broken").getJSONObject("snapshot_error");
 		assertEquals(IllegalStateException.class.getName(), snapshotError.getString("type"));
 		assertEquals("Snapshot failure", snapshotError.getString("message"));
-		var output = new ByteArrayOutputStream();
+
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		PrintStream previous = System.err;
 		try (PrintStream captured = new PrintStream(output, true, StandardCharsets.UTF_8)) {
 			System.setErr(captured);
-			var failure = new IllegalStateException() {
+			IllegalStateException failure = new IllegalStateException() {
 				@Override
 				public String getMessage() {
 					throw new IllegalStateException("Cannot describe failure");
@@ -195,6 +207,7 @@ class BattleNext_LoggerTest {
 		} finally {
 			System.setErr(previous);
 		}
+
 		assertTrue(appender.events.isEmpty());
 		assertEquals("Business log output failed: source=" + getClass().getName()
 				+ ", event=test.output.failure, type=java.lang.IllegalStateException, message=Cannot describe failure"

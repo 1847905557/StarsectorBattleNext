@@ -14,16 +14,21 @@ public class BattleNext_TestDeploymentFixture extends BattleNext_TestGameFixture
 
 	public interface FleetManager extends CombatFleetManagerAPI {
 		MutableStat getMaxFleetPoints();
+
 		void addEventListener(FleetListener listener);
 	}
 
 	protected static FleetManager deploymentManager(Handler handler) {
 		MutableStat[] points = {new MutableStat(100f)};
 		List<FleetListener> listeners = new ArrayList<>();
+
 		return proxy(FleetManager.class, (method, args) -> switch (method) {
 			case "getMaxFleetPoints" -> points[0];
 			case "getMaxStrength" -> (int) points[0].getModifiedValue();
-			case "addEventListener" -> { listeners.add((FleetListener) args[0]); yield null; }
+			case "addEventListener" -> {
+				listeners.add((FleetListener) args[0]);
+				yield null;
+			}
 			case "setMaxStrength" -> {
 				int before = (int) points[0].getModifiedValue();
 				points[0] = new MutableStat((Integer) args[0]);

@@ -174,9 +174,20 @@ public class BattleNext_TestGameFixture {
 					case "getAngle" -> transform[0];
 					case "getBlendSrc" -> (int) transform[1];
 					case "getBlendDest" -> (int) transform[2];
-					case "setAngle" -> { transform[0] = (Float) values[0]; yield null; }
-					case "setNormalBlend" -> { transform[1] = 770f; transform[2] = 771f; yield null; }
-					case "setAdditiveBlend" -> { transform[1] = 770f; transform[2] = 1f; yield null; }
+					case "setAngle" -> {
+						transform[0] = (Float) values[0];
+						yield null;
+					}
+					case "setNormalBlend" -> {
+						transform[1] = 770f;
+						transform[2] = 771f;
+						yield null;
+					}
+					case "setAdditiveBlend" -> {
+						transform[1] = 770f;
+						transform[2] = 1f;
+						yield null;
+					}
 					case "setBlendFunc" -> {
 						transform[1] = (Integer) values[0];
 						transform[2] = (Integer) values[1];
@@ -286,6 +297,7 @@ public class BattleNext_TestGameFixture {
 			});
 			default -> null;
 		});
+
 		hulls.put(id, hull);
 		moduleSlots.put(hull, slots);
 		return hull;

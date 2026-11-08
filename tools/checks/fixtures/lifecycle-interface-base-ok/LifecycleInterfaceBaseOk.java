@@ -2,6 +2,7 @@ public class LifecycleInterfaceBaseOk extends BaseEveryFrameCombatPlugin {
 	private static final String KEY = "key";
 
 	private LifecycleInterfaceBaseOk() {
+
 	}
 
 	@LifecycleEntry

@@ -86,8 +86,10 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	@Override
 	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
+
 		TextFieldPanelPlugin plugin = new TextFieldPanelPlugin();
 		panel = ownPanel(host, panelOwner.createCustomPanel(width, height, plugin));
+
 		textHost = panel.createUIElement(width, height, false);
 		textHost.setParaSmallInsignia();
 		textHost.setParaFontColor(textColor);
@@ -96,9 +98,11 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		textLabel.setAlignment(Alignment.LMID);
 		textLabel.setColor(textColor);
 		textHost.setHeightSoFar(height);
+
 		panel.addUIElement(textHost).inTL(0f, 0f);
 		plugin.field = this;
 		session.register(this, viewports);
+
 		host.addCustom(panel, 0f);
 		refreshVisual();
 	}
@@ -107,7 +111,9 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		return this;
 	}
 
-	public record EditState(String text, int cursor, int anchor, float scroll, String undoText, boolean focused) { }
+	public record EditState(String text, int cursor, int anchor, float scroll, String undoText, boolean focused) {
+
+	}
 
 	public EditState captureEditState() {
 		return new EditState(text, cursor, anchor, scroll, undoText, session.isFocused(this));
@@ -202,6 +208,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			String previous = "";
 			int count = 1;
 			int start = characters.first();
+
 			for (int end = characters.next(); end != BreakIterator.DONE; end = characters.next()) {
 				String character = text.substring(start, end);
 				float advance = measured.computeIfAbsent(previous + character, value -> (float) measure.applyAsDouble(value));
@@ -212,6 +219,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 				previous = character;
 				start = end;
 			}
+
 			boundaries = Arrays.copyOf(offsets, count);
 			positions = Arrays.copyOf(widths, count);
 		}
@@ -352,6 +360,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			} else rejected = true;
 			offset += Character.charCount(codePoint);
 		}
+
 		if (!accepted.isEmpty()) {
 			replaceSelection(accepted.toString());
 			soundSink.accept(TYPE_SOUND_ID);
@@ -386,8 +395,10 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	void processKeyboard(InputEventAPI event) {
+
 		int key = event.getEventValue();
 		boolean extend = event.isShiftDown();
+
 		if (event.isCtrlDown()) {
 			pendingHighSurrogate = 0;
 			if (!event.isAltDown() && key == Keyboard.KEY_A) {
@@ -411,8 +422,10 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			}
 			return;
 		}
+
 		if (!editable && key != Keyboard.KEY_LEFT && key != Keyboard.KEY_RIGHT
 				&& key != Keyboard.KEY_HOME && key != Keyboard.KEY_END && key != Keyboard.KEY_ESCAPE) return;
+
 		switch (key) {
 			case Keyboard.KEY_LEFT:
 				pendingHighSurrogate = 0;
@@ -545,6 +558,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		@Override
 		public void render(float alphaMult) {
 			if (field == null) return;
+
 			if (field.editable && field.session.isFocused(field) && field.showCursor
 					&& ((int) (field.blink * CURSOR_BLINK_CYCLES_PER_SECOND)
 							% CURSOR_BLINK_PHASE_COUNT == 0)) {
@@ -554,10 +568,12 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 						field.panel.getPosition().getY() + CARET_VERTICAL_INSET, CARET_WIDTH,
 						field.height - CARET_VERTICAL_INSET * 2f, field.textColor, alphaMult);
 			}
+
 			if (clipState != null) {
 				BattleNext_GeometryRenderer.popClip(clipState);
 				clipState = null;
 			}
+
 			BattleNext_GeometryRenderer.lineLoop(new float[]{
 					field.panel.getPosition().getX(), field.panel.getPosition().getY(),
 					field.panel.getPosition().getX() + field.width, field.panel.getPosition().getY(),
@@ -573,6 +589,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 				field.blink += amount;
 				if (field.blink > CURSOR_BLINK_PERIOD) field.blink = 0f;
 			}
+
 			if (field.session.isDragging(field)) {
 				float mouseX = field.session.getPointerX();
 				float mouseY = field.session.getPointerY();
@@ -580,6 +597,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 				float right = field.getPosition().getX() + field.width - field.pad;
 				float overshoot = 0f;
 				float direction = 0f;
+
 				// Automatic scrolling uses the latest root InputEventAPI pointer position.
 				if (mouseX < left) {
 					direction = -1f;
@@ -588,6 +606,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 					direction = 1f;
 					overshoot = mouseX - right;
 				}
+
 				if (direction != 0f && field.textLabel.computeTextWidth(field.text)
 						> field.getContentWidth()) {
 					float speed = Math.min(AUTO_SCROLL_MAX_SPEED,
@@ -672,8 +691,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setBgColor(Color color) {
-		background = color;
+	public void setBgColor(Color bgColor) {
+		background = bgColor;
 	}
 
 	@Override
@@ -682,9 +701,9 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setText(String value) {
+	public void setText(String string) {
 		pendingHighSurrogate = 0;
-		text = value == null ? "" : value;
+		text = string == null ? "" : string;
 		if (maxChars >= 0 && text.length() > maxChars) {
 			int end = maxChars;
 			if (end > 0 && Character.isHighSurrogate(text.charAt(end - 1))
@@ -708,8 +727,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setLimitByStringWidth(boolean value) {
-		limitByStringWidth = value;
+	public void setLimitByStringWidth(boolean limitByStringWidth) {
+		this.limitByStringWidth = limitByStringWidth;
 	}
 
 	@Override
@@ -754,11 +773,13 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	@Override
 	public void deleteLastWord() {
 		if (!editable) return;
+
 		if (hasSelection()) {
 			deleteSelection();
 			playEditSound(true);
 			return;
 		}
+
 		String previous = text;
 		int end = cursor;
 		while (end > 0 && Character.isWhitespace(text.charAt(end - 1))) {
@@ -767,6 +788,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		while (end > 0 && !Character.isWhitespace(text.charAt(end - 1))) {
 			end--;
 		}
+
 		text = text.substring(0, end) + text.substring(cursor);
 		cursor = end;
 		anchor = end;
@@ -798,8 +820,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setUndoOnEscape(boolean value) {
-		undoOnEscape = value;
+	public void setUndoOnEscape(boolean undoOnEscape) {
+		this.undoOnEscape = undoOnEscape;
 	}
 
 	@Override
@@ -808,8 +830,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setHandleCtrlV(boolean value) {
-		handleCtrlV = value;
+	public void setHandleCtrlV(boolean handleCtrlV) {
+		this.handleCtrlV = handleCtrlV;
 	}
 
 	@Override
@@ -818,8 +840,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setBorderColor(Color color) {
-		border = color;
+	public void setBorderColor(Color borderColor) {
+		border = borderColor;
 	}
 
 	@Override
@@ -828,8 +850,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	@Override
-	public void setVerticalCursor(boolean value) {
-		verticalCursor = value;
+	public void setVerticalCursor(boolean verticalCursor) {
+		this.verticalCursor = verticalCursor;
 	}
 
 	@Override
@@ -840,15 +862,5 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	@Override
 	public void showCursor() {
 		showCursor = true;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		return super.equals(obj);
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode();
 	}
 }

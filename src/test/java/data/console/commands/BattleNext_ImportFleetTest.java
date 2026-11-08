@@ -49,14 +49,23 @@ class BattleNext_ImportFleetTest extends BattleNext_TestCampaignFleetFixture {
 
 		registeredVariants.put("parent_variant", selectedVariant.getApi());
 		FleetDataAPI data = proxy(FleetDataAPI.class, (method, args) -> switch (method) {
-			case "addFleetMember" -> { importedMembers.add((FleetMemberAPI) args[0]); yield null; }
-			case "addOfficer" -> { importedOfficers.add((PersonAPI) args[0]); yield null; }
+			case "addFleetMember" -> {
+				importedMembers.add((FleetMemberAPI) args[0]);
+				yield null;
+			}
+			case "addOfficer" -> {
+				importedOfficers.add((PersonAPI) args[0]);
+				yield null;
+			}
 			case "getMembersListCopy" -> List.copyOf(importedMembers);
 			default -> null;
 		});
 		CampaignFleetAPI playerFleet = proxy(CampaignFleetAPI.class, (method, args) -> switch (method) {
 			case "getFleetData" -> data;
-			case "forceSync" -> { syncCount++; yield null; }
+			case "forceSync" -> {
+				syncCount++;
+				yield null;
+			}
 			default -> null;
 		});
 		Global.setSector(proxy(SectorAPI.class, (method, args) -> switch (method) {

@@ -7,7 +7,12 @@ import org.json.JSONObject;
 
 public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 
-	public enum TournamentBracketType { SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN, KING_OF_THE_HILL }
+	public enum TournamentBracketType {
+		SINGLE_ELIMINATION,
+		DOUBLE_ELIMINATION,
+		ROUND_ROBIN,
+		KING_OF_THE_HILL
+	}
 
 	public static final int FORMAT_VERSION = 1;
 	public static final int MIN_FLEET_COUNT = 2;
@@ -75,6 +80,7 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 		json.put("maxFleet", maxFleet);
 		json.put("ruleId", ruleId);
 		json.put("mapId", mapId);
+
 		return json;
 	}
 
@@ -138,5 +144,4 @@ public class BattleNext_TournamentModel extends BattleNext_JsonModel {
 	public void setMapId(int mapId) {
 		this.mapId = mapId;
 	}
-
 }

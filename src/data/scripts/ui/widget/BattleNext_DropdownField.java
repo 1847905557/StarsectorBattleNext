@@ -21,22 +21,16 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	private static final float POPUP_SCROLLBAR_RESERVE = 5f;
 	private static final float POPUP_BUTTON_WIDTH_RESERVE = 15f;
 
-	public static final class DropdownChoice {
-
-		private final String id;
-		private final String label;
-		private final boolean enabled;
-		private final String disabledReason;
+	public record DropdownChoice(String id, String label, boolean enabled, String disabledReason) {
 
 		public DropdownChoice(String id, String label) {
 			this(id, label, true, "");
 		}
 
-		public DropdownChoice(String id, String label, boolean enabled, String disabledReason) {
-			this.id = id == null ? "" : id;
-			this.label = label == null ? "" : label;
-			this.enabled = enabled;
-			this.disabledReason = disabledReason == null ? "" : disabledReason;
+		public DropdownChoice {
+			id = id == null ? "" : id;
+			label = label == null ? "" : label;
+			disabledReason = disabledReason == null ? "" : disabledReason;
 		}
 	}
 
@@ -44,7 +38,9 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 		void onSelected(String id);
 	}
 
-	private enum DropdownAction { TOGGLE }
+	private enum DropdownAction {
+		TOGGLE
+	}
 
 	private final CustomPanelAPI overlayHost;
 	private final DropdownSelectionListener listener;
@@ -59,13 +55,14 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+
 		float width = panel.getPosition().getWidth();
 		float height = panel.getPosition().getHeight();
 		row = ownPanel(panel, panel.createCustomPanel(width, height, new DropdownButtonPlugin()));
 		button = BattleNext_PageLayout.fixedButton(row,
 				new UIRect(0f, 0f, width, height), "", DropdownAction.TOGGLE, CutStyle.ALL, BattleNext_UiTheme.TEXT, new BaseTooltipCreator() {
 			@Override
-			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				for (DropdownChoice choice : options) {
 					if (!choice.id.equals(value)) continue;
 					tooltip.addPara(choice.label, 0f);
@@ -74,6 +71,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 				}
 			}
 		});
+
 		panel.addComponent(row).inTL(0f, 0f);
 		refreshLabel();
 	}
@@ -154,6 +152,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	@Override
 	protected boolean handleWidgetInput(List<InputEventAPI> events) {
 		if (popup == null || !inputRouter.isTop(popupOverlay)) return false;
+
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			if (event.isKeyboardEvent() && event.isKeyDownEvent()
@@ -181,6 +180,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 	private void openPopup() {
 		closePopup();
 		if (!enabled || row == null) return;
+
 		inputRouter.releaseFocus();
 		float hostHeight = overlayHost.getPosition().getHeight();
 		PositionAPI rowPosition = row.getPosition();
@@ -197,6 +197,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 		float available = Math.max(POPUP_OPTION_HEIGHT, above ? aboveSpace : belowSpace);
 		float height = Math.min(desiredHeight, available);
 		float y = above ? rowTop - height - POPUP_ROW_GAP : dropdownY;
+
 		popup = ownPanel(overlayHost, panel.createCustomPanel(width, height, new DropdownPopupPlugin()));
 		TooltipMakerAPI list = popup.createUIElement(width - POPUP_SCROLLBAR_RESERVE, height, true);
 		list.setButtonFontOrbitron20();
@@ -211,8 +212,10 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 			}
 		}
 		popup.addUIElement(list).inTL(0f, 0f);
+
 		overlayHost.addComponent(popup).inTL(rowX, Math.max(POPUP_SCREEN_MARGIN, y));
 		overlayHost.bringComponentToTop(popup);
+
 		popupOverlay = new PopupOverlay(popup);
 		inputRouter.push(popupOverlay);
 	}

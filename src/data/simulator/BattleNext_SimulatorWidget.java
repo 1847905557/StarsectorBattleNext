@@ -40,9 +40,11 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 	private final BattleNext_BattleSourceProvider sources;
 	private final BattleNext_BattleReportStore reports;
 	private final CustomPanelAPI overlayHost;
+
 	private final BattleNext_I18nSection simulatorStrings = BattleNext_I18nSection.getInstance("Simulator", "BattleNext_simulator_");
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+
 	private BattleNext_BattleSourceField sourceField;
 	private BattleNext_BattleSourceField instanceField;
 	private BattleNext_QuickBattleDisplay quickBattleDisplay;
@@ -93,12 +95,12 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			statusLabel.getPosition().inTL(0f, 5f);
 			statusContent.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
-				public float getTooltipWidth(Object ignored) {
+				public float getTooltipWidth(Object tooltipParam) {
 					return 480f;
 				}
 
 				@Override
-				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object ignored) {
+				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					showStatusDetails(tooltip);
 				}
 			}, TooltipMakerAPI.TooltipLocation.ABOVE);
@@ -164,7 +166,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 					List.of(0.3f, 0.3f, 0.05f, 0.1f, 0.15f, 0.1f), false,
 					row -> new BattleNext_QuickBattleDisplay.Action(simulatorStrings.get("simulate"), "simulator:quick:" + row.getModel().getId(),
 							sources.quickBattleErrors(row.getModel()).isEmpty()), this::submitQuickBattle);
-			quickBattleDisplay = new BattleNext_QuickBattleDisplay(inputRouter, sources.getQuickBattleStore().getAll(), presentation,
+			quickBattleDisplay = new BattleNext_QuickBattleDisplay(inputRouter, sources.getQuickBattleStore().getAllCopy(), presentation,
 					entry -> entry.getId(), row -> sources.quickBattleErrors(row.getModel()), sources.getFleetStore(), overlayHost);
 			quickBattleDisplay.attach(bodyPanel);
 			if (browser.getQuickBattleState() != null) {
@@ -198,7 +200,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		if (task != null) {
 			started = task.getStartedTournament();
 		}
-		List<String> fleetIds = started == null ? browser.template(tournament).getFleetIds() : started.getFleetIds();
+		List<String> fleetIds = started == null ? browser.template(tournament).getFleetIdsReadonly() : started.getFleetIdsReadonly();
 		List<String> reasons = tournament == null ? List.of(tournamentStrings.get("missing_detail") + " " + browser.getSelectedId())
 				: started == null ? sources.getCatalogErrors() : sources.tournamentErrors(tournament, fleetIds);
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, started, fleetIds,
@@ -210,7 +212,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		if (started == null && browser.getSelectedInstanceId().isEmpty()) {
 			BattleNext_TournamentTemplate template = browser.template(tournament);
 			tournamentDisplay.enableTemplateEditing(overlayHost, new BattleNext_FleetSourceProvider(sources.getFleetStore()),
-					template::getFleetIds, (slot, id) -> {
+					template::getFleetIdsReadonly, (slot, id) -> {
 						template.select(slot, id);
 						browser.setCheckResult(null);
 						updateTournamentDetails();
@@ -242,6 +244,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 
 	private void handleTournamentAction(Object action) {
 		if (!(action instanceof String id)) return;
+
 		try {
 			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
 			if (id.startsWith("simulator:pause:")) {
@@ -253,7 +256,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			} else if (id.startsWith("simulator:tournament:") || id.startsWith("simulator:check:")) {
 				BattleNext_TournamentModel configuration = sources.getTournamentStore().get(browser.getSelectedId());
 				BattleNext_StartedTournament selected = sources.getInstance(browser.getSelectedInstanceId());
-				List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIds() : selected.getFleetIds();
+				List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIdsReadonly() : selected.getFleetIdsReadonly();
+
 				browser.setCheckResult(sources.checkTournament(browser.getSelectedId(), fleetIds));
 				configuration = sources.getTournamentStore().get(browser.getSelectedId());
 				if (id.startsWith("simulator:check:") || !browser.getCheckResult().failures().isEmpty()) {
@@ -262,12 +266,14 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 					refreshStatus();
 					return;
 				}
+
 				task = BattleNext_SimulatorService.getInstance().submit(BattleNext_SimulationRequest.fromTournament(configuration,
 						fleetIds, sources.getFleetStore(), sources.getRuleStore(), BattleNext_SimulationConfig.quickBattle(BattleNext_Settings.getBattleTimeLimit(), BattleNext_Settings.getDeploymentPointLimit())));
 				clearBody();
 				browser.selectInstance(task.getRequest().id());
 				buildBody();
 			}
+
 			browser.setStatusError("");
 		} catch (BattleNext_BattleValidation.Rejection rejection) {
 			browser.setCheckResult(rejection.getResult());
@@ -279,11 +285,13 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			BattleNext_Logger.warn(getClass(), "simulator.tournament.submission.failed",
 					BattleNext_Logger.fields().put("source_id", browser.getSelectedId()).build(), exception);
 		}
+
 		refreshStatus();
 	}
 
 	private void refreshTournament() {
 		if (tournamentDisplay == null || browser.getSelectedId().isEmpty()) return;
+
 		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
 		if (task == null && !tournamentTaskId.isEmpty()) {
 			clearBody();
@@ -291,10 +299,12 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			return;
 		}
 		if (task == null || task.getVersion() == tournamentVersion) return;
+
 		BattleNext_TournamentModel configuration = sources.getTournamentStore().get(browser.getSelectedId());
 		BattleNext_StartedTournament started = task.getStartedTournament();
-		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(configuration, started, started.getFleetIds(),
+		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(configuration, started, started.getFleetIdsReadonly(),
 				sources.getFleetStore(), sources.getRuleStore(), task.getImportError(), sources.getCatalogErrors(), reports).withCheckResult(browser.getCheckResult());
+
 		tournamentDisplay.update(configuration, started, details, tournamentActions(task));
 		tournamentVersion = task.getVersion();
 		tournamentTaskId = started.getId();
@@ -309,7 +319,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		}
 		BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(browser.getSelectedInstanceId());
 		BattleNext_StartedTournament selected = sources.getInstance(browser.getSelectedInstanceId());
-		List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIds() : selected.getFleetIds();
+		List<String> fleetIds = selected == null ? browser.template(configuration).getFleetIdsReadonly() : selected.getFleetIdsReadonly();
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(configuration, selected, fleetIds,
 				sources.getFleetStore(), sources.getRuleStore(), "", List.of(), reports).withCheckResult(browser.getCheckResult());
 		tournamentDisplay.update(configuration, selected, details, tournamentActions(task));
@@ -404,6 +414,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			instanceField.close();
 			instanceField = null;
 		}
+
 		tournamentVersion = -1L;
 		tournamentTaskId = "";
 		if (quickBattleDisplay != null) {
@@ -411,11 +422,13 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			quickBattleDisplay.close();
 			quickBattleDisplay = null;
 		}
+
 		if (tournamentDisplay != null) {
 			browser.rememberTournament(tournamentDisplay.captureState());
 			tournamentDisplay.close();
 			tournamentDisplay = null;
 		}
+
 		if (bodyPanel != null) {
 			releasePanel(bodyPanel);
 			bodyPanel = null;

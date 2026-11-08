@@ -3,6 +3,7 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.test.fixture.BattleNext_TestUiFixture;
 import org.json.JSONArray;
@@ -18,7 +19,8 @@ class BattleNext_PersonalitySourceProviderTest extends BattleNext_TestUiFixture 
 
 	@Test
 	void mergedCatalogSortsValidIdentitiesUsesFallbackNamesAndRendersTheRegisteredDescription() throws Exception {
-		var rows = new JSONArray()
+
+		JSONArray rows = new JSONArray()
 				.put(new JSONObject().put("id", " steady ").put("name", " ").put("desc", "Balances aggression and defense.\nSecond paragraph."))
 				.put(new JSONObject().put("id", "").put("name", "Unknown"))
 				.put("invalid row")
@@ -37,11 +39,12 @@ class BattleNext_PersonalitySourceProviderTest extends BattleNext_TestUiFixture 
 				throw exception.getCause();
 			}
 		}));
-		var provider = new BattleNext_PersonalitySourceProvider();
-		var options = provider.getOptions();
-		assertEquals(List.of("aggressive", "steady"), options.stream().map(OptionChoice::getId).toList());
-		assertEquals(List.of("Aggressive", "steady"), options.stream().map(OptionChoice::getLabel).toList());
-		var tooltip = tooltip(provider.getTooltipWidth(), 0f, false);
+		BattleNext_PersonalitySourceProvider provider = new BattleNext_PersonalitySourceProvider();
+		List<OptionChoice> options = provider.getOptions();
+		assertEquals(List.of("aggressive", "steady"), options.stream().map(option -> option.id()).toList());
+		assertEquals(List.of("Aggressive", "steady"), options.stream().map(option -> option.label()).toList());
+
+		TooltipMakerAPI tooltip = tooltip(provider.getTooltipWidth(), 0f, false);
 		provider.createTooltip(tooltip, options.get(1));
 		assertEquals(List.of("steady", "steady", "Balances aggression and defense."),
 				tooltips.get(tooltip).getComponents().stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());

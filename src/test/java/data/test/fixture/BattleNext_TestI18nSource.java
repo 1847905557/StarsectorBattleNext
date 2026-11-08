@@ -9,6 +9,7 @@ import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntry;
 import com.github.javaparser.ast.stmt.YieldStmt;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
 import data.test.fixture.BattleNext_TestTextCatalog.TextKey;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,9 +21,13 @@ import java.util.*;
 
 public class BattleNext_TestI18nSource {
 
-	public record Section(String category, String prefix) { }
+	public record Section(String category, String prefix) {
 
-	public record Read(TextKey key, List<Expression> arguments, Node origin) { }
+	}
+
+	public record Read(TextKey key, List<Expression> arguments, Node origin) {
+
+	}
 
 	private final List<MethodCallExpr> calls = new ArrayList<>();
 	private final List<MethodReferenceExpr> references = new ArrayList<>();
@@ -145,7 +150,7 @@ public class BattleNext_TestI18nSource {
 			return result;
 		}
 		if (expression.isNameExpr()) {
-			var declaration = expression.asNameExpr().resolve();
+			ResolvedValueDeclaration declaration = expression.asNameExpr().resolve();
 			if (declaration.getType().isReferenceType()
 					&& declaration.getType().asReferenceType().getTypeDeclaration().orElseThrow().isEnum()) {
 				return enumValues(declaration.getType());
@@ -153,7 +158,7 @@ public class BattleNext_TestI18nSource {
 			return declarationValues(declaration.toAst().orElseThrow(), declaration.getName());
 		}
 		if (expression.isFieldAccessExpr()) {
-			var declaration = expression.asFieldAccessExpr().resolve();
+			ResolvedValueDeclaration declaration = expression.asFieldAccessExpr().resolve();
 			if (declaration.getType().isReferenceType()
 					&& declaration.getType().asReferenceType().getTypeDeclaration().orElseThrow().isEnum()) {
 				return enumValues(declaration.getType());

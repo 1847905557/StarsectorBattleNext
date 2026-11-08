@@ -3,6 +3,7 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestSpriteCatalog;
@@ -90,15 +91,15 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 	void primaryTintRestoresSharedSpriteStateAndKeepsPortraitsAtTheirOriginalColor(
 			String kind, boolean portrait, boolean tint) throws Exception {
 
-		var owner = panel(400f, 140f, new BaseCustomUIPanelPlugin());
-		var list = owner.createUIElement(400f, 140f, false);
+		CustomPanelAPI owner = panel(400f, 140f, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI list = owner.createUIElement(400f, 140f, false);
 		BattleNext_ExpandablePanel.Header data = new BattleNext_ExpandablePanel.Header("graphics/ship.png",
 				portrait, portrait ? "graphics/portrait.png" : "", kind, "Detail", "", "",
 				tint ? BattleNext_UiTheme.ACCENT : null);
 		BattleNext_ExpandablePanel.add(list, owner, 380f, false, 0f, data, () -> {}, ignored -> {}, body -> {});
 		owner.addUIElement(list).inTL(0f, 0f);
-		var root = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
-		var top = (CustomPanelAPI) children.get(root).get(0);
+		CustomPanelAPI root = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
+		CustomPanelAPI top = (CustomPanelAPI) children.get(root).get(0);
 		SpriteAPI primary = (SpriteAPI) getField(plugins.get(top), "primarySprite");
 		Color original = ORIGINAL_SPRITE_COLOR;
 		primary.setColor(original);
@@ -124,7 +125,7 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 	}
 
 	private CustomPanelAPI header(BattleNext_VariantDetails details) throws Exception {
-		var root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+		CustomPanelAPI root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
 		return (CustomPanelAPI) children.get(root).get(0);
 	}
 }

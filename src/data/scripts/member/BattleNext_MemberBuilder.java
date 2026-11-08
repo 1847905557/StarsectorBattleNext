@@ -31,9 +31,7 @@ public class BattleNext_MemberBuilder {
 
 	private void applyMemberData(FleetMemberAPI member, BattleNext_MemberModel definition) {
 		String name = definition.getName();
-		if (name.isBlank()) {
-			name = member.getVariant().getHullSpec().getHullName();
-		}
+		if (name.isBlank()) name = member.getVariant().getHullSpec().getHullName();
 		member.setShipName(name);
 		if (!definition.getPersonality().isEmpty()) {
 			member.setPersonalityOverride(definition.getPersonality());
@@ -47,7 +45,7 @@ public class BattleNext_MemberBuilder {
 			officer.setPortraitSprite(definition.getPortrait());
 		}
 
-		BattleNext_PersonSkills.apply(officer, definition.getSkills());
+		BattleNext_PersonSkills.apply(officer, definition.getSkillsReadonly());
 		member.setCaptain(officer);
 
 		member.getRepairTracker().setMothballed(false);

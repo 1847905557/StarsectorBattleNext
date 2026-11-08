@@ -11,6 +11,7 @@ public class BattleNext_RttGeometry {
 	private static final float SHIP_SPACING = 1.25f;
 
 	private BattleNext_RttGeometry() {
+
 	}
 
 	public static boolean inside(float x, float y, float firstX, float firstY, float secondX, float secondY) {

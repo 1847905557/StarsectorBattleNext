@@ -39,17 +39,20 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 				}
 				return choices;
 			}
+
 			@Override
 			public int getMaxStack(String id) {
 				return 1;
 			}
+
 			@Override
 			public String getIconPath(String id) {
 				return null;
 			}
+
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-				tooltip.addTitle(option.getLabel());
+				tooltip.addTitle(option.label());
 			}
 		};
 		BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, overlay, 32f, 28f, "...", 0f,
@@ -123,6 +126,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 	@ParameterizedTest
 	@ValueSource(ints = {12, 658})
 	void popupUsesIndependentHostActualButtonHeightAndBoundaries(int top) throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI overlay = panel(800f, 700f, new BaseCustomUIPanelPlugin());
@@ -144,6 +148,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 				- popup.getPosition().getY() - popup.getPosition().getHeight();
 		assertEquals(top == 12 ? 44f : 236f, popupTop);
 		assertEquals("S-mod", buttonLabels.get("TOGGLE"));
+
 		picker.closeOverlays();
 		assertEquals(1, children.get(overlay).size());
 		assertFalse(router.getSession().hasInputState());
@@ -153,6 +158,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 
 	@Test
 	void repeatedConfirmCancelAndFullCloseReleaseSearchRegistrations() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI overlay = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI host = overlay.createUIElement(32f, 28f, false);
@@ -181,12 +187,14 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			assertFalse(router.getSession().hasInputState());
 			assertEquals(1, children.get(overlay).size());
 		}
+
 		press(picker, "row", "TOGGLE");
 		Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
 		selection.clear();
 		selection.put("second", 1);
 		press(picker, "popup", "CONFIRM");
 		assertEquals(List.of("second"), draft);
+
 		press(picker, "row", "TOGGLE");
 		picker.close();
 		assertTrue(router.isEmpty());
@@ -197,6 +205,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 
 	@Test
 	void scrollingClipsButtonHitsAndClosesPopupWhenRowLeavesViewport() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI overlay = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI viewport = overlay.createUIElement(400f, 100f, true);
@@ -211,6 +220,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		assertEquals(52f, viewport.getPosition().getY() + viewport.getPosition().getHeight()
 				- rowPosition.getY() - rowPosition.getHeight());
 		assertEquals(190f, rowPosition.getWidth());
+
 		press(picker, "row", "TOGGLE");
 		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
 		viewport.getExternalScroller().setYOffset(100f);
@@ -227,9 +237,11 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		assertNull(getField(picker, "popup"));
 		plugins.get(row).advance(0f);
 		assertFalse(((ButtonAPI) getField(picker, "toggle")).isEnabled());
+
 		viewport.getExternalScroller().setYOffset(0f);
 		plugins.get(row).advance(0f);
 		assertTrue(((ButtonAPI) getField(picker, "toggle")).isEnabled());
+
 		picker.setEnabled(false);
 		plugins.get(row).advance(0f);
 		assertFalse(((ButtonAPI) getField(picker, "toggle")).isEnabled());
@@ -252,17 +264,20 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 				public List<BattleNext_OptionPicker.OptionChoice> getOptions() {
 					return List.of(new BattleNext_OptionPicker.OptionChoice("first", "First"), new BattleNext_OptionPicker.OptionChoice("second", "Second"));
 				}
+
 				@Override
 				public int getMaxStack(String id) {
 					return id.equals("second") ? 2 : 1;
 				}
+
 				@Override
 				public String getIconPath(String id) {
 					return "";
 				}
+
 				@Override
 				public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-					tooltip.addTitle(option.getLabel());
+					tooltip.addTitle(option.label());
 				}
 			};
 			BattleNext_OptionPicker picker = new BattleNext_OptionPicker(router, root, source, mode, () -> draft, ids -> {

@@ -68,9 +68,7 @@ public class LifecycleControllerAnalysis {
 	private LifecycleTypeStatus lifecycleTypeStatusUncached(ClassOrInterfaceDeclaration classDeclaration) {
 		try {
 			ResolvedReferenceTypeDeclaration resolved = classDeclaration.resolve();
-			if (!resolved.isClass()) {
-				return LifecycleTypeStatus.NOT_LIFECYCLE_INTERFACE;
-			}
+			if (!resolved.isClass()) return LifecycleTypeStatus.NOT_LIFECYCLE_INTERFACE;
 			boolean matched = resolved.asClass().getAllInterfaces().stream()
 					.map(ResolvedReferenceType::getQualifiedName)
 					.anyMatch(LIFECYCLE_INTERFACES::contains);
@@ -112,6 +110,7 @@ public class LifecycleControllerAnalysis {
 	}
 
 	public record LifecycleEntryMethod(MethodDeclaration method, boolean annotated) {
+
 	}
 
 	private record LifecycleAnalysis(
@@ -119,5 +118,6 @@ public class LifecycleControllerAnalysis {
 			List<MethodDeclaration> candidateMethods,
 			List<LifecycleEntryMethod> entries
 	) {
+
 	}
 }

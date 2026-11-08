@@ -12,7 +12,10 @@ import java.util.*;
 
 public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 
-	public enum ExecutionKind { MANUAL, SIMULATION }
+	public enum ExecutionKind {
+		MANUAL,
+		SIMULATION
+	}
 
 	private String id;
 	private String sourceTournamentId;
@@ -40,6 +43,7 @@ public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
+
 		String parsedId = json.getString("id");
 		UUID.fromString(parsedId);
 		String parsedSource = json.getString("sourceTournamentId");
@@ -65,7 +69,7 @@ public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 		JSONArray values = json.getJSONArray("matches");
 		List<BattleNext_Match> parsedMatches = readIdentifiedCollection("matches", values, BattleNext_Match::fromJson);
 		for (BattleNext_Match match : parsedMatches) {
-			for (String error : match.getLoadErrors()) {
+			for (String error : match.getLoadErrorsCopy()) {
 				addLoadError("Match " + match.getId() + ": " + error);
 			}
 		}
@@ -86,9 +90,8 @@ public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 	@Override
 	public JSONObject toJson() throws JSONException {
 		JSONArray values = new JSONArray();
-		for (BattleNext_Match match : matches) {
-			values.put(match.toJson());
-		}
+		for (BattleNext_Match match : matches) values.put(match.toJson());
+
 		return new JSONObject().put("id", id).put("sourceTournamentId", sourceTournamentId)
 				.put("executionKind", executionKind.name()).put("startedAt", startedAt).put("fleetIds", writeCollection("fleetIds", new JSONArray(fleetIds))).put("matches", writeCollection("matches", values))
 				.put("completed", completed).put("championFleetId", championFleetId)
@@ -160,11 +163,11 @@ public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 		this.pendingMatchId = pendingMatchId;
 	}
 
-	public List<BattleNext_Match> getMatches() {
+	public List<BattleNext_Match> getMatchesReadonly() {
 		return Collections.unmodifiableList(matches);
 	}
 
-	public List<String> getFleetIds() {
+	public List<String> getFleetIdsReadonly() {
 		return Collections.unmodifiableList(fleetIds);
 	}
 
@@ -197,9 +200,7 @@ public class BattleNext_StartedTournament extends BattleNext_JsonModel {
 	public int getPlayableMatchCount() {
 		int count = 0;
 		for (BattleNext_Match match : matches) {
-			if (!match.getEnemy().isEmpty()) {
-				count++;
-			}
+			if (!match.getEnemy().isEmpty()) count++;
 		}
 		return count;
 	}

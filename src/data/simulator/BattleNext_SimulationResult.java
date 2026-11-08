@@ -8,7 +8,9 @@ import java.util.UUID;
 public record BattleNext_SimulationResult(String id, Outcome outcome, String reportJson, String startedTournamentJson,
 		float simulationSeconds, long executionNanos, long steps, long peakHeapBytes, String diagnostic) {
 
-	public enum Outcome { COMPLETED, CANCELLED, BUDGET_EXCEEDED, FAILED }
+	public enum Outcome {
+		COMPLETED, CANCELLED, BUDGET_EXCEEDED, FAILED
+	}
 
 	public BattleNext_SimulationResult(String id, Outcome outcome, String reportJson, float simulationSeconds,
 			long executionNanos, long steps, long peakHeapBytes, String diagnostic) {

@@ -11,7 +11,7 @@ public class FilterWhiteHullmod implements BattleNext_EquipmentRestriction {
 	@Override
 	public List<String> validateItem(BattleNext_RuleRestriction restriction, BattleNext_RestrictionUtils.RestrictionEquipmentItem item) {
 		if (!"hullmod".equals(item.getCategory())) return List.of();
-		if (restriction.getItems().contains(item.getId())) return List.of();
+		if (restriction.getItemsReadonly().contains(item.getId())) return List.of();
 		return List.of(BattleNext_RestrictionUtils.itemReason(item, "outside", restriction.getId()));
 	}
 }

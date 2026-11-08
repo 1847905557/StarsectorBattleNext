@@ -21,7 +21,12 @@ public class BattleNext_Settings {
 
 	private static JSONObject values;
 
+	private BattleNext_Settings() {
+
+	}
+
 	public static void load() {
+
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.load",
 				() -> BattleNext_Logger.fields().put("path", PATH).build());
 		values = defaults();
@@ -39,12 +44,14 @@ public class BattleNext_Settings {
 						BattleNext_Logger.fields().put("path", PATH + ".data").put("settings", values).build(), absent);
 			}
 		}
+
 		if (!values.has("cnText")) {
 			boolean cnText = Global.getSettings().getBoolean("showCNTranslationCredits");
 			put(values, "cnText", cnText);
 			BattleNext_Logger.info(BattleNext_Settings.class, "settings.field.default",
 					() -> BattleNext_Logger.fields().put("key", "cnText").put("source_key", "showCNTranslationCredits").put("value", cnText).build());
 		}
+
 		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.load",
 				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
 	}
@@ -104,6 +111,7 @@ public class BattleNext_Settings {
 			if (defaultTimeMult <= 0f || !Float.isFinite(defaultTimeMult)) throw new IllegalArgumentException("Default time multiplier is invalid");
 			if (boostTimeMult <= 0f || !Float.isFinite(boostTimeMult)) throw new IllegalArgumentException("Boost time multiplier is invalid");
 			if (reportKeepCount < 0) throw new IllegalArgumentException("Report keep count is invalid");
+
 			JSONObject next = defaults();
 			put(next, "cnText", cnText);
 			put(next, "fullGraphicEffect", fullGraphicEffect);
@@ -114,6 +122,7 @@ public class BattleNext_Settings {
 			put(next, "boostTimeMult", boostTimeMult);
 			put(next, "reportKeepCount", reportKeepCount);
 			put(next, "deploymentPointLimit", deploymentPointLimit);
+
 			try {
 				BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.write",
 				() -> BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build());
@@ -125,6 +134,7 @@ public class BattleNext_Settings {
 				BattleNext_Logger.fields().put("path", PATH).put("settings", next).put("compressed", false).build(), exception);
 				throw new IllegalStateException("Unable to save settings", exception);
 			}
+
 			values = next;
 			BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.save",
 					() -> BattleNext_Logger.fields().put("path", PATH).put("settings", values).build());
@@ -149,6 +159,7 @@ public class BattleNext_Settings {
 				BattleNext_Logger.info(BattleNext_Settings.class, "settings.defaults.applied",
 						() -> BattleNext_Logger.fields().put("path", path).put("settings", values).build());
 			}
+
 			return stored;
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_Settings.class, "settings.read", input, exception);
@@ -170,8 +181,10 @@ public class BattleNext_Settings {
 	}
 
 	private static void merge(JSONObject stored) {
+
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.merge",
 				() -> BattleNext_Logger.fields().put("stored", stored).put("defaults", values).build());
+
 		if (stored.has("cnText")) put(values, "cnText", stored.optBoolean("cnText"));
 		putIf(values, "fullGraphicEffect", stored.has("fullGraphicEffect") ? stored.optBoolean("fullGraphicEffect") : null);
 		putIf(values, "infoLog", stored.has("infoLog") ? stored.optBoolean("infoLog") : null);
@@ -180,11 +193,13 @@ public class BattleNext_Settings {
 		putIf(values, "battleTimeLimit", validNumber(stored, "battleTimeLimit", false));
 		putIf(values, "defaultTimeMult", validNumber(stored, "defaultTimeMult", true));
 		putIf(values, "boostTimeMult", validNumber(stored, "boostTimeMult", true));
+
 		if (stored.has("reportKeepCount") && stored.optInt("reportKeepCount", -1) < 0) {
 			BattleNext_Logger.warn(BattleNext_Settings.class, "settings.validation.rejected",
 				BattleNext_Logger.fields().put("key", "reportKeepCount").put("input", stored.opt("reportKeepCount")).put("criterion", "Nonnegative integer").put("default_value", DEFAULT_REPORT_KEEP_COUNT).build());
 		}
 		putIf(values, "reportKeepCount", stored.has("reportKeepCount") && stored.optInt("reportKeepCount", -1) >= 0 ? stored.optInt("reportKeepCount") : null);
+
 		BattleNext_Logger.operationSucceeded(BattleNext_Settings.class, "settings.merge",
 				() -> BattleNext_Logger.fields().put("stored", stored).put("settings", values).build());
 	}

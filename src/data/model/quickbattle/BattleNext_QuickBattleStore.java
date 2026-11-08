@@ -15,7 +15,7 @@ public class BattleNext_QuickBattleStore extends BattleNext_BaseStore<BattleNext
 
 	private final BattleNext_QuickBattleStandardLoader standardLoader = new BattleNext_QuickBattleStandardLoader();
 	private final BattleNext_QuickBattleLegacyLoader legacyLoader = new BattleNext_QuickBattleLegacyLoader();
-	private final BattleNext_QuickBattleSaver saver = new BattleNext_QuickBattleSaver(this::getAll);
+	private final BattleNext_QuickBattleSaver saver = new BattleNext_QuickBattleSaver(this::getAllCopy);
 
 	public BattleNext_QuickBattleStore() {
 		super("Quick battle catalog has not been loaded");

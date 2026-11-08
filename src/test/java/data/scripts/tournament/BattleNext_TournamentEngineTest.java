@@ -24,21 +24,25 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void drawAndSideSwapUseOrderedRounds() {
+
 		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.SINGLE_ELIMINATION, 4);
 		start(tournament);
 		BattleNext_Match match = engine.getNextMatch(instances.get(tournament));
 		engine.recordRound(tournament, instances.get(tournament), match.getId(), "draw", report().getId());
-		assertEquals(BattleNext_Round.RoundStatus.DRAW, match.getRounds().get(0).getStatus());
+		assertEquals(BattleNext_Round.RoundStatus.DRAW, match.getRoundsReadonly().get(0).getStatus());
 		assertEquals("F1", match.getPlayer());
+
 		engine.recordRound(tournament, instances.get(tournament), match.getId(), "F1", report().getId());
 		assertEquals("F2", match.getPlayer());
+
 		engine.recordRound(tournament, instances.get(tournament), match.getId(), "F1", report().getId());
-		assertEquals(BattleNext_Round.RoundStatus.ENEMY_WIN, match.getRounds().get(2).getStatus());
+		assertEquals(BattleNext_Round.RoundStatus.ENEMY_WIN, match.getRoundsReadonly().get(2).getStatus());
 		assertEquals(2, match.getPlayerWins());
 		assertEquals(BattleNext_Match.MatchStatus.PENDING, match.getStatus());
+
 		engine.recordRound(tournament, instances.get(tournament), match.getId(), "F1", report().getId());
 		assertEquals("F1", instances.get(tournament).getChampionFleetId());
-		assertEquals(4, match.getRounds().size());
+		assertEquals(4, match.getRoundsReadonly().size());
 	}
 
 	@Test
@@ -75,7 +79,7 @@ class BattleNext_TournamentEngineTest {
 				start(tournament);
 				int played = finishByPlayer(tournament);
 				assertTrue(instances.get(tournament).isCompleted(), type + " with " + count + " fleets");
-				assertTrue(instances.get(tournament).getFleetIds().contains(instances.get(tournament).getChampionFleetId()));
+				assertTrue(instances.get(tournament).getFleetIdsReadonly().contains(instances.get(tournament).getChampionFleetId()));
 				assertTrue(played > 0);
 				assertNull(engine.getNextMatch(instances.get(tournament)));
 				assertEliminationLosses(tournament, type, count);
@@ -106,9 +110,11 @@ class BattleNext_TournamentEngineTest {
 		start(tournament);
 		engine.recordRound(tournament, instances.get(tournament), "W1-1", "F1", report().getId());
 		assertEquals("F2", instances.get(tournament).findMatch("L1-1").getWinnerFleetId());
+
 		engine.recordRound(tournament, instances.get(tournament), "GF", "F2", report().getId());
 		assertFalse(instances.get(tournament).isCompleted());
 		assertEquals(BattleNext_Match.MatchStage.GRAND_FINAL_RESET, instances.get(tournament).findMatch("GF_RESET").getStage());
+
 		engine.recordRound(tournament, instances.get(tournament), "GF_RESET", "F1", report().getId());
 		assertEquals("F1", instances.get(tournament).getChampionFleetId());
 	}
@@ -125,11 +131,12 @@ class BattleNext_TournamentEngineTest {
 			BattleNext_BattleReportModel dependent = report();
 			dependent.setId("discard-me-123");
 			engine.recordRound(tournament, instances.get(tournament), "W2-1", instances.get(tournament).findMatch("W2-1").getPlayer(), dependent.getId());
+
 			engine.rollback(tournament, instances.get(tournament), "W1-1");
 			assertEquals(BattleNext_Match.MatchStatus.PENDING, instances.get(tournament).findMatch("W1-1").getStatus());
 			assertEquals(BattleNext_Match.MatchStatus.COMPLETE, instances.get(tournament).findMatch("W1-2").getStatus());
-			assertEquals(1, instances.get(tournament).findMatch("W1-2").getRounds().size());
-			assertEquals("independent", instances.get(tournament).findMatch("W1-2").getRounds().get(0).getReportId());
+			assertEquals(1, instances.get(tournament).findMatch("W1-2").getRoundsReadonly().size());
+			assertEquals("independent", instances.get(tournament).findMatch("W1-2").getRoundsReadonly().get(0).getReportId());
 			assertNull(instances.get(tournament).findMatch("W2-1"));
 			assertFalse(instances.get(tournament).toJson().toString().contains("discard-me-123"));
 			assertEquals("W1-1", engine.getNextMatch(instances.get(tournament)).getId());
@@ -144,6 +151,7 @@ class BattleNext_TournamentEngineTest {
 		engine.recordRound(roundRobin, instances.get(roundRobin), "RR-0-2", "F3", report().getId());
 		engine.recordRound(roundRobin, instances.get(roundRobin), "RR-1-2", "F2", report().getId());
 		assertEquals("F1", instances.get(roundRobin).getChampionFleetId());
+
 		BattleNext_TournamentModel kof = tournament(5, TournamentBracketType.KING_OF_THE_HILL, 1);
 		start(kof);
 		assertEquals(4, finishByPlayer(kof));
@@ -152,12 +160,14 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void seededPairingsAndHeadToHeadRanking() {
+
 		BattleNext_TournamentModel seeded = tournament(8, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		start(seeded);
 		assertEquals("F1", instances.get(seeded).findMatch("W1-1").getPlayer());
 		assertEquals("F8", instances.get(seeded).findMatch("W1-1").getEnemy());
 		assertEquals("F4", instances.get(seeded).findMatch("W1-2").getPlayer());
 		assertEquals("F5", instances.get(seeded).findMatch("W1-2").getEnemy());
+
 		BattleNext_TournamentModel roundRobin = tournament(4, TournamentBracketType.ROUND_ROBIN, 1);
 		start(roundRobin);
 		engine.recordRound(roundRobin, instances.get(roundRobin), "RR-0-1", "F2", report().getId());
@@ -182,6 +192,7 @@ class BattleNext_TournamentEngineTest {
 
 	@Test
 	void nestedEnumsRejectUnknownValues() throws Exception {
+
 		BattleNext_TournamentModel tournament = tournament(2, TournamentBracketType.SINGLE_ELIMINATION, 1);
 		start(tournament);
 		BattleNext_Match match = engine.getNextMatch(instances.get(tournament));
@@ -191,14 +202,15 @@ class BattleNext_TournamentEngineTest {
 		matchJson.put("status", "UNKNOWN");
 		BattleNext_StartedTournament loaded = new BattleNext_StartedTournament();
 		loaded.fromJson(json);
-		assertTrue(loaded.getMatches().isEmpty());
-		assertTrue(loaded.getLoadErrors().get(0).contains("match.status"));
+		assertTrue(loaded.getMatchesReadonly().isEmpty());
+		assertTrue(loaded.getLoadErrorsCopy().get(0).contains("match.status"));
+
 		matchJson.put("status", "COMPLETE");
 		matchJson.getJSONArray("rounds").getJSONObject(0).put("status", "UNKNOWN");
 		loaded.fromJson(json);
-		assertEquals(1, loaded.getMatches().size());
-		assertTrue(loaded.getMatches().get(0).getRounds().isEmpty());
-		assertTrue(loaded.getLoadErrors().get(0).contains("round.status"));
+		assertEquals(1, loaded.getMatchesReadonly().size());
+		assertTrue(loaded.getMatchesReadonly().get(0).getRoundsReadonly().isEmpty());
+		assertTrue(loaded.getLoadErrorsCopy().get(0).contains("round.status"));
 		assertEquals(json.toString(), loaded.toJson().toString());
 	}
 
@@ -253,13 +265,14 @@ class BattleNext_TournamentEngineTest {
 			List<String> slots = new ArrayList<>(List.of("", "F1", "", "F2", "F3", "", ""));
 			BattleNext_StartedTournament started = engine.start(configuration, slots, ExecutionKind.MANUAL);
 			slots.set(1, "other");
-			assertEquals(List.of("", "F1", "", "F2", "F3", "", ""), started.getFleetIds());
+			assertEquals(List.of("", "F1", "", "F2", "F3", "", ""), started.getFleetIdsReadonly());
+
 			instances.put(configuration, started.copy());
 			int played = finishByPlayer(configuration);
 			assertEquals(instances.get(configuration).getPlayableMatchTotal(configuration), played);
 			assertTrue(List.of("F1", "F2", "F3").contains(instances.get(configuration).getChampionFleetId()));
-			for (BattleNext_Match match : instances.get(configuration).getMatches()) {
-				if (match.getRounds().isEmpty()) continue;
+			for (BattleNext_Match match : instances.get(configuration).getMatchesReadonly()) {
+				if (match.getRoundsReadonly().isEmpty()) continue;
 				assertFalse(match.getPlayer().isEmpty());
 				assertFalse(match.getEnemy().isEmpty());
 			}
@@ -273,7 +286,7 @@ class BattleNext_TournamentEngineTest {
 		inputs.put(List.of("a", "a", "", ""), BattleNext_TournamentEngine.ConfigurationReason.DUPLICATE_FLEETS);
 		inputs.put(List.of("a", "", "", ""), BattleNext_TournamentEngine.ConfigurationReason.MINIMUM_FLEETS);
 		inputs.put(List.of("a", "b"), BattleNext_TournamentEngine.ConfigurationReason.LIMITS);
-		for (var input : inputs.entrySet()) {
+		for (Map.Entry<List<String>, BattleNext_TournamentEngine.ConfigurationReason> input : inputs.entrySet()) {
 			List<String> slots = input.getKey();
 			BattleNext_TournamentEngine.ConfigurationRejection rejected = assertThrows(BattleNext_TournamentEngine.ConfigurationRejection.class,
 					() -> engine.start(configuration, slots, ExecutionKind.MANUAL));
@@ -283,12 +296,12 @@ class BattleNext_TournamentEngineTest {
 
 	private void assertEliminationLosses(BattleNext_TournamentModel tournament, TournamentBracketType type, int count) {
 		Map<String, Integer> losses = new HashMap<>();
-		for (BattleNext_Match match : instances.get(tournament).getMatches()) {
+		for (BattleNext_Match match : instances.get(tournament).getMatchesReadonly()) {
 			if (!match.getLoserFleetId().isEmpty()) {
 				losses.merge(match.getLoserFleetId(), 1, Integer::sum);
 			}
 		}
-		for (String fleet : instances.get(tournament).getFleetIds()) {
+		for (String fleet : instances.get(tournament).getFleetIdsReadonly()) {
 			if (!fleet.equals(instances.get(tournament).getChampionFleetId())) {
 				assertEquals(type == TournamentBracketType.DOUBLE_ELIMINATION ? 2 : 1,
 						losses.getOrDefault(fleet, 0), type + " losses for " + count + " fleets: " + fleet);

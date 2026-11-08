@@ -15,9 +15,12 @@ import java.util.Locale;
 public class BattleNext_ReportSourceDisplay {
 
 	public record SourceVisual(String name, String primarySprite, String secondarySprite,
-			String placeholder, boolean resolved, boolean accentIcon) { }
+			String placeholder, boolean resolved, boolean accentIcon) {
+
+	}
 
 	private BattleNext_ReportSourceDisplay() {
+
 	}
 
 	public static SourceVisual resolve(BattleNext_DamageSourceReport source, SettingsAPI settings) {
@@ -66,6 +69,7 @@ public class BattleNext_ReportSourceDisplay {
 			BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.degraded",
 				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).build(), exception);
 		}
+
 		BattleNext_Logger.warn(BattleNext_ReportSourceDisplay.class, "report.source.unavailable",
 				BattleNext_Logger.fields().put("kind", source.getKind()).put("id", id).put("placeholder", placeholder(source.getKind())).build());
 		return new SourceVisual(id, "", "", placeholder(source.getKind()), false, false);

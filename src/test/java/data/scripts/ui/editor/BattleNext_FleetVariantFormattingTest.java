@@ -1,11 +1,14 @@
 package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.fleet.io.BattleNext_FleetSaver;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
+import java.util.stream.Stream;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Settings;
@@ -35,7 +38,7 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 	void formattingCapturesDraftInputsRefreshesExpandedFieldsAndCommitsRenamedFilesOnRetry() throws Exception {
 
 		AtomicBoolean failWrite = new AtomicBoolean();
-		var store = new BattleNext_FleetStore() {
+		BattleNext_FleetStore store = new BattleNext_FleetStore() {
 			private final BattleNext_FleetSaver writer = new BattleNext_FleetSaver() {
 				@Override
 				public String save(BattleNext_FleetModel fleet) throws IOException, JSONException {
@@ -50,14 +53,14 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 			}
 		};
 		store.reload();
-		var parent = source().getApi();
-		var fleet = fleet(List.of("parent_variant", "parent_variant"));
+		ShipVariantAPI parent = source().getApi();
+		BattleNext_FleetModel fleet = fleet(List.of("parent_variant", "parent_variant"));
 		fleet.putVariant(BattleNext_VariantBuilder.fromVariant(parent));
 		fleet.putVariant(BattleNext_VariantBuilder.fromVariant(parent.getModuleVariant("module")));
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(new JSONObject().put("variantId", "extra").put("hullId", "child"), ""));
 		store.save(fleet);
 		Map<Path, String> stored = storedFiles();
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(fleet, false);
 		attachEditor(editor, panel(1000f, 350f, new BaseCustomUIPanelPlugin()));
 		editor.buttonPressed("toggle_member:0");
@@ -78,10 +81,10 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_format_success"), 2, 2), editor.getStatusText());
 		assertTrue(editor.hasUnsavedChanges());
 		assertEquals(stored, storedFiles());
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
-		assertEquals(List.of("ctb_parent_1", "ctb_parent_1"), draft.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
-		assertEquals("Edited member", draft.getMembers().get(0).getName());
-		assertEquals("full_assault", draft.getMembers().get(0).getOrders());
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
+		assertEquals(List.of("ctb_parent_1", "ctb_parent_1"), draft.getMembersReadonly().stream().map(BattleNext_MemberModel::getVariantId).toList());
+		assertEquals("Edited member", draft.getMembersReadonly().get(0).getName());
+		assertEquals("full_assault", draft.getMembersReadonly().get(0).getOrders());
 		assertEquals("ctb_parent_1", field(((List<?>) getField(editor, "memberFields")).get(0), "variantField").getText());
 		assertEquals(Set.of(0), getField(editor, "expandedMembers"));
 		viewports = (Map<?, ?>) getField(editor, "viewports");
@@ -94,14 +97,14 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 		assertTrue(editor.getSaveErrors().get(0).contains("Injected formatted fleet write failure"));
 		assertTrue(editor.hasUnsavedChanges());
 		assertEquals(stored, storedFiles());
-		assertEquals("parent_variant", store.get("format_fleet").getMembers().get(0).getVariantId());
+		assertEquals("parent_variant", store.get("format_fleet").getMembersReadonly().get(0).getVariantId());
 		failWrite.set(false);
 		assertTrue(editor.save(), editor.getStatusText());
 		assertFalse(editor.hasUnsavedChanges());
 		store.reload();
-		var loaded = store.get("format_fleet");
+		BattleNext_FleetModel loaded = store.get("format_fleet");
 		assertEquals("Edited fleet", loaded.getName());
-		assertEquals("ctb_parent_1", loaded.getMembers().get(0).getVariantId());
+		assertEquals("ctb_parent_1", loaded.getMembersReadonly().get(0).getVariantId());
 		assertEquals("ctb_child_1", loaded.getVariant("ctb_parent_1").build().getModuleVariant("module").getHullVariantId());
 		assertEquals(7, loaded.getVariant("ctb_child_1").build().getNumFluxVents());
 		assertNotNull(loaded.getVariant("extra"));
@@ -117,13 +120,13 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 	@Test
 	void rejectedPreviewPreservesPinnedSelectionUnsubmittedInputsAndTheOriginalDraft() throws Exception {
 
-		var pins = new BattleNext_PinnedVariantStore();
+		BattleNext_PinnedVariantStore pins = new BattleNext_PinnedVariantStore();
 		pins.reload();
-		var parent = source().getApi();
+		ShipVariantAPI parent = source().getApi();
 		registeredVariants.put("parent_variant", parent);
-		var pin = pins.saveVariant("Pinned", parent);
-		var fleet = fleet(List.of("parent_variant", "missing"));
-		var editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_PinnedVariantModel pin = pins.saveVariant("Pinned", parent);
+		BattleNext_FleetModel fleet = fleet(List.of("parent_variant", "missing"));
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		editor.open(fleet, false);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		editor.buttonPressed("toggle_member:0");
@@ -134,7 +137,7 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 		field(fields, "nameField").setText("Pending name");
 		field(editor, "variantPrefixField").setText("ctb");
 		String inputs = editor.serializeState();
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
 		String original = draft.toJson().toString();
 		Map<Path, String> stored = storedFiles();
 		editor.buttonPressed("format_ids");
@@ -146,14 +149,14 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 		assertEquals(original, draft.toJson().toString());
 		assertEquals("", field(editor, "folderNameField").getText());
 		assertEquals("pinned:" + pin.getPinId(), field(fields, "variantField").getText());
-		assertTrue(draft.getVariants().isEmpty());
+		assertTrue(draft.getVariantsCopy().isEmpty());
 		assertEquals(stored, storedFiles());
 		editor.buttonPressed("toggle_member:1");
 		field(((List<?>) getField(editor, "memberFields")).get(1), "variantField").setText("parent_variant");
 		editor.buttonPressed("format_ids");
 		assertTrue(editor.getSaveErrors().isEmpty(), editor.getStatusText());
-		var corrected = (BattleNext_FleetModel) getField(editor, "draft");
-		assertEquals(List.of("ctb_parent_1", "ctb_parent_2"), corrected.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
+		BattleNext_FleetModel corrected = (BattleNext_FleetModel) getField(editor, "draft");
+		assertEquals(List.of("ctb_parent_1", "ctb_parent_2"), corrected.getMembersReadonly().stream().map(BattleNext_MemberModel::getVariantId).toList());
 		assertEquals("ctb_child_1", corrected.getVariant("ctb_parent_1").build().getModuleVariant("module").getHullVariantId());
 		assertEquals("ctb_child_1", corrected.getVariant("ctb_parent_2").build().getModuleVariant("module").getHullVariantId());
 		assertEquals("parent_variant", parent.getHullVariantId());
@@ -166,21 +169,21 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 	void moduleOnlyChangesTriggerConfirmationAndTheFooterSharesLocalizedFormatFeedback(boolean cnText) throws Exception {
 
 		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50, 0);
-		var fleet = fleet(List.of("ctb_parent_custom"));
+		BattleNext_FleetModel fleet = fleet(List.of("ctb_parent_custom"));
 		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson().put("variantId", "ctb_parent_custom");
 		fleet.putVariant(BattleNext_VariantBuilder.fromJson(json, ""));
-		var store = new BattleNext_FleetStore();
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		store.save(fleet);
 		AtomicBoolean closed = new AtomicBoolean();
-		var manager = new BattleNext_UiManager(() -> closed.set(true));
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> closed.set(true));
 		manager.attach(panel(1400f, 900f, manager));
 		Object fleets = Arrays.stream(Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants())
 				.filter(tab -> tab.toString().equals("FLEETS")).findFirst().orElseThrow();
 		manager.buttonPressed(fleets);
-		var page = (BattleNext_FleetLibraryPage) getField(manager, "fleetPage");
+		BattleNext_FleetLibraryPage page = (BattleNext_FleetLibraryPage) getField(manager, "fleetPage");
 		manager.buttonPressed("fleet:format_fleet");
-		var editor = (BattleNext_FleetEditor) getField(page, "editor");
+		BattleNext_FleetEditor editor = (BattleNext_FleetEditor) getField(page, "editor");
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_variant_id_prefix")));
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_format_ids"), buttonLabels.get("format_ids"));
 		field(editor, "variantPrefixField").setText("ctb");
@@ -198,12 +201,12 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 		manager.buttonPressed("format_ids");
 		assertTrue(page.getSaveErrors().isEmpty());
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_format_success"), 1, 1), page.getStatusText());
-		assertEquals("ctb_parent_custom", ((BattleNext_FleetModel) getField(editor, "draft")).getMembers().get(0).getVariantId());
+		assertEquals("ctb_parent_custom", ((BattleNext_FleetModel) getField(editor, "draft")).getMembersReadonly().get(0).getVariantId());
 		assertTrue(page.hasUnsavedChanges());
 		manager.buttonPressed("format_ids");
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_format_success"), 0, 0), page.getStatusText());
 		manager.buttonPressed("close");
-		var confirmation = (BattleNext_ConfirmationDialog) getField(manager, "confirmationDialog");
+		BattleNext_ConfirmationDialog confirmation = (BattleNext_ConfirmationDialog) getField(manager, "confirmationDialog");
 		assertTrue(confirmation.isActive());
 		assertFalse(closed.get());
 		manager.buttonPressed("confirm_cancel");
@@ -233,7 +236,7 @@ class BattleNext_FleetVariantFormattingTest extends BattleNext_TestPageFixture {
 
 	private Map<Path, String> storedFiles() throws IOException {
 		Map<Path, String> stored = new LinkedHashMap<>();
-		try (var paths = Files.walk(directory)) {
+		try (Stream<Path> paths = Files.walk(directory)) {
 			for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
 				stored.put(path, Files.readString(path, StandardCharsets.UTF_8));
 			}

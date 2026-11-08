@@ -7,6 +7,8 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
@@ -141,16 +143,16 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 		TooltipMakerAPI tooltip = render();
 		List<LabelAPI> text = textLabels(tooltip);
 		for (int index = 0; index < text.size(); index++) {
-			var position = text.get(index).getPosition();
+			PositionAPI position = text.get(index).getPosition();
 			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default", labelFonts.get(position));
 			assertEquals(index == 0 || index == 4 ? BattleNext_UiTheme.ACCENT
 					: index == 1 ? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index == 0) continue;
-			var previous = text.get(index - 1).getPosition();
+			PositionAPI previous = text.get(index - 1).getPosition();
 			assertEquals(index == 1 ? 5f : index == 3 || index > 4 ? 2f : 8f,
 					previous.getY() - position.getY() - position.getHeight());
 		}
-		var components = tooltips.get(tooltip).getComponents();
+		List<UIComponentAPI> components = tooltips.get(tooltip).getComponents();
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
 	}
 
@@ -158,7 +160,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 	void localVariantWinsOverRegisteredVariantAndUsesTheCurrentFleetSnapshot() throws Exception {
 
 		fleet.setMembers(List.of(member("root", List.of(), "")));
-		var localHull = spec("local", "Local hull", 7.25f, 9, List.of(), Set.of());
+		ShipHullSpecAPI localHull = spec("local", "Local hull", 7.25f, 9, List.of(), Set.of());
 		Variant local = variant("root", localHull);
 		local.getApi().setWingId(0, "local_wing");
 		fleet.putVariant(BattleNext_VariantBuilder.fromVariant(local.getApi()));
@@ -217,7 +219,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 	void missingModuleKeepsSiblingWingsAndFullBaseCosts() throws Exception {
 		parent.getModules().put("left", null);
 		fleet.setMembers(List.of(member("root", List.of(), "")));
-		var text = values(render());
+		List<String> text = values(render());
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 1 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 6 (" + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_partial") + ")", text.get(2));
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 5.5 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 4", text.get(3));
 		assertEquals("left", previewLogs().get(0).getJSONObject("fields").getString("module_path"));

@@ -15,7 +15,9 @@ import data.scripts.ui.widget.BattleNext_VariantDetails;
 public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 
 	private final BattleNext_PinnedVariantStore store;
+
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
+
 	private final BattleNext_VariantDetails details = new BattleNext_VariantDetails(this::refreshContent, () -> inputRouter.isEmpty());
 
 	private CatalogEntry entry;
@@ -36,11 +38,13 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void buildEditorContent() {
+
 		String edited = nameField == null ? entry.name() : nameField.getText();
 		float offset = metadataContent == null || metadataContent.getExternalScroller() == null
 				? 0f : metadataContent.getExternalScroller().getYOffset();
 		nameField = null;
 		CatalogEntry selected = entry;
+
 		UIRect area = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		float metadataLimit = Math.max(1f, (float) Math.floor(area.getHeight() / 3f));
 		CustomPanelAPI metadataPanel = panel.createCustomPanel(area.getWidth(), metadataLimit,
@@ -58,9 +62,11 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		if (!selected.error().isEmpty()) {
 			fieldContent.addPara(selected.error(), 8f);
 		}
+
 		float metadataHeight = Math.min(metadataLimit, fieldContent.getHeightSoFar());
 		metadataPanel.getPosition().setSize(area.getWidth(), metadataHeight);
 		fieldContent.getPosition().setSize(area.getWidth() + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, metadataHeight);
+
 		metadataPanel.addUIElement(fieldContent).inTL(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, 0f);
 		panel.addComponent(metadataPanel).inTL(0f, 0f);
 		metadataContent = fieldContent;
@@ -68,6 +74,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		if (fieldContent.getExternalScroller() != null) {
 			fieldContent.getExternalScroller().setYOffset(Math.min(Math.max(0f, fieldContent.getHeightSoFar() - metadataHeight), offset));
 		}
+
 		if (selected.error().isEmpty() && selected.model() != null && store.isLoaded()) {
 			float detailsHeight = Math.max(1f, area.getHeight() - metadataHeight - 8f);
 			CustomPanelAPI visual = panel.createCustomPanel(area.getWidth(), detailsHeight,
@@ -75,7 +82,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 			panel.addComponent(visual).inTL(0f,
 					metadataHeight + 8f);
 			try {
-				details.setVariantJson(selected.model().getVariantJson());
+				details.setVariantJson(selected.model().getVariantJsonCopy());
 				own(details);
 				details.attach(visual);
 			} catch (Exception exception) {
@@ -100,6 +107,7 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 	protected boolean submitDraft() {
 		if (entry.model() == null || nameField == null || !store.isLoaded()) return false;
 		if (!validateName(entry.path(), variantStrings.get("pin_name"), nameField.getText(), variantStrings.get("pin_name_required"))) return false;
+
 		String next = nameField.getText().trim();
 		try {
 			return persist(() -> {

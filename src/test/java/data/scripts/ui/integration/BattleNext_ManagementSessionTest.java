@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,39 +32,45 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void switchingFromAnActiveTournamentToQuickBattlePublishesTheSharedSelectionWithoutAnEditor() throws Exception {
-		var configurations = new BattleNext_TournamentStore();
+
+		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		configurations.save(new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2));
-		var instances = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		String instanceId = UUID.randomUUID().toString();
 		instances.save(new BattleNext_StartedTournament(instanceId, "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta")));
 		instances.activate(instanceId);
-		var manager = new BattleNext_UiManager(() -> { });
+
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
 		settleUi(manager);
-		var session = (BattleNext_ManagementSession) getField(manager, "catalogs");
+		BattleNext_ManagementSession session = (BattleNext_ManagementSession) getField(manager, "catalogs");
 		assertEquals(instanceId, manager.getActiveTournamentId());
 		assertNull(getField(getField(manager, "battleSelectorPage"), "quickBattleEditor"));
+
 		manager.buttonPressed(new BattleSourceSelectionRequest(""));
 		assertTrue(manager.isSaving());
 		settleSave(manager);
 		assertEquals("", session.data().instances().getActiveId());
 		assertEquals("", manager.getActiveTournamentId());
 		assertEquals("", getField(getField(manager, "battleSelectorPage"), "selectedId"));
+
 		manager.buttonPressed("close");
 	}
 
 	@Test
 	void reportRefreshRetainsAChangeArrivingWhileThePreviousRefreshIsWaitingForPublication() throws Exception {
-		var manager = new BattleNext_UiManager(() -> { });
+
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
 		settleUi(manager);
-		var session = (BattleNext_ManagementSession) getField(manager, "catalogs");
+		BattleNext_ManagementSession session = (BattleNext_ManagementSession) getField(manager, "catalogs");
 		long revision = session.data().reports().getRevision();
+
 		session.refreshReports();
-		var report = new BattleNext_BattleReportModel();
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId("late");
 		report.setName("Late report");
 		session.persist(() -> {
@@ -77,25 +84,29 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 			session.advance();
 			Thread.sleep(1L);
 		}
+
 		assertEquals(revision + 2, session.data().reports().getRevision());
 		manager.buttonPressed("close");
 	}
 
 	@Test
 	void reportRefreshReadsAnUpdatedReportWrittenByAnotherSession() throws Exception {
-		var report = new BattleNext_BattleReportModel();
+
+		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId("report");
 		report.setName("Initial");
 		Files.createDirectories(directory.resolve("tournament/_reports"));
 		Files.writeString(directory.resolve("tournament/_reports/report.json"), report.toJson().toString(), StandardCharsets.UTF_8);
-		var manager = new BattleNext_UiManager(() -> { });
+
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
 		settleUi(manager);
-		var session = (BattleNext_ManagementSession) getField(manager, "catalogs");
-		var initial = session.data().reports().get("report");
+		BattleNext_ManagementSession session = (BattleNext_ManagementSession) getField(manager, "catalogs");
+		BattleNext_BattleReportModel initial = session.data().reports().get("report");
+
 		report.setName("Updated by simulator");
-		var other = new BattleNext_ModFileManager.ReadSession(directory.toString());
+		BattleNext_ModFileManager.ReadSession other = new BattleNext_ModFileManager.ReadSession(directory.toString());
 		other.submit(() -> {
 			BattleNext_ModFileManager.writeText("tournament/_reports/report.json", report.toJson().toString());
 			return null;
@@ -110,6 +121,7 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		assertEquals("Updated by simulator", session.data().reports().get("report").getName());
 		initial.prepareDetails();
 		assertEquals("Initial", initial.getName());
+
 		manager.buttonPressed("close");
 	}
 
@@ -117,16 +129,25 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 	void pageOperationsPublishWithoutAnEditorKeepNestedWorkAndDropClosedViewCallbacks() throws Exception {
 		BattleNext_PageView page = new BattleNext_PageView() {
 			@Override
-			protected void loadPageState() { }
+			protected void loadPageState() {
+
+			}
+
 			@Override
-			protected void buildPage() { }
+			protected void buildPage() {
+
+			}
+
 			@Override
-			protected void refreshPage() { }
+			protected void refreshPage() {
+
+			}
 		};
 		CompletableFuture<Boolean> first = new CompletableFuture<>();
 		CompletableFuture<Boolean> second = new CompletableFuture<>();
 		AtomicInteger submitted = new AtomicInteger();
 		AtomicInteger published = new AtomicInteger();
+
 		page.setPersistence(write -> submitted.getAndIncrement() == 0 ? first : second);
 		page.persistMutation(() -> true, () -> {
 			published.incrementAndGet();
@@ -136,10 +157,12 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		page.completeSave();
 		assertTrue(page.isSaving());
 		assertEquals("Next", page.getStatusText());
+
 		second.completeExceptionally(new IllegalStateException("Injected operation failure"));
 		page.completeSave();
 		assertFalse(page.isSaving());
 		assertTrue(page.getStatusText().contains("Injected operation failure"));
+
 		CompletableFuture<Boolean> closing = new CompletableFuture<>();
 		page.setPersistence(write -> closing);
 		page.persistMutation(() -> true, published::incrementAndGet, "Loading", "Failure");
@@ -151,10 +174,12 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void sharedCatalogPublishesAsyncSavesAndRefreshesExternalEditsWhileRetainingSelection() throws Exception {
+
 		BattleNext_FleetStore source = new BattleNext_FleetStore();
 		source.reload();
 		BattleNext_FleetModel fleet = new BattleNext_FleetModel("fleet", "Original", List.of(), List.of(), List.of());
 		source.save(fleet);
+
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
@@ -171,6 +196,7 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		BattleNext_ManagementSession session = (BattleNext_ManagementSession) getField(manager, "catalogs");
 		assertEquals("Saved", session.data().fleets().get("fleet").getName());
 		assertSame(session.data().fleets(), getField(page, "store"));
+
 		long tournamentRevision = session.data().tournaments().getRevision();
 		long instancesRevision = session.data().instances().getRevision();
 		fleet.setName("External");
@@ -180,19 +206,26 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		assertEquals("Saved", session.data().fleets().get("fleet").getName());
 		assertEquals(tournamentRevision, session.data().tournaments().getRevision());
 		assertEquals(instancesRevision, session.data().instances().getRevision());
+
 		manager.buttonPressed("fleet:fleet");
 		manager.buttonPressed("refresh");
 		settleUi(manager);
 		Object refreshed = getField(getField(manager, "fleetPage"), "editor");
 		assertEquals("External", ((TextFieldAPI) getField(refreshed, "nameField")).getText());
+
 		manager.buttonPressed("close");
 	}
 
 	@Test
 	void openingStartsPreparationImmediatelyAndEntersTheSelectedPageOnlyAfterCompletion() throws Exception {
+
 		CompletableFuture<Void> release = new CompletableFuture<>();
-		var files = new BattleNext_ModFileManager.ReadSession(directory.toString());
-		var blocked = files.submit(() -> { release.get(); return null; });
+		BattleNext_ModFileManager.ReadSession files = new BattleNext_ModFileManager.ReadSession(directory.toString());
+		CompletableFuture<Void> blocked = files.submit(() -> {
+			release.get();
+			return null;
+		});
+
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
@@ -211,8 +244,9 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		}
 		blocked.get();
 		started.get();
+
 		CompletableFuture<Void> finishing = new CompletableFuture<>();
-		var preparation = BattleNext_ManagementSession.class.getDeclaredField("preparation");
+		Field preparation = BattleNext_ManagementSession.class.getDeclaredField("preparation");
 		preparation.setAccessible(true);
 		preparation.set(session, finishing);
 		manager.buttonPressed(tab("RULES"));
@@ -222,6 +256,7 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		finishing.complete(null);
 		settleUi(manager);
 		assertNotNull(getField(manager, "attachedView"));
+
 		manager.buttonPressed("add");
 		Object page = getField(manager, "rulesPage");
 		Object editor = getField(page, "editor");
@@ -233,15 +268,18 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		manager.advance(1f / 60f);
 		assertSame(name, getField(editor, "nameField"));
 		assertEquals("Loaded page draft", name.getText());
+
 		manager.buttonPressed("close");
 		manager.buttonPressed("confirm_discard");
 	}
 
 	@Test
 	void refreshCancellationKeepsTheDraftAndConfirmedSaveCompletesBeforeReload() throws Exception {
+
 		BattleNext_FleetStore source = new BattleNext_FleetStore();
 		source.reload();
 		source.save(new BattleNext_FleetModel("fleet", "Original", List.of(), List.of(), List.of()));
+
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> { });
 		manager.attach(panel(1400f, 800f, manager));
 		manager.open();
@@ -255,6 +293,7 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		manager.buttonPressed("confirm_cancel");
 		assertEquals("Draft", name.getText());
 		assertFalse(manager.isLoading());
+
 		manager.buttonPressed("refresh");
 		Object previousSession = getField(manager, "catalogs");
 		manager.buttonPressed("confirm_save");
@@ -264,6 +303,7 @@ class BattleNext_ManagementSessionTest extends BattleNext_TestPageFixture {
 		assertNotSame(previousSession, getField(manager, "catalogs"));
 		Object refreshed = getField(getField(manager, "fleetPage"), "editor");
 		assertEquals("Draft", ((TextFieldAPI) getField(refreshed, "nameField")).getText());
+
 		manager.buttonPressed("close");
 	}
 

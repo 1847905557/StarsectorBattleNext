@@ -12,6 +12,7 @@ import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.BattleNext_ManagementSession.Catalogs;
 import data.scripts.ui.editor.BattleNext_TournamentEditor;
 import data.simulator.BattleNext_SimulatorService;
+import data.simulator.BattleNext_SimulationTask;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -20,6 +21,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
+
 	private final BattleNext_BattleSourceProvider provider;
 	private final BattleNext_TournamentStore tournamentStore;
 	private final BattleNext_RuleStore ruleStore;
@@ -52,7 +54,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 			refreshInstances();
 		})));
 		editor.setRoundRetry(id -> persistMutation(() -> {
-			var task = BattleNext_SimulatorService.tournament(id);
+			BattleNext_SimulationTask task = BattleNext_SimulatorService.tournament(id);
 			if (task == null) BattleNext_BattleResultRecorder.retryTournamentRound(id);
 			else task.retryImport();
 			instances.reload();
@@ -84,7 +86,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 	@Override
 	protected void buildListItems(TooltipMakerAPI listContent) {
 		addCatalogDiagnostics(listContent, tournamentStore.getErrors());
-		for (BattleNext_TournamentModel tournament : tournamentStore.getAll()) {
+		for (BattleNext_TournamentModel tournament : tournamentStore.getAllCopy()) {
 			addListItem(listContent, tournament.getName(), "tournament:select:" + tournament.getId());
 		}
 	}
@@ -129,6 +131,7 @@ public class BattleNext_TournamentPage extends BattleNext_ManagementPage {
 		try {
 			BattleNext_StartedTournament instance = instances.get(id);
 			if (instance == null) instance = BattleNext_SimulatorService.tournament(id).getStartedTournament();
+
 			deletion.accept(instance.getName(tournamentStore.get(selectedId)), () -> {
 				if (BattleNext_SimulatorService.tournament(id) != null) {
 					try {

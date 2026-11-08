@@ -20,6 +20,7 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 	@Override
 	public List<BattleNext_BattleReportModel> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<BattleNext_BattleReportModel> result = new ArrayList<>();
 		for (String path : catalogPaths()) {
 			String raw = "";
@@ -39,6 +40,7 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 				reject(path, -1, id, raw, exception);
 			}
 		}
+
 		result = finishLoad(result);
 		result.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 		return result;
@@ -54,7 +56,11 @@ public class BattleNext_BattleReportStandardLoader extends BattleNext_CatalogLoa
 
 	@Override
 	protected List<String> catalogPaths() throws IOException, JSONException {
-		return paths(RESOURCE_FOLDER, false).stream().filter(path -> path.endsWith(".json")).toList();
+		List<String> result = new ArrayList<>();
+		for (String path : paths(RESOURCE_FOLDER, false)) {
+			if (path.endsWith(".json")) result.add(path);
+		}
+		return List.copyOf(result);
 	}
 
 	@Override

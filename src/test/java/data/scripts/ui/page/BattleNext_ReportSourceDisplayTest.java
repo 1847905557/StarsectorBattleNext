@@ -134,6 +134,7 @@ class BattleNext_ReportSourceDisplayTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void damageTypesUseFiveUntintedVanillaIcons() {
+
 		Map<DamageType, String> suffixes = Map.of(
 				DamageType.ENERGY, "energy",
 				DamageType.FRAGMENTATION, "fragmentation",

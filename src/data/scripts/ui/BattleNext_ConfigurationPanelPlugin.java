@@ -48,6 +48,7 @@ public class BattleNext_ConfigurationPanelPlugin extends BaseCustomUIPanelPlugin
 
 	@Override
 	public void positionChanged(PositionAPI position) {
+
 	}
 
 	@Override

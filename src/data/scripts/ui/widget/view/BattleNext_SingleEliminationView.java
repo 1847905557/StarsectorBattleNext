@@ -17,10 +17,7 @@ public class BattleNext_SingleEliminationView extends BattleNext_TournamentView 
 	@Override
 	protected void buildLayout() {
 		int width = 2;
-
-		while (width < fleetIds.size()) {
-			width *= 2;
-		}
+		while (width < fleetIds.size()) width *= 2;
 		buildWinners(width, BattleNext_Match.MatchStage.MAIN);
 	}
 }

@@ -30,6 +30,7 @@ public class BattleNext_GeometryRenderer {
 	private static boolean initialized;
 
 	private BattleNext_GeometryRenderer() {
+
 	}
 
 	public static void fillRect(PositionAPI position, Color color, float alpha) {
@@ -55,13 +56,16 @@ public class BattleNext_GeometryRenderer {
 
 	public static void texturedQuad(int texture, float x, float y, float width, float height,
 			float maxU, float maxV, float red, float green, float blue, float alpha) {
+
 		flush();
 		ensureInitialized();
+
 		GEOMETRY_DATA.clear();
 		GEOMETRY_DATA.put(x).put(y).put(x + width).put(y).put(x).put(y + height)
 				.put(x + width).put(y + height).flip();
 		TEXTURE_UV.clear();
 		TEXTURE_UV.put(0f).put(0f).put(maxU).put(0f).put(0f).put(maxV).put(maxU).put(maxV).flip();
+
 		withState(() -> {
 			upload(positionVbo, GEOMETRY_DATA);
 			upload(uvVbo, TEXTURE_UV);
@@ -76,6 +80,7 @@ public class BattleNext_GeometryRenderer {
 	public static void texturedFullscreen(int texture, float maxU, float maxV,
 			int viewportWidth, int viewportHeight) {
 		flush();
+
 		GL11.glPushAttrib(GL11.GL_TRANSFORM_BIT | GL11.GL_VIEWPORT_BIT | GL11.GL_ENABLE_BIT);
 		GL11.glViewport(0, 0, viewportWidth, viewportHeight);
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
@@ -85,7 +90,9 @@ public class BattleNext_GeometryRenderer {
 		GL11.glPushMatrix();
 		GL11.glLoadIdentity();
 		GL11.glDisable(GL11.GL_BLEND);
+
 		texturedQuad(texture, -1f, -1f, 2f, 2f, maxU, maxV, 0.5f, 0.5f, 0.5f, 1f);
+
 		GL11.glPopMatrix();
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
 		GL11.glPopMatrix();
@@ -98,15 +105,18 @@ public class BattleNext_GeometryRenderer {
 
 	public static GeometryClipState pushClip(float x, float y, float width, float height) {
 		flush();
+
 		float xScale = Global.getSettings().getScreenWidthPixels()
 				/ Math.max(1f, Global.getSettings().getScreenWidth());
 		float yScale = Global.getSettings().getScreenHeightPixels()
 				/ Math.max(1f, Global.getSettings().getScreenHeight());
+
 		IntBuffer box = CLIP_BOX;
 		box.clear();
 		GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
 		GeometryClipState state = new GeometryClipState(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1),
 				box.get(2), box.get(3));
+
 		int clipX = Math.round(x * xScale);
 		int clipY = Math.round(y * yScale);
 		int clipWidth = Math.max(0, Math.round(width * xScale));
@@ -119,6 +129,7 @@ public class BattleNext_GeometryRenderer {
 			clipWidth = Math.max(0, right - clipX);
 			clipHeight = Math.max(0, top - clipY);
 		}
+
 		GL11.glEnable(GL11.GL_SCISSOR_TEST);
 		GL11.glScissor(clipX, clipY, clipWidth, clipHeight);
 		return state;
@@ -165,6 +176,7 @@ public class BattleNext_GeometryRenderer {
 
 	private static void append(float[] vertices, int mode, Color color, float alpha, float width) {
 		if (batchPositions.position() > 0 && (mode != batchMode || width != batchWidth)) flush();
+
 		batchMode = mode;
 		batchWidth = width;
 		if (batchPositions.remaining() < vertices.length) {
@@ -178,6 +190,7 @@ public class BattleNext_GeometryRenderer {
 			batchPositions = positions;
 			batchColors = colors;
 		}
+
 		batchPositions.put(vertices);
 		for (int index = 0; index < vertices.length / 2; index++) {
 			batchColors.put(color.getRed() / 255f).put(color.getGreen() / 255f).put(color.getBlue() / 255f)
@@ -189,6 +202,7 @@ public class BattleNext_GeometryRenderer {
 		if (batchPositions.position() == 0) return;
 		batchPositions.flip();
 		batchColors.flip();
+
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL11.glDisable(GL11.GL_TEXTURE_2D);
 		GL11.glEnable(GL11.GL_BLEND);
@@ -201,7 +215,9 @@ public class BattleNext_GeometryRenderer {
 		GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 		GL11.glVertexPointer(2, 0, batchPositions);
 		GL11.glColorPointer(4, 0, batchColors);
+
 		GL11.glDrawArrays(batchMode, 0, batchPositions.remaining() / 2);
+
 		batchPositions.clear();
 		batchColors.clear();
 	}
@@ -251,19 +267,7 @@ public class BattleNext_GeometryRenderer {
 		}
 	}
 
-	public static class GeometryClipState {
-		private final boolean enabled;
-		private final int x;
-		private final int y;
-		private final int width;
-		private final int height;
+	public record GeometryClipState(boolean enabled, int x, int y, int width, int height) {
 
-		private GeometryClipState(boolean enabled, int x, int y, int width, int height) {
-			this.enabled = enabled;
-			this.x = x;
-			this.y = y;
-			this.width = width;
-			this.height = height;
-		}
 	}
 }

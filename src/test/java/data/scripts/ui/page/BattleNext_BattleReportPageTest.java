@@ -237,6 +237,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(strings = {"weapon", "ship", "fighter_wing", "arc", "source_type", "damage_type", "unknown"})
 	void allSourceKindsUseTheSameRowAndTextCenter(String kind) throws Exception {
+
 		configureRowAssets();
 		paragraphLineHeight = 15f;
 		mixedLabelHeights = true;
@@ -289,7 +290,7 @@ class BattleNext_BattleReportPageTest extends BattleNext_TestPageFixture {
 	private void assertTextCentered(CustomPanelAPI row) {
 
 		TooltipMakerAPI labels = (TooltipMakerAPI) children.get(row).get(children.get(row).size() - 1);
-		var components = tooltips.get(labels).getComponents();
+		List<UIComponentAPI> components = tooltips.get(labels).getComponents();
 		assertEquals(5, components.size());
 		PositionAPI name = components.get(0).getPosition();
 		float bottom = Float.POSITIVE_INFINITY;

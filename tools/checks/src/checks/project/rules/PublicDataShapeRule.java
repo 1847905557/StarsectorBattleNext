@@ -1,8 +1,8 @@
 package checks.project.rules;
 
 import checks.project.ProjectRule;
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 import checks.project.support.AstSupport;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;

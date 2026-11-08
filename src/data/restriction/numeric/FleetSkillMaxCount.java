@@ -13,6 +13,6 @@ public class FleetSkillMaxCount implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		return BattleNext_RestrictionUtils.maximum(restriction, assembledFleet.getDefinition().getId(),
-				new HashSet<>(assembledFleet.getDefinition().getSkills()).size());
+				new HashSet<>(assembledFleet.getDefinition().getSkillsReadonly()).size());
 	}
 }

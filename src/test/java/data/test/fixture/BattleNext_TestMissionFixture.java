@@ -145,9 +145,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 	@AfterEach
 	protected void restoreMission() throws Exception {
 		BattleNext_MissionRestrictedUnlock.getInstance().forget();
-		for (var entry : previousSelections.entrySet()) {
-			entry.getKey().set(null, entry.getValue());
-		}
+		for (Map.Entry<Field, Object> entry : previousSelections.entrySet()) entry.getKey().set(null, entry.getValue());
 		settingsValues.set(null, previousValues);
 		keyboardInput.set(null, previousKeyboardInput);
 	}
@@ -161,13 +159,18 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 	}
 
 	protected FleetMemberAPI enemyMember(String name, Variant variant, PersonAPI officer, int points) {
+
 		float[] readiness = {0f};
 		RepairTrackerAPI repair = proxy(RepairTrackerAPI.class, (method, args) -> switch (method) {
 			case "getMaxCR" -> 0.7f;
 			case "getCR" -> readiness[0];
-			case "setCR" -> { readiness[0] = (Float) args[0]; yield null; }
+			case "setCR" -> {
+				readiness[0] = (Float) args[0];
+				yield null;
+			}
 			default -> null;
 		});
+
 		return proxy(FleetMemberAPI.class, (method, args) -> switch (method) {
 			case "getId" -> name;
 			case "getShipName" -> name;
@@ -202,6 +205,7 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 		private float elapsed;
 
 		public CombatState(MissionState mission) {
+
 			List<ShipAPI> ships = new ArrayList<>();
 			for (FleetSide side : FleetSide.values()) {
 				for (FleetMemberAPI member : mission.getMembers().get(side)) {
@@ -214,11 +218,13 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 					}));
 				}
 			}
+
 			Map<String, Object> custom = new LinkedHashMap<>();
 			CombatUIAPI ui = proxy(CombatUIAPI.class, (method, args) -> {
 				if (method.equals("addMessage")) notices.add((String) ((Object[]) args[1])[0]);
 				return null;
 			});
+
 			api = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
 				case "getFleetManager" -> proxy(CombatFleetManagerAPI.class, (name, values) -> switch (name) {
 					case "getDeployedCopy" -> aliveSides.contains(args[0]) ? mission.getMembers().get(args[0]) : List.of();
@@ -261,13 +267,17 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 				if (!inflated) throw new IllegalStateException("Members read before inflation");
 				return new ArrayList<>(members);
 			});
+
 			api = proxy(CampaignFleetAPI.class, (method, args) -> switch (method) {
 				case "getId" -> id;
 				case "getNameWithFaction" -> faction + " patrol";
 				case "getFleetData" -> data;
 				case "getCommander" -> commander;
 				case "getFleetPoints" -> members.stream().mapToInt(FleetMemberAPI::getFleetPointCost).sum();
-				case "inflateIfNeeded" -> { inflated = true; yield null; }
+				case "inflateIfNeeded" -> {
+					inflated = true;
+					yield null;
+				}
 				default -> null;
 			});
 		}
@@ -297,18 +307,44 @@ public class BattleNext_TestMissionFixture extends BattleNext_TestFleetIoFixture
 		private final MissionDefinitionAPI api;
 
 		public MissionState() {
+
 			for (FleetSide side : FleetSide.values()) {
 				members.put(side, new ArrayList<>());
 				commanders.put(side, person("Commander", "", "steady", false, false, false, Map.of()));
 			}
+
 			api = proxy(MissionDefinitionAPI.class, (method, args) -> switch (method) {
-				case "initFleet" -> { defaultAi.put((FleetSide) args[0], (Boolean) args[3]); events.add("init:" + args[0]); yield null; }
-				case "setFleetTagline" -> { names.put((FleetSide) args[0], (String) args[1]); events.add("tagline:" + args[0]); yield null; }
-				case "addFleetMember" -> { members.get(args[0]).add((FleetMemberAPI) args[1]); events.add("member:" + args[0]); yield null; }
-				case "getDefaultCommander" -> { events.add("commander:" + args[0]); yield commanders.get(args[0]); }
-				case "addPlugin" -> { plugins.add((EveryFrameCombatPlugin) args[0]); yield null; }
-				case "addBriefingItem" -> { briefing.add((String) args[0]); yield null; }
-				case "initMap" -> { map = new float[]{(Float) args[0], (Float) args[1], (Float) args[2], (Float) args[3]}; yield null; }
+				case "initFleet" -> {
+					defaultAi.put((FleetSide) args[0], (Boolean) args[3]);
+					events.add("init:" + args[0]);
+					yield null;
+				}
+				case "setFleetTagline" -> {
+					names.put((FleetSide) args[0], (String) args[1]);
+					events.add("tagline:" + args[0]);
+					yield null;
+				}
+				case "addFleetMember" -> {
+					members.get(args[0]).add((FleetMemberAPI) args[1]);
+					events.add("member:" + args[0]);
+					yield null;
+				}
+				case "getDefaultCommander" -> {
+					events.add("commander:" + args[0]);
+					yield commanders.get(args[0]);
+				}
+				case "addPlugin" -> {
+					plugins.add((EveryFrameCombatPlugin) args[0]);
+					yield null;
+				}
+				case "addBriefingItem" -> {
+					briefing.add((String) args[0]);
+					yield null;
+				}
+				case "initMap" -> {
+					map = new float[]{(Float) args[0], (Float) args[1], (Float) args[2], (Float) args[3]};
+					yield null;
+				}
 				default -> null;
 			});
 		}

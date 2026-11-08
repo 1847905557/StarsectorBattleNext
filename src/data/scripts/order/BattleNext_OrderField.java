@@ -80,10 +80,12 @@ public class BattleNext_OrderField {
 			AssignmentTargetAPI target, float priority, Object command) {
 
 		if (hasExternalAssignment(ship)) return false;
+
 		if (action == Action.CLEAN) {
 			releaseShip(ship);
 			return true;
 		}
+
 		DeployedFleetMemberAPI member = manager.getDeployedFleetMember(ship);
 		if (member == null) return false;
 		if (action == Action.RETREAT) {
@@ -99,6 +101,7 @@ public class BattleNext_OrderField {
 			retreats.put(ship, new Retreat(tasks.getAssignmentFor(ship), command));
 			return true;
 		}
+
 		if (!member.canBeGivenOrders()) return false;
 		if (!BattleNext_OrderUtils.isValidTarget(target, engine)) return false;
 		OwnedTask existing = targets.get(target);
@@ -106,23 +109,24 @@ public class BattleNext_OrderField {
 			if (assignment.getTarget() != target) continue;
 			if (existing == null || assignment != existing.assignment) return false;
 		}
+
 		if (existing != null && existing.assignment.getType() != type) {
 			if (hasExternalParticipants(existing)) return false;
 			if (priority <= getPriorityOnTarget(target)) return false;
 			List<ShipAPI> displaced = new ArrayList<>();
-			for (var entry : participants.entrySet()) {
+			for (Map.Entry<ShipAPI, Participation> entry : participants.entrySet()) {
 				if (entry.getValue().task == existing) displaced.add(entry.getKey());
 			}
-			for (ShipAPI displacedShip : displaced) {
-				releaseShip(displacedShip);
-			}
+			for (ShipAPI displacedShip : displaced) releaseShip(displacedShip);
 			existing = null;
 		}
+
 		Participation own = participants.get(ship);
 		if (own != null && own.task == existing) {
 			participants.put(ship, new Participation(existing, priority, command));
 			return true;
 		}
+
 		releaseShip(ship);
 		if (existing == null) {
 			AssignmentInfo assignment = tasks.createAssignment(type, target, false);
@@ -131,6 +135,7 @@ public class BattleNext_OrderField {
 			existing = new OwnedTask(assignment);
 			targets.put(target, existing);
 		}
+
 		tasks.giveAssignment(member, existing.assignment, false);
 		BattleNext_AssignmentIndex.changed(tasks, ship);
 		if (tasks.getAssignmentFor(ship) != existing.assignment) return false;
@@ -157,6 +162,7 @@ public class BattleNext_OrderField {
 	}
 
 	public void releaseShip(ShipAPI ship) {
+
 		Participation participant = participants.remove(ship);
 		Retreat retreat = retreats.remove(ship);
 		boolean writable = !tasks.isInFullRetreat() && !tasks.isFullAssault();
@@ -165,6 +171,7 @@ public class BattleNext_OrderField {
 				&& tasks.getAssignmentFor(ship) == participant.task.assignment) {
 			tasks.orderSearchAndDestroy(member, false);
 		}
+
 		if (writable && member != null && retreat != null && ownsRetreat(ship, retreat)) {
 			tasks.orderSearchAndDestroy(member, false);
 			ship.setRetreating(false, false);
@@ -174,6 +181,7 @@ public class BattleNext_OrderField {
 				BattleNext_AssignmentIndex.removed(tasks, retreat.assignment);
 			}
 		}
+
 		pruneAssignments();
 		BattleNext_AssignmentIndex.changed(tasks, ship);
 	}
@@ -190,6 +198,7 @@ public class BattleNext_OrderField {
 				releaseShip(ship);
 			}
 		}
+
 		for (ShipAPI ship : new ArrayList<>(retreats.keySet())) {
 			if (!eligible.contains(ship) || !belongs(ship) || !ownsRetreat(ship, retreats.get(ship))) {
 				releaseShip(ship);
@@ -199,14 +208,16 @@ public class BattleNext_OrderField {
 	}
 
 	public void pruneAssignments() {
+
 		List<AssignmentInfo> current = BattleNext_AssignmentIndex.assignments(tasks, engine);
-		for (var entry : new ArrayList<>(targets.entrySet())) {
+		for (Map.Entry<AssignmentTargetAPI, OwnedTask> entry : new ArrayList<>(targets.entrySet())) {
 			OwnedTask task = entry.getValue();
 			if (!current.contains(task.assignment)) {
 				participants.values().removeIf(participant -> participant.task == task);
 				targets.remove(entry.getKey());
 				continue;
 			}
+
 			if (participants.values().stream().anyMatch(participant -> participant.task == task)) continue;
 			if (!hasExternalParticipants(task)) {
 				tasks.removeAssignment(task.assignment);
@@ -217,30 +228,22 @@ public class BattleNext_OrderField {
 	}
 
 	public void cleanup() {
-		for (ShipAPI ship : new ArrayList<>(participants.keySet())) {
-			releaseShip(ship);
-		}
-		for (ShipAPI ship : new ArrayList<>(retreats.keySet())) {
-			releaseShip(ship);
-		}
+		for (ShipAPI ship : new ArrayList<>(participants.keySet())) releaseShip(ship);
+		for (ShipAPI ship : new ArrayList<>(retreats.keySet())) releaseShip(ship);
 		pruneAssignments();
 		String key = KEY_PREFIX + owner + (ally ? "_ally" : "");
 		if (engine.getCustomData().get(key) == this) engine.getCustomData().remove(key);
 	}
 
-	@Override
-	public int hashCode() {
-		return super.hashCode();
+	private record OwnedTask(AssignmentInfo assignment) {
+
 	}
 
-	@Override
-	public boolean equals(Object obj) {
-		return super.equals(obj);
+	private record Participation(OwnedTask task, float priority, Object command) {
+
 	}
 
-	private record OwnedTask(AssignmentInfo assignment) { }
+	private record Retreat(AssignmentInfo assignment, Object command) {
 
-	private record Participation(OwnedTask task, float priority, Object command) { }
-
-	private record Retreat(AssignmentInfo assignment, Object command) { }
+	}
 }

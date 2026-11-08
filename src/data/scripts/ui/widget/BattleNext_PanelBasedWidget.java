@@ -89,18 +89,23 @@ public abstract class BattleNext_PanelBasedWidget {
 	}
 
 	private record OwnedPanel(UIPanelAPI parent, CustomPanelAPI child) {
+
 	}
 
 	protected void bindInput() {
+
 	}
 
 	protected void clearPageState() {
+
 	}
 
 	protected void clearContent() {
+
 	}
 
 	protected void clearOverlays() {
+
 	}
 
 	protected boolean handleWidgetInput(List<InputEventAPI> events) {

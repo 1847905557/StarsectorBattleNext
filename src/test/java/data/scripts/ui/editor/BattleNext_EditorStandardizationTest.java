@@ -7,6 +7,7 @@ import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_JsonModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.report.BattleNext_ReportTarget;
@@ -37,30 +38,34 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"fleet", "rule", "tournament"})
 	void savingThenEditingAndRebuildingKeepsThePublishedModelIndependentFromTheDraft(String kind) throws Exception {
+
 		BattleNext_EditorView editor = editor(kind);
-		var store = (BattleNext_BaseStore<?>) getField(editor, "store");
+		BattleNext_BaseStore<?> store = (BattleNext_BaseStore<?>) getField(editor, "store");
 		store.reload();
 		if (kind.equals("tournament")) ((BattleNext_RuleStore) getField(editor, "ruleStore")).reload();
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("isolated");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Saved");
 		assertTrue(editor.save(), editor.getStatusText());
-		var stored = (BattleNext_JsonModel) store.get("isolated");
+		BattleNext_JsonModel stored = (BattleNext_JsonModel) store.get("isolated");
 		String published = stored.toJson().toString();
 		long revision = store.getRevision();
 		assertNotSame(stored, getField(editor, "draft"));
+
 		((TextFieldAPI) getField(editor, "nameField")).setText("Second draft");
 		editor.refreshContent();
 		assertTrue(editor.hasUnsavedChanges());
 		assertEquals(published, stored.toJson().toString());
 		assertEquals(revision, store.getRevision());
 		assertEquals("Second draft", ((TextFieldAPI) getField(editor, "nameField")).getText());
+
 		editor.discard();
 		assertEquals("Saved", ((TextFieldAPI) getField(editor, "nameField")).getText());
 		assertFalse(editor.hasUnsavedChanges());
@@ -103,6 +108,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	@Test
 	void sharedEditorSessionOwnsRefreshReattachAndIdempotentRelease() throws Exception {
+
 		ProbeEditor editor = new ProbeEditor();
 		CustomPanelAPI root = panel(180f, 350f, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, root);
@@ -118,12 +124,15 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		assertEquals(draft, editor.serializeState());
 		assertTrue(editor.hasUnsavedChanges());
 		assertFalse(((Map<?, ?>) getField(router.getSession(), "registrations")).containsKey(first));
+
 		editor.detach();
 		assertTrue(children.get(root).isEmpty());
 		assertFalse(router.getSession().hasInputState());
+
 		editor.attach(root);
 		assertEquals(state, editor.field.captureEditState());
 		assertEquals(draft, editor.serializeState());
+
 		editor.close();
 		editor.close();
 		assertTrue(children.get(root).isEmpty());
@@ -192,7 +201,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	private Map<Path, String> storedFiles() throws Exception {
 		Map<Path, String> stored = new LinkedHashMap<>();
-		try (var paths = Files.walk(directory)) {
+		try (Stream<Path> paths = Files.walk(directory)) {
 			for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
 				stored.put(path, Files.readString(path, StandardCharsets.UTF_8));
 			}
@@ -312,12 +321,15 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			rowPanel = panel.createCustomPanel(areaWidth, cell.getHeight(), panel.getPlugin());
 			cellField = createCellField("cell", rowPanel, cell, value, fieldContent);
 			fieldContent.addCustom(rowPanel, 0f);
+
 			CustomPanelAPI statusPanel = panel.createCustomPanel(areaWidth, cell.getHeight(), panel.getPlugin());
 			validCheckbox = createCellCheckbox("valid", statusPanel, cell, "valid", true, false, null);
 			fieldContent.addCustom(statusPanel, 0f);
+
 			labelPanel = panel.createCustomPanel(areaWidth, cell.getHeight(), panel.getPlugin());
 			nameLabel = createTextCell(labelPanel, cell, value, false, null, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 			fieldContent.addCustom(labelPanel, 0f);
+
 			actionsPanel = panel.createCustomPanel(areaWidth, cell.getHeight(), panel.getPlugin());
 			EditorAction[] actions = new EditorAction[actionCount];
 			for (int index = 0; index < actionCount; index++) {
@@ -325,6 +337,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			}
 			createActions(actionsPanel, cell, actions);
 			fieldContent.addCustom(actionsPanel, 0f);
+
 			panel.addUIElement(fieldContent).inTL(0f, 0f);
 			bindViewport("content", fieldContent);
 		}
@@ -352,10 +365,11 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	@Test
 	void savedPinnedNameStaysCommittedWhenCatalogRefreshFails() throws Exception {
+
 		FailingStore store = new FailingStore();
 		store.getWriter().setFail(false);
 		store.reload();
-		var pin = store.saveVariant("Original", source().getApi());
+		BattleNext_PinnedVariantModel pin = store.saveVariant("Original", source().getApi());
 		BattleNext_PinnedVariantPage page = page(store, Runnable::run, (description, action) -> {}, () -> {});
 		page.attach(panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("pin:" + pin.getSourcePath());
@@ -371,6 +385,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				+ String.format(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_errors_summary"),
 				1, page.getSaveErrors().get(0)), page.getStatusText());
 		assertEquals("Saved name", ((TextFieldAPI) getField(editor, "nameField")).getText());
+
 		store.setFailLoad(false);
 		store.reload();
 		assertEquals("Saved name", store.get(pin.getPinId()).getDisplayName());
@@ -380,6 +395,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	@Test
 	void reportIdentityAndPersistenceUseIndependentRecords() throws Exception {
+
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
 		BattleNext_BattleReportModel standalone = new BattleNext_BattleReportModel();
@@ -393,11 +409,13 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		reports.save(round);
 		BattleNext_ReportTarget second = new BattleNext_ReportTarget(round);
 		assertNotEquals(first.identity(), second.identity());
+
 		second.rename(reports, "Changed round");
 		first.rename(reports, "Changed standalone");
 		reports.reload();
 		assertEquals("Changed standalone", reports.get("same").getName());
 		assertEquals("Changed round", reports.get("round").getName());
+
 		second.delete(reports);
 		reports.reload();
 		assertNull(reports.get("round"));
@@ -406,6 +424,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 
 	@Test
 	void failedContentBuildReleasesItsPartialComponentsAndRetainsTheCapturedDraft() throws Exception {
+
 		ProbeEditor editor = new ProbeEditor();
 		CustomPanelAPI host = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
 		attachEditor(editor, host);
@@ -416,6 +435,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 		assertTrue(children.get(host).isEmpty());
 		assertTrue(((Map<?, ?>) getField(getField(editor, "inputRouter"), "modalFields")).isEmpty());
 		assertTrue(((Map<?, ?>) getField(((BattleNext_UiInputRouter) getField(editor, "inputRouter")).getSession(), "registrations")).isEmpty());
+
 		editor.fail = false;
 		editor.refreshContent();
 		assertEquals(draft, editor.serializeState());
@@ -481,6 +501,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				store.reload();
 				store.saveVariant("Pin", source().getApi());
 				store.reload();
+
 				BattleNext_PinnedVariantEditor editor = new BattleNext_PinnedVariantEditor(store);
 				editor.open(store.getCatalog().get(0));
 				yield editor;
@@ -489,6 +510,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 				BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 				report.setId("report");
 				report.setName("Report");
+
 				BattleNext_ReportEditor editor = new BattleNext_ReportEditor(new BattleNext_BattleReportStore());
 				editor.open(new BattleNext_ReportTarget(report));
 				yield editor;

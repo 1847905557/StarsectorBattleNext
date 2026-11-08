@@ -70,14 +70,14 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		assertTrue(source.getOptions().isEmpty());
 		store.save(new BattleNext_RuleModel("zeta", "同名 50%"));
 		store.save(new BattleNext_RuleModel("alpha", "同名 50%"));
-		assertEquals(List.of("zeta", "alpha"), source.getOptions().stream().map(OptionChoice::getId).toList());
-		assertEquals(List.of("同名 50%", "同名 50%"), source.getOptions().stream().map(OptionChoice::getLabel).toList());
+		assertEquals(List.of("zeta", "alpha"), source.getOptions().stream().map(option -> option.id()).toList());
+		assertEquals(List.of("同名 50%", "同名 50%"), source.getOptions().stream().map(option -> option.label()).toList());
 		store.save(new BattleNext_RuleModel("zeta", "Updated rule"));
-		assertEquals("Updated rule", source.getOptions().get(0).getLabel());
+		assertEquals("Updated rule", source.getOptions().get(0).label());
 		store.delete("alpha");
 		store.reload();
-		assertEquals(List.of("zeta"), source.getOptions().stream().map(OptionChoice::getId).toList());
-		assertEquals("Updated rule", source.getOptions().get(0).getLabel());
+		assertEquals(List.of("zeta"), source.getOptions().stream().map(option -> option.id()).toList());
+		assertEquals("Updated rule", source.getOptions().get(0).label());
 	}
 
 	@Test
@@ -101,7 +101,7 @@ class BattleNext_RuleSourceProviderTest extends BattleNext_TestPageFixture {
 		BattleNext_RuleSourceProvider source = new BattleNext_RuleSourceProvider(store);
 		OptionChoice option = source.getOptions().get(0);
 		assertFalse(source.expectsIcon());
-		assertEquals("", source.getIconPath(option.getId()));
+		assertEquals("", source.getIconPath(option.id()));
 		TooltipMakerAPI tooltip = tooltip(source.getTooltipWidth(), 0f, false);
 		assertEquals(0f, tooltip.getPosition().getWidth());
 		source.createTooltip(tooltip, option);

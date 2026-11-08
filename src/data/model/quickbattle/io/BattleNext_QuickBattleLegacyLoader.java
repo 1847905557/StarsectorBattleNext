@@ -14,9 +14,11 @@ import java.util.List;
 public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<BattleNext_QuickBattleModel> {
 
 	private static final String LEGACY_PATH = "tournament/PvP_matches.csv";
+
 	@Override
 	public List<BattleNext_QuickBattleModel> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
 		String text;
 		try {
@@ -27,6 +29,7 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 				BattleNext_Logger.fields().put("path", LEGACY_PATH).put("fallback", result).build(), exception);
 			return result;
 		}
+
 		int index = 0;
 		String[] lines = text.split("\\R", -1);
 		int limit = text.endsWith("\n") || text.endsWith("\r") ? lines.length - 1 : lines.length;
@@ -43,6 +46,7 @@ public class BattleNext_QuickBattleLegacyLoader extends BattleNext_BaseLoader<Ba
 			markSource(model, LEGACY_PATH);
 			result.add(model);
 		}
+
 		return result;
 	}
 

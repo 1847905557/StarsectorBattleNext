@@ -1,7 +1,7 @@
 package checks.project;
 
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 
 import java.util.List;

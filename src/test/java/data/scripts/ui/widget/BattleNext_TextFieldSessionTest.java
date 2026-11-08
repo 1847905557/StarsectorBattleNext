@@ -1,6 +1,8 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import java.lang.reflect.Field;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -21,6 +23,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void closingOneFieldPreservesTheOtherFieldsFocusAndRegistration() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI owner = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI host = owner.createUIElement(200f, 100f, false);
@@ -30,11 +33,13 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		second.attach(host, owner);
 		owner.addUIElement(host).inTL(0f, 0f);
 		second.grabFocus(false);
+
 		first.close();
 		assertTrue(second.hasFocus());
 		assertSame(router, getField(second, "inputRouter"));
 		assertEquals(1, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertEquals(List.of(host), ((Map<?, ?>) getField(router.getSession(), "registrations")).get(second));
+
 		second.close();
 		assertFalse(router.getSession().hasInputState());
 		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
@@ -43,6 +48,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void textInputUsesBothInnerAndOuterScrollingViewports() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI owner = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI outer = owner.createUIElement(400f, 100f, true);
@@ -57,6 +63,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		innerPanel.addUIElement(inner).inTL(0f, 0f);
 		owner.addUIElement(outer).inTL(0f, 0f);
 		assertEquals(List.of(inner, outer), ((Map<?, ?>) getField(router.getSession(), "registrations")).get(field));
+
 		outer.getExternalScroller().setYOffset(100f);
 		PositionAPI position = field.getPosition();
 		InputEventAPI event = proxy(InputEventAPI.class, (method, args) -> switch (method) {
@@ -74,6 +81,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void registrationKeepsOneImmutableViewportRecordForEachField() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI owner = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		BattleNext_TextField field = createField(router, owner, 0f, 0f);
@@ -87,6 +95,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		assertEquals(List.of(inner, outer), registrations.get(field));
 		List<?> registered = (List<?>) registrations.get(field);
 		assertThrows(UnsupportedOperationException.class, registered::clear);
+
 		router.getSession().register(field, outer);
 		assertEquals(1, registrations.size());
 		assertEquals(List.of(outer), registrations.get(field));
@@ -96,6 +105,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void rootRoutersKeepFocusKeyboardInputAndCleanupIndependent() throws Exception {
+
 		BattleNext_UiInputRouter firstRouter = new BattleNext_UiInputRouter();
 		BattleNext_UiInputRouter secondRouter = new BattleNext_UiInputRouter();
 		CustomPanelAPI firstRoot = panel(800f, 700f, new BaseCustomUIPanelPlugin());
@@ -106,14 +116,17 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		second.grabFocus(false);
 		assertTrue(first.hasFocus());
 		assertTrue(second.hasFocus());
+
 		assertTrue(firstRouter.handleGlobalInput(List.of(key('a'))));
 		assertEquals("abcdefghija", first.getText());
 		assertEquals("abcdefghij", second.getText());
+
 		firstRouter.clear();
 		assertFalse(first.hasFocus());
 		assertTrue(second.hasFocus());
 		assertTrue(secondRouter.handleGlobalInput(List.of(key('b'))));
 		assertEquals("abcdefghijb", second.getText());
+
 		first.close();
 		second.close();
 		assertFalse(firstRouter.getSession().hasInputState());
@@ -138,7 +151,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		InputEventAPI move = pointer("move", bounds.getX() + 500f, bounds.getCenterY() - 300f, false);
 		assertTrue(router.handleGlobalInput(List.of(move)));
 		assertTrue(router.getSession().isDragging(field));
-		var plugin = plugins.get((CustomPanelAPI) getField(field, "panel"));
+		CustomUIPanelPlugin plugin = plugins.get((CustomPanelAPI) getField(field, "panel"));
 		plugin.advance(0.5f);
 		assertTrue(field.captureEditState().scroll() > 0f);
 		assertEquals(0, field.captureEditState().anchor());
@@ -157,6 +170,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void closingAnUnrelatedFieldKeepsTheCapturedPointerAndClosingItsOwnerReleasesIt() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI owner = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		BattleNext_TextField first = createField(router, owner, 20f, 20f);
@@ -167,6 +181,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		second.close();
 		assertTrue(first.hasFocus());
 		assertTrue(router.getSession().isDragging(first));
+
 		first.close();
 		assertFalse(router.getSession().hasInputState());
 		assertEquals("IDLE", getField(router.getSession(), "phase").toString());
@@ -220,6 +235,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void removingAnUnderlyingOverlayPreservesTheTopFieldsFocusAndScope() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TestOverlay parent = overlay(root, 20f, 20f);
@@ -229,6 +245,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		router.push(child);
 		router.registerModalField(field);
 		assertTrue(router.handleGlobalInput(List.of(click(field))));
+
 		router.pop(parent);
 		assertTrue(field.hasFocus());
 		assertTrue(router.isTop(child));
@@ -239,6 +256,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void repeatedPushUsesExistingMembershipAndLiveOverlayBounds() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TestOverlay overlay = overlay(root, 20f, 20f);
@@ -246,6 +264,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		router.push(overlay);
 		router.registerModalField(field);
 		assertTrue(router.handleGlobalInput(List.of(click(field))));
+
 		router.push(overlay);
 		assertFalse(field.hasFocus());
 		assertTrue(router.handleGlobalInput(List.of(click(field))));
@@ -254,6 +273,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		overlay.bounds = position(10f, 10f);
 		assertFalse(router.handleGlobalInput(List.of(outside)));
 		assertFalse(field.hasFocus());
+
 		overlay.bounds = overlay.panel.getPosition();
 		assertTrue(router.handleGlobalInput(List.of(click(field))));
 		field.close();
@@ -280,6 +300,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void closingAModalFieldRemovesItsMembershipFromEveryLayer() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TestOverlay parent = overlay(root, 20f, 20f);
@@ -289,11 +310,13 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		router.registerModalField(field);
 		router.push(child);
 		router.registerModalField(field);
+
 		field.close();
 		Map<?, ?> memberships = (Map<?, ?>) getField(router, "modalFields");
 		assertEquals(Set.of(), memberships.get(parent));
 		assertEquals(Set.of(), memberships.get(child));
 		assertFalse(router.getSession().hasInputState());
+
 		router.clear();
 		assertTrue(parent.closed);
 		assertTrue(child.closed);
@@ -302,6 +325,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void rootCleanupClosesAllLayersAndReleasesFocusPointerAndRegistrationTogether() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(800f, 700f, new BaseCustomUIPanelPlugin());
 		TestOverlay parent = overlay(root, 20f, 20f);
@@ -312,6 +336,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		router.registerModalField(field);
 		assertTrue(router.handleGlobalInput(List.of(click(field))));
 		assertTrue(router.handleGlobalInput(List.of(pointer("move", 400f, 400f, false))));
+
 		router.clear();
 		assertTrue(parent.closed);
 		assertTrue(child.closed);
@@ -330,7 +355,7 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		field.attach(host, owner);
 		owner.addUIElement(host).inTL(left, top);
 		field.setText("abcdefghij");
-		var sound = BattleNext_TextField.class.getDeclaredField("soundSink");
+		Field sound = BattleNext_TextField.class.getDeclaredField("soundSink");
 		sound.setAccessible(true);
 		sound.set(field, (Consumer<String>) ignored -> {});
 		return field;
@@ -351,7 +376,10 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		AtomicBoolean consumed = new AtomicBoolean();
 		return proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
 			case "isConsumed" -> consumed.get();
-			case "consume" -> { consumed.set(true); yield null; }
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
 			case "isLMBDownEvent" -> type.equals("down");
 			case "isLMBUpEvent" -> type.equals("up");
 			case "isMouseMoveEvent" -> type.equals("move");
@@ -366,7 +394,10 @@ class BattleNext_TextFieldSessionTest extends BattleNext_TestPageFixture {
 		AtomicBoolean consumed = new AtomicBoolean();
 		return proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
 			case "isConsumed" -> consumed.get();
-			case "consume" -> { consumed.set(true); yield null; }
+			case "consume" -> {
+				consumed.set(true);
+				yield null;
+			}
 			case "isKeyboardEvent", "isKeyDownEvent" -> true;
 			case "getEventChar" -> character;
 			case "getEventValue" -> Keyboard.KEY_Z;

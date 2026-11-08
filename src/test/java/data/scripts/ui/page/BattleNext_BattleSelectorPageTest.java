@@ -34,10 +34,13 @@ class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 		assertEquals(row.getPosition().getX(), popup.getPosition().getX(), 0.01f);
 		assertEquals(420f, popup.getPosition().getWidth(), 0.01f);
 		assertTrue(popup.getPosition().getHeight() > 0f);
+
 		dropdown.closeOverlays();
 		assertSame(sourceContent.getPosition(), geometry.get(row.getPosition()).getParent());
+
 		dropdown.close();
 		assertTrue(children.get(row).isEmpty());
+
 		CustomPanelAPI sourcePanel = source.getPanel();
 		source.close();
 		assertTrue(children.get(sourcePanel).isEmpty());

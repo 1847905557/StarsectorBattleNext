@@ -114,6 +114,7 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 	}
 
 	protected WeaponSpecAPI previewWeapon(String id, boolean missile, List<Vector2f> offsets, List<Float> angles) {
+
 		spriteSpecs.put(id + "_missile", createSpriteSpec("graphics/" + id + "_missile.png", 10f, 14f, 5f, 7f, 0f, null));
 		ShipHullSpecAPI missileHull = proxy(ShipHullSpecAPI.class, (method, arguments) -> switch (method) {
 			case "getHullId" -> id + "_missile";
@@ -123,21 +124,23 @@ public class BattleNext_TestVariantPreviewFixture extends BattleNext_TestVariant
 		});
 		MissileSpecAPI projectile = proxy(MissileSpecAPI.class, (method, arguments) ->
 				method.equals("getHullSpec") ? missileHull : null);
+
 		WeaponSpecAPI spec = proxy(ProjectileWeaponSpecAPI.class, (method, arguments) -> {
 			if (method.equals(failedWeaponQueries.get(id))) throw new IllegalArgumentException("Weapon query failure: " + method);
 			return switch (method) {
-			case "getWeaponId", "getWeaponName" -> id;
-			case "getTurretSpriteName" -> "graphics/" + id + "_turret.png";
-			case "getHardpointSpriteName" -> "graphics/" + id + "_hardpoint.png";
-			case "getTurretGunSpriteName" -> "graphics/" + id + "_turret_gun.png";
-			case "getHardpointGunSpriteName" -> "graphics/" + id + "_hardpoint_gun.png";
-			case "getProjectileSpec" -> missile ? projectile : null;
-			case "getTurretFireOffsets", "getHardpointFireOffsets" -> offsets;
-			case "getTurretAngleOffsets", "getHardpointAngleOffsets" -> angles;
-			case "getHiddenFireOffsets", "getHiddenAngleOffsets" -> throw new AssertionError("Hidden weapon queried");
-			default -> null;
+				case "getWeaponId", "getWeaponName" -> id;
+				case "getTurretSpriteName" -> "graphics/" + id + "_turret.png";
+				case "getHardpointSpriteName" -> "graphics/" + id + "_hardpoint.png";
+				case "getTurretGunSpriteName" -> "graphics/" + id + "_turret_gun.png";
+				case "getHardpointGunSpriteName" -> "graphics/" + id + "_hardpoint_gun.png";
+				case "getProjectileSpec" -> missile ? projectile : null;
+				case "getTurretFireOffsets", "getHardpointFireOffsets" -> offsets;
+				case "getTurretAngleOffsets", "getHardpointAngleOffsets" -> angles;
+				case "getHiddenFireOffsets", "getHiddenAngleOffsets" -> throw new AssertionError("Hidden weapon queried");
+				default -> null;
 			};
 		});
+
 		previewWeapons.put(id, spec);
 		imageSizes.put("graphics/" + id + "_missile.png", new float[]{10f, 14f});
 		return spec;

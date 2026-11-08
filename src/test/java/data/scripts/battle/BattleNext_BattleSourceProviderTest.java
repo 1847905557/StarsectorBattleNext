@@ -22,6 +22,7 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 
 	@Test
 	void catalogLoadingDefersAssemblyAndValidationCachesOnlyRequestedFleetsUntilReload() throws Exception {
+
 		standard("alpha", "alpha", "parent_variant");
 		standard("beta", "beta", "child_variant");
 		AtomicInteger builds = new AtomicInteger();
@@ -35,16 +36,17 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 						throw exception.getCause();
 					}
 				}));
-		var provider = new BattleNext_BattleSourceProvider();
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		assertTrue(provider.reloadCatalogs().isEmpty());
 		assertEquals(0, builds.get());
-		var validation = provider.getValidation();
+		BattleNext_BattleValidation validation = provider.getValidation();
 		assertTrue(validation.fleetResult("alpha").failures().isEmpty());
 		assertEquals(1, builds.get());
 		assertTrue(validation.fleetResult("alpha").failures().isEmpty());
 		assertEquals(1, builds.get());
 		assertTrue(validation.fleetResult("beta").failures().isEmpty());
 		assertEquals(2, builds.get());
+
 		standard("beta", "beta", "missing_variant");
 		assertTrue(provider.reloadCatalogs().isEmpty());
 		assertEquals(2, builds.get());
@@ -63,15 +65,15 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,2,1.5\n# beta,alpha,3,1\n"
 				+ "invalid raw row\nalpha,missing,0,1\nalpha,broken,0,1\nalpha,beta,-1,2\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
-		var provider = new BattleNext_BattleSourceProvider();
-		var pvp = provider.load();
-		var warnings = List.copyOf(provider.getWarnings());
-		var pve = provider.loadQuickBattles();
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
+		List<BattleNext_Match> pvp = provider.load();
+		List<String> warnings = List.copyOf(provider.getWarningsReadonly());
+		List<BattleNext_Match> pve = provider.loadQuickBattles();
 		assertEquals(pvp.stream().map(BattleNext_Match::getId).toList(), pve.stream().map(BattleNext_Match::getId).toList());
 		assertEquals(List.of(2, -1), pve.stream().map(BattleNext_Match::getMap).toList());
 		assertEquals(List.of(1.5f, 2f), pve.stream().map(BattleNext_Match::getMapScale).toList());
 		assertEquals(List.of("alpha", "alpha"), pve.stream().map(BattleNext_Match::getPlayer).toList());
-		assertEquals(warnings, provider.getWarnings());
+		assertEquals(warnings, provider.getWarningsReadonly());
 		assertTrue(warnings.stream().anyMatch(warning -> warning.contains("missing player/enemy")));
 		assertTrue(warnings.stream().anyMatch(warning -> warning.contains("missing_variant")));
 	}
@@ -83,9 +85,9 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		standard("beta", "beta", "child_variant");
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,beta,2,1.5\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
-		var tournaments = new BattleNext_TournamentStore();
+		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
-		var tournament = new BattleNext_TournamentModel();
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
 		tournament.setId("active");
 		tournament.setName("Active");
 		tournaments.save(tournament);
@@ -93,12 +95,12 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
 		instances.save(started);
 		instances.activate(started.getId());
-		var provider = new BattleNext_BattleSourceProvider();
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		assertEquals(1, provider.load().size());
 		assertEquals(started.getId(), provider.getActiveTournament().getId());
 		assertEquals("alpha", provider.loadQuickBattles().get(0).getPlayer());
 		assertNull(provider.getActiveTournament());
-		assertTrue(provider.getRuleWarnings().isEmpty());
+		assertTrue(provider.getRuleWarningsReadonly().isEmpty());
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nbeta,alpha,4,2\n");
 		assertEquals("beta", provider.loadQuickBattles().get(0).getPlayer());
 		assertEquals(started.getId(), instances.getActiveId());
@@ -109,37 +111,44 @@ class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture 
 		standard("alpha", "alpha", "parent_variant");
 		write("tournament/quick_battle.csv", "player,enemy,map,size\nalpha,alpha,0,1\n");
 		write("tournament/PvP_matches.csv", "player,enemy,map,size\n");
-		var provider = new BattleNext_BattleSourceProvider();
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		assertEquals(1, provider.loadQuickBattles().size());
+		List<String> warnings = provider.getWarningsReadonly();
+		assertThrows(UnsupportedOperationException.class, () -> warnings.add("blocked"));
+
 		standard("duplicate", "alpha", "child_variant");
 		assertTrue(provider.loadQuickBattles().isEmpty());
-		assertTrue(provider.getWarnings().get(0).contains("alpha"));
+		assertTrue(warnings.get(0).contains("alpha"));
+
 		standard("duplicate", "beta", "child_variant");
 		assertEquals(1, provider.loadQuickBattles().size());
-		assertTrue(provider.getWarnings().isEmpty());
+		assertTrue(warnings.isEmpty());
 	}
 
 	@Test
 	void completeTournamentCheckRereadsReferencesAndCreationRejectsTheSameOrderedFailures() throws Exception {
+
 		standard("alpha", "alpha", "parent_variant");
 		standard("broken", "broken", "unknown_variant");
-		var provider = new BattleNext_BattleSourceProvider();
+		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		provider.reloadTournamentCatalog();
-		var configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 4);
+		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 4);
 		provider.getTournamentStore().save(configuration);
 		List<String> slots = List.of("alpha", "alpha", "broken", "missing");
-		var checked = provider.checkTournament("cup", slots);
+		BattleNext_BattleValidation.Result checked = provider.checkTournament("cup", slots);
 		assertEquals(List.of(BattleNext_BattleValidation.FailureKind.CONFIGURATION, BattleNext_BattleValidation.FailureKind.ASSEMBLY,
 				BattleNext_BattleValidation.FailureKind.REFERENCE), checked.failures().stream().map(BattleNext_BattleValidation.Failure::kind).toList());
-		var store = new BattleNext_StartedTournamentStore();
-		var rejection = assertThrows(BattleNext_BattleValidation.Rejection.class, () -> new BattleNext_TournamentEngine().create(configuration,
+		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
+		BattleNext_BattleValidation.Rejection rejection = assertThrows(BattleNext_BattleValidation.Rejection.class, () -> new BattleNext_TournamentEngine().create(configuration,
 				slots, BattleNext_StartedTournament.ExecutionKind.MANUAL, store, provider.getFleetStore(), provider.getRuleStore()));
 		assertEquals(checked, rejection.getResult());
 		assertEquals("Tournament qualification failed: cup", rejection.getMessage());
 		store.reload();
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
+
 		BattleNext_Settings.save(true, true, false, false, 500f, 1f, 3f, 50, 0);
 		assertEquals(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_duplicate_fleets"), checked.messages().get(0));
+
 		standard("beta", "beta", "child_variant");
 		assertTrue(provider.checkTournament("cup", List.of("alpha", "", "beta", "")).failures().isEmpty());
 		assertFalse(provider.checkTournament("cup", List.of("alpha", "", "", "")).failures().isEmpty());

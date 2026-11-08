@@ -86,6 +86,7 @@ public class BattleNext_TestVariantFixture extends BattleNext_TestPageFixture {
 		} catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
 		}
+
 		try {
 			Method open = BattleNext_LunaPinnedVariantPanel.class.getDeclaredMethod("open",
 					ShipVariantAPI.class, String.class);

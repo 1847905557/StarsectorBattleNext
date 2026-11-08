@@ -14,6 +14,7 @@ class BattleNext_TooltipBasedWidgetTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void releaseAndFullCloseUseActualParentsInChildFirstOrder() throws Exception {
+
 		CustomPanelAPI factory = panel(500f, 300f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI host = factory.createUIElement(200f, 100f, false);
 		ProbeWidget widget = new ProbeWidget();
@@ -21,15 +22,18 @@ class BattleNext_TooltipBasedWidgetTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI first = widget.parent;
 		CustomPanelAPI child = widget.child;
 		assertEquals(List.of(first), tooltips.get(host).getComponents());
+
 		widget.releaseChild();
 		assertTrue(children.get(first).isEmpty());
 		assertEquals(1, ((List<?>) getField(widget, "ownedPanels")).size());
+
 		widget.refreshContent();
 		assertEquals(List.of(child, first), removedComponents);
 		CustomPanelAPI rebuilt = widget.parent;
 		CustomPanelAPI rebuiltChild = widget.child;
 		widget.closeOverlays();
 		assertEquals(2, ((List<?>) getField(widget, "ownedPanels")).size());
+
 		widget.close();
 		assertEquals(List.of(child, first, rebuiltChild, rebuilt), removedComponents);
 		assertTrue(tooltips.get(host).getComponents().isEmpty());

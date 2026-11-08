@@ -6,8 +6,10 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.fleet.FleetGoal;
 import com.fs.starfarer.api.fleet.FleetMemberType;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
+import com.fs.starfarer.api.mission.MissionDefinitionAPI;
 import data.scripts.plugin.BattleNext_DeploymentPlugin;
 import data.scripts.tools.BattleNext_AppContext;
 import org.apache.log4j.ConsoleAppender;
@@ -28,6 +30,10 @@ public class BattleNext_DeploymentOpeningSmoke {
 	private static volatile boolean verified;
 	private static volatile Throwable failure;
 
+	private BattleNext_DeploymentOpeningSmoke() {
+
+	}
+
 	public static void run() throws Exception {
 		Path core = Path.of("../..", "starsector-core").toAbsolutePath().normalize();
 		List<String> command = BattleNext_SimulatorLaunch.javaCommand(core);
@@ -42,6 +48,7 @@ public class BattleNext_DeploymentOpeningSmoke {
 	}
 
 	public static void main(String[] arguments) throws Throwable {
+
 		System.setProperty("launchDirect", "true");
 		System.setProperty("startRes", "800x600");
 		System.setProperty("startFS", "false");
@@ -50,6 +57,7 @@ public class BattleNext_DeploymentOpeningSmoke {
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);
+
 		Thread driver = new Thread(BattleNext_DeploymentOpeningSmoke::drive, "Opening deployment verification");
 		driver.setDaemon(true);
 		driver.start();
@@ -62,21 +70,22 @@ public class BattleNext_DeploymentOpeningSmoke {
 
 	private static void drive() {
 		try {
-			long deadline = System.nanoTime() + 120000000000L;
+			long deadlineNanos = System.nanoTime() + 120000000000L;
 			while (Global.getSettings() == null || Global.getCurrentState() != GameState.TITLE || Global.getCombatEngine() == null) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native title startup timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native title startup timed out");
 				Thread.sleep(20L);
 			}
 			Thread.sleep(1000L);
+
 			Global.getSettings().setBoolean("idleWhileWindowNotVisible", false);
 			Global.getSettings().setBoolean("devMode", false);
 			BattleNext_SimulatorNative access = new BattleNext_SimulatorNative(BattleNext_DeploymentOpeningSmoke.class.getClassLoader());
 			access.configureGraphics();
-			var mission = access.createMission();
+			MissionDefinitionAPI mission = access.createMission();
 			for (FleetSide side : FleetSide.values()) {
 				mission.initFleet(side, "", FleetGoal.ATTACK, true, 999);
 				for (int index = 0; index < 2; index++) {
-					var member = mission.addToFleet(side, "wolf_CS", FleetMemberType.SHIP, "Opening " + side + " " + index, index == 0);
+					FleetMemberAPI member = mission.addToFleet(side, "wolf_CS", FleetMemberType.SHIP, "Opening " + side + " " + index, index == 0);
 					member.getRepairTracker().setCR(0.7f);
 				}
 			}
@@ -84,12 +93,13 @@ public class BattleNext_DeploymentOpeningSmoke {
 			mission.addPlugin(new BattleNext_DeploymentPlugin(80, true, true));
 			mission.addPlugin(new OpeningVerifier());
 			access.submitMission(mission);
+
 			while (!verified && failure == null) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native opening deployment timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native opening deployment timed out");
 				Thread.sleep(20L);
 			}
 			while (Global.getCurrentState() != GameState.TITLE) {
-				if (System.nanoTime() > deadline) throw new AssertionError("Native title return timed out");
+				if (System.nanoTime() > deadlineNanos) throw new AssertionError("Native title return timed out");
 				Thread.sleep(20L);
 			}
 			access.exit();
@@ -119,9 +129,11 @@ public class BattleNext_DeploymentOpeningSmoke {
 				dialogField.setAccessible(true);
 				Object dialog = dialogField.get(state);
 				if (dialog == null) return;
+
 				for (FleetSide side : FleetSide.values()) {
 					if (engine.getFleetManager(side).getMaxStrength() != 80) throw new AssertionError("Opening side " + side + " must have 80 DP");
 				}
+
 				int bars = 0;
 				for (Field field : dialog.getClass().getDeclaredFields()) {
 					if (!field.getType().getName().equals("com.fs.starfarer.campaign.ui.N")) continue;
@@ -131,6 +143,7 @@ public class BattleNext_DeploymentOpeningSmoke {
 					bars++;
 				}
 				if (bars != 2) throw new AssertionError("Opening deployment must expose both fleet progress bars");
+
 				System.out.println("Opening deployment dialog: player=80 DP, enemy=80 DP, bars=80 DP");
 				verified = true;
 				finished = true;

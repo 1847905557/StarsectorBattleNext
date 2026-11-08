@@ -2,6 +2,7 @@ public class LifecycleInterfaceBaseMissingAnnotation extends BaseEveryFrameComba
 	private static final String KEY = "key";
 
 	private LifecycleInterfaceBaseMissingAnnotation() {
+
 	}
 
 	public static LifecycleInterfaceBaseMissingAnnotation getInstance(CombatEngineAPI engine, CombatEntityAPI entity) {

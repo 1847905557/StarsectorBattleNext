@@ -15,6 +15,7 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {0, 20})
 	void tablesMeasureRowsAndAdditionalContentBeforeMount(int count) {
+
 		CustomPanelAPI root = panel(600f, 240f, new BaseCustomUIPanelPlugin());
 		BattleNext_TableWidget table = new BattleNext_TableWidget(
 				root.getPlugin(), new String[]{"Name"}, new float[]{1f}, count,
@@ -23,6 +24,7 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 					content.addCustom(panel(width, 42f, root.getPlugin()), 0f);
 				},
 				(width, content) -> content.addCustom(panel(width, 30f, root.getPlugin()), 5f));
+
 		table.attach(root);
 		assertEquals(root, table.getPanel());
 		TooltipMakerAPI header = (TooltipMakerAPI) children.get(root).get(0);

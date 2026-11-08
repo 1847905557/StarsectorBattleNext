@@ -38,6 +38,7 @@ public class BattleNext_SimulatorWorker {
 	private static BattleNext_SimulatorMouse mouse;
 
 	private BattleNext_SimulatorWorker() {
+
 	}
 
 	public static boolean isWorker() {

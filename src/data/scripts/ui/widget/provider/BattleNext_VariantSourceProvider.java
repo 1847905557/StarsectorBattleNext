@@ -5,6 +5,7 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
+import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
@@ -56,7 +57,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	@Override
 	public List<OptionChoice> getGroups() {
 		getOptions();
-		return catalog.hulls();
+		return catalog.hullsCopy();
 	}
 
 	@Override
@@ -80,9 +81,9 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
 
 		try {
-			ShipVariantAPI variant = resolve(option.getId());
+			ShipVariantAPI variant = resolve(option.id());
 			if (variant == null || variant.getHullSpec() == null) {
-				throw new IllegalArgumentException("Unknown variant: " + option.getId());
+				throw new IllegalArgumentException("Unknown variant: " + option.id());
 			}
 			ShipHullSpecAPI hull = variant.getHullSpec();
 			String size = hull.getHullSize().name().replace('_', ' ').toLowerCase(Locale.ROOT);
@@ -91,16 +92,17 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			List<String> properties = List.of(
 					variantStrings.get("flux_capacitors") + ": " + variant.getNumFluxCapacitors(),
 					variantStrings.get("flux_vents") + ": " + variant.getNumFluxVents());
-			List<VariantSection> sections = List.of(weaponSection(variant, option.getId()),
-					wingSection(variant, option.getId()), moduleSection(variant, option.getId()),
-					hullmodSection(variant, option.getId()));
+			List<VariantSection> sections = List.of(weaponSection(variant, option.id()),
+					wingSection(variant, option.id()), moduleSection(variant, option.id()),
+					hullmodSection(variant, option.id()));
+
 			BattleNext_EquipmentTooltip.renderVariant(tooltip, new BattleNext_EquipmentTooltip.Content(
-					option.getLabel(), option.getId(), facts, properties), sections);
+					option.label(), option.id(), facts, properties), sections);
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.tooltip.degraded",
-				BattleNext_Logger.fields().put("variant_id", option.getId()).put("name", option.getLabel()).build(), exception);
+				BattleNext_Logger.fields().put("variant_id", option.id()).put("name", option.label()).build(), exception);
 			BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
-					option.getLabel(), option.getId(), "", List.of(exception.toString())));
+					option.label(), option.id(), "", List.of(exception.toString())));
 		}
 	}
 
@@ -111,6 +113,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		for (String slot : variant.getFittedWeaponSlots()) {
 			counts.merge(variant.getWeaponId(slot), 1, Integer::sum);
 		}
+
 		for (String id : counts.keySet()) {
 			BattleNext_WeaponDisplay.Visual display = BattleNext_WeaponDisplay.resolve(id, Global.getSettings());
 			String name = display.name();
@@ -122,6 +125,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			}
 			names.put(id, name);
 		}
+
 		return countedSection(variantStrings.get("weapons"), counts, names);
 	}
 
@@ -132,9 +136,10 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		for (String id : variant.getFittedWings()) {
 			counts.merge(id, 1, Integer::sum);
 		}
+
 		for (String id : counts.keySet()) {
 			try {
-				var spec = Global.getSettings().getFighterWingSpec(id);
+				FighterWingSpecAPI spec = Global.getSettings().getFighterWingSpec(id);
 				if (spec == null) throw new IllegalArgumentException("Unknown fighter wing: " + id);
 				String name = spec.getWingName();
 				if (name == null || name.isBlank()) throw new IllegalArgumentException("Missing fighter wing name: " + id);
@@ -146,6 +151,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 				names.put(id, commonStrings.get("unavailable") + ": " + id);
 			}
 		}
+
 		return countedSection(variantStrings.get("fighter_wings"), counts, names);
 	}
 
@@ -153,7 +159,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 
 		Map<String, Integer> counts = new TreeMap<>();
 		Map<String, String> names = new TreeMap<>();
-		for (var entry : new TreeMap<>(variant.getStationModules()).entrySet()) {
+		for (Map.Entry<String, String> entry : new TreeMap<>(variant.getStationModules()).entrySet()) {
 			String id = entry.getValue();
 			String name;
 			try {
@@ -174,6 +180,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			counts.merge(id, 1, Integer::sum);
 			names.put(id, name);
 		}
+
 		return countedSection(variantStrings.get("modules"), counts, names);
 	}
 
@@ -185,11 +192,13 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		Set<String> sMods = variant.getSMods();
 		Set<String> builtInSMods = variant.getSModdedBuiltIns();
 		Set<String> suppressed = variant.getSuppressedMods();
+
 		ids.addAll(builtIns);
 		ids.addAll(permanent);
 		ids.addAll(sMods);
 		ids.addAll(builtInSMods);
 		ids.addAll(suppressed);
+
 		List<String> rows = new ArrayList<>();
 		for (String id : ids) {
 			List<String> states = new ArrayList<>();
@@ -214,14 +223,13 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 			}
 			rows.add(name + (states.isEmpty() ? "" : " [" + String.join(", ", states) + "]"));
 		}
+
 		return new VariantSection(variantStrings.get("hullmods"), rows.size(), rows);
 	}
 
 	private VariantSection countedSection(String title, Map<String, Integer> counts, Map<String, String> names) {
 		List<String> rows = new ArrayList<>();
-		for (var entry : counts.entrySet()) {
-			rows.add(names.get(entry.getKey()) + " ×" + entry.getValue());
-		}
+		for (Map.Entry<String, Integer> entry : counts.entrySet()) rows.add(names.get(entry.getKey()) + " ×" + entry.getValue());
 		return new VariantSection(title, counts.values().stream().mapToInt(Integer::intValue).sum(), rows);
 	}
 

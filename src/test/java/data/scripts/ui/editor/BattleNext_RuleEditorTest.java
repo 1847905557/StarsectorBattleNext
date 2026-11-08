@@ -40,7 +40,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 
 	@BeforeEach
 	void installRestrictionChoices() throws Exception {
-		var registry = BattleNext_RestrictionRegistry.getInstance();
+		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		previousEntries = getField(registry, "entries");
 		previousFactory = getField(registry, "scriptFactory");
 		previousLoadErrors = getField(registry, "loadErrors");
@@ -52,7 +52,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 
 	@AfterEach
 	void restoreRestrictionChoices() throws Exception {
-		var registry = BattleNext_RestrictionRegistry.getInstance();
+		BattleNext_RestrictionRegistry registry = BattleNext_RestrictionRegistry.getInstance();
 		Field entries = registry.getClass().getDeclaredField("entries");
 		entries.setAccessible(true);
 		entries.set(registry, previousEntries);
@@ -66,17 +66,18 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void saveAggregatesNameIdAndNumericRestrictionErrorsBeforePersistence() throws Exception {
-		var store = new BattleNext_RuleStore();
+
+		BattleNext_RuleStore store = new BattleNext_RuleStore();
 		store.reload();
-		var model = new BattleNext_RuleModel("rule", "Rule");
-		var first = new BattleNext_RuleRestriction("limitNumber", "number");
-		var second = new BattleNext_RuleRestriction("anotherNumber", "number");
+		BattleNext_RuleModel model = new BattleNext_RuleModel("rule", "Rule");
+		BattleNext_RuleRestriction first = new BattleNext_RuleRestriction("limitNumber", "number");
+		BattleNext_RuleRestriction second = new BattleNext_RuleRestriction("anotherNumber", "number");
 		model.setRestrictions(List.of(first, second));
 		BattleNext_RestrictionRegistry.getInstance().load(new JSONArray()
 				.put(new JSONObject().put("id", "limitNumber").put("name", "First").put("type", "number").put("script", "number").put("desc", "First limit"))
 				.put(new JSONObject().put("id", "anotherNumber").put("name", "Second").put("type", "number").put("script", "number").put("desc", "Second limit")),
 				name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
-		var editor = new BattleNext_RuleEditor(store);
+		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(store);
 		editor.open(model);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("bad?id");
@@ -90,7 +91,8 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		assertTrue(editor.getSaveErrors().get(1).contains("U+003F"));
 		assertTrue(editor.getSaveErrors().get(2).contains("limitNumber = \"first-invalid\""));
 		assertTrue(editor.getSaveErrors().get(3).contains("anotherNumber = \"second-invalid\""));
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
+
 		editor.discard();
 		assertTrue(editor.getSaveErrors().isEmpty());
 		assertFalse(editor.hasUnsavedChanges());
@@ -106,8 +108,8 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "restrictionPicker");
 		BattleNext_RestrictionSourceProvider source = (BattleNext_RestrictionSourceProvider) getField(picker, "source");
 		List<BattleNext_OptionPicker.OptionChoice> options = source.getOptions();
-		assertEquals(List.of("limitNumber", "limitList"), options.stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
-		assertEquals(List.of("Ship limit", "Equipment filter"), options.stream().map(BattleNext_OptionPicker.OptionChoice::getLabel).toList());
+		assertEquals(List.of("limitNumber", "limitList"), options.stream().map(option -> option.id()).toList());
+		assertEquals(List.of("Ship limit", "Equipment filter"), options.stream().map(option -> option.label()).toList());
 		List<List<String>> expected = List.of(List.of("Ship limit", "limitNumber  [number]", "Number limit"),
 				List.of("Equipment filter", "limitList  [list]", "Item limit"));
 		for (int index = 0; index < options.size(); index++) {
@@ -117,14 +119,14 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 					.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
 		}
 		confirmRestrictions(editor, List.of("limitNumber"));
-		assertEquals(List.of("limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		assertEquals(List.of("limitList"), source.getOptions().stream().map(option -> option.id()).toList());
 		assertRestrictionRow(editor, "Ship limit", expected.get(0));
 		editor.buttonPressed("rule:remove:0");
-		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(option -> option.id()).toList());
 		confirmRestrictions(editor, List.of("limitList"));
 		assertRestrictionRow(editor, "Equipment filter", expected.get(1));
 		editor.discard();
-		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(BattleNext_OptionPicker.OptionChoice::getId).toList());
+		assertEquals(List.of("limitNumber", "limitList"), source.getOptions().stream().map(option -> option.id()).toList());
 		editor.close();
 	}
 
@@ -156,14 +158,14 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		values.get("limitList").setText("laser,pulse");
 		editor.buttonPressed("rule:up:1");
 		BattleNext_RuleModel draft = (BattleNext_RuleModel) getField(editor, "draft");
-		assertEquals(List.of("limitList", "limitNumber"), draft.getRestrictions().stream().map(entry -> entry.getId()).toList());
-		assertEquals(List.of("laser", "pulse"), draft.getRestriction("limitList").getItems());
+		assertEquals(List.of("limitList", "limitNumber"), draft.getRestrictionsReadonly().stream().map(entry -> entry.getId()).toList());
+		assertEquals(List.of("laser", "pulse"), draft.getRestriction("limitList").getItemsReadonly());
 		assertTrue(editor.hasUnsavedChanges());
 		assertTrue(editor.save(), editor.getStatusText());
 		store.reload();
 		assertEquals(draft.toJson().toString(), store.get("draft_rule").toJson().toString());
 		editor.buttonPressed("rule:remove:0");
-		assertEquals(List.of("limitNumber"), draft.getRestrictions().stream().map(entry -> entry.getId()).toList());
+		assertEquals(List.of("limitNumber"), draft.getRestrictionsReadonly().stream().map(entry -> entry.getId()).toList());
 		editor.discard();
 		assertFalse(editor.hasUnsavedChanges());
 		assertEquals(Set.of("limitNumber", "limitList"), ((Map<?, ?>) getField(editor, "valueFields")).keySet());
@@ -265,6 +267,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {180, 1000})
 	void restrictionButtonUsesTableWidthTitleAlignmentAndNestedViewports(int width) throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
@@ -283,6 +286,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		TooltipMakerAPI[] viewports = (TooltipMakerAPI[]) getField(picker, "viewports");
 		assertEquals(2, viewports.length);
 		assertSame(table.getContent(), viewports[0]);
+
 		((TextFieldAPI) getField(editor, "idField")).setText("rule_draft");
 		editor.refreshContent();
 		assertEquals("rule_draft", editor.getDraftId());
@@ -290,12 +294,15 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(2, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
 		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
 				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+
 		confirmRestrictions(editor, List.of("limitNumber", "limitList"));
 		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
 				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+
 		editor.buttonPressed("rule:remove:0");
 		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
 				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));
+
 		editor.buttonPressed("rule:remove:0");
 		assertTablePickerAlignment((BattleNext_TableWidget) getField(editor, "tableWidget"),
 				(BattleNext_OptionPicker) getField(editor, "restrictionPicker"));

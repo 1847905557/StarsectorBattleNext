@@ -43,6 +43,5 @@ public class MissionDefinition implements MissionDefinitionPlugin {
 		api.addPlugin(new BattleNext_FreeCameraPlugin());
 		api.addPlugin(new BattleNext_AllShipsStatusPlugin());
 		api.addPlugin(new BattleNext_RttPlugin());
-
 	}
 }

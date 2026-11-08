@@ -20,6 +20,7 @@ import data.scripts.plugin.BattleNext_FreeCameraPlugin;
 import data.scripts.plugin.BattleNext_RttPlugin;
 import data.test.fixture.BattleNext_TestGameFixture;
 import lunalib.lunaRefit.LunaRefitManager;
+import lunalib.lunaRefit.BaseRefitButton;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -47,8 +48,8 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 	@Test
 	void campaignLoadsReplaceTheirOwnMonitorAndPreserveOtherTransientScripts() {
 
-		var registry = LunaRefitManager.INSTANCE.getButtons();
-		var previous = List.copyOf(registry);
+		ArrayList<BaseRefitButton> registry = LunaRefitManager.INSTANCE.getButtons();
+		List<BaseRefitButton> previous = List.copyOf(registry);
 		registry.removeIf(button -> button instanceof BattleNext_LunaPinnedVariantRefitButton || button instanceof BattleNext_LunaFleetSaveRefitButton);
 		List<EveryFrameScript> scripts = new ArrayList<>();
 		EveryFrameScript other = proxy(EveryFrameScript.class, (method, args) -> null);
@@ -91,7 +92,7 @@ class BattleNext_SimulatorAttachmentTest extends BattleNext_TestGameFixture {
 			for (boolean newGame : List.of(true, false, true)) {
 				lifecycle.clear();
 				plugin.onGameLoad(newGame);
-				var monitors = scripts.stream().filter(script -> script instanceof BattleNext_SimulatorCampaignMonitor).toList();
+				List<EveryFrameScript> monitors = scripts.stream().filter(script -> script instanceof BattleNext_SimulatorCampaignMonitor).toList();
 				assertEquals(1, monitors.size());
 				assertNotSame(previousMonitor, monitors.get(0));
 				assertTrue(scripts.contains(other));

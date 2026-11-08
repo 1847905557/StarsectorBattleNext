@@ -4,10 +4,13 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.ui.BattleNext_UiTheme;
 import data.test.fixture.BattleNext_TestTextCatalog;
@@ -22,6 +25,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.InvocationTargetException;
+import java.awt.Color;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,7 +45,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		paragraphLineHeight = 15f;
 		originalVariant = source();
 		snapshot = BattleNext_VariantBuilder.fromVariant(originalVariant.getApi()).toJson();
-		var registeredModule = originalVariant.getModules().get("module");
+		ShipVariantAPI registeredModule = originalVariant.getModules().get("module");
 		SettingsAPI previous = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, arguments) -> {
@@ -73,40 +77,40 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 		snapshot.put("modules", modules).put("wings", wings);
 		BattleNext_VariantDetails details = mount(width);
 		for (String section : List.of("modules", "wings")) {
-		TooltipState grid = tooltips.get(lists(details).get(section));
-		assertEquipmentSpacing(grid);
-		List<CustomPanelAPI> rows = rows(grid);
-		float rowWidth = rows.get(0).getPosition().getWidth();
-		int columns = Math.max(1, (int) ((rowWidth + 4f) / 124f));
-		float size = (rowWidth - (columns - 1) * 4f) / columns;
-		assertEquals((7 + columns - 1) / columns, rows.size());
-		int item = 0;
-		for (CustomPanelAPI row : rows) {
-			assertEquals(size, row.getPosition().getHeight(), 0.001f);
-			int expectedCount = Math.min(columns, 7 - item);
-			assertEquals(expectedCount, children.get(row).size());
-			for (int column = 0; column < expectedCount; column++) {
-				CustomPanelAPI card = (CustomPanelAPI) children.get(row).get(column);
-				assertEquals(size, card.getPosition().getWidth(), 0.001f);
-				assertEquals(size, card.getPosition().getHeight(), 0.001f);
-				assertEquals(row.getPosition().getX() + column * (size + 4f), card.getPosition().getX(), 0.001f);
-				LabelAPI caption = caption(card);
-				assertEquals(Alignment.MID, labelAlignments.get(caption.getPosition()));
-				assertEquals(card.getPosition().getCenterX(), caption.getPosition().getCenterX(), 0.001f);
-				assertEquals(card.getPosition().getY() + 20f, caption.getPosition().getCenterY(), 0.001f);
-				assertEquals(8f, caption.getPosition().getX() - card.getPosition().getX(), 0.001f);
-				if (section.equals("modules")) {
-					List<String> info = hover(card);
-					assertEquals(List.of("Child " + item, "child_" + item), info);
-				} else {
-					assertEquals("Wing wing_" + item, caption.getText());
+			TooltipState grid = tooltips.get(lists(details).get(section));
+			assertEquipmentSpacing(grid);
+			List<CustomPanelAPI> rows = rows(grid);
+			float rowWidth = rows.get(0).getPosition().getWidth();
+			int columns = Math.max(1, (int) ((rowWidth + 4f) / 124f));
+			float size = (rowWidth - (columns - 1) * 4f) / columns;
+			assertEquals((7 + columns - 1) / columns, rows.size());
+			int item = 0;
+			for (CustomPanelAPI row : rows) {
+				assertEquals(size, row.getPosition().getHeight(), 0.001f);
+				int expectedCount = Math.min(columns, 7 - item);
+				assertEquals(expectedCount, children.get(row).size());
+				for (int column = 0; column < expectedCount; column++) {
+					CustomPanelAPI card = (CustomPanelAPI) children.get(row).get(column);
+					assertEquals(size, card.getPosition().getWidth(), 0.001f);
+					assertEquals(size, card.getPosition().getHeight(), 0.001f);
+					assertEquals(row.getPosition().getX() + column * (size + 4f), card.getPosition().getX(), 0.001f);
+					LabelAPI caption = caption(card);
+					assertEquals(Alignment.MID, labelAlignments.get(caption.getPosition()));
+					assertEquals(card.getPosition().getCenterX(), caption.getPosition().getCenterX(), 0.001f);
+					assertEquals(card.getPosition().getY() + 20f, caption.getPosition().getCenterY(), 0.001f);
+					assertEquals(8f, caption.getPosition().getX() - card.getPosition().getX(), 0.001f);
+					if (section.equals("modules")) {
+						List<String> info = hover(card);
+						assertEquals(List.of("Child " + item, "child_" + item), info);
+					} else {
+						assertEquals("Wing wing_" + item, caption.getText());
+					}
+					item++;
 				}
-				item++;
 			}
-		}
-		assertEquals(7, item);
-		float expectedHeight = rows.size() * (size + 4f) + 8f;
-		assertEquals(expectedHeight, grid.getMountedHeight(), 0.001f);
+			assertEquals(7, item);
+			float expectedHeight = rows.size() * (size + 4f) + 8f;
+			assertEquals(expectedHeight, grid.getMountedHeight(), 0.001f);
 		}
 		CustomPanelAPI parent = details.getPanel();
 		details.close();
@@ -126,7 +130,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 			SpriteAPI sprite = (SpriteAPI) getField(plugin, "sprite");
 			assertNotNull(sprite);
 			float[] before = sprites.get(sprite).clone();
-			var color = sprite.getColor();
+			Color color = sprite.getColor();
 			spriteCenters.clear();
 			spriteRenderStates.clear();
 			plugins.get(card).render(0.5f);
@@ -149,6 +153,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 
 	@Test
 	void moduleFormsAndDuplicateWingsKeepIdentityInTheirWholeCardHover() throws Exception {
+
 		snapshot.put("modules", new JSONArray().put(new JSONObject().put("inline", module()))
 				.put(new JSONObject().put("registered", "registered_module")));
 		snapshot.put("wings", new JSONArray().put("wing").put("wing"));
@@ -160,6 +165,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 			List<String> info = hover(modules.get(index));
 			assertEquals(List.of("Child", "child"), info);
 		}
+
 		List<CustomPanelAPI> wings = cards(details, "wings");
 		assertEquals(2, wings.size());
 		for (CustomPanelAPI card : wings) {
@@ -167,7 +173,7 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 			List<String> info = hover(card);
 			assertEquals(List.of("Wing wing", "wing"), info);
 			TooltipState text = tooltips.get(children.get(card).get(0));
-			var surface = text.getComponents().get(0).getPosition();
+			PositionAPI surface = text.getComponents().get(0).getPosition();
 			assertEquals(card.getPosition().getWidth(), surface.getWidth());
 			assertEquals(card.getPosition().getHeight(), surface.getHeight());
 		}
@@ -302,12 +308,12 @@ class BattleNext_VariantSquareCardsIntegrationTest extends BattleNext_TestVarian
 	}
 
 	private LabelAPI caption(CustomPanelAPI card) {
-		var contents = tooltips.get(children.get(card).get(0)).getComponents();
+		List<UIComponentAPI> contents = tooltips.get(children.get(card).get(0)).getComponents();
 		return (LabelAPI) contents.get(1);
 	}
 
 	private List<String> hover(CustomPanelAPI card) {
-		var surface = tooltips.get(children.get(card).get(0)).getComponents().get(0);
+		UIComponentAPI surface = tooltips.get(children.get(card).get(0)).getComponents().get(0);
 		int before = labels.size();
 		attachedTooltips.get(surface).createTooltip(tooltip(800f, 600f, false), false, null);
 		return List.copyOf(labels.subList(before, labels.size()));

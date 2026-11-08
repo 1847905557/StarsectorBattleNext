@@ -78,12 +78,15 @@ public abstract class BattleNext_TooltipBasedWidget {
 	}
 
 	private record OwnedPanel(UIPanelAPI parent, CustomPanelAPI child) {
+
 	}
 
 	protected void clearOverlays() {
+
 	}
 
 	protected void clearContent() {
+
 	}
 
 	protected boolean handleWidgetInput(List<InputEventAPI> events) {

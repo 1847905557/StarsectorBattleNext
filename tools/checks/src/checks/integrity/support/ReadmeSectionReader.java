@@ -8,6 +8,7 @@ import java.util.List;
 
 public final class ReadmeSectionReader {
 	private ReadmeSectionReader() {
+
 	}
 
 	public static String readSection(Path readme, String heading) throws IOException {
@@ -17,24 +18,18 @@ public final class ReadmeSectionReader {
 		boolean insideSection = false;
 		for (String line : lines) {
 			if (line.startsWith(headingPrefix)) {
-				if (insideSection) {
-					break;
-				}
+				if (insideSection) break;
 				insideSection = line.equals(heading);
 				continue;
 			}
-			if (insideSection) {
-				section.append(line).append('\n');
-			}
+			if (insideSection) section.append(line).append('\n');
 		}
 		return section.toString();
 	}
 
 	private static String headingPrefix(String heading) {
 		int index = 0;
-		while (index < heading.length() && heading.charAt(index) == '#') {
-			index++;
-		}
+		while (index < heading.length() && heading.charAt(index) == '#') index++;
 		return "#".repeat(index) + " ";
 	}
 }

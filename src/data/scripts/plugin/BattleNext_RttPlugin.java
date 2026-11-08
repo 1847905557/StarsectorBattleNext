@@ -53,6 +53,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	private float pointerY;
 
 	public BattleNext_RttPlugin() {
+
 	}
 
 	@Override
@@ -66,7 +67,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 		if (engine == null || engine.isCombatOver()) return;
 
 		updateControlState();
-		boolean active = acceptsMouseInput();
+		boolean active = acceptsMouseInput(engine);
 
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
@@ -74,18 +75,19 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				event.consume();
 				continue;
 			}
+
 			if (!active) continue;
 			if (!event.isRepeat() && handleGroupEvent(event)) {
 				event.consume();
 				continue;
 			}
+
 			if (!selected.isEmpty() && !event.isRepeat() && event.isControlDownEvent(VENT_CONTROL)) {
-				for (ShipAPI ship : selected) {
-					ship.giveCommand(ShipCommand.VENT_FLUX, null, -1);
-				}
+				for (ShipAPI ship : selected) ship.giveCommand(ShipCommand.VENT_FLUX, null, -1);
 				event.consume();
 				continue;
 			}
+
 			if (!selected.isEmpty() && !event.isRepeat() && event.isControlDownEvent(SYSTEM_CONTROL)) {
 				Vector2f point = new Vector2f(engine.getViewport().convertScreenXToWorldX(event.getX()),
 						engine.getViewport().convertScreenYToWorldY(event.getY()));
@@ -95,6 +97,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				event.consume();
 				continue;
 			}
+
 			if (event.isLMBDownEvent()) {
 				pressing = true;
 				dragging = false;
@@ -104,6 +107,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				event.consume();
 				continue;
 			}
+
 			if (pressing && event.isMouseMoveEvent()) {
 				pointerX = event.getX();
 				pointerY = event.getY();
@@ -113,6 +117,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				if (dragging) event.consume();
 				continue;
 			}
+
 			if (pressing && event.isLMBUpEvent()) {
 				pointerX = event.getX();
 				pointerY = event.getY();
@@ -122,6 +127,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				event.consume();
 				continue;
 			}
+
 			if (event.isRMBDownEvent() && !selected.isEmpty()) {
 				orderAt(engine.getViewport(), event.getX(), event.getY());
 				event.consume();
@@ -142,15 +148,11 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 
 	private void updateControlState() {
 		prune();
-		if (!acceptsMouseInput()) {
+		if (!acceptsMouseInput(engine)) {
 			pressing = false;
 			dragging = false;
 			addSelection = false;
 		}
-	}
-
-	private boolean acceptsMouseInput() {
-		return acceptsMouseInput(engine);
 	}
 
 	static boolean acceptsMouseInput(CombatEngineAPI engine) {
@@ -162,6 +164,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	@Override
 	public void renderInWorldCoords(ViewportAPI viewport) {
 		if (engine == null || engine.isCombatOver()) return;
+
 		for (ShipAPI ship : selected) {
 			if (!validSelection(ship)) continue;
 			circle(ship.getLocation(), ship.getCollisionRadius() * RING_SHIP_SCALE + RING_PADDING, SELECTION_COLOR);
@@ -176,7 +179,8 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			BattleNext_GeometryRenderer.lineStrip(new float[]{ship.getLocation().x, ship.getLocation().y,
 					point.x, point.y}, color, viewport.getAlphaMult(), 1.5f);
 		}
-		if (pressing && dragging && acceptsMouseInput()) {
+
+		if (pressing && dragging && acceptsMouseInput(engine)) {
 			float firstX = viewport.convertScreenXToWorldX(startX);
 			float firstY = viewport.convertScreenYToWorldY(startY);
 			float secondX = viewport.convertScreenXToWorldX(pointerX);
@@ -185,6 +189,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			float bottom = Math.min(firstY, secondY);
 			float width = Math.abs(secondX - firstX);
 			float height = Math.abs(secondY - firstY);
+
 			BattleNext_GeometryRenderer.fillRect(left, bottom, width, height, DRAG_FILL, viewport.getAlphaMult());
 			BattleNext_GeometryRenderer.lineLoop(new float[]{left, bottom, left + width, bottom,
 					left + width, bottom + height, left, bottom + height}, SELECTION_COLOR, viewport.getAlphaMult(), 1f);
@@ -203,10 +208,12 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 				if (group != null && group.contains(ship)) numbers.add(Integer.toString(number));
 			}
 			if (numbers.length() == 0) continue;
+
 			if (groupText == null) {
 				groupText = BattleNext_FontData.getInsigniaNormal();
 				groupText.setFontSize(GROUP_FONT_SIZE);
 			}
+
 			groupText.setText(numbers.toString());
 			float offset = (ship.getCollisionRadius() * RING_SHIP_SCALE + RING_PADDING) * RING_DIAGONAL;
 			float x = viewport.convertWorldXtoScreenX(ship.getLocation().x + offset) + GROUP_TEXT_GAP;
@@ -256,6 +263,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void orderAt(ViewportAPI viewport, float screenX, float screenY) {
+
 		float x = viewport.convertScreenXToWorldX(screenX);
 		float y = viewport.convertScreenYToWorldY(screenY);
 		List<ShipAPI> targets = new ArrayList<>();
@@ -263,6 +271,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			if (ship.isAlive() && !ship.isExpired() && !ship.isFighter() && !ship.isDrone()
 					&& !ship.isStation() && !ship.isStationModule()) targets.add(ship);
 		}
+
 		ShipAPI target = BattleNext_RttGeometry.hit(targets, x, y);
 		if (target != null) {
 			for (ShipAPI ship : selected) {
@@ -273,20 +282,21 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			}
 			return;
 		}
+
 		Map<ShipAPI, Vector2f> points = BattleNext_RttGeometry.formation(new ArrayList<>(selected),
 				new Vector2f(x, y), engine.getMapWidth(), engine.getMapHeight());
-		for (ShipAPI ship : selected) {
-			control(ship).orderMove(points.get(ship));
-		}
+		for (ShipAPI ship : selected) control(ship).orderMove(points.get(ship));
 	}
 
 	private BattleNext_RttShipAI control(ShipAPI ship) {
 		BattleNext_RttShipAI ai = controlled.get(ship);
 		if (ai != null) return ai;
+
 		ShipAIPlugin previous = ship.getShipAI();
 		String orderFieldKey = BattleNext_OrderField.KEY_PREFIX + ship.getOwner() + (ship.isAlly() ? "_ally" : "");
 		Object field = engine.getCustomData().get(orderFieldKey);
 		if (field instanceof BattleNext_OrderField orderField) orderField.releaseShip(ship);
+
 		ai = new BattleNext_RttShipAI(ship);
 		previousAis.put(ship, previous);
 		controlled.put(ship, ai);
@@ -317,9 +327,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void cleanup() {
-		for (ShipAPI ship : controlled.keySet()) {
-			ship.removeCustomData(BattleNext_RttShipAI.CONTROL_KEY);
-		}
+		for (ShipAPI ship : controlled.keySet()) ship.removeCustomData(BattleNext_RttShipAI.CONTROL_KEY);
 		controlled.clear();
 		previousAis.clear();
 		selected.clear();
@@ -336,9 +344,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 
 	private void prune() {
 		selected.removeIf(ship -> !validSelection(ship));
-		for (Set<ShipAPI> group : groups.values()) {
-			group.removeIf(ship -> !validSelection(ship));
-		}
+		for (Set<ShipAPI> group : groups.values()) group.removeIf(ship -> !validSelection(ship));
 		controlled.entrySet().removeIf(entry -> {
 			if (entry.getKey().isAlive() && !entry.getKey().isExpired()
 					&& engine.getShips().contains(entry.getKey())) return false;
@@ -369,6 +375,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 			vertices[index * 2] = center.x + (float) Math.cos(angle) * radius;
 			vertices[index * 2 + 1] = center.y + (float) Math.sin(angle) * radius;
 		}
+
 		BattleNext_GeometryRenderer.lineLoop(vertices, color, 1f, 1.5f);
 	}
 }

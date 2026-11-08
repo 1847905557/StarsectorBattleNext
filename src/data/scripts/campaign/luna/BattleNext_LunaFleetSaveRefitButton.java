@@ -123,6 +123,7 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 			BattleNext_Logger.warn(BattleNext_LunaFleetSaveRefitButton.class, "fleet.player.refit.context.unavailable",
 				BattleNext_Logger.fields().put("member", member).put("variant", variant).build(), exception);
 		}
+
 		display = new BattleNext_LunaFleetSavePanel(this::dismiss);
 		display.open(member, variant, error);
 		float width = backgroundPanel.getPosition().getWidth();
@@ -154,6 +155,7 @@ public class BattleNext_LunaFleetSaveRefitButton extends BaseRefitButton impleme
 			cleanup(true);
 			return;
 		}
+
 		try {
 			if (!BattleNext_CampaignRefitContext.childrenOf(host).contains(background)) {
 				cleanup(false);

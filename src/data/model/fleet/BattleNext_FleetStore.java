@@ -54,13 +54,14 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 
 			requireLoaded();
 			String target = "tournament/" + model.getFolderName();
-			for (BattleNext_FleetModel fleet : getAll()) {
+			for (BattleNext_FleetModel fleet : getAllCopy()) {
 				if (fleet.getSourceType() != BattleNext_LoadSource.LEGACY) continue;
 				String source = fleet.getSourcePath().replace('\\', '/');
 				if (model.getId().equals(fleet.getId()) || target.equalsIgnoreCase(source.substring(0, source.lastIndexOf('/')))) {
 					throw new IOException("Legacy fleet requires a new ID and target directory: " + source);
 				}
 			}
+
 			super.save(model);
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetStore.class, "fleet.store.commit",
 					() -> BattleNext_Logger.fields().put("model", model).build());
@@ -96,7 +97,7 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	@Override
 	public List<EditRejection> editRejections(BattleNext_FleetModel model, String sourceId) {
 		List<EditRejection> rejections = new ArrayList<>();
-		for (BattleNext_FleetModel existing : getAll()) {
+		for (BattleNext_FleetModel existing : getAllCopy()) {
 			if (!existing.getId().equals(sourceId) && BattleNext_EntryId.sameFileName(model.getFolderName(), existing.getFolderName())) {
 				rejections.add(new EditRejection(EditRejectionReason.DUPLICATE_FOLDER, model.getFolderName()));
 			}

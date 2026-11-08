@@ -13,19 +13,21 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 class BattleNext_SpriteSpecObfIntegrationTest {
 
 	@Test
 	void readsActualLoadedHullSpriteMetadataThroughTheProductionAdapter() throws Exception {
+
 		Path core = Path.of("../..", "starsector-core").toAbsolutePath().normalize();
 		List<String> classpath = new ArrayList<>();
 		classpath.add(Path.of(BattleNext_SpriteSpec.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
 		classpath.add(Path.of(Probe.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
-		try (var paths = Files.list(core)) {
+		try (Stream<Path> paths = Files.list(core)) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).sorted().map(Path::toString).toList());
 		}
-		try (var paths = Files.walk(Path.of("../BoxUtil/jars"))) {
+		try (Stream<Path> paths = Files.walk(Path.of("../BoxUtil/jars"))) {
 			classpath.addAll(paths.filter(path -> path.toString().endsWith(".jar")).map(path -> path.toAbsolutePath().toString()).toList());
 		}
 		String java = Path.of(System.getProperty("java.home"), "bin", "java.exe").toString();
@@ -38,7 +40,12 @@ class BattleNext_SpriteSpecObfIntegrationTest {
 
 	public static class Probe {
 
+		private Probe() {
+
+		}
+
 		public static void main(String[] arguments) throws Exception {
+
 			Class<?> hullType = Class.forName("com.fs.starfarer.loading.specs.g", false, Probe.class.getClassLoader());
 			Class<?> spriteType = hullType.getMethod("getSpriteSpec").getReturnType();
 			ShipHullSpecAPI hull = (ShipHullSpecAPI) hullType.getConstructor(String.class).newInstance("probe_hull");
@@ -51,6 +58,7 @@ class BattleNext_SpriteSpecObfIntegrationTest {
 				BattleNext_SpriteSpec geometry = BattleNext_SpriteSpec.read(hull);
 				BattleNext_SpriteSpec expected = new BattleNext_SpriteSpec(values[0], values[1], values[2], values[3]);
 				if (!expected.equals(geometry)) throw new AssertionError("Native sprite geometry: " + geometry);
+
 				Object changed = constructor.newInstance("graphics/probe.png", 190f, 310f, 63f, 98f, 220f, null);
 				hullType.getMethod("setSpriteSpec", spriteType).invoke(hull, changed);
 				if (!expected.equals(geometry)) throw new AssertionError("Captured geometry changed with the native spec");

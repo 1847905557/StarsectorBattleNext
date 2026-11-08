@@ -13,6 +13,7 @@ import com.fs.starfarer.api.mission.FleetSide;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.fleet.BattleNext_AssembledFleet;
+import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.report.BattleNext_DamageAttribution;
 import data.scripts.report.BattleNext_MemberReport;
 import data.scripts.tools.BattleNext_Logger;
@@ -56,6 +57,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			freeze(determineWinner());
 			return;
 		}
+
 		if (engine.isPaused()) return;
 		if (!battleStarted) {
 			if (!isReadyToStart()) return;
@@ -63,6 +65,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.started",
 				() -> BattleNext_Logger.fields().put("ships", engine.getShips()).build());
 		}
+
 		if (battleStarted) {
 			String winner = determineWinner();
 			if (winner != null) {
@@ -73,9 +76,11 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	@Override
 	public void reportDamageApplied(Object source, CombatEntityAPI target, ApplyDamageResultAPI result) {
+
 		if (frozenReport != null || result == null || !(target instanceof ShipAPI targetShip)) return;
 		if (result.getDamageToHull() <= 0f && result.getTotalDamageToArmor() <= 0f
 				&& result.getDamageToShields() <= 0f && result.getEmpDamage() <= 0f) return;
+
 		Object damageParam = targetShip.getParamAboutToApplyDamage();
 		BattleNext_DamageAttribution.SourceKey key = BattleNext_DamageAttribution.sourceKey(source, damageParam, result);
 		if (!targetShip.isFighter()) {
@@ -85,6 +90,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 						result.getTotalDamageToArmor(), result.getDamageToShields(), result.getEmpDamage());
 			}
 		}
+
 		ShipAPI sourceShip = BattleNext_DamageAttribution.memberShip(
 				BattleNext_DamageAttribution.sourceShip(source, damageParam));
 		ScoreTrackedFleetMember sourceMember = findTracked(sourceShip);
@@ -108,10 +114,11 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 
 	private void registerMembers(BattleNext_AssembledFleet assembledFleet, boolean playerSide) {
 		BattleNext_FleetModel definition = assembledFleet.getDefinition();
-		List<FleetMemberAPI> members = assembledFleet.getMembers();
+		List<FleetMemberAPI> members = assembledFleet.getMembersReadonly();
 		for (int index = 0; index < members.size(); index++) {
-			String variantId = definition.getMembers().get(index).getVariantId();
-			String name = definition.getMembers().get(index).getName();
+			BattleNext_MemberModel source = definition.getMembersReadonly().get(index);
+			String variantId = source.getVariantId();
+			String name = source.getName();
 			ScoreTrackedFleetMember tracked = new ScoreTrackedFleetMember(variantId, name, members.get(index), playerSide);
 			trackedMembers.add(tracked);
 			membersByFleetMember.put(members.get(index), tracked);
@@ -192,6 +199,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 				report.addEnemyMember(tracked.report);
 			}
 		}
+
 		frozenReport = report;
 		BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.result.frozen",
 				() -> BattleNext_Logger.fields().put("report", frozenReport).build());
@@ -234,6 +242,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			} else if (everDeployed || manager.getAllEverDeployedCopy().stream().anyMatch(deployed -> deployed.getMember() == member)) {
 				status = "retreated";
 			}
+
 			report.setFinalState(hullFraction, member.getRepairTracker().getCR(), status);
 		}
 	}

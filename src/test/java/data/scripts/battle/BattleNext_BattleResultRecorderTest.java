@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -73,7 +74,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 		assertTrue(scorekeeper.report.getName().matches(".*\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"));
 		BattleNext_BattleReportStore store = new BattleNext_BattleReportStore();
 		store.reload();
-		assertEquals(keep, store.getAll().size());
+		assertEquals(keep, store.getAllCopy().size());
 		if (keep > 0) {
 			assertEquals(scorekeeper.report.toJson().toString(), store.get(scorekeeper.report.getId()).toJson().toString());
 		}
@@ -89,7 +90,7 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0, 0);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		for (String id : List.of("alpha", "beta")) {
-			var root = directory.resolve("tournament/" + id);
+			Path root = directory.resolve("tournament/" + id);
 			Files.createDirectories(root);
 			Files.writeString(root.resolve("fleet_data.json"),
 					new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()).toJson().toString(), StandardCharsets.UTF_8);
@@ -113,12 +114,12 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 		BattleNext_StartedTournament saved = provider.getStartedStore().get(started.getId());
 		assertTrue(saved.isCompleted());
 		assertEquals(match.getPlayer(), saved.getChampionFleetId());
-		assertEquals(1, saved.findMatch(match.getId()).getRounds().size());
-		assertEquals("result", saved.findMatch(match.getId()).getRounds().get(0).getReportId());
+		assertEquals(1, saved.findMatch(match.getId()).getRoundsReadonly().size());
+		assertEquals("result", saved.findMatch(match.getId()).getRoundsReadonly().get(0).getReportId());
 		assertEquals(List.of(BattleNext_TestTextCatalog.text("Report", "BattleNext_report_not_retained")), notices);
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
-		assertTrue(reports.getAll().isEmpty());
+		assertTrue(reports.getAllCopy().isEmpty());
 	}
 
 	@Test
@@ -176,14 +177,16 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 
 	@Test
 	void tournamentReportFailureKeepsCompletePendingResultAndRetryCommitsItsStableIdentity() throws Exception {
+
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 50, 0);
 		BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
 		for (String id : List.of("alpha", "beta")) {
-			var root = directory.resolve("tournament/" + id);
+			Path root = directory.resolve("tournament/" + id);
 			Files.createDirectories(root);
 			Files.writeString(root.resolve("fleet_data.json"),
 					new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()).toJson().toString(), StandardCharsets.UTF_8);
 		}
+
 		provider.getTournamentStore().reload();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 		provider.getTournamentStore().save(configuration);
@@ -191,31 +194,34 @@ class BattleNext_BattleResultRecorderTest extends BattleNext_TestMemberFixture {
 		provider.getStartedStore().save(started);
 		provider.getStartedStore().activate(started.getId());
 		BattleNext_Match match = provider.load().get(0);
+
 		FrozenScorekeeper scorekeeper = new FrozenScorekeeper();
 		scorekeeper.frozen = true;
 		Files.createDirectories(directory.resolve("tournament/_reports/result.json"));
 		recorder(scorekeeper, provider, match).advance(0f, List.of());
 		provider.getStartedStore().reload();
-		assertTrue(provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRounds().isEmpty());
-		var pendingPath = directory.resolve(BattleNext_StartedTournamentStore.pendingRoundPath(started.getId()));
+		assertTrue(provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRoundsReadonly().isEmpty());
+		Path pendingPath = directory.resolve(BattleNext_StartedTournamentStore.pendingRoundPath(started.getId()));
 		String pendingText = Files.readString(pendingPath, StandardCharsets.UTF_8);
 		JSONObject pending = new JSONObject(pendingText);
 		assertEquals(pending.toString(4), pendingText);
 		assertTrue(pendingText.contains("\n    \""));
 		assertEquals(scorekeeper.report.toJson().toString(), pending.getJSONObject("report").toString());
 		assertTrue(provider.load().isEmpty());
-		assertTrue(provider.getWarnings().stream().anyMatch(warning -> warning.contains(started.getId())));
+		assertTrue(provider.getWarningsReadonly().stream().anyMatch(warning -> warning.contains(started.getId())));
+
 		Files.delete(directory.resolve("tournament/_reports/result.json"));
 		assertTrue(BattleNext_BattleResultRecorder.retryTournamentRound(started.getId()));
 		assertFalse(Files.exists(pendingPath));
 		provider.getStartedStore().reload();
-		assertEquals("result", provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRounds().get(0).getReportId());
+		assertEquals("result", provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRoundsReadonly().get(0).getReportId());
 		assertTrue(provider.getStartedStore().get(started.getId()).isCompleted());
 		BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 		reports.reload();
 		assertEquals(scorekeeper.report.getName(), reports.get("result").getName());
+
 		reports.delete("result");
 		provider.getStartedStore().reload();
-		assertEquals("result", provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRounds().get(0).getReportId());
+		assertEquals("result", provider.getStartedStore().get(started.getId()).findMatch(match.getId()).getRoundsReadonly().get(0).getReportId());
 	}
 }

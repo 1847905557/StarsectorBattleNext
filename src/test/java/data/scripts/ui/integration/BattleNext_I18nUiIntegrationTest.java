@@ -4,6 +4,8 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.TextFieldAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import org.json.JSONObject;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
 import data.model.tournament.BattleNext_TournamentModel;
@@ -32,6 +34,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void fleetMetadataAndMemberEditorsUseTheirOwnSkillAndIdentityLabels(boolean cnText) throws Exception {
+
 		SettingsAPI delegate = Global.getSettings();
 		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
@@ -44,7 +47,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		}));
 		BattleNext_Settings.save(cnText, true, false, false, 500f, 1f, 3f, 50, 0);
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
-		var root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI root = panel(1000f, 700f, new BaseCustomUIPanelPlugin());
 		editor.open(null, false);
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		editor.setInputRouter(router);
@@ -55,6 +58,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_officer_skills")));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_officer_personality")));
 		assertTrue(labels.contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_officer_portrait")));
+
 		editor.closeOverlays();
 		router.clear();
 	}
@@ -62,7 +66,7 @@ class BattleNext_I18nUiIntegrationTest extends BattleNext_TestVariantFixture {
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
 	void weaponGroupsDisplayTheirAutofireState(boolean enabled) throws Exception {
-		var json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
+		JSONObject json = BattleNext_VariantBuilder.fromVariant(source().getApi()).toJson();
 		json.getJSONArray("weaponGroups").getJSONObject(0).put("autofire", enabled);
 		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		details.setVariantJson(json);

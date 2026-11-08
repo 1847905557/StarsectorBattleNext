@@ -11,6 +11,9 @@ import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+import java.lang.reflect.Method;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_ReportTarget;
 import data.scripts.fleet.BattleNext_VariantBuilder;
@@ -54,7 +57,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 
 		shortenLabels = true;
 		paragraphLineHeight = 15f;
-		var original = source();
+		Variant original = source();
 		snapshot = BattleNext_VariantBuilder.fromVariant(original.getApi()).toJson();
 		snapshot.put("hullMods", new JSONArray().put("ordinary")).put("permaMods", new JSONArray())
 				.put("sMods", new JSONArray()).put("sModdedBuiltIns", new JSONArray()).put("suppressedMods", new JSONArray());
@@ -74,8 +77,8 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 				});
 			}
 			if (method.getName().equals("getFighterWingSpec")) {
-				var fighterHull = decorateHull(hull("fighter", "Broadsword", List.of()));
-				var fighter = proxy(ShipVariantAPI.class, (name, values) -> switch (name) {
+				ShipHullSpecAPI fighterHull = decorateHull(hull("fighter", "Broadsword", List.of()));
+				ShipVariantAPI fighter = proxy(ShipVariantAPI.class, (name, values) -> switch (name) {
 					case "getHullSpec" -> fighterHull;
 					default -> null;
 				});
@@ -97,7 +100,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 					default -> "";
 				};
 				if (text.isEmpty()) return null;
-				var description = new Description(arguments[0].toString(), (Description.Type) arguments[1]);
+				Description description = new Description(arguments[0].toString(), (Description.Type) arguments[1]);
 				description.setText1(text + "\nSECOND PARAGRAPH");
 				return description;
 			}
@@ -124,26 +127,26 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	@ValueSource(strings = {"hullmod", "module", "wing", "weapon"})
 	void nativeTooltipsShareOneIdentifierFontsColorsAndSpacing(String kind) throws Exception {
 
-		var details = new BattleNext_VariantDetails(() -> {});
+		BattleNext_VariantDetails details = new BattleNext_VariantDetails(() -> {});
 		((Set<Integer>) getField(details, "expanded")).add(0);
 		details.setVariantJson(snapshot);
 		details.attach(panel(1000f, 601f, new BaseCustomUIPanelPlugin()));
-		var hover = tooltip(360f, 80f, false);
+		TooltipMakerAPI hover = tooltip(360f, 80f, false);
 		if (kind.equals("hullmod")) {
-			var card = tooltips.get(lists(details).get("plugins")).getComponents().get(0);
+			UIComponentAPI card = tooltips.get(lists(details).get("plugins")).getComponents().get(0);
 			assertEquals(360f, attachedTooltips.get(card).getTooltipWidth(null));
 			attachedTooltips.get(card).createTooltip(hover, false, null);
 		} else if (kind.equals("weapon")) {
-			var root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
-			var container = (CustomPanelAPI) children.get(root).get(1);
-			var body = (CustomPanelAPI) children.get(container).get(0);
-			var row = tooltips.get(children.get(body).get(0)).getComponents().get(0);
+			CustomPanelAPI root = (CustomPanelAPI) tooltips.get(lists(details).get("groups")).getComponents().get(0);
+			CustomPanelAPI container = (CustomPanelAPI) children.get(root).get(1);
+			CustomPanelAPI body = (CustomPanelAPI) children.get(container).get(0);
+			UIComponentAPI row = tooltips.get(children.get(body).get(0)).getComponents().get(0);
 			attachedTooltips.get(row).createTooltip(hover, false, null);
 		} else {
-			var section = kind.equals("module") ? "modules" : "wings";
-			var row = (CustomPanelAPI) tooltips.get(lists(details).get(section)).getComponents().get(0);
-			var card = (CustomPanelAPI) children.get(row).get(0);
-			var surface = tooltips.get(children.get(card).get(0)).getComponents().get(0);
+			String section = kind.equals("module") ? "modules" : "wings";
+			CustomPanelAPI row = (CustomPanelAPI) tooltips.get(lists(details).get(section)).getComponents().get(0);
+			CustomPanelAPI card = (CustomPanelAPI) children.get(row).get(0);
+			UIComponentAPI surface = tooltips.get(children.get(card).get(0)).getComponents().get(0);
 			attachedTooltips.get(surface).createTooltip(hover, false, null);
 		}
 		String title = switch (kind) {
@@ -181,15 +184,15 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	void reportEquipmentSourcesUseTheSameDescriptionsAndRawIdentifiers(String kind) throws Exception {
 
 		String id = kind.equals("ship") ? "child" : kind.equals("weapon") ? "laser" : "wing";
-		var page = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
-		var body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
-		var list = body.createUIElement(600f, 100f, false);
-		var method = page.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
+		BattleNext_ReportDetails page = new BattleNext_ReportDetails(new BattleNext_UiInputRouter(), new BattleNext_ReportTarget(new BattleNext_BattleReportModel()), () -> {});
+		CustomPanelAPI body = panel(600f, 100f, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI list = body.createUIElement(600f, 100f, false);
+		Method method = page.getClass().getDeclaredMethod("addSourceRow", CustomPanelAPI.class,
 				TooltipMakerAPI.class, BattleNext_DamageSourceReport.class, float.class);
 		method.setAccessible(true);
 		method.invoke(page, body, list, new BattleNext_DamageSourceReport(kind, id), 600f);
-		var row = tooltips.get(list).getComponents().get(0);
-		var hover = tooltip(360f, 80f, false);
+		UIComponentAPI row = tooltips.get(list).getComponents().get(0);
+		TooltipMakerAPI hover = tooltip(360f, 80f, false);
 		attachedTooltips.get(row).createTooltip(hover, false, null);
 		String title = kind.equals("ship") ? "Child" : kind.equals("weapon") ? "Ion Pulser" : "Broadsword Wing";
 		String text = kind.equals("ship") ? MODULE_PARAGRAPH : kind.equals("weapon") ? WEAPON_PARAGRAPH : WING_PARAGRAPH;
@@ -203,17 +206,17 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		BattleNext_OptionPicker.OptionChoiceSource source = kind.equals("smod")
 				? new BattleNext_RefitSModSourceProvider(() -> current)
 				: new BattleNext_RefitDModSourceProvider(() -> current);
-		var hover = tooltip(360f, 60f, false);
+		TooltipMakerAPI hover = tooltip(360f, 60f, false);
 		String id = kind.equals("smod") ? "ordinary" : "damaged";
 		source.createTooltip(hover, new BattleNext_OptionPicker.OptionChoice(id, "Choice"));
 		assertEquals(360f, source.getTooltipWidth());
-		var content = textValues(hover);
+		List<String> content = textValues(hover);
 		assertEquals(id, content.get(1));
 		assertEquals(MOD_PARAGRAPH + "\nSECOND PARAGRAPH", content.get(2));
 		assertEquals(kind.equals("smod") ? 5 : 4, content.size());
 		assertTrue(tooltips.get(hover).getUsedHeight() > 60f);
 		for (int index = 2; index < content.size(); index++) {
-			var position = tooltips.get(hover).getComponents().get(index).getPosition();
+			PositionAPI position = tooltips.get(hover).getComponents().get(index).getPosition();
 			assertEquals("default", labelFonts.get(position));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(position));
 		}
@@ -228,8 +231,8 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	@ValueSource(strings = {"variant_50%"})
 	void variantSelectorRendersCurrentPropertiesWithSharedHeaderAndSectionLayout(String id) {
 
-		var source = new BattleNext_VariantSourceProvider();
-		var hover = tooltip(360f, 0f, false);
+		BattleNext_VariantSourceProvider source = new BattleNext_VariantSourceProvider();
+		TooltipMakerAPI hover = tooltip(360f, 0f, false);
 		source.createTooltip(hover, new BattleNext_OptionPicker.OptionChoice(id, "Choice"));
 		assertEquals(360f, source.getTooltipWidth());
 		List<String> values = textValues(hover);
@@ -241,9 +244,9 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 		assertTrue(values.contains(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ": 1"));
 		assertTrue(values.contains("Child ×1"));
 		assertEquals(List.of(), descriptionReads);
-		var components = tooltips.get(hover).getComponents();
+		List<UIComponentAPI> components = tooltips.get(hover).getComponents();
 		for (int index = 0; index < values.size(); index++) {
-			var position = components.get(index).getPosition();
+			PositionAPI position = components.get(index).getPosition();
 			String text = values.get(index);
 			boolean heading = Set.of(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_weapons") + ":", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_fighter_wings") + ":",
 					BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_modules") + ":", BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_hullmods") + ":").stream().anyMatch(text::startsWith);
@@ -252,7 +255,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 			assertEquals(index == 0 || heading ? BattleNext_UiTheme.ACCENT : index == 1
 					? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index == 0) continue;
-			var previous = components.get(index - 1).getPosition();
+			PositionAPI previous = components.get(index - 1).getPosition();
 			boolean sectionRow = index > 4 && !heading;
 			assertEquals(index == 1 ? 5f : index == 4 || sectionRow ? 2f : 8f,
 					previous.getY() - position.getY() - position.getHeight());
@@ -273,19 +276,20 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	@ParameterizedTest
 	@ValueSource(strings = {"missing", "empty", "failure"})
 	void absentOrFailedDescriptionsKeepHeaderAndNormalErrorNotes(String mode) {
+
 		failDescriptions = mode.equals("failure");
 		Description.Type type = Description.Type.WEAPON;
 		String descriptionId = mode.equals("empty") ? "" : mode.equals("failure") ? "laser" : "missing";
-		var hover = tooltip(360f, 100f, false);
-		var data = BattleNext_EquipmentTooltip.description("Name", "id", descriptionId, type,
+		TooltipMakerAPI hover = tooltip(360f, 100f, false);
+		BattleNext_EquipmentTooltip.Content data = BattleNext_EquipmentTooltip.description("Name", "id", descriptionId, type,
 				Global.getSettings(), List.of());
 		BattleNext_EquipmentTooltip.render(hover, data);
-		var values = textValues(hover);
+		List<String> values = textValues(hover);
 		assertEquals(List.of("Name", "id"), values.subList(0, 2));
 		assertEquals(mode.equals("failure") ? 3 : 2, values.size());
 		if (mode.equals("failure")) {
 			assertTrue(values.get(2).contains("Missing description resource"));
-			var position = tooltips.get(hover).getComponents().get(2).getPosition();
+			PositionAPI position = tooltips.get(hover).getComponents().get(2).getPosition();
 			assertEquals("default", labelFonts.get(position));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(position));
 		}
@@ -295,16 +299,16 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 
 		TooltipState state = tooltips.get(hover);
 		assertEquals(expected, textValues(hover));
-		var components = state.getComponents();
+		List<UIComponentAPI> components = state.getComponents();
 		assertEquals(expected.size() + 1, components.size());
 		for (int index = 0; index < expected.size(); index++) {
-			var position = components.get(index).getPosition();
+			PositionAPI position = components.get(index).getPosition();
 			assertEquals(index == 0 ? "small-orbitron" : index == 1 ? "small-insignia" : "default",
 					labelFonts.get(position));
 			assertEquals(index == 0 ? BattleNext_UiTheme.ACCENT : index == 1
 					? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index > 0) {
-				var previous = components.get(index - 1).getPosition();
+				PositionAPI previous = components.get(index - 1).getPosition();
 				assertEquals(index == 1 ? 5f : 8f, previous.getY() - position.getY() - position.getHeight());
 			}
 		}
@@ -312,8 +316,8 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 	}
 
 	private List<String> textValues(TooltipMakerAPI hover) {
-		var result = new ArrayList<String>();
-		for (var component : tooltips.get(hover).getComponents()) {
+		List<String> result = new ArrayList<>();
+		for (UIComponentAPI component : tooltips.get(hover).getComponents()) {
 			if (component instanceof LabelAPI label) result.add(label.getText());
 		}
 		return result;

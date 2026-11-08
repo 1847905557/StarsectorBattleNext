@@ -10,6 +10,7 @@ public class BattleNext_CsvLine {
 	}
 
 	public static List<String> parse(String line) {
+
 		List<String> result = new ArrayList<>();
 		StringBuilder field = new StringBuilder();
 		boolean quoted = false;
@@ -29,6 +30,7 @@ public class BattleNext_CsvLine {
 				field.append(value);
 			}
 		}
+
 		result.add(field.toString().trim());
 		return result;
 	}

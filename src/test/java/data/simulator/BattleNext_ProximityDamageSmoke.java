@@ -10,6 +10,8 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.mission.FleetSide;
+import com.fs.starfarer.api.mission.MissionDefinitionAPI;
+import data.model.report.BattleNext_BattleReportModel;
 import data.scripts.plugin.BattleNext_ScorekeeperPlugin;
 import data.scripts.report.BattleNext_DamageSourceReport;
 import org.apache.log4j.ConsoleAppender;
@@ -33,6 +35,10 @@ public class BattleNext_ProximityDamageSmoke {
 	private static volatile int completed;
 	private static Path reports;
 
+	private BattleNext_ProximityDamageSmoke() {
+
+	}
+
 	public static void run() throws Exception {
 
 		Path core = Path.of("../..", "starsector-core").toAbsolutePath().normalize();
@@ -55,6 +61,7 @@ public class BattleNext_ProximityDamageSmoke {
 	}
 
 	public static void main(String[] arguments) throws Throwable {
+
 		reports = Path.of(arguments[0]);
 		System.setProperty("launchDirect", "true");
 		System.setProperty("startRes", "800x600");
@@ -64,6 +71,7 @@ public class BattleNext_ProximityDamageSmoke {
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);
+
 		Thread driver = new Thread(BattleNext_ProximityDamageSmoke::drive, "Proximity damage verification");
 		driver.setDaemon(true);
 		driver.start();
@@ -87,7 +95,7 @@ public class BattleNext_ProximityDamageSmoke {
 				Global.getSettings().setBoolean("idleWhileWindowNotVisible", false);
 				Global.getSettings().setBoolean("devMode", false);
 				access.configureGraphics();
-				var mission = access.createMission();
+				MissionDefinitionAPI mission = access.createMission();
 				mission.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
 				mission.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 999);
 				ShipVariantAPI unarmed = Global.getSettings().createEmptyVariant("BattleNext_proximity_unarmed", Global.getSettings().getHullSpec("wolf"));
@@ -251,13 +259,13 @@ public class BattleNext_ProximityDamageSmoke {
 		private void verifyReport() throws Throwable {
 
 			scorekeeper.freeze("draw");
-			var report = scorekeeper.getFrozenReport();
+			BattleNext_BattleReportModel report = scorekeeper.getFrozenReport();
 			JSONObject output = new JSONObject().put("battle", battle).put("probes", probes).put("report", report.toJson());
 			Files.writeString(reports.resolve("battle-" + battle + ".json"), output.toString(2), StandardCharsets.UTF_8);
-			for (List<BattleNext_DamageSourceReport> sources : List.of(report.getPlayerMembers().get(0).getDealtBySource(),
-					report.getEnemyMembers().get(0).getTakenBySource())) {
+			for (List<BattleNext_DamageSourceReport> sources : List.of(report.getPlayerMembersReadonly().get(0).getDealtBySourceCopy(),
+					report.getEnemyMembersReadonly().get(0).getTakenBySourceCopy())) {
 				if (sources.size() != 1) throw new AssertionError("All Devastator splash must share one weapon source: " + sources.size());
-				var source = sources.get(0);
+				BattleNext_DamageSourceReport source = sources.get(0);
 				if (!source.getKind().equals("weapon") || !source.getId().equals("devastator")) {
 					throw new AssertionError("Devastator splash source: " + source.getKind() + "/" + source.getId());
 				}

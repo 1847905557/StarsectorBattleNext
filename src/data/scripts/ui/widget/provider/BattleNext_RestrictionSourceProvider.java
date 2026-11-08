@@ -3,7 +3,7 @@ package data.scripts.ui.widget.provider;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
 import data.restriction.BattleNext_RestrictionRegistry;
-import data.restriction.BattleNext_RestrictionSpec;
+import data.restriction.BattleNext_RestrictionRegistry.BattleNext_RestrictionSpec;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 
@@ -23,9 +23,9 @@ public class BattleNext_RestrictionSourceProvider extends BattleNext_BaseSourceP
 	public List<OptionChoice> getOptions() {
 		BattleNext_RuleModel rule = ruleSupplier.get();
 		List<OptionChoice> options = new ArrayList<>();
-		for (BattleNext_RestrictionSpec spec : BattleNext_RestrictionRegistry.getInstance().getAll()) {
-			if (rule.getRestriction(spec.getId()) != null) continue;
-			options.add(new OptionChoice(spec.getId(), spec.getName()));
+		for (BattleNext_RestrictionSpec spec : BattleNext_RestrictionRegistry.getInstance().getAllCopy()) {
+			if (rule.getRestriction(spec.id()) != null) continue;
+			options.add(new OptionChoice(spec.id(), spec.name()));
 		}
 		return options;
 	}
@@ -47,8 +47,8 @@ public class BattleNext_RestrictionSourceProvider extends BattleNext_BaseSourceP
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(option.getId());
+		BattleNext_RestrictionSpec spec = BattleNext_RestrictionRegistry.getInstance().get(option.id());
 		BattleNext_EquipmentTooltip.render(tooltip, new BattleNext_EquipmentTooltip.Content(
-				spec.getName(), spec.getId() + "  [" + spec.getType() + "]", spec.getDescription(), List.of()));
+				spec.name(), spec.id() + "  [" + spec.type() + "]", spec.description(), List.of()));
 	}
 }

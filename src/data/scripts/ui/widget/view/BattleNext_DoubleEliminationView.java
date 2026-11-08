@@ -18,10 +18,7 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 	protected void buildLayout() {
 
 		int width = 2;
-
-		while (width < fleetIds.size()) {
-			width *= 2;
-		}
+		while (width < fleetIds.size()) width *= 2;
 		int levels = Integer.numberOfTrailingZeros(width);
 		int loserRounds = Math.max(1, levels * 2 - 2);
 		buildWinners(width, BattleNext_Match.MatchStage.WINNERS);

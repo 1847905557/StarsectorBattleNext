@@ -2,7 +2,7 @@ package checks.integrity.rules;
 
 import checks.integrity.IntegrityCheckInput;
 import checks.integrity.IntegrityRule;
-import checks.integrity.model.RuleRegistry;
+import checks.integrity.support.ProjectRuleRegistryReader.Registry;
 import checks.integrity.support.ProjectRuleRegistryReader;
 import checks.integrity.support.ReadmeSectionReader;
 
@@ -20,11 +20,9 @@ public class ReadmeRuleListSyncRule implements IntegrityRule {
 
 	@Override
 	public List<String> check(IntegrityCheckInput input) throws IOException {
-		RuleRegistry ruleRegistry = ProjectRuleRegistryReader.read(input.projectRulesDir());
+		Registry ruleRegistry = ProjectRuleRegistryReader.read(input.projectRulesDir());
 		Set<String> expectedRuleFiles = new LinkedHashSet<>();
-		for (String ruleClass : ruleRegistry.ruleClasses()) {
-			expectedRuleFiles.add(ruleClass + ".java");
-		}
+		for (String ruleClass : ruleRegistry.ruleClasses()) expectedRuleFiles.add(ruleClass + ".java");
 
 		List<String> failures = new ArrayList<>();
 		String section = ReadmeSectionReader.readSection(input.readme(), PROJECT_RULES_SECTION);
@@ -32,9 +30,7 @@ public class ReadmeRuleListSyncRule implements IntegrityRule {
 		Matcher matcher = README_CODE_SPAN.matcher(section);
 		while (matcher.find()) {
 			String code = matcher.group(1);
-			if (!code.endsWith(".java")) {
-				continue;
-			}
+			if (!code.endsWith(".java")) continue;
 			if (code.contains("/") || code.contains("\\")) {
 				failures.add("tools README checks section must list rule file names without paths: " + code + ".");
 				continue;

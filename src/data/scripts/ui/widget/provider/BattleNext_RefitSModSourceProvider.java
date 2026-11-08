@@ -21,8 +21,10 @@ public class BattleNext_RefitSModSourceProvider extends BattleNext_HullModSource
 	@Override
 	protected List<HullModSpecAPI> getHullMods(ShipVariantAPI variant) {
 		if (variant == null) return List.of();
+
 		Set<String> ids = new LinkedHashSet<>(variant.getHullMods());
 		ids.addAll(variant.getHullSpec().getBuiltInMods());
+
 		List<HullModSpecAPI> result = new ArrayList<>();
 		for (String id : ids) {
 			try {
@@ -36,6 +38,7 @@ public class BattleNext_RefitSModSourceProvider extends BattleNext_HullModSource
 								.put("fallback", "Omitted option").build(), exception);
 			}
 		}
+
 		return result;
 	}
 }

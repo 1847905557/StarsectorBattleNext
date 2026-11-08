@@ -1,5 +1,6 @@
 public class LifecyclePrivateOk {
 	private LifecyclePrivateOk() {
+
 	}
 
 	@LifecycleEntry

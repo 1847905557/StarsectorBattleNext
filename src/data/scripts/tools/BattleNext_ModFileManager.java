@@ -45,7 +45,6 @@ public class BattleNext_ModFileManager {
 
 	}
 
-
 	public static JSONObject readJson(Class<?> source, String path, String modId) throws IOException, JSONException {
 		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "json").build();
 		BattleNext_Logger.operationStarted(source, "file.read", input);
@@ -78,6 +77,7 @@ public class BattleNext_ModFileManager {
 	}
 
 	private static JSONArray parseCsv(String text) throws JSONException {
+
 		JSONArray rows = new JSONArray();
 		List<String> columns = null;
 		for (String line : text.split("\\R")) {
@@ -87,12 +87,14 @@ public class BattleNext_ModFileManager {
 				columns = cells;
 				continue;
 			}
+
 			JSONObject row = new JSONObject();
 			for (int index = 0; index < columns.size(); index++) {
 				row.put(columns.get(index), index < cells.size() ? cells.get(index) : "");
 			}
 			rows.put(row);
 		}
+
 		return rows;
 	}
 
@@ -129,9 +131,11 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static void writeTextAtomic(String relativePath, String text) throws IOException {
+
 		ReflectiveModFileOperations bridge = createBridge(relativePath);
-		Object target = resolveTarget(bridge, relativePath, true);
-		Path path = Path.of(targetPath(target));
+		ModFileOperationTarget target = resolveTarget(bridge, relativePath, true);
+		Path path = Path.of(target.canonicalPath);
+
 		String staging = relativePath + ".pending";
 		writeText(staging, text);
 		try {
@@ -140,6 +144,7 @@ public class BattleNext_ModFileManager {
 					MethodType.methodType(Path.class, Path.class, Path.class, CopyOption[].class));
 			move.invoke(path.resolveSibling(path.getFileName() + ".pending"), path,
 					new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
+
 			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 		} catch (IOException exception) {
 			throw exception;
@@ -151,6 +156,7 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static void moveDirectory(String source, String destination) throws IOException {
+
 		ReflectiveModFileOperations bridge = createBridge(source);
 		ModFileOperationTarget from = resolveExisting(bridge, source);
 		ModFileOperationTarget to = resolveExisting(bridge, destination);
@@ -161,6 +167,7 @@ public class BattleNext_ModFileManager {
 			Object parent = bridge.parent.invoke(to.file);
 			bridge.mkdirs.invoke(parent);
 			move.invoke(Path.of(from.canonicalPath), Path.of(to.canonicalPath), new CopyOption[]{StandardCopyOption.ATOMIC_MOVE});
+
 			if (READ_SESSION.get() != null) {
 				READ_SESSION.get().invalidateDirectory(source);
 				READ_SESSION.get().invalidateDirectory(destination);
@@ -192,11 +199,12 @@ public class BattleNext_ModFileManager {
 		try {
 			if (data == null) throw new IOException("Unable to write null data: " + relativePath);
 			ReflectiveModFileOperations bridge = createBridge(relativePath);
-			Object target = resolveTarget(bridge, relativePath, overwrite);
+			ModFileOperationTarget target = resolveTarget(bridge, relativePath, overwrite);
+
 			Object output = null;
 			Throwable failure = null;
 			try {
-				output = bridge.outputConstructor.invoke(targetPath(target), false);
+				output = bridge.outputConstructor.invoke(target.canonicalPath, false);
 				bridge.write.invoke(output, data);
 				bridge.flush.invoke(output);
 			} catch (Throwable exception) {
@@ -206,14 +214,13 @@ public class BattleNext_ModFileManager {
 					try {
 						bridge.close.invoke(output);
 					} catch (Throwable exception) {
-						if (failure == null) {
-							failure = exception;
-						}
+						if (failure == null) failure = exception;
 						else failure.addSuppressed(exception);
 					}
 				}
 			}
-			if (failure != null) throw writeFailure(relativePath, failure);
+
+			if (failure != null) throw fileFailure(relativePath, failure);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.write", logFields);
 			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 		} catch (IOException | RuntimeException exception) {
@@ -240,6 +247,7 @@ public class BattleNext_ModFileManager {
 			if ((boolean) invoke(bridge.directoryCheck, target.file)) {
 				throw new IOException("The target is a directory: " + relativePath);
 			}
+
 			Object input = null;
 			Object output = null;
 			byte[] result = null;
@@ -250,9 +258,7 @@ public class BattleNext_ModFileManager {
 				byte[] buffer = new byte[8192];
 				int count;
 				while ((count = (int) bridge.read.invoke(input, buffer)) >= 0) {
-					if (count > 0) {
-						bridge.byteArrayWrite.invoke(output, buffer, 0, count);
-					}
+					if (count > 0) bridge.byteArrayWrite.invoke(output, buffer, 0, count);
 				}
 				result = (byte[]) bridge.toByteArray.invoke(output);
 			} catch (Throwable exception) {
@@ -262,13 +268,12 @@ public class BattleNext_ModFileManager {
 					try {
 						bridge.closeInput.invoke(input);
 					} catch (Throwable exception) {
-						if (failure == null) {
-							failure = exception;
-						}
+						if (failure == null) failure = exception;
 						else failure.addSuppressed(exception);
 					}
 				}
 			}
+
 			if (failure != null) throw fileFailure(relativePath, failure);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.read", logFields);
 			return result;
@@ -311,6 +316,7 @@ public class BattleNext_ModFileManager {
 			if ((boolean) invoke(bridge.directoryCheck, target.file)) {
 				throw new IOException("The target is a directory: " + relativePath);
 			}
+
 			deleteTarget(bridge, target.file, relativePath);
 			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.delete", logFields);
@@ -334,6 +340,7 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) invoke(bridge.directoryCheck, target.file)) {
 				throw new IOException("The target is not a directory: " + relativePath);
 			}
+
 			deleteTree(bridge, target.file, target.rootCanonical, relativePath);
 			if (READ_SESSION.get() != null) READ_SESSION.get().invalidateDirectory(relativePath);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.delete.bundle", logFields);
@@ -351,6 +358,7 @@ public class BattleNext_ModFileManager {
 			Class<?> outputType = Class.forName("java.io.FileOutputStream", false, null);
 			Class<?> byteArrayOutputType = Class.forName("java.io.ByteArrayOutputStream", false, null);
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+
 			operations = new ReflectiveModFileOperations(
 					lookup.findConstructor(fileType, MethodType.methodType(void.class, String.class)),
 					lookup.findVirtual(fileType, "exists", MethodType.methodType(boolean.class)),
@@ -375,13 +383,14 @@ public class BattleNext_ModFileManager {
 					lookup.findVirtual(byteArrayOutputType, "write",
 							MethodType.methodType(void.class, byte[].class, int.class, int.class)),
 					lookup.findVirtual(byteArrayOutputType, "toByteArray", MethodType.methodType(byte[].class)));
+
 			return operations;
 		} catch (Throwable exception) {
-			throw writeFailure(relativePath, exception);
+			throw fileFailure(relativePath, exception);
 		}
 	}
 
-	private static Object resolveTarget(ReflectiveModFileOperations bridge, String relativePath, boolean overwrite) throws IOException {
+	private static ModFileOperationTarget resolveTarget(ReflectiveModFileOperations bridge, String relativePath, boolean overwrite) throws IOException {
 		String normalizedPath = normalizePath(relativePath);
 		try {
 			String rootPath = rootPath();
@@ -389,6 +398,7 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
 			}
+
 			Object target = bridge.fileConstructor.invoke(rootPath + "/" + normalizedPath);
 			String rootCanonical = (String) bridge.canonicalPath.invoke(root);
 			String targetCanonical = (String) bridge.canonicalPath.invoke(target);
@@ -402,6 +412,7 @@ public class BattleNext_ModFileManager {
 				}
 				if (!overwrite) throw new IOException("The target already exists: " + normalizedPath);
 			}
+
 			Object parent = bridge.parent.invoke(target);
 			if (parent == null) throw new IOException("The target has no parent: " + normalizedPath);
 			String parentCanonical = (String) bridge.canonicalPath.invoke(parent);
@@ -412,13 +423,15 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) bridge.exists.invoke(parent) || !(boolean) bridge.directoryCheck.invoke(parent)) {
 				throw new IOException("The parent is not a directory: " + normalizedPath);
 			}
+
 			targetCanonical = (String) bridge.canonicalPath.invoke(target);
 			ensureInsideRoot(rootCanonical, targetCanonical, normalizedPath);
+
 			return new ModFileOperationTarget(target, targetCanonical, rootCanonical);
 		} catch (IOException exception) {
 			throw exception;
 		} catch (Throwable exception) {
-			throw writeFailure(relativePath, exception);
+			throw fileFailure(relativePath, exception);
 		}
 	}
 
@@ -430,6 +443,7 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
 			}
+
 			String rootCanonical = (String) bridge.canonicalPath.invoke(root);
 			Object target = bridge.fileConstructor.invoke(rootCanonical + "/" + normalizedPath);
 			String targetCanonical = (String) bridge.canonicalPath.invoke(target);
@@ -437,6 +451,7 @@ public class BattleNext_ModFileManager {
 			if (samePath(rootCanonical, targetCanonical)) {
 				throw new IOException("The mod root is not a file target: " + normalizedPath);
 			}
+
 			return new ModFileOperationTarget(target, targetCanonical, rootCanonical);
 		} catch (IOException exception) {
 			throw exception;
@@ -485,6 +500,7 @@ public class BattleNext_ModFileManager {
 			if (!samePath(canonical, absolute)) {
 				throw new IOException("Symbolic links are not allowed in recursive deletion: " + relativePath);
 			}
+
 			if ((boolean) bridge.directoryCheck.invoke(target)) {
 				Object[] children = (Object[]) bridge.listFiles.invoke(target);
 				if (children == null) throw new IOException("Unable to list directory: " + relativePath);
@@ -492,6 +508,7 @@ public class BattleNext_ModFileManager {
 					deleteTree(bridge, child, rootCanonical, relativePath);
 				}
 			}
+
 			deleteTarget(bridge, target, relativePath);
 		} catch (IOException exception) {
 			throw exception;
@@ -507,14 +524,17 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
 			}
+
 			Object folder = bridge.fileConstructor.invoke(rootPath + "/" + directory);
 			if (!(boolean) bridge.exists.invoke(folder)) return List.of();
 			if (!(boolean) bridge.directoryCheck.invoke(folder)) {
 				throw new IOException("Not a directory: " + rootPath + "/" + directory);
 			}
+
 			List<String> result = new ArrayList<>();
 			collect(bridge, folder, directory, depth, descend, result);
 			Collections.sort(result);
+
 			return result;
 		} catch (IOException exception) {
 			throw exception;
@@ -541,10 +561,6 @@ public class BattleNext_ModFileManager {
 		} catch (Throwable exception) {
 			throw fileFailure(relative, exception);
 		}
-	}
-
-	private static String targetPath(Object target) {
-		return ((ModFileOperationTarget) target).canonicalPath;
 	}
 
 	private static String rootPath() {
@@ -666,75 +682,17 @@ public class BattleNext_ModFileManager {
 				+ (message == null ? cause.getClass().getName() : message), cause);
 	}
 
-	private static IOException writeFailure(String relativePath, Throwable exception) {
-		return fileFailure(relativePath, exception);
+	private record ModFileOperationTarget(Object file, String canonicalPath, String rootCanonical) {
+
 	}
 
-	private static class ModFileOperationTarget {
-		private final Object file;
-		private final String canonicalPath;
-		private final String rootCanonical;
+	private record ReflectiveModFileOperations(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
+			MethodHandle regularFile, MethodHandle name, MethodHandle canonicalPath,
+			MethodHandle absolutePath, MethodHandle realPath, MethodHandle parent, MethodHandle mkdirs,
+			MethodHandle listFiles, MethodHandle delete, MethodHandle inputConstructor, MethodHandle read,
+			MethodHandle outputConstructor, MethodHandle write, MethodHandle flush, MethodHandle close,
+			MethodHandle closeInput, MethodHandle byteArrayOutputConstructor, MethodHandle byteArrayWrite,
+			MethodHandle toByteArray) {
 
-		private ModFileOperationTarget(Object file, String canonicalPath, String rootCanonical) {
-			this.file = file;
-			this.canonicalPath = canonicalPath;
-			this.rootCanonical = rootCanonical;
-		}
-	}
-
-	private static class ReflectiveModFileOperations {
-		private final MethodHandle fileConstructor;
-		private final MethodHandle exists;
-		private final MethodHandle directoryCheck;
-		private final MethodHandle regularFile;
-		private final MethodHandle name;
-		private final MethodHandle canonicalPath;
-		private final MethodHandle absolutePath;
-		private final MethodHandle realPath;
-		private final MethodHandle parent;
-		private final MethodHandle mkdirs;
-		private final MethodHandle listFiles;
-		private final MethodHandle delete;
-		private final MethodHandle inputConstructor;
-		private final MethodHandle read;
-		private final MethodHandle outputConstructor;
-		private final MethodHandle write;
-		private final MethodHandle flush;
-		private final MethodHandle close;
-		private final MethodHandle closeInput;
-		private final MethodHandle byteArrayOutputConstructor;
-		private final MethodHandle byteArrayWrite;
-		private final MethodHandle toByteArray;
-
-		private ReflectiveModFileOperations(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
-				MethodHandle regularFile, MethodHandle name, MethodHandle canonicalPath,
-				MethodHandle absolutePath, MethodHandle realPath, MethodHandle parent, MethodHandle mkdirs,
-				MethodHandle listFiles, MethodHandle delete, MethodHandle inputConstructor, MethodHandle read,
-				MethodHandle outputConstructor, MethodHandle write, MethodHandle flush, MethodHandle close,
-				MethodHandle closeInput, MethodHandle byteArrayOutputConstructor, MethodHandle byteArrayWrite,
-				MethodHandle toByteArray) {
-			this.fileConstructor = fileConstructor;
-			this.exists = exists;
-			this.directoryCheck = directoryCheck;
-			this.regularFile = regularFile;
-			this.name = name;
-			this.canonicalPath = canonicalPath;
-			this.absolutePath = absolutePath;
-			this.realPath = realPath;
-			this.parent = parent;
-			this.mkdirs = mkdirs;
-			this.listFiles = listFiles;
-			this.delete = delete;
-			this.inputConstructor = inputConstructor;
-			this.read = read;
-			this.outputConstructor = outputConstructor;
-			this.write = write;
-			this.flush = flush;
-			this.close = close;
-			this.closeInput = closeInput;
-			this.byteArrayOutputConstructor = byteArrayOutputConstructor;
-			this.byteArrayWrite = byteArrayWrite;
-			this.toByteArray = toByteArray;
-		}
 	}
 }

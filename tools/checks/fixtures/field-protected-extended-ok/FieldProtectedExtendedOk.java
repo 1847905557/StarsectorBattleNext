@@ -3,4 +3,5 @@ public class FieldProtectedExtendedOk {
 }
 
 class FieldProtectedExtendedChild extends FieldProtectedExtendedOk {
+
 }

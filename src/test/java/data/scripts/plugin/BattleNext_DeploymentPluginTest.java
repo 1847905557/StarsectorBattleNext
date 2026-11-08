@@ -28,6 +28,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 
 	@Test
 	void positiveLimitKeepsOriginalAdmiralsAndClearsBothPlayerTaskManagersBeforeCombat() {
+
 		BattleCreationContext context = new BattleCreationContext(null, null, null, null);
 		context.aiRetreatAllowed = true;
 		context.fightToTheLast = false;
@@ -36,6 +37,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 		List<CombatAssignmentType> playerTasks = new ArrayList<>(List.of(CombatAssignmentType.CAPTURE));
 		List<CombatAssignmentType> alliedTasks = new ArrayList<>(List.of(CombatAssignmentType.DEFEND));
 		List<String> calls = new ArrayList<>();
+
 		AdmiralAIPlugin playerAi = proxy(AdmiralAIPlugin.class, (method, args) -> {
 			if (method.equals("setNoOrders")) {
 				assertEquals(true, args[0]);
@@ -48,7 +50,11 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 			return null;
 		});
 		FleetManager player = deploymentManager((method, args) -> switch (method) {
-			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> { assertEquals(true, args[0]); retreatSettings.add("force:player"); yield null; }
+			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> {
+				assertEquals(true, args[0]);
+				retreatSettings.add("force:player");
+				yield null;
+			}
 			case "getAdmiralAI" -> playerAi;
 			case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (name, values) -> {
 				if (name.equals("setPreventFullRetreat")) {
@@ -65,7 +71,11 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 			default -> null;
 		});
 		FleetManager enemy = deploymentManager((method, args) -> switch (method) {
-			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> { assertEquals(true, args[0]); retreatSettings.add("force:enemy"); yield null; }
+			case "setCanForceShipsToEngageWhenBattleClearlyLost" -> {
+				assertEquals(true, args[0]);
+				retreatSettings.add("force:enemy");
+				yield null;
+			}
 			case "getAdmiralAI" -> enemyAi;
 			case "getTaskManager" -> proxy(CombatTaskManagerAPI.class, (name, values) -> {
 				assertEquals("setPreventFullRetreat", name);
@@ -84,6 +94,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 		});
 		BattleNext_DeploymentPlugin plugin = new BattleNext_DeploymentPlugin(10, false, true);
 		plugin.init(engine);
+
 		assertFalse(context.aiRetreatAllowed);
 		assertTrue(context.fightToTheLast);
 		assertEquals(List.of("force:player", "prevent:player:false", "prevent:player:true", "force:enemy", "prevent:enemy:false"), retreatSettings);
@@ -93,13 +104,16 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 		assertTrue(alliedTasks.isEmpty());
 		assertSame(playerAi, player.getAdmiralAI());
 		assertSame(enemyAi, enemy.getAdmiralAI());
+
 		player.setMaxStrength(240);
 		enemy.setMaxStrength(160);
 		assertEquals(10, player.getMaxStrength());
 		assertEquals(10, enemy.getMaxStrength());
+
 		player.getMaxFleetPoints().modifyFlat("objective", 20f);
 		player.getMaxFleetPoints().modifyPercent("skill", 50f);
 		assertEquals(35, player.getMaxStrength());
+
 		player.setMaxStrength(240);
 		assertEquals(10, player.getMaxStrength());
 	}
@@ -107,13 +121,20 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {-5, 0})
 	void nonpositiveLimitsDeployBothSidesOnceInTheirGridAndKeepRuntimePointModifiers(int limit) {
+
 		FleetMemberAPI member = proxy(FleetMemberAPI.class, (method, args) -> null);
 		Map<FleetSide, Integer> caps = new EnumMap<>(FleetSide.class);
 		List<Vector2f> locations = new ArrayList<>();
 		List<Float> facings = new ArrayList<>();
 		List<String> commands = new ArrayList<>();
-		AdmiralAIPlugin playerAi = proxy(AdmiralAIPlugin.class, (method, args) -> { commands.add("player:" + method); return null; });
-		AdmiralAIPlugin enemyAi = proxy(AdmiralAIPlugin.class, (method, args) -> { commands.add("enemy:" + method); return null; });
+		AdmiralAIPlugin playerAi = proxy(AdmiralAIPlugin.class, (method, args) -> {
+			commands.add("player:" + method);
+			return null;
+		});
+		AdmiralAIPlugin enemyAi = proxy(AdmiralAIPlugin.class, (method, args) -> {
+			commands.add("enemy:" + method);
+			return null;
+		});
 		CombatEngineAPI engine = proxy(CombatEngineAPI.class, (method, args) -> switch (method) {
 			case "getContext" -> new BattleCreationContext(null, null, null, null);
 			case "setMaxFleetPoints" -> caps.put((FleetSide) args[0], (Integer) args[1]);
@@ -138,9 +159,11 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 		});
 		BattleNext_DeploymentPlugin plugin = new BattleNext_DeploymentPlugin(limit, true, false);
 		plugin.init(engine);
+
 		assertEquals(4, locations.size());
 		assertEquals(List.of("enemy:setNoOrders", "clear:ENEMY"), commands);
 		assertEquals(Map.of(FleetSide.PLAYER, 999, FleetSide.ENEMY, 999), caps);
+
 		caps.put(FleetSide.PLAYER, 1019);
 		String previousWorker = System.getProperty("BattleNext.simulator.worker");
 		try {
@@ -154,6 +177,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 				System.setProperty("BattleNext.simulator.worker", previousWorker);
 			}
 		}
+
 		assertEquals(List.of(new Vector2f(0f, -6000f), new Vector2f(-800f, -6000f),
 				new Vector2f(0f, 6000f), new Vector2f(-800f, 6000f)), locations);
 		assertEquals(List.of(90f, 90f, -90f, -90f), facings);
@@ -164,10 +188,10 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 	@ParameterizedTest
 	@MethodSource("deploymentLayouts")
 	void fleetOrderFillsRowsFromTheFrontTowardItsMapEdge(float width, int shipCount, float[][] expected) {
+
 		List<FleetMemberAPI> ships = new ArrayList<>();
-		for (int index = 0; index < shipCount; index++) {
-			ships.add(proxy(FleetMemberAPI.class, (method, args) -> null));
-		}
+		for (int index = 0; index < shipCount; index++) ships.add(proxy(FleetMemberAPI.class, (method, args) -> null));
+
 		FleetMemberAPI wing = proxy(FleetMemberAPI.class, (method, args) -> method.equals("isFighterWing") ? true : null);
 		List<FleetMemberAPI> reserves = new ArrayList<>();
 		reserves.add(wing);
@@ -175,6 +199,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 			reserves.add(ship);
 			reserves.add(wing);
 		}
+
 		Map<FleetSide, List<Vector2f>> locations = new EnumMap<>(FleetSide.class);
 		Map<FleetSide, List<FleetMemberAPI>> deployed = new EnumMap<>(FleetSide.class);
 		for (FleetSide side : FleetSide.values()) {
@@ -200,6 +225,7 @@ class BattleNext_DeploymentPluginTest extends BattleNext_TestDeploymentFixture {
 			default -> null;
 		});
 		new BattleNext_DeploymentPlugin(0, true, true).init(engine);
+
 		for (FleetSide side : FleetSide.values()) {
 			assertEquals(ships, deployed.get(side));
 			assertEquals(expected.length, locations.get(side).size());

@@ -240,15 +240,18 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 
 	@Test
 	void cutAndPublicDeleteMethodsRespectChangeAndSoundFlags() throws Exception {
+
 		BattleNext_TextField field = field();
 		field.setText("abc");
 		field.processKeyboard(key(Keyboard.KEY_A, (char) 1, true, false));
 		field.processKeyboard(key(Keyboard.KEY_C, (char) 3, true, false));
 		assertTrue(sounds.isEmpty());
+
 		field.processKeyboard(key(Keyboard.KEY_X, (char) 24, true, false));
 		assertEquals("abc", clipboard.getData(DataFlavor.stringFlavor));
 		assertEquals("", field.getText());
 		assertEquals(List.of("ui_typer_type"), sounds);
+
 		sounds.clear();
 		field.setText("text");
 		field.deleteAll();
@@ -261,12 +264,14 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 
 	@Test
 	void failedClipboardWritesKeepTheCompleteSelectionAndCutCanSucceedAfterRecovery() throws Exception {
+
 		BattleNext_TextField field = field();
 		String value = "中文😀 50% " + "long ".repeat(90);
 		field.setText(value);
 		field.grabFocus(false);
 		router.handleGlobalInput(List.of(key(Keyboard.KEY_A, (char) 1, true, false)));
 		BattleNext_TextField.EditState before = field.captureEditState();
+
 		AtomicBoolean attempted = new AtomicBoolean();
 		Clipboard unavailable = new Clipboard("unavailable") {
 			@Override
@@ -286,6 +291,7 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 			assertEquals(before, field.captureEditState());
 			assertEquals(List.of("ui_typer_buzz"), sounds);
 		}
+
 		setField(field, "clipboardSupplier", (Supplier<Clipboard>) () -> clipboard);
 		sounds.clear();
 		router.handleGlobalInput(List.of(key(Keyboard.KEY_X, (char) 24, true, false)));
@@ -294,6 +300,7 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 		assertEquals(0, field.captureEditState().anchor());
 		assertEquals(0, field.captureEditState().cursor());
 		assertEquals(List.of("ui_typer_type"), sounds);
+
 		setField(field, "clipboardSupplier", (Supplier<Clipboard>) () -> unavailable);
 		attempted.set(false);
 		sounds.clear();
@@ -306,11 +313,13 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 
 	@Test
 	void pasteReadFailuresKeepTheSelectionAndReportOneRejectedOperation() throws Exception {
+
 		BattleNext_TextField field = field();
 		field.setText("Selected 中文😀 " + "long ".repeat(90));
 		field.grabFocus(false);
 		router.handleGlobalInput(List.of(key(Keyboard.KEY_A, (char) 1, true, false)));
 		BattleNext_TextField.EditState before = field.captureEditState();
+
 		for (Exception failure : List.of(new IllegalStateException("Clipboard is busy"), new HeadlessException(),
 				new IOException("Clipboard data read failed"), new UnsupportedFlavorException(DataFlavor.stringFlavor))) {
 			AtomicBoolean attempted = new AtomicBoolean();
@@ -365,10 +374,12 @@ class BattleNext_TextFieldTest extends BattleNext_TestUiFixture {
 				public DataFlavor[] getTransferDataFlavors() {
 					return new DataFlavor[]{DataFlavor.javaFileListFlavor};
 				}
+
 				@Override
 				public boolean isDataFlavorSupported(DataFlavor flavor) {
 					return DataFlavor.javaFileListFlavor.equals(flavor);
 				}
+
 				@Override
 				public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
 					if (!isDataFlavorSupported(flavor)) throw new UnsupportedFlavorException(flavor);

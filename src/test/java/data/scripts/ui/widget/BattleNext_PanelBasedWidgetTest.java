@@ -3,6 +3,7 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,6 +17,7 @@ class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void closingOwnedChildrenPreservesSharedInputAndReleasesInReverseOrder() throws Exception {
+
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
 		CustomPanelAPI root = panel(400f, 300f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI textHost = root.createUIElement(180f, 28f, false);
@@ -30,6 +32,7 @@ class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 		widget.refreshContent();
 		assertEquals(List.of(child, parent), removedComponents);
 		assertTrue(field.hasFocus());
+
 		CustomPanelAPI rebuiltParent = widget.parent;
 		CustomPanelAPI rebuiltChild = widget.child;
 		widget.close();
@@ -60,6 +63,7 @@ class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 	@ParameterizedTest
 	@ValueSource(ints = {180, 1400})
 	void attachAndRefreshUseTheCompleteHostPanel(int width) {
+
 		ProbeWidget widget = new ProbeWidget();
 		CustomPanelAPI root = panel(width, 300f, new BaseCustomUIPanelPlugin());
 		assertSame(root, widget.attach(root));
@@ -67,14 +71,15 @@ class BattleNext_PanelBasedWidgetTest extends BattleNext_TestPageFixture {
 			assertSame(root, widget.getPanel());
 			assertEquals(width, root.getPosition().getWidth());
 			assertEquals(300f, root.getPosition().getHeight());
-			var components = children.get(root);
-			var viewport = tooltips.get(components.get(components.size() - 1)).getViewport();
+			List<Object> components = children.get(root);
+			PositionAPI viewport = tooltips.get(components.get(components.size() - 1)).getViewport();
 			assertEquals(root.getPosition().getX(), viewport.getX());
 			assertEquals(root.getPosition().getY(), viewport.getY());
 			assertEquals(root.getPosition().getWidth(), viewport.getWidth());
 			assertEquals(root.getPosition().getHeight(), viewport.getHeight());
 			widget.refreshContent();
 		}
+
 		widget.close();
 		assertNotNull(root.getPosition());
 	}

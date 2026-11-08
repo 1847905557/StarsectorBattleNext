@@ -5,10 +5,14 @@ import org.json.JSONObject;
 
 public class BattleNext_Round {
 
-	public enum RoundStatus { PLAYER_WIN, ENEMY_WIN, DRAW }
+	public enum RoundStatus {
+		PLAYER_WIN,
+		ENEMY_WIN,
+		DRAW
+	}
 
-	private String player;
-	private String enemy;
+	private final String player;
+	private final String enemy;
 	private RoundStatus status = RoundStatus.DRAW;
 	private String reportId = "";
 

@@ -35,6 +35,7 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 			String folder = segments[1];
 			if (BattleNext_EntryId.isReservedFolder(folder)) continue;
 			if (!segments[2].matches("player\\d+_data\\.csv")) continue;
+
 			String directory = "tournament/" + folder;
 			if (paths.contains(directory + "/fleet_data.json")) continue;
 			String number = segments[2].replaceAll("^player(\\d+)_data\\.csv$", "$1");
@@ -52,6 +53,7 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 				reject(path, -1, number, "", exception);
 			}
 		}
+
 		return finishLoad(result);
 	}
 }

@@ -21,5 +21,6 @@ public interface BattleNext_OrderStarter {
 	Action getAction();
 
 	List<? extends CombatEntityAPI> getInitialTargets(ShipAPI source, CombatEngineAPI engine);
+
 	CombatAssignmentType getCombatAssignmentType();
 }

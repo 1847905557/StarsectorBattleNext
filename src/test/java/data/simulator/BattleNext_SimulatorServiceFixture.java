@@ -50,6 +50,7 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 	}
 
 	protected void withServiceMetadata(Runnable action) throws Exception {
+
 		SettingsAPI settings = Global.getSettings();
 		ModSpecAPI mod = proxy(ModSpecAPI.class, (method, args) -> method.equals("getPath") ? directory.toString() : null);
 		ModManagerAPI mods = proxy(ModManagerAPI.class, (method, args) -> switch (method) {
@@ -66,6 +67,7 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 				throw exception.getCause();
 			}
 		}));
+
 		try {
 			action.run();
 		} finally {

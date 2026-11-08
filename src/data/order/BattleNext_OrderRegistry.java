@@ -29,6 +29,10 @@ public class BattleNext_OrderRegistry {
 	private Function<String, Object> scriptFactory;
 	private List<LoadError> loadErrors = List.of();
 
+	public record BattleNext_OrderSpec(String id, String name, String type, String script, String description) {
+
+	}
+
 	@LifecycleEntry
 	public static BattleNext_OrderRegistry getInstance() {
 		return INSTANCE;
@@ -53,10 +57,9 @@ public class BattleNext_OrderRegistry {
 			JSONObject row = rows.optJSONObject(index);
 			if (row == null) continue;
 			String id = row.optString("id", "").trim();
-			if (!id.isEmpty()) {
-				counts.merge(id, 1, Integer::sum);
-			}
+			if (!id.isEmpty()) counts.merge(id, 1, Integer::sum);
 		}
+
 		Map<String, BattleNext_OrderSpec> parsed = new LinkedHashMap<>();
 		List<LoadError> errors = new ArrayList<>();
 		for (int index = 0; index < rows.length(); index++) {
@@ -83,6 +86,7 @@ public class BattleNext_OrderRegistry {
 				errors.add(new LoadError(PATH, index, id, rows.opt(index).toString(), exception.toString()));
 			}
 		}
+
 		entries = parsed;
 		loadErrors = List.copyOf(errors);
 		this.scriptFactory = scriptFactory;
@@ -109,7 +113,7 @@ public class BattleNext_OrderRegistry {
 	public Object create(String id) {
 		BattleNext_OrderSpec spec = entries.get(id);
 		try {
-			return scriptFactory.apply(spec.getScript());
+			return scriptFactory.apply(spec.script);
 		} catch (RuntimeException exception) {
 			throw new IllegalStateException("Unable to instantiate order " + id, exception);
 		}
@@ -119,11 +123,15 @@ public class BattleNext_OrderRegistry {
 		return entries.get(id);
 	}
 
-	public List<BattleNext_OrderSpec> getAll() {
+	public List<BattleNext_OrderSpec> getAllCopy() {
 		return List.copyOf(entries.values());
 	}
 
 	public List<BattleNext_OrderSpec> getByType(String type) {
-		return entries.values().stream().filter(entry -> entry.getType().equals(type)).toList();
+		List<BattleNext_OrderSpec> result = new ArrayList<>();
+		for (BattleNext_OrderSpec entry : entries.values()) {
+			if (entry.type.equals(type)) result.add(entry);
+		}
+		return List.copyOf(result);
 	}
 }

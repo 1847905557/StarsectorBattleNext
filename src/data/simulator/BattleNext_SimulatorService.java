@@ -35,7 +35,9 @@ import java.util.concurrent.*;
 
 public class BattleNext_SimulatorService implements AutoCloseable {
 
-	public enum Phase { NOT_STARTED, IDLE, STOPPED, QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED, PAUSED }
+	public enum Phase {
+		NOT_STARTED, IDLE, STOPPED, QUEUED, STARTING, PREPARING, RUNNING, FROZEN, COMMITTING, CLEANING, FINISHED, IMPORT_FAILED, PAUSED
+	}
 
 	private static BattleNext_SimulatorService instance;
 	private final LinkedBlockingQueue<BattleNext_SimulationTask> queue = new LinkedBlockingQueue<>();
@@ -54,14 +56,19 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	private volatile BattleNext_SimulatorProtocol channel;
 	private volatile Process process;
 	private Path workerLogs;
-	private volatile long cancellationStarted;
+	private volatile long cancellationStartedAtNanos;
 	private final StringBuilder workerOutput = new StringBuilder();
 	private Thread supervisor;
 	private final List<Preparation> preparations = new ArrayList<>();
 	private final List<ReportImport> reportImports = new ArrayList<>();
 
-	private record Preparation(Checkpoint checkpoint, BattleNext_BattleSourceProvider sources, CompletableFuture<List<String>> loading) { }
-	private record ReportImport(BattleNext_SimulationTask task, CompletableFuture<Boolean> saved) { }
+	private record Preparation(Checkpoint checkpoint, BattleNext_BattleSourceProvider sources, CompletableFuture<List<String>> loading) {
+
+	}
+
+	private record ReportImport(BattleNext_SimulationTask task, CompletableFuture<Boolean> saved) {
+
+	}
 
 	private BattleNext_SimulatorService() throws IOException {
 
@@ -86,6 +93,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	public BattleNext_SimulationTask submit(BattleNext_SimulationRequest request) {
 		if (closed) throw new IllegalStateException("Simulator service is closed");
+
 		BattleNext_SimulationTask task = new BattleNext_SimulationTask(request, this);
 		try {
 			if (request.kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
@@ -94,6 +102,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				List<String> fleetIds = request.tournamentFleetIds();
 				BattleNext_BattleValidation.Result result = sources.checkTournament(sourceId, fleetIds);
 				if (!result.failures().isEmpty()) throw new BattleNext_BattleValidation.Rejection(sourceId, result);
+
 				BattleNext_TournamentModel configuration = sources.getTournamentStore().get(sourceId);
 				BattleNext_StartedTournament started = new BattleNext_StartedTournament(request.id(), configuration.getId(),
 						BattleNext_StartedTournament.ExecutionKind.SIMULATION, fleetIds);
@@ -105,6 +114,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		} catch (Exception exception) {
 			throw new IllegalStateException("Unable to submit simulator task: " + request.id(), exception);
 		}
+
 		latest = task;
 		tasks.put(request.id(), task);
 		enqueue(task);
@@ -151,6 +161,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			new BattleNext_StartedTournamentStore().delete(id);
 			return;
 		}
+
 		BattleNext_SimulatorService service = instance;
 		synchronized (service) {
 			task.requestDeletion();
@@ -192,15 +203,19 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	}
 
 	public record Status(Phase phase, BattleNext_SimulationRequest current, int queued,
-			BattleNext_SimulationRequest recentRequest, BattleNext_SimulationResult result, String importError, boolean retained) { }
+			BattleNext_SimulationRequest recentRequest, BattleNext_SimulationResult result, String importError, boolean retained) {
+
+	}
 
 	public static Status status() {
 		BattleNext_SimulatorService service = instance;
 		if (service == null) return new Status(Phase.NOT_STARTED, null, 0, null, null, "", false);
+
 		BattleNext_SimulationTask current = service.active;
 		if (current == null) {
 			current = service.queue.peek();
 		}
+
 		BattleNext_SimulationTask recent = service.latest;
 		Phase phase = service.closed ? Phase.STOPPED : current != null ? Phase.valueOf(current.getState().name())
 				: recent == null ? Phase.IDLE : Phase.valueOf(recent.getState().name());
@@ -208,6 +223,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		if (current != null && current.getCurrentRound() != null) {
 			currentRequest = current.getCurrentRound();
 		}
+
 		return new Status(phase, currentRequest, service.queue.size(),
 				recent == null ? null : recent.getRequest(), recent == null ? null : recent.getResult(),
 				recent == null ? "" : recent.getImportError(), recent != null && recent.isRetained());
@@ -230,7 +246,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		}
 	}
 
-	public List<BattleNext_SimulationTask> getFailedImports() {
+	public List<BattleNext_SimulationTask> getFailedImportsCopy() {
 		return List.copyOf(failedImports.values());
 	}
 
@@ -242,7 +258,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	void cancel(BattleNext_SimulationTask task) {
 		if (task != active) return;
-		cancellationStarted = System.nanoTime();
+		cancellationStartedAtNanos = System.nanoTime();
 		try {
 			if (channel != null) {
 				BattleNext_SimulationRequest request = task.getRequest().kind() != BattleNext_SimulationRequest.Kind.TOURNAMENT ? task.getRequest() : task.getCurrentRound();
@@ -308,7 +324,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				synchronized (this) {
 					if (task.isDeletionRequested()) continue;
 					active = task;
-					cancellationStarted = 0L;
+					cancellationStartedAtNanos = 0L;
 				}
 				try {
 					if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
@@ -361,20 +377,24 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	private void runTournament(BattleNext_SimulationTask task) throws Exception {
 		if (!checkpoint(task)) return;
+
 		while (!closed && !task.isCancelled()) {
 			if (task.getState() == BattleNext_SimulationTask.State.FINISHED) return;
 			BattleNext_SimulationRequest round = task.getCurrentRound();
 			if (closed || task.isCancelled()) break;
+
 			if (reload || process == null || !process.isAlive()) {
 				stopWorker();
 				reload = false;
 				task.transition(BattleNext_SimulationTask.State.STARTING);
 				startWorker();
 			}
+
 			channel.send("REQUEST", round.toJson());
 			if (task.isCancelled()) {
 				cancel(task);
 			}
+
 			BattleNext_SimulationResult result = runTask(task, round);
 			if (result == null) break;
 			if (result.outcome() != BattleNext_SimulationResult.Outcome.COMPLETED && result.outcome() != BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED) {
@@ -382,14 +402,18 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				latest = task;
 				return;
 			}
+
 			if (!checkpoint(task)) return;
 			if (task.getState() == BattleNext_SimulationTask.State.FINISHED) return;
 		}
+
 		task.interrupted("Simulation paused");
 		latest = task;
 	}
 
-	private record Checkpoint(BattleNext_SimulationTask task, CompletableFuture<Boolean> completed) { }
+	private record Checkpoint(BattleNext_SimulationTask task, CompletableFuture<Boolean> completed) {
+
+	}
 
 	private boolean checkpoint(BattleNext_SimulationTask task) throws Exception {
 		CompletableFuture<Boolean> saved = new CompletableFuture<>();
@@ -450,9 +474,11 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	}
 
 	private void commitTournamentRound(BattleNext_SimulationTask task, BattleNext_BattleSourceProvider sources) throws IOException, JSONException {
+
 		BattleNext_StartedTournament started = task.getStartedTournament();
 		BattleNext_TournamentModel configuration = sources.getTournamentStore().get(started.getSourceTournamentId());
 		BattleNext_SimulationResult pending = task.pendingRound();
+
 		if (pending != null) {
 			BattleNext_Match match = BattleNext_Match.fromJson(task.getCurrentRound().source().getJSONObject("match"));
 			String winner = switch (pending.reportJson().isEmpty() ? "" : pending.report().getWinner()) {
@@ -460,6 +486,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				case "enemy" -> match.getEnemy();
 				default -> "";
 			};
+
 			String reportId = "";
 			if (!pending.reportJson().isEmpty()) {
 				BattleNext_BattleReportModel report = pending.report();
@@ -468,6 +495,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				BattleNext_BattleResultRecorder.saveStandalone(report);
 				reportId = report.getId();
 			}
+
 			new BattleNext_TournamentEngine().recordRound(configuration, started, match.getId(), winner, reportId);
 			task.publishStarted(started);
 			task.committedRound();
@@ -494,7 +522,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			process = BattleNext_SimulatorLaunch.start(launch, core);
 			Process worker = process;
 			Thread outputReader = new Thread(() -> {
-				try (var reader = new InputStreamReader(worker.getInputStream(), StandardCharsets.UTF_8)) {
+				try (InputStreamReader reader = new InputStreamReader(worker.getInputStream(), StandardCharsets.UTF_8)) {
 					char[] buffer = new char[4096];
 					int length;
 					while ((length = reader.read(buffer)) != -1) {
@@ -510,11 +538,11 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			outputReader.start();
 			BattleNext_Logger.info(getClass(), "simulator.worker.started", () -> BattleNext_Logger.fields().put("pid", process.pid())
 					.put("command", launch.subList(0, launch.size() - 1)).put("logs", logs.toString()).build());
-			long deadline = System.nanoTime() + 180000000000L;
+			long deadlineNanos = System.nanoTime() + 180000000000L;
 			Socket socket = null;
 			while (socket == null) {
-				if (closed || !process.isAlive() || System.nanoTime() >= deadline || cancellationStarted != 0L
-						&& System.nanoTime() - cancellationStarted >= 5000000000L) throw new IOException("Simulator cold start failed, was cancelled or exceeded 180 seconds");
+				if (closed || !process.isAlive() || System.nanoTime() >= deadlineNanos || cancellationStartedAtNanos != 0L
+						&& System.nanoTime() - cancellationStartedAtNanos >= 5000000000L) throw new IOException("Simulator cold start failed, was cancelled or exceeded 180 seconds");
 				try {
 					socket = server.accept();
 				} catch (SocketTimeoutException exception) {
@@ -524,8 +552,8 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			socket.setSoTimeout(1000);
 			channel = new BattleNext_SimulatorProtocol(socket, token);
 			while (true) {
-				if (closed || !process.isAlive() || System.nanoTime() >= deadline || cancellationStarted != 0L
-						&& System.nanoTime() - cancellationStarted >= 5000000000L) throw new IOException("Simulator initialization cancelled or exceeded 180 seconds");
+				if (closed || !process.isAlive() || System.nanoTime() >= deadlineNanos || cancellationStartedAtNanos != 0L
+						&& System.nanoTime() - cancellationStartedAtNanos >= 5000000000L) throw new IOException("Simulator initialization cancelled or exceeded 180 seconds");
 				try {
 					JSONObject ready = channel.receive();
 					if (!ready.getString("type").equals("READY")) throw new IOException("Expected simulator READY handshake");
@@ -539,19 +567,19 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 
 	private BattleNext_SimulationResult runTask(BattleNext_SimulationTask task, BattleNext_SimulationRequest request) throws Exception {
 
-		long started = 0L;
-		long preparing = System.nanoTime();
+		long startedAtNanos = 0L;
+		long preparingAtNanos = System.nanoTime();
 		boolean received = false;
-		long returning = 0L;
+		long returningAtNanos = 0L;
 		BattleNext_SimulationResult result = null;
 		while (!closed) {
 			if (!process.isAlive()) throw new IOException("Simulator worker exited with code " + process.exitValue());
-			if (cancellationStarted != 0L && System.nanoTime() - cancellationStarted > 5000000000L) throw new IOException("Simulator cancellation grace period exhausted");
-			if (started == 0L && System.nanoTime() - preparing > 180000000000L) throw new IOException("Simulator task preparation exceeded 180 seconds");
-			if (received && System.nanoTime() - returning > 30000000000L) throw new IOException("Simulator return to idle exceeded 30 seconds");
-			if (!received && started != 0L && System.nanoTime() - started > request.config().executionSeconds() * 1000000000d + 5000000000L) {
+			if (cancellationStartedAtNanos != 0L && System.nanoTime() - cancellationStartedAtNanos > 5000000000L) throw new IOException("Simulator cancellation grace period exhausted");
+			if (startedAtNanos == 0L && System.nanoTime() - preparingAtNanos > 180000000000L) throw new IOException("Simulator task preparation exceeded 180 seconds");
+			if (received && System.nanoTime() - returningAtNanos > 30000000000L) throw new IOException("Simulator return to idle exceeded 30 seconds");
+			if (!received && startedAtNanos != 0L && System.nanoTime() - startedAtNanos > request.config().executionSeconds() * 1000000000d + 5000000000L) {
 				result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED,
-						"", 0f, System.nanoTime() - started, 0L, 0L, "Worker exceeded execution deadline");
+						"", 0f, System.nanoTime() - startedAtNanos, 0L, 0L, "Worker exceeded execution deadline");
 				if (task.getRequest().kind() == BattleNext_SimulationRequest.Kind.TOURNAMENT) {
 					task.receiveRound(result);
 				} else {
@@ -574,7 +602,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				BattleNext_SimulationTask.State state = BattleNext_SimulationTask.State.valueOf(payload.getString("state"));
 				task.transition(state);
 				if (state == BattleNext_SimulationTask.State.RUNNING) {
-					started = System.nanoTime();
+					startedAtNanos = System.nanoTime();
 				}
 			} else if (type.equals("RESULT") && !received) {
 				result = BattleNext_SimulationResult.fromJson(payload);
@@ -584,7 +612,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					task.receiveRound(result);
 				}
 				received = true;
-				returning = System.nanoTime();
+				returningAtNanos = System.nanoTime();
 			} else {
 				throw new IOException("Unexpected simulator task frame: " + type);
 			}
@@ -622,9 +650,10 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			});
 			preparations.add(new Preparation(checkpoint, sources, loading));
 		}
-		long deadline = System.nanoTime() + 2_000_000L;
+
+		long deadlineNanos = System.nanoTime() + 2_000_000L;
 		Iterator<Preparation> pending = preparations.iterator();
-		while (pending.hasNext() && System.nanoTime() < deadline) {
+		while (pending.hasNext() && System.nanoTime() < deadlineNanos) {
 			Preparation preparation = pending.next();
 			if (!preparation.loading().isDone()) continue;
 			try {
@@ -637,6 +666,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 			}
 			pending.remove();
 		}
+
 		BattleNext_SimulationTask task;
 		while ((task = imports.poll()) != null) {
 			BattleNext_SimulationResult result = task.getResult();
@@ -645,6 +675,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 					Global.getSettings().getModManager().getModSpec("AI_Battles_Next").getPath());
 			reportImports.add(new ReportImport(task, files.submit(() -> BattleNext_BattleResultRecorder.saveStandalone(result.report()))));
 		}
+
 		completeReportImports();
 	}
 
@@ -653,6 +684,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		while (pending.hasNext()) {
 			ReportImport imported = pending.next();
 			if (!imported.saved().isDone()) continue;
+
 			BattleNext_SimulationTask task = imported.task();
 			BattleNext_SimulationResult result = task.getResult();
 			try {
@@ -714,6 +746,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 	@Override
 	public void close() {
 		if (closed) return;
+
 		closed = true;
 		try {
 			if (supervisor != null && supervisor != Thread.currentThread()) {
@@ -724,6 +757,7 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 		} catch (InterruptedException exception) {
 			Thread.currentThread().interrupt();
 		}
+
 		BattleNext_SimulationTask task;
 		while ((task = queue.poll()) != null) {
 			if (task.getRequest().kind() != BattleNext_SimulationRequest.Kind.TOURNAMENT) {
@@ -732,10 +766,12 @@ public class BattleNext_SimulatorService implements AutoCloseable {
 				task.interrupted("Application stopped");
 			}
 		}
+
 		for (ReportImport imported : reportImports) {
 			imported.saved().handle((value, error) -> null).join();
 		}
 		completeReportImports();
+
 		for (Preparation preparation : preparations) {
 			preparation.loading().handle((value, error) -> null).join();
 		}

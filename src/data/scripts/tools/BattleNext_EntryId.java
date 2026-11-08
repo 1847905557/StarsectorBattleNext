@@ -5,19 +5,26 @@ import java.util.Locale;
 public class BattleNext_EntryId {
 
 	private BattleNext_EntryId() {
+
 	}
 
 	public static boolean isValid(String value) {
 		return problem(value) == null;
 	}
 
-	public enum Reason { REQUIRED, NUMERIC, CONTROL, WHITESPACE, CHARACTER, TRAILING_DOT, RESERVED }
+	public enum Reason {
+		REQUIRED, NUMERIC, CONTROL, WHITESPACE, CHARACTER, TRAILING_DOT, RESERVED
+	}
 
-	public record Problem(Reason reason, int position, int codePoint) { }
+	public record Problem(Reason reason, int position, int codePoint) {
+
+	}
 
 	public static Problem problem(String value) {
+
 		if (value == null || value.isEmpty()) return new Problem(Reason.REQUIRED, 0, 0);
 		if (value.matches("[0-9]+")) return new Problem(Reason.NUMERIC, 0, 0);
+
 		for (int index = 0; index < value.length(); index++) {
 			int letter = value.codePointAt(index);
 			int position = value.codePointCount(0, index) + 1;
@@ -26,6 +33,7 @@ public class BattleNext_EntryId {
 			if ("<>:\"/\\|?*".indexOf(letter) >= 0) return new Problem(Reason.CHARACTER, position, letter);
 			index += Character.charCount(letter) - 1;
 		}
+
 		if (value.endsWith(".")) return new Problem(Reason.TRAILING_DOT, 0, 0);
 		String stem = value.split("\\.", 2)[0].toUpperCase(Locale.ROOT);
 		if (stem.matches("CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]")) return new Problem(Reason.RESERVED, 0, 0);
@@ -42,11 +50,13 @@ public class BattleNext_EntryId {
 			if (!isWhitespace(codePoint)) break;
 			start += Character.charCount(codePoint);
 		}
+
 		while (end > start) {
 			int codePoint = value.codePointBefore(end);
 			if (!isWhitespace(codePoint)) break;
 			end -= Character.charCount(codePoint);
 		}
+
 		return value.substring(start, end);
 	}
 

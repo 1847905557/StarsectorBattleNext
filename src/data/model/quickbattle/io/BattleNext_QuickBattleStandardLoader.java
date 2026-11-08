@@ -18,6 +18,7 @@ public class BattleNext_QuickBattleStandardLoader extends BattleNext_BaseLoader<
 	@Override
 	public List<BattleNext_QuickBattleModel> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<BattleNext_QuickBattleModel> result = new ArrayList<>();
 		int index = 0;
 		String text;
@@ -27,6 +28,7 @@ public class BattleNext_QuickBattleStandardLoader extends BattleNext_BaseLoader<
 			reject(BUILT_IN_PATH, -1, "", "", exception);
 			return result;
 		}
+
 		String[] lines = text.split("\\R", -1);
 		int limit = text.endsWith("\n") || text.endsWith("\r") ? lines.length - 1 : lines.length;
 		for (int lineIndex = 0; lineIndex < limit; lineIndex++) {
@@ -42,6 +44,7 @@ public class BattleNext_QuickBattleStandardLoader extends BattleNext_BaseLoader<
 			markSource(model, BUILT_IN_PATH);
 			result.add(model);
 		}
+
 		return result;
 	}
 

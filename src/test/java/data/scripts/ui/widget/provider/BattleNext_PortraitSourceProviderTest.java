@@ -5,6 +5,7 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.FactionSpecAPI;
 import com.fs.starfarer.api.loading.Description;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestUiFixture;
@@ -19,6 +20,7 @@ class BattleNext_PortraitSourceProviderTest extends BattleNext_TestUiFixture {
 
 	@Test
 	void factionAndCustomPortraitsUseTheirRegisteredDescriptionAndPreserveTheirIdentity() {
+
 		FactionSpecAPI faction = proxy(FactionSpecAPI.class, (method, args) -> switch (method) {
 			case "getId" -> "hegemony";
 			case "getDisplayName" -> "Hegemony";
@@ -42,12 +44,13 @@ class BattleNext_PortraitSourceProviderTest extends BattleNext_TestUiFixture {
 				throw exception.getCause();
 			}
 		}));
-		var provider = new BattleNext_PortraitSourceProvider();
-		var factionTooltip = tooltip(provider.getTooltipWidth(), 0f, false);
+		BattleNext_PortraitSourceProvider provider = new BattleNext_PortraitSourceProvider();
+		TooltipMakerAPI factionTooltip = tooltip(provider.getTooltipWidth(), 0f, false);
 		provider.createTooltip(factionTooltip, new OptionChoice("graphics/portraits/hegemony.png", "Hegemony"));
 		assertEquals(List.of("Hegemony", "graphics/portraits/hegemony.png", "The Hegemony descends from a Domain fleet."),
 				tooltips.get(factionTooltip).getComponents().stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
-		var customTooltip = tooltip(provider.getTooltipWidth(), 0f, false);
+
+		TooltipMakerAPI customTooltip = tooltip(provider.getTooltipWidth(), 0f, false);
 		provider.createTooltip(customTooltip, new OptionChoice("graphics/portraits/custom.png", "custom"));
 		assertEquals(List.of("custom", "graphics/portraits/custom.png", BattleNext_TestTextCatalog.text("Member", "BattleNext_member_custom_portrait")),
 				tooltips.get(customTooltip).getComponents().stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());

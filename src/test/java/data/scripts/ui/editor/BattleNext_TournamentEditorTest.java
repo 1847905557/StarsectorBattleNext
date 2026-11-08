@@ -28,11 +28,12 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void saveAggregatesConfigurationFieldsBeforeSubmittingAndRebuildsErrorsOnRetry() throws Exception {
-		var store = new BattleNext_TournamentStore();
+
+		BattleNext_TournamentStore store = new BattleNext_TournamentStore();
 		store.reload();
-		var rules = new BattleNext_RuleStore();
+		BattleNext_RuleStore rules = new BattleNext_RuleStore();
 		rules.reload();
-		var editor = new BattleNext_TournamentEditor(store, rules);
+		BattleNext_TournamentEditor editor = new BattleNext_TournamentEditor(store, rules);
 		editor.open(null);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		for (String field : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "mapField")) {
@@ -47,7 +48,8 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 			assertTrue(editor.getSaveErrors().get(index).contains(BattleNext_TestTextCatalog.text(category, prefix + keys.get(index))));
 		}
 		assertTrue(editor.getSaveErrors().get(4).contains(BattleNext_TestTextCatalog.text("Battle", "BattleNext_battle_map_number_label")));
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
+
 		((TextFieldAPI) getField(editor, "idField")).setText("cup");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Cup");
 		((TextFieldAPI) getField(editor, "bestOfField")).setText("1");
@@ -55,6 +57,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		((TextFieldAPI) getField(editor, "mapField")).setText("-1");
 		assertFalse(editor.save());
 		assertEquals(1, editor.getSaveErrors().size());
+
 		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("2");
 		assertTrue(editor.save(), editor.getStatusText());
 		assertTrue(editor.getSaveErrors().isEmpty());
@@ -63,6 +66,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void configurationFieldsUseLeftColumnAndPreserveUnfinishedInputsAcrossRefresh() throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();
 		rules.reload();
@@ -85,6 +89,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI ruleRow = (CustomPanelAPI) getField(optionFields(editor).get(0), "row");
 		assertEquals(leftWidth - 12f, ruleRow.getPosition().getWidth());
 		assertEquals(ruleRow.getPosition().getWidth() - 32f, ((TextFieldAPI) getField(editor, "ruleField")).getPosition().getWidth());
+
 		((TextFieldAPI) getField(editor, "bestOfField")).setText("pending");
 		left.getExternalScroller().setYOffset(95f);
 		editor.refreshContent();
@@ -92,6 +97,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(95f, ((TooltipMakerAPI) getField(editor, "metadataContent")).getExternalScroller().getYOffset());
 		assertFalse(editor.save());
 		assertEquals("pending", ((TextFieldAPI) getField(editor, "bestOfField")).getText());
+
 		editor.discard();
 		assertEquals("3", ((TextFieldAPI) getField(editor, "bestOfField")).getText());
 		assertFalse(editor.hasUnsavedChanges());
@@ -101,6 +107,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void configurationSavesWithoutParticipantsAndFailureKeepsCompleteInput() throws Exception {
+
 		BattleNext_TournamentStore tournaments = new BattleNext_TournamentStore();
 		tournaments.reload();
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();
@@ -119,10 +126,12 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		assertEquals("Cup 中文 50%", tournaments.get("cup").getName());
 		assertEquals(-1, tournaments.get("cup").getMapId());
 		assertFalse(editor.hasUnsavedChanges());
+
 		((TextFieldAPI) getField(editor, "maxFleetsField")).setText("1");
 		assertFalse(editor.save());
 		assertEquals("1", ((TextFieldAPI) getField(editor, "maxFleetsField")).getText());
 		assertEquals(7, tournaments.get("cup").getMaxFleet());
+
 		editor.discard();
 		assertEquals("7", ((TextFieldAPI) getField(editor, "maxFleetsField")).getText());
 		editor.close();
@@ -130,6 +139,7 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void ruleSelectionSearchCancelAndCommitPreserveInputsAndSelectedIdentity() throws Exception {
+
 		BattleNext_RuleStore rules = new BattleNext_RuleStore();
 		rules.reload();
 		rules.save(new BattleNext_RuleModel("rule_a", "Rule A"));
@@ -144,29 +154,36 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		TextFieldAPI ruleField = (TextFieldAPI) getField(editor, "ruleField");
 		((TextFieldAPI) getField(editor, "bestOfField")).setText("pending");
 		String before = editor.serializeState();
+
 		chooseRule(editor, "Rule B", "CANCEL");
 		assertEquals(before, editor.serializeState());
+
 		chooseRule(editor, "Rule B", "CONFIRM");
 		assertEquals("rule_b", ruleField.getText());
 		assertFalse(editor.save());
 		editor.refreshContent();
 		assertEquals("rule_b", ((TextFieldAPI) getField(editor, "ruleField")).getText());
 		assertEquals("pending", ((TextFieldAPI) getField(editor, "bestOfField")).getText());
+
 		((TextFieldAPI) getField(editor, "bestOfField")).setText("3");
 		assertTrue(editor.save(), editor.getStatusText());
 		tournaments.reload();
 		assertEquals("rule_b", tournaments.get("cup").getRuleId());
+
 		ruleField = (TextFieldAPI) getField(editor, "ruleField");
 		ruleField.setText("unknown");
 		chooseRule(editor, "", "CONFIRM");
 		assertEquals("unknown", ruleField.getText());
+
 		ruleField.setText("");
 		chooseRule(editor, "", "CONFIRM");
 		assertEquals("", ruleField.getText());
 		assertTrue(editor.save(), editor.getStatusText());
+
 		rules.save(new BattleNext_RuleModel("rule_c", "New rule"));
 		chooseRule(editor, "New rule", "CONFIRM");
 		assertEquals("rule_c", ruleField.getText());
+
 		editor.discard();
 		assertEquals("", ((TextFieldAPI) getField(editor, "ruleField")).getText());
 		editor.close();

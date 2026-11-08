@@ -23,11 +23,13 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		beginLoad();
+
 		List<BattleNext_FleetModel> result = new ArrayList<>();
 		List<String> paths = paths(LEGACY_FOLDER, false);
 		for (String dataPath : paths) {
 			String fileName = dataPath.substring(dataPath.lastIndexOf('/') + 1);
 			if (!fileName.matches("player\\d+_data\\.csv")) continue;
+
 			String number = fileName.replaceAll("^player(\\d+)_data\\.csv$", "$1");
 			String fleetPath = LEGACY_FOLDER + "/player" + number + "_fleet.csv";
 			if (!paths.contains(fleetPath)) {
@@ -42,6 +44,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 				reject(dataPath, -1, number, "", exception);
 			}
 		}
+
 		return finishLoad(result);
 	}
 
@@ -81,9 +84,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 						splitValues(data.optString("skills")), splitValues(data.optString("tags")), members);
 				result.setFolderName("legacy_" + number);
 				result.setAuthor(data.optString("author").trim());
-				for (String error : errors) {
-					result.addLoadError(error);
-				}
+				for (String error : errors) result.addLoadError(error);
 				markSource(result, dataPath);
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load",
 					() -> BattleNext_Logger.fields().put("fleet", result).put("metadata_path", dataPath).put("members_path", fleetPath).build());

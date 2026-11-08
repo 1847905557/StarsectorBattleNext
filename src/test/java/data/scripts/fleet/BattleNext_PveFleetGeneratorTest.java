@@ -1,6 +1,10 @@
 package data.scripts.fleet;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.FactionSpecAPI;
+import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
+import data.scripts.member.BattleNext_MemberModel;
+import org.apache.log4j.Logger;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.FleetTypes;
 import data.scripts.member.BattleNext_PersonSkills;
@@ -23,8 +27,8 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 
 	@Test
 	void discoversVisibleFactionsInCurrentRegistrationOrder() throws Exception {
-		var generator = new BattleNext_PveFleetGenerator();
-		var expected = factionSpecs.stream().filter(faction -> faction.isShowInIntelTab()).toList();
+		BattleNext_PveFleetGenerator generator = new BattleNext_PveFleetGenerator();
+		List<FactionSpecAPI> expected = factionSpecs.stream().filter(faction -> faction.isShowInIntelTab()).toList();
 		assertEquals(expected, generator.loadFactions());
 		assertTrue(dataReads.contains("getMergedSpreadsheetData:id:" + BattleNext_PveFleetGenerator.FACTIONS_PATH));
 		factionSpecs.add(1, faction("additional_mod", true));
@@ -53,16 +57,18 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 			protected void append(LoggingEvent event) {
 				events.add(event);
 			}
+
 			@Override
 			public void close() {
 
 			}
+
 			@Override
 			public boolean requiresLayout() {
 				return false;
 			}
 		};
-		var logger = Global.getLogger(BattleNext_Logger.class);
+		Logger logger = Global.getLogger(BattleNext_Logger.class);
 		logger.addAppender(appender);
 		try {
 			assertEquals(factionSpecs.stream().filter(faction -> faction.isShowInIntelTab()).toList(), new BattleNext_PveFleetGenerator().loadFactions());
@@ -83,7 +89,7 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 	@Test
 	void reloadUsesCurrentMergedOverridesAndCurrentFactionCatalog() throws Exception {
 
-		var generator = new BattleNext_PveFleetGenerator();
+		BattleNext_PveFleetGenerator generator = new BattleNext_PveFleetGenerator();
 		pveFactionRows.put(new JSONObject().put("id", "hidden"));
 		assertEquals(factionSpecs, generator.loadFactions());
 		pveFactionRows.put(0, new JSONObject().put("id", "hegemony"));
@@ -97,8 +103,8 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 	@Test
 	void callsNativeFactoryWithPatrolDefaultsAndInflatesBeforeReadingMembers() {
 
-		var result = new BattleNext_PveFleetGenerator().generate("mod_faction", 170);
-		var params = generatedParameters.get(0);
+		BattleNext_AssembledFleet result = new BattleNext_PveFleetGenerator().generate("mod_faction", 170);
+		FleetParamsV3 params = generatedParameters.get(0);
 		assertEquals("mod_faction", params.factionId);
 		assertEquals(FleetTypes.PATROL_LARGE, params.fleetType);
 		assertNull(params.source);
@@ -117,50 +123,50 @@ class BattleNext_PveFleetGeneratorTest extends BattleNext_TestMissionFixture {
 		assertEquals(1f, params.officerNumberMult);
 		assertTrue(generatedFleets.get(0).isInflated());
 		assertTrue(result.isComplete());
-		assertEquals(List.of("default_ai"), result.getDefinition().getTags());
+		assertEquals(List.of("default_ai"), result.getDefinition().getTagsReadonly());
 	}
 
 	@Test
 	void preservesNativeMembersOfficersVariantsModulesAndSkillLevels() throws Exception {
 
-		var result = new BattleNext_PveFleetGenerator().generate("mod_faction", 100);
-		var nativeMembers = generatedFleets.get(0).getMembers();
-		assertEquals(nativeMembers, result.getMembers());
+		BattleNext_AssembledFleet result = new BattleNext_PveFleetGenerator().generate("mod_faction", 100);
+		List<FleetMemberAPI> nativeMembers = generatedFleets.get(0).getMembers();
+		assertEquals(nativeMembers, result.getMembersReadonly());
 		assertSame(player, result.getCommander());
-		assertEquals(BattleNext_PersonSkills.capture(player), result.getDefinition().getSkills());
+		assertEquals(BattleNext_PersonSkills.capture(player), result.getDefinition().getSkillsReadonly());
 		for (int index = 0; index < nativeMembers.size(); index++) {
 			FleetMemberAPI member = nativeMembers.get(index);
-			assertSame(member, result.getMembers().get(index));
-			assertEquals(member.getShipName(), result.getDefinition().getMembers().get(index).getName());
-			assertEquals(member.getVariant().getHullVariantId(), result.getDefinition().getMembers().get(index).getVariantId());
+			assertSame(member, result.getMembersReadonly().get(index));
+			assertEquals(member.getShipName(), result.getDefinition().getMembersReadonly().get(index).getName());
+			assertEquals(member.getVariant().getHullVariantId(), result.getDefinition().getMembersReadonly().get(index).getVariantId());
 			assertEquals(member.getRepairTracker().getMaxCR(), member.getRepairTracker().getCR());
 		}
-		assertSame(activeVariant.getApi(), result.getMembers().get(0).getVariant());
-		assertSame(officer, result.getMembers().get(0).getCaptain());
-		assertEquals(7, result.getMembers().get(0).getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
-		var model = result.getDefinition().getMembers().get(0);
-		assertEquals(BattleNext_PersonSkills.capture(officer), model.getSkills());
+		assertSame(activeVariant.getApi(), result.getMembersReadonly().get(0).getVariant());
+		assertSame(officer, result.getMembersReadonly().get(0).getCaptain());
+		assertEquals(7, result.getMembersReadonly().get(0).getVariant().getModuleVariant("module").toJSONObject().getInt("fluxVents"));
+		BattleNext_MemberModel model = result.getDefinition().getMembersReadonly().get(0);
+		assertEquals(BattleNext_PersonSkills.capture(officer), model.getSkillsReadonly());
 		assertEquals("officer.png", model.getPortrait());
 		assertEquals("reckless", model.getPersonality());
-		var defaultOfficer = result.getDefinition().getMembers().get(1);
-		assertTrue(defaultOfficer.getSkills().isEmpty());
+		BattleNext_MemberModel defaultOfficer = result.getDefinition().getMembersReadonly().get(1);
+		assertTrue(defaultOfficer.getSkillsReadonly().isEmpty());
 		assertEquals("", defaultOfficer.getPortrait());
 		assertEquals("", defaultOfficer.getPersonality());
 	}
 
 	@Test
 	void repeatedRequestsUseFreshNativeFactoryResults() {
-		var generator = new BattleNext_PveFleetGenerator();
-		var first = generator.generate("hegemony", 100);
-		var second = generator.generate("hegemony", 100);
+		BattleNext_PveFleetGenerator generator = new BattleNext_PveFleetGenerator();
+		BattleNext_AssembledFleet first = generator.generate("hegemony", 100);
+		BattleNext_AssembledFleet second = generator.generate("hegemony", 100);
 		assertEquals(2, generatedParameters.size());
 		assertNotEquals(first.getDefinition().getId(), second.getDefinition().getId());
-		assertNotSame(first.getMembers().get(0), second.getMembers().get(0));
+		assertNotSame(first.getMembersReadonly().get(0), second.getMembersReadonly().get(0));
 	}
 
 	@Test
 	void generationFailureAndEmptyFleetsRemainExplicitFailures() {
-		var generator = new BattleNext_PveFleetGenerator();
+		BattleNext_PveFleetGenerator generator = new BattleNext_PveFleetGenerator();
 		this.generator = params -> null;
 		assertEquals("Fleet generator returned no fleet for hegemony",
 				assertThrows(IllegalStateException.class, () -> generator.generate("hegemony", 100)).getMessage());

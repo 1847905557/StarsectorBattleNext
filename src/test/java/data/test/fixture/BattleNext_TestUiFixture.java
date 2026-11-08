@@ -7,6 +7,7 @@ import data.scripts.ui.widget.BattleNext_OptionPicker;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.awt.Color;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,8 +38,27 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected boolean shortenLabels;
 	protected float paragraphLineHeight = 20f;
 
+	protected final Map<CustomPanelAPI, CustomUIPanelPlugin> plugins = new IdentityHashMap<>();
+	protected final Map<CustomPanelAPI, List<Object>> children = new IdentityHashMap<>();
+	protected final Map<PositionAPI, Bounds> geometry = new IdentityHashMap<>();
+	protected final Map<TooltipMakerAPI, TooltipState> tooltips = new IdentityHashMap<>();
+
 	protected record TooltipBinding(TooltipState owner, TooltipMakerAPI.TooltipLocation location,
-			boolean recreateEveryFrame) { }
+			boolean recreateEveryFrame) {
+
+	}
+
+	protected Object getField(Object target, String name) throws Exception {
+		Class<?> owner = target.getClass();
+		while (true) {
+			for (Field field : owner.getDeclaredFields()) {
+				if (!field.getName().equals(name)) continue;
+				field.setAccessible(true);
+				return field.get(target);
+			}
+			owner = owner.getSuperclass();
+		}
+	}
 
 	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {
 		return new BattleNext_OptionPicker.OptionChoiceSource() {
@@ -60,14 +80,10 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 
 			@Override
 			public void createTooltip(TooltipMakerAPI tooltip, BattleNext_OptionPicker.OptionChoice option) {
-				tooltip.addTitle(option.getLabel());
+				tooltip.addTitle(option.label());
 			}
 		};
 	}
-	protected final Map<CustomPanelAPI, CustomUIPanelPlugin> plugins = new IdentityHashMap<>();
-	protected final Map<CustomPanelAPI, List<Object>> children = new IdentityHashMap<>();
-	protected final Map<PositionAPI, Bounds> geometry = new IdentityHashMap<>();
-	protected final Map<TooltipMakerAPI, TooltipState> tooltips = new IdentityHashMap<>();
 
 	protected CustomPanelAPI panel(float width, float height, CustomUIPanelPlugin plugin) {
 
@@ -145,11 +161,13 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 		private Color titleColor = Color.WHITE;
 
 		protected TooltipState(float width, float height, boolean scrollable) {
+
 			this.width = width;
 			this.position = position(deferTooltipWidth ? 0f : width, height);
 			this.viewport = position(width, height);
 			this.textWidth = Math.max(1f, width);
 			this.scrollable = scrollable;
+
 			this.scroller = proxy(ScrollPanelAPI.class, (method, args) -> switch (method) {
 				case "getPosition" -> viewport;
 				case "getYOffset" -> offset;
@@ -217,6 +235,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				left = bounds.left + (bounds.middleX ? (owner.width - bounds.width) * 0.5f : 0f);
 				top += bounds.middleY ? (owner.height + bounds.height) * 0.5f : bounds.top + bounds.height;
 			}
+
 			component.getPosition().inTL(left, top);
 			usedHeight += pad + component.getPosition().getHeight();
 			components.add(component);
@@ -234,6 +253,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 							break;
 						}
 					}
+
 					table = new TableState(itemHeight, (Object[]) args[args.length - 1]);
 					tables.put(table.panel, table);
 					yield table.panel;
@@ -250,12 +270,30 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 				}
 				case "getExternalScroller" -> mounted && scrollable ? scroller : null;
 				case "getPosition" -> position;
-				case "setParaFontDefault" -> { paraFont = "default"; yield null; }
-				case "setParaSmallInsignia" -> { paraFont = "small-insignia"; yield null; }
-				case "setTitleSmallOrbitron" -> { titleFont = "small-orbitron"; yield null; }
-				case "setTitleOrbitronLarge" -> { titleFont = "large-orbitron"; yield null; }
-				case "setParaFontColor" -> { paraColor = (Color) args[0]; yield null; }
-				case "setTitleFontColor" -> { titleColor = (Color) args[0]; yield null; }
+				case "setParaFontDefault" -> {
+					paraFont = "default";
+					yield null;
+				}
+				case "setParaSmallInsignia" -> {
+					paraFont = "small-insignia";
+					yield null;
+				}
+				case "setTitleSmallOrbitron" -> {
+					titleFont = "small-orbitron";
+					yield null;
+				}
+				case "setTitleOrbitronLarge" -> {
+					titleFont = "large-orbitron";
+					yield null;
+				}
+				case "setParaFontColor" -> {
+					paraColor = (Color) args[0];
+					yield null;
+				}
+				case "setTitleFontColor" -> {
+					titleColor = (Color) args[0];
+					yield null;
+				}
 				case "createLabel" -> {
 					LabelAPI label = label((String) args[0], (Float) args[2]);
 					labels.add((String) args[0]);
@@ -276,6 +314,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					labelColors.put(label.getPosition(), args[1] instanceof Color color ? color : paraColor);
 					headingBackgroundColors.put(label.getPosition(), (Color) args[2]);
 					labelPatterns.put(label.getPosition(), value);
+
 					PositionAPI anchorPosition = position(headingWidth, label.getPosition().getHeight());
 					UIComponentAPI anchor = proxy(UIComponentAPI.class,
 							(name, values) -> "getPosition".equals(name) ? anchorPosition : null);
@@ -284,6 +323,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					geometry.get(label.getPosition()).parent = position;
 					label.getPosition().inTL(first ? 0f : anchorPosition.getX() - position.getX() - 5f,
 							position.getY() + position.getHeight() - anchorPosition.getY() - anchorPosition.getHeight());
+
 					components.add(components.size() - 1, (UIComponentAPI) label);
 					yield label;
 				}
@@ -308,6 +348,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					Color[] highlightColors = highlight instanceof Color[] colors ? colors
 							: highlight instanceof Color color ? new Color[]{color} : new Color[0];
 					labelHighlightColors.put(label.getPosition(), List.of(highlightColors));
+
 					append((UIComponentAPI) label, pad);
 					yield label;
 				}
@@ -443,6 +484,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 	protected LabelAPI label(String text, float width) {
 		PositionAPI position = position(width, labelHeight(text, width));
 		String[] value = {text};
+
 		return proxy(LabelAPI.class, (method, args) -> switch (method) {
 			case "getPosition" -> position;
 			case "highlightLast" -> {

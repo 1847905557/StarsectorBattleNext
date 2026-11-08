@@ -44,13 +44,13 @@ public class HullSizeFilter implements BattleNext_OrderFilter {
 		if (!sizes.isEmpty()) targets.removeIf(target -> !sizes.contains(((ShipAPI) target).getHullSize()));
 		if (!largest && !smallest) return;
 		if (targets.isEmpty()) return;
+
 		Set<ShipAPI.HullSize> eligible = EnumSet.noneOf(ShipAPI.HullSize.class);
-		for (CombatEntityAPI target : targets) {
-			eligible.add(((ShipAPI) target).getHullSize());
-		}
+		for (CombatEntityAPI target : targets) eligible.add(((ShipAPI) target).getHullSize());
 		Set<ShipAPI.HullSize> selected = EnumSet.noneOf(ShipAPI.HullSize.class);
 		if (largest) selected.add(eligible.stream().max(Comparator.comparingInt(Enum::ordinal)).orElseThrow());
 		if (smallest) selected.add(eligible.stream().min(Comparator.comparingInt(Enum::ordinal)).orElseThrow());
+
 		targets.removeIf(target -> !selected.contains(((ShipAPI) target).getHullSize()));
 	}
 }

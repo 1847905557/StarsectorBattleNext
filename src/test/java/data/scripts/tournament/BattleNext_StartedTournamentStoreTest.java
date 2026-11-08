@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,12 +38,14 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void independentStoresMergeInstancesActivationAndRoundProgressAndLockConfiguration() throws Exception {
+
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel();
 		configuration.setId("cup");
 		configuration.setName("Cup");
 		configurations.save(configuration);
+
 		BattleNext_TournamentEngine engine = new BattleNext_TournamentEngine();
 		BattleNext_StartedTournament first = engine.start(configuration, List.of("a", "b"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
 		BattleNext_StartedTournament second = engine.start(configuration, List.of("b", "a"), BattleNext_StartedTournament.ExecutionKind.MANUAL);
@@ -54,6 +57,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		left.save(first);
 		right.save(second);
 		left.activate(first.getId());
+
 		BattleNext_Match match = second.getNextPendingMatch();
 		BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 		report.setId(UUID.randomUUID().toString());
@@ -62,10 +66,11 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		right.save(second);
 		left.reload();
 		assertEquals(first.getId(), left.getActiveId());
-		assertEquals(2, left.getAll().size());
+		assertEquals(2, left.getAllCopy().size());
 		assertTrue(left.get(second.getId()).isCompleted());
-		assertTrue(left.get(first.getId()).getMatches().get(0).getRounds().isEmpty());
-		assertEquals(report.getId(), left.get(second.getId()).getMatches().get(0).getRounds().get(0).getReportId());
+		assertTrue(left.get(first.getId()).getMatchesReadonly().get(0).getRoundsReadonly().isEmpty());
+		assertEquals(report.getId(), left.get(second.getId()).getMatchesReadonly().get(0).getRoundsReadonly().get(0).getReportId());
+
 		BattleNext_StartedTournament simulated = engine.start(configuration, List.of("a", "b"), BattleNext_StartedTournament.ExecutionKind.SIMULATION);
 		assertThrows(IllegalArgumentException.class, () -> left.save(simulated));
 		assertThrows(IllegalArgumentException.class, () -> left.activate(simulated.getId()));
@@ -76,6 +81,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void instanceParsingAndPendingQueriesPreserveIndependentOrderedReports() throws Exception {
+
 		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "", "b", "c"));
 		BattleNext_Match bye = new BattleNext_Match("bye", "a", "", -1, 1f);
 		BattleNext_Match first = new BattleNext_Match("first", "a", "b", -1, 1f);
@@ -87,6 +93,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		String before = started.toJson().toString();
 		assertSame(selected, started.getNextPendingMatch());
 		assertEquals(before, started.toJson().toString());
+
 		selected.setStatus(BattleNext_Match.MatchStatus.COMPLETE);
 		BattleNext_Round completedRound = new BattleNext_Round("b", "c");
 		completedRound.setReportId("report-50%");
@@ -94,12 +101,14 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		selected.addRound(completedRound);
 		assertSame(first, started.getNextPendingMatch());
 		BattleNext_StartedTournament restored = started.copy();
-		assertEquals("report-50%", restored.findMatch("selected").getRounds().get(0).getReportId());
-		assertEquals("b", restored.findMatch("selected").getRounds().get(0).getWinnerFleetId());
-		assertEquals(List.of("a", "", "b", "c"), restored.getFleetIds());
-		assertThrows(UnsupportedOperationException.class, () -> restored.getFleetIds().clear());
+		assertEquals("report-50%", restored.findMatch("selected").getRoundsReadonly().get(0).getReportId());
+		assertEquals("b", restored.findMatch("selected").getRoundsReadonly().get(0).getWinnerFleetId());
+		assertEquals(List.of("a", "", "b", "c"), restored.getFleetIdsReadonly());
+		assertThrows(UnsupportedOperationException.class, () -> restored.getFleetIdsReadonly().clear());
+
 		first.addRound(new BattleNext_Round("a", "b"));
-		assertTrue(restored.findMatch("first").getRounds().isEmpty());
+		assertTrue(restored.findMatch("first").getRoundsReadonly().isEmpty());
+
 		JSONObject broken = restored.toJson().put("executionKind", "UNKNOWN");
 		String state = restored.toJson().toString();
 		assertThrows(IllegalArgumentException.class, () -> restored.fromJson(broken));
@@ -112,7 +121,8 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
 		store.save(started);
 		store.activate(started.getId());
-		var path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+
+		Path path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		Files.delete(path);
 		Files.createDirectory(path);
 		Files.writeString(path.resolve("owned"), "Keep", StandardCharsets.UTF_8);
@@ -125,17 +135,20 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void malformedInstanceSourcePublishesEmptyContentsAndAllowsConfigurationSave() throws Exception {
+
 		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
 		store.reload();
 		BattleNext_StartedTournament started = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
 		store.save(started);
+
 		Files.writeString(directory.resolve(BattleNext_StartedTournamentStore.PATH), "{broken", StandardCharsets.UTF_8);
 		store.reload();
 		assertTrue(store.isLoaded());
-		assertTrue(store.getAll().isEmpty());
-		assertTrue(store.getLoadErrors().get(0).contains(BattleNext_StartedTournamentStore.PATH));
+		assertTrue(store.getAllCopy().isEmpty());
+		assertTrue(store.getLoadErrorsCopy().get(0).contains(BattleNext_StartedTournamentStore.PATH));
 		assertThrows(JSONException.class, () -> store.save(started));
 		assertEquals("{broken", Files.readString(directory.resolve(BattleNext_StartedTournamentStore.PATH), StandardCharsets.UTF_8));
+
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		configurations.save(new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2));
@@ -144,6 +157,7 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
 	void deletingInstancesMergesLatestDataClearsActivityAndUnlocksTheirConfiguration() throws Exception {
+
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", BattleNext_TournamentModel.TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
@@ -155,38 +169,43 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		firstStore.save(first);
 		firstStore.activate(first.getId());
 		secondStore.save(second);
+
 		firstStore.delete(first.getId());
-		assertEquals(List.of(second.getId()), firstStore.getAll().stream().map(BattleNext_StartedTournament::getId).toList());
+		assertEquals(List.of(second.getId()), firstStore.getAllCopy().stream().map(BattleNext_StartedTournament::getId).toList());
 		assertEquals("", firstStore.getActiveId());
 		assertTrue(configurations.isLocked("cup"));
+
 		secondStore.delete(second.getId());
 		assertFalse(configurations.isLocked("cup"));
 		configurations.save(configuration);
 		assertThrows(IllegalArgumentException.class, () -> secondStore.delete(first.getId()));
-		assertTrue(secondStore.getAll().isEmpty());
+		assertTrue(secondStore.getAllCopy().isEmpty());
 	}
 
 	@Test
 	void mixedInstancesKeepHealthyProgressAndDeleteTheSelectedMalformedPosition() throws Exception {
-		var valid = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "healthy", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
-		var broken = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b")).toJson();
+
+		BattleNext_StartedTournament valid = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "healthy", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
+		JSONObject broken = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b")).toJson();
 		broken.remove("fleetIds");
 		JSONObject unowned = new JSONObject().put("unreadable", "保留 50%");
 		JSONArray inputs = new JSONArray().put(valid.toJson()).put(broken).put(unowned);
 		JSONObject envelope = new JSONObject().put("formatVersion", 1).put("activeTournamentId", broken.getString("id")).put("instances", inputs);
-		var path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+		Path path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		Files.createDirectories(path.getParent());
 		Files.writeString(path, envelope.toString(), StandardCharsets.UTF_8);
-		var store = new BattleNext_StartedTournamentStore();
+
+		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
 		store.reload();
-		assertEquals(List.of(valid.getId()), store.getAll().stream().map(BattleNext_StartedTournament::getId).toList());
+		assertEquals(List.of(valid.getId()), store.getAllCopy().stream().map(BattleNext_StartedTournament::getId).toList());
 		assertTrue(store.hasInstances("cup"));
 		assertFalse(store.hasInstances(""));
 		assertEquals("", store.getActiveId());
-		var selected = store.getCatalog().get(1);
+		BattleNext_StartedTournamentStore.CatalogEntry selected = store.getCatalog().get(1);
 		assertEquals("cup", selected.sourceTournamentId());
 		assertTrue(selected.error().contains("fleetIds"));
 		assertEquals(broken.toString(), selected.raw());
+
 		store.delete(selected);
 		String remainingText = Files.readString(path, StandardCharsets.UTF_8);
 		JSONObject remaining = new JSONObject(remainingText);
@@ -198,26 +217,28 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		assertTrue(remainingText.contains("\n    \""));
 		assertEquals(remaining.toString(4), remainingText);
 		assertFalse(store.hasInstances("cup"));
-		assertEquals(1, store.getLoadErrors().size());
+		assertEquals(1, store.getLoadErrorsCopy().size());
 	}
 
 	@Test
 	void conflictingInstancesAreAllRejectedAndDeletionPreservesSharedReferencesUntilTheLastItem() throws Exception {
-		var instance = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
-		var path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+
+		BattleNext_StartedTournament instance = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
+		Path path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		Files.createDirectories(path.getParent());
-		var duplicate = instance.toJson().put("startedAt", 123);
-		var envelope = new JSONObject().put("formatVersion", 1).put("activeTournamentId", instance.getId())
+		JSONObject duplicate = instance.toJson().put("startedAt", 123);
+		JSONObject envelope = new JSONObject().put("formatVersion", 1).put("activeTournamentId", instance.getId())
 				.put("instances", new JSONArray().put(instance.toJson()).put(duplicate));
 		Files.writeString(path, envelope.toString(), StandardCharsets.UTF_8);
-		var pending = directory.resolve(BattleNext_StartedTournamentStore.pendingRoundPath(instance.getId()));
+		Path pending = directory.resolve(BattleNext_StartedTournamentStore.pendingRoundPath(instance.getId()));
 		Files.createDirectories(pending.getParent());
 		Files.writeString(pending, "owned pending", StandardCharsets.UTF_8);
-		var store = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
 		store.reload();
-		assertTrue(store.getAll().isEmpty());
-		assertEquals(2, store.getLoadErrors().size());
+		assertTrue(store.getAllCopy().isEmpty());
+		assertEquals(2, store.getLoadErrorsCopy().size());
 		assertThrows(IllegalArgumentException.class, () -> store.delete(instance.getId()));
+
 		store.delete(store.getCatalog().get(0));
 		String remainingText = Files.readString(path, StandardCharsets.UTF_8);
 		JSONObject remaining = new JSONObject(remainingText);
@@ -228,21 +249,22 @@ class BattleNext_StartedTournamentStoreTest extends BattleNext_TestGameFixture {
 		assertEquals(remaining.toString(4), remainingText);
 		assertEquals(instance.getId(), store.getActiveId());
 		assertTrue(Files.exists(pending));
+
 		store.delete(store.getCatalog().get(0));
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
 		assertFalse(Files.exists(pending));
 		assertEquals("", store.getActiveId());
 	}
 
 	@Test
 	void deletionRereadsTheSelectedRawEntryAndRejectsAChangedPosition() throws Exception {
-		var store = new BattleNext_StartedTournamentStore();
-		var instance = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
+		BattleNext_StartedTournamentStore store = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournament instance = new BattleNext_StartedTournament(UUID.randomUUID().toString(), "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b"));
 		store.save(instance);
-		var selected = store.getCatalog().get(0);
-		var changed = instance.toJson().put("version", 9);
-		var path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
-		var envelope = new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).put("instances", new JSONArray().put(changed));
+		BattleNext_StartedTournamentStore.CatalogEntry selected = store.getCatalog().get(0);
+		JSONObject changed = instance.toJson().put("version", 9);
+		Path path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+		JSONObject envelope = new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).put("instances", new JSONArray().put(changed));
 		Files.writeString(path, envelope.toString(), StandardCharsets.UTF_8);
 		assertThrows(IllegalStateException.class, () -> store.delete(selected));
 		assertEquals(envelope.toString(), Files.readString(path, StandardCharsets.UTF_8));

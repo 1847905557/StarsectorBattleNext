@@ -15,6 +15,7 @@ import data.scripts.ui.widget.BattleNext_ReportDetails;
 public class BattleNext_ReportEditor extends BattleNext_EditorView {
 
 	private final BattleNext_BattleReportStore reports;
+
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
 
 	private BattleNext_ReportTarget target;
@@ -64,6 +65,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 	@Override
 	protected boolean submitDraft() {
 		if (!validateName(target.identity(), reportStrings.get("name"), nameField.getText(), reportStrings.get("name_required"))) return false;
+
 		String next = nameField.getText().trim();
 		try {
 			return persist(() -> {

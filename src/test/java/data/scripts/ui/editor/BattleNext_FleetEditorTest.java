@@ -8,6 +8,7 @@ import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -35,10 +36,11 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void saveReportsFolderAndIdConflictsTogetherAndCanSaveAfterCorrection() throws Exception {
-		var store = new BattleNext_FleetStore();
+
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		store.save(new BattleNext_FleetModel("taken", "Existing", List.of(), List.of(), List.of()));
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(null, false);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("taken");
@@ -50,6 +52,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertTrue(editor.getSaveErrors().get(0).endsWith(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_duplicate_folder")));
 		assertTrue(editor.getSaveErrors().get(1).endsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_duplicate_id")));
 		assertEquals("Existing", store.get("taken").getName());
+
 		((TextFieldAPI) getField(editor, "idField")).setText("copy");
 		((TextFieldAPI) getField(editor, "folderNameField")).setText("copy");
 		assertTrue(editor.save(), editor.getStatusText());
@@ -60,12 +63,13 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void saveCollectsIdentityFolderAndMemberErrorsAndPreservesOrdinaryReferenceWarnings() throws Exception {
-		var store = new BattleNext_FleetStore();
+
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		var fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), List.of(
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel("fleet", "Fleet", List.of(), List.of(), List.of(
 				new BattleNext_MemberModel("parent_variant", "Alpha", "", List.of(), "", "", List.of()),
 				new BattleNext_MemberModel("parent_variant", "Beta", "", List.of(), "", "", List.of())));
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(fleet, false);
 		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
 		editor.buttonPressed("toggle_member:0");
@@ -85,8 +89,9 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertTrue(errors.get(2).contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_label") + " 1 / Alpha"));
 		assertTrue(errors.get(3).contains(BattleNext_TestTextCatalog.text("Member", "BattleNext_member_label") + " 2 / Beta"));
 		assertTrue(errors.get(3).contains("pinned:missing"));
-		assertTrue(store.getAll().isEmpty());
+		assertTrue(store.getAllCopy().isEmpty());
 		assertTrue(editor.hasUnsavedChanges());
+
 		((TextFieldAPI) getField(editor, "idField")).setText("fleet");
 		((TextFieldAPI) getField(editor, "folderNameField")).setText("fleet");
 		for (Object member : fields) {
@@ -95,7 +100,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertTrue(editor.save(), editor.getStatusText());
 		assertTrue(editor.getSaveErrors().isEmpty());
 		store.reload();
-		assertEquals(List.of("ordinary_missing", "ordinary_missing"), store.get("fleet").getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList());
+		assertEquals(List.of("ordinary_missing", "ordinary_missing"), store.get("fleet").getMembersReadonly().stream().map(BattleNext_MemberModel::getVariantId).toList());
 		editor.close();
 	}
 
@@ -114,14 +119,14 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 						throw exception.getCause();
 					}
 				}));
-		var editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		editor.open(null, false);
 		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_add_member"), buttonLabels.get("add_member"));
 		editor.buttonPressed("add_member");
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
-		assertTrue(draft.getMembers().isEmpty());
-		var picker = (BattleNext_OptionPicker) getField(editor, "memberPicker");
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
+		assertTrue(draft.getMembersReadonly().isEmpty());
+		BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "memberPicker");
 		for (int index = 0; index < 64; index++) {
 			clickPickerOption(picker, "parent_variant");
 		}
@@ -129,12 +134,12 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		clickPickerOption(picker, "parent_variant");
 		assertEquals(Map.of(), getField(picker, "selection"));
 		((CustomPanelAPI) getField(picker, "popup")).getPlugin().buttonPressed(buttonIds.get("CANCEL"));
-		assertTrue(draft.getMembers().isEmpty());
+		assertTrue(draft.getMembersReadonly().isEmpty());
 		addFleetMembers(editor, Collections.nCopies(64, "parent_variant"));
-		assertEquals(64, draft.getMembers().size());
-		assertTrue(draft.getMembers().stream().allMatch(member -> member.getVariantId().equals("parent_variant")));
+		assertEquals(64, draft.getMembersReadonly().size());
+		assertTrue(draft.getMembersReadonly().stream().allMatch(member -> member.getVariantId().equals("parent_variant")));
 		Set<BattleNext_MemberModel> members = Collections.newSetFromMap(new IdentityHashMap<>());
-		members.addAll(draft.getMembers());
+		members.addAll(draft.getMembersReadonly());
 		assertEquals(64, members.size());
 		editor.close();
 		assertTrue(((BattleNext_UiInputRouter) getField(editor, "inputRouter")).isEmpty());
@@ -143,15 +148,15 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	@Test
 	void addMemberButtonAppendsMixedVariantsPreservesDraftAndSavesPinnedCopies() throws Exception {
 
-		var store = new BattleNext_FleetStore();
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
-		var pins = new BattleNext_PinnedVariantStore();
+		BattleNext_PinnedVariantStore pins = new BattleNext_PinnedVariantStore();
 		pins.reload();
-		var source = source().getApi();
+		ShipVariantAPI source = source().getApi();
 		registeredVariants.put("parent_variant", source);
 		registeredVariants.put("child_variant", source.getModuleVariant("module"));
-		var pin = pins.saveVariant("Pinned ship", source);
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_PinnedVariantModel pin = pins.saveVariant("Pinned ship", source);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(null, false);
 		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("batch_fleet");
@@ -161,17 +166,17 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		((TextFieldAPI) getField(fields.get(0), "nameField")).setText("Existing ship");
 		((TextFieldAPI) getField(fields.get(0), "ordersField")).setText("existing_order");
 		addFleetMembers(editor, List.of("child_variant", "child_variant", "pinned:" + pin.getPinId(), "pinned:" + pin.getPinId()));
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
-		assertEquals(5, draft.getMembers().size());
-		assertEquals("Existing ship", draft.getMembers().get(0).getName());
-		assertEquals("existing_order", draft.getMembers().get(0).getOrders());
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
+		assertEquals(5, draft.getMembersReadonly().size());
+		assertEquals("Existing ship", draft.getMembersReadonly().get(0).getName());
+		assertEquals("existing_order", draft.getMembersReadonly().get(0).getOrders());
 		assertTrue(editor.save(), editor.getStatusText());
 		store.reload();
-		var saved = store.get("batch_fleet");
-		assertEquals(2, saved.getMembers().stream().filter(member -> member.getVariantId().equals("child_variant")).count());
-		assertEquals(2, saved.getMembers().stream().filter(member -> member.getVariantId().equals(pin.getPinId())).count());
-		assertEquals("Existing ship", saved.getMembers().get(0).getName());
-		assertEquals("existing_order", saved.getMembers().get(0).getOrders());
+		BattleNext_FleetModel saved = store.get("batch_fleet");
+		assertEquals(2, saved.getMembersReadonly().stream().filter(member -> member.getVariantId().equals("child_variant")).count());
+		assertEquals(2, saved.getMembersReadonly().stream().filter(member -> member.getVariantId().equals(pin.getPinId())).count());
+		assertEquals("Existing ship", saved.getMembersReadonly().get(0).getName());
+		assertEquals("existing_order", saved.getMembersReadonly().get(0).getOrders());
 		assertEquals("child_variant", saved.getVariant("child_variant").build().getHullVariantId());
 		assertEquals(7, saved.getVariant(pin.getPinId()).build().getModuleVariant("module").getNumFluxVents());
 		editor.close();
@@ -183,12 +188,12 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 		registeredVariants.put("parent_variant", source().getApi());
 		registeredVariants.put("child_variant", source().getApi().getModuleVariant("module"));
-		var store = new BattleNext_FleetStore();
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		List<String> names = List.of("first", "second", "third", "fourth");
-		var fleet = new BattleNext_FleetModel("copied_fleet", "Copied fleet", List.of(), List.of(),
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel("copied_fleet", "Copied fleet", List.of(), List.of(),
 				names.stream().map(name -> new BattleNext_MemberModel("parent_variant", name, "", List.of(), "", "", List.of())).toList());
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(fleet, false);
 		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
 		editor.buttonPressed("toggle_member:1");
@@ -206,13 +211,13 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_OptionField variant = optionFields(editor).get(copied == 1 ? 1 : 5);
 		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
 		body.getPlugin().buttonPressed("copy_member:" + copied);
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
-		var expected = new BattleNext_MemberModel("child_variant", "Edited ship", "aggressive",
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
+		BattleNext_MemberModel expected = new BattleNext_MemberModel("child_variant", "Edited ship", "aggressive",
 				List.of("helmsmanship", "target_analysis"), "graphics/portraits/officer.png", "full_assault", List.of("frontline", "escort"));
-		assertEquals(5, draft.getMembers().size());
-		assertJsonEquals(expected.toJson(), draft.getMembers().get(copied).toJson());
-		assertJsonEquals(expected.toJson(), draft.getMembers().get(copied + 1).toJson());
-		assertNotSame(draft.getMembers().get(copied), draft.getMembers().get(copied + 1));
+		assertEquals(5, draft.getMembersReadonly().size());
+		assertJsonEquals(expected.toJson(), draft.getMembersReadonly().get(copied).toJson());
+		assertJsonEquals(expected.toJson(), draft.getMembersReadonly().get(copied + 1).toJson());
+		assertNotSame(draft.getMembersReadonly().get(copied), draft.getMembersReadonly().get(copied + 1));
 		assertEquals(copied == 1 ? Set.of(1, 2, 4) : Set.of(1, 3, 4), getField(editor, "expandedMembers"));
 		fields = (List<?>) getField(editor, "memberFields");
 		((TextFieldAPI) getField(fields.get(copied + 1), "nameField")).setText("Independent copy");
@@ -221,14 +226,14 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertTrue(editor.hasUnsavedChanges());
 		assertTrue(editor.save(), editor.getStatusText());
 		store.reload();
-		var saved = store.get("copied_fleet");
+		BattleNext_FleetModel saved = store.get("copied_fleet");
 		assertEquals(copied == 1 ? List.of("first", "Edited ship", "Independent copy", "third", "fourth")
 				: List.of("first", "second", "third", "Edited ship", "Independent copy"),
-				saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
-		assertJsonEquals(expected.toJson(), saved.getMembers().get(copied).toJson());
+				saved.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
+		assertJsonEquals(expected.toJson(), saved.getMembersReadonly().get(copied).toJson());
 		expected.setName("Independent copy");
 		expected.setTags(List.of("reserve"));
-		assertJsonEquals(expected.toJson(), saved.getMembers().get(copied + 1).toJson());
+		assertJsonEquals(expected.toJson(), saved.getMembersReadonly().get(copied + 1).toJson());
 		assertEquals("child_variant", saved.getVariant("child_variant").build().getHullVariantId());
 		editor.close();
 	}
@@ -238,13 +243,13 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 	void moveMemberPreservesInputsAndExpansionRenumbersAndSavesOrder(String direction, int target, boolean collapsed) throws Exception {
 
 		registeredVariants.put("parent_variant", source().getApi());
-		var store = new BattleNext_FleetStore();
+		BattleNext_FleetStore store = new BattleNext_FleetStore();
 		store.reload();
 		List<String> names = List.of("first", "second", "third");
-		var fleet = new BattleNext_FleetModel("moving_fleet", "Moving fleet", List.of(), List.of(),
+		BattleNext_FleetModel fleet = new BattleNext_FleetModel("moving_fleet", "Moving fleet", List.of(), List.of(),
 				names.stream().map(name -> new BattleNext_MemberModel("parent_variant", name, "aggressive",
 						List.of("helmsmanship"), "graphics/portraits/officer.png", "orders_" + name, List.of(name))).toList());
-		var editor = new BattleNext_FleetEditor(store);
+		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(store);
 		editor.open(fleet, false);
 		attachEditor(editor, panel(1000f, 900f, new BaseCustomUIPanelPlugin()));
 		for (int index = 0; index < 3; index++) {
@@ -263,9 +268,9 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_OptionField variant = optionFields(editor).stream().filter(option -> option.getField() == variantField).findFirst().orElseThrow();
 		CustomPanelAPI body = (CustomPanelAPI) getField(variant, "panelOwner");
 		body.getPlugin().buttonPressed("move_member_" + direction + ":1");
-		var draft = (BattleNext_FleetModel) getField(editor, "draft");
+		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
 		List<String> expectedNames = target == 0 ? List.of("edited", "first", "third") : List.of("first", "third", "edited");
-		assertEquals(expectedNames, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(expectedNames, draft.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
 		assertEquals(collapsed ? Set.of(0, 2) : Set.of(0, 1, 2), getField(editor, "expandedMembers"));
 		assertTrue(editor.hasUnsavedChanges());
 		fields = (List<?>) getField(editor, "memberFields");
@@ -282,14 +287,14 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		editor.refreshContent();
 		assertTrue(editor.save(), editor.getStatusText());
 		store.reload();
-		var saved = store.get("moving_fleet");
-		assertEquals(expectedNames, saved.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		BattleNext_FleetModel saved = store.get("moving_fleet");
+		assertEquals(expectedNames, saved.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
 		for (int index = 0; index < expectedNames.size(); index++) {
 			String name = expectedNames.get(index);
-			var expected = new BattleNext_MemberModel("parent_variant", name, "aggressive", List.of("helmsmanship"),
+			BattleNext_MemberModel expected = new BattleNext_MemberModel("parent_variant", name, "aggressive", List.of("helmsmanship"),
 					"graphics/portraits/officer.png", name.equals("edited") ? "edited_order" : "orders_" + name,
 					List.of(name.equals("edited") ? "second" : name));
-			assertJsonEquals(expected.toJson(), saved.getMembers().get(index).toJson());
+			assertJsonEquals(expected.toJson(), saved.getMembersReadonly().get(index).toJson());
 		}
 		editor.close();
 	}
@@ -319,18 +324,19 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_FleetModel draft = (BattleNext_FleetModel) getField(editor, "draft");
 		List<String> expected = IntStream.range(0, names.size()).filter(index -> index != removed)
 				.mapToObj(names::get).toList();
-		assertEquals(expected, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(expected, draft.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
 		assertEquals(expected.stream().map(name -> "orders_" + name).toList(),
-				draft.getMembers().stream().map(BattleNext_MemberModel::getOrders).toList());
+				draft.getMembersReadonly().stream().map(BattleNext_MemberModel::getOrders).toList());
 		editor.refreshContent();
 		editor.closeOverlays();
-		assertEquals(expected, draft.getMembers().stream().map(BattleNext_MemberModel::getName).toList());
+		assertEquals(expected, draft.getMembersReadonly().stream().map(BattleNext_MemberModel::getName).toList());
 		assertTrue(router.isEmpty());
 	}
 
 	@ParameterizedTest
 	@CsvSource({"1000, 12", "1000, 20", "320, 17"})
 	void memberFieldsShareMetadataSpacingAndMeasureTheirExpandedHeight(int width, int lineHeight) throws Exception {
+
 		paragraphLineHeight = lineHeight;
 		deferTooltipWidth = true;
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
@@ -377,11 +383,13 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(remove.getY(), copy.getY());
 		assertEquals(remove.getHeight(), copy.getHeight());
 		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP, copy.getX() - remove.getX() - remove.getWidth());
+
 		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[1];
 		List<UIComponentAPI> memberRows = tooltips.get(viewport).getComponents();
 		assertEquals(memberRows.get(0).getPosition().getHeight() + BattleNext_ExpandablePanel.ROW_GAP
 				+ member.getHeight() + BattleNext_PageLayout.EDITOR_BUTTON_GAP + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT,
 				tooltips.get(viewport).getMountedHeight());
+
 		List<?> members = (List<?>) getField(editor, "memberFields");
 		TextFieldAPI memberName = (TextFieldAPI) getField(members.get(0), "nameField");
 		memberName.setText("compact ship");
@@ -394,6 +402,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		}
 		assertEquals(expected, registrations.keySet());
 		assertFalse(registrations.containsKey(memberName));
+
 		editor.buttonPressed("toggle_member:0");
 		members = (List<?>) getField(editor, "memberFields");
 		assertEquals("compact ship", ((TextFieldAPI) getField(members.get(0), "nameField")).getText());
@@ -432,6 +441,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void allFiveFleetSelectorsUseExplicitWidthsRootHostAndTheirViewport() throws Exception {
+
 		deferTooltipWidth = true;
 		BattleNext_FleetEditor editor = new BattleNext_FleetEditor(new BattleNext_FleetStore());
 		BattleNext_UiInputRouter router = new BattleNext_UiInputRouter();
@@ -455,6 +465,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 			assertEquals(2, ((TooltipMakerAPI[]) getField(member, "viewports")).length);
 		}
 		assertEquals(15, ((Map<?, ?>) getField(router.getSession(), "registrations")).size());
+
 		editor.closeOverlays();
 		assertEquals("draft_id", editor.getDraftId());
 		editor.refreshContent();

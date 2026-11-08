@@ -31,6 +31,7 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 		for (JSONObject row : rows) {
 			counts.merge(row.optString("id", "").trim(), 1, Integer::sum);
 		}
+
 		for (JSONObject row : rows) {
 			if (counts.get(row.optString("id", "").trim()) > 1) {
 				BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.identity.conflict", BattleNext_Logger.fields().put("row", row).build());
@@ -39,7 +40,8 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 			OptionChoice option = toOption(row);
 			if (option != null) options.add(option);
 		}
-		options.sort(Comparator.comparing(OptionChoice::getId));
+
+		options.sort(Comparator.comparing(OptionChoice::id));
 		return options;
 	}
 
@@ -55,8 +57,8 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 
 	@Override
 	public void createTooltip(TooltipMakerAPI tooltip, OptionChoice option) {
-		JSONObject row = findRow(option.getId());
-		addHeader(tooltip, option.getLabel(), option.getId());
+		JSONObject row = findRow(option.id());
+		addHeader(tooltip, option.label(), option.id());
 		if (row != null) {
 			String description = row.optString("desc", "").trim();
 			addDescription(tooltip, description);
@@ -78,6 +80,7 @@ public class BattleNext_PersonalitySourceProvider extends BattleNext_BaseSourceP
 		} catch (IOException | JSONException exception) {
 			BattleNext_Logger.warn(BattleNext_PersonalitySourceProvider.class, "personality.source.unavailable", BattleNext_Logger.fields().put("path", PERSONALITIES_PATH).build(), exception);
 		}
+
 		return result;
 	}
 

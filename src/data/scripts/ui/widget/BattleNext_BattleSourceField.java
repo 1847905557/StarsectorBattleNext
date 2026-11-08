@@ -26,7 +26,9 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 
 	private final CustomPanelAPI overlayHost;
 	private final BattleNext_DropdownField.DropdownSelectionListener listener;
+
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
+
 	private BattleNext_DropdownField dropdown;
 	private LabelAPI label;
 
@@ -63,7 +65,7 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 	public void configure(BattleNext_TournamentStore store, String selectedId) {
 		List<BattleNext_DropdownField.DropdownChoice> options = new ArrayList<>();
 		options.add(new BattleNext_DropdownField.DropdownChoice("", battleStrings.get("quick_battle")));
-		for (BattleNext_TournamentModel tournament : store.getAll()) {
+		for (BattleNext_TournamentModel tournament : store.getAllCopy()) {
 			options.add(new BattleNext_DropdownField.DropdownChoice(tournament.getId(), tournament.getName()));
 		}
 		dropdown.setOptions(options);

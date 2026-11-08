@@ -7,6 +7,7 @@ import data.model.BattleNext_BaseStore;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.report.BattleNext_BattleReportModel;
 import data.model.report.BattleNext_BattleReportStore;
 import data.model.rule.BattleNext_RuleModel;
@@ -41,12 +42,14 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 
 	@Test
 	void openingManagementLoadsEachFleetOnceAndSharesTheCatalogWithQuickBattles() throws Exception {
-		var fleets = new BattleNext_FleetStore();
+
+		BattleNext_FleetStore fleets = new BattleNext_FleetStore();
 		fleets.reload();
 		for (String id : List.of("alpha", "beta", "unrelated")) {
 			fleets.save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
 		}
-		var manager = new BattleNext_UiManager(() -> {});
+
+		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		for (int iteration = 0; iteration < 2; iteration++) {
 			dataReads.clear();
@@ -65,7 +68,8 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 
 	@Test
 	void abandoningAnInvalidDraftClearsErrorsBeforeTheNextEditingSession() throws Exception {
-		var page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
+
+		BattleNext_FleetLibraryPage page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("add");
 		Object editor = getField(page, "editor");
@@ -74,16 +78,20 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		((TextFieldAPI) getField(editor, "nameField")).setText("");
 		assertFalse(page.save());
 		assertEquals(3, page.getSaveErrors().size());
+
 		page.buttonPressed("back");
 		assertTrue(page.getSaveErrors().isEmpty());
 		assertEquals("", page.getStatusText());
+
 		page.buttonPressed("add");
 		assertTrue(page.getSaveErrors().isEmpty());
 		assertEquals("", page.getStatusText());
 		assertFalse(page.save());
+
 		page.discard();
 		assertTrue(page.getSaveErrors().isEmpty());
 		assertFalse(page.hasUnsavedChanges());
+
 		page.close();
 	}
 
@@ -166,6 +174,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 				assertFalse(registrations.containsKey(input));
 			}
 		}
+
 		BattleNext_PageView next = (BattleNext_PageView) getField(manager, "attachedView");
 		manager.buttonPressed("close");
 		assertTrue(closed.get());
@@ -207,6 +216,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 					.map(LabelAPI.class::cast).map(LabelAPI::getText).anyMatch(value -> value.contains(name)));
 		}
 		assertEquals(List.of("first", "second").size(), count);
+
 		state.getScroller().setYOffset(state.getUsedHeight());
 		float offset = state.getScroller().getYOffset();
 		state.getScroller().setYOffset(0f);
@@ -215,11 +225,13 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.buttonPressed(action);
 		assertEquals(name + "first", ((TextFieldAPI) getField(getField(page, "editor"), "nameField")).getText());
 		assertFalse(page.hasUnsavedChanges());
+
 		TooltipMakerAPI next = (TooltipMakerAPI) getField(page, "listContent");
 		next.getExternalScroller().setYOffset(offset);
 		page.refreshContent();
 		next = (TooltipMakerAPI) getField(page, "listContent");
 		assertEquals(offset, next.getExternalScroller().getYOffset());
+
 		page.close();
 		assertTrue(children.get(root).isEmpty());
 	}
@@ -235,6 +247,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 	}
 
 	private void saveDirectoryEntries(String kind, BattleNext_ManagementPage page, String name) throws Exception {
+
 		String field = kind.equals("tournament") ? "tournamentStore" : kind.equals("report") ? "reportStore" : "store";
 		BattleNext_BaseStore<?> store = (BattleNext_BaseStore<?>) getField(page, field);
 		store.reload();
@@ -305,9 +318,11 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 			assertTrue(children.get(shell).contains(getField(page, "listPanel")));
 			assertTrue(children.get(shell).contains(getField(page, "detailPanel")));
 			assertEquals(List.of(shell), children.get(root));
+
 			page.createContents();
 			assertTrue(removedComponents.contains(shell));
 			assertEquals(List.of(getField(page, "panel")), children.get(root));
+
 			page.close();
 			assertTrue(children.get(root).isEmpty());
 		}
@@ -345,19 +360,23 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertTrue(closed.get());
 		assertTrue(router.isEmpty());
 		assertEquals(1, children.get(firstRoot).size());
+
 		page.setDirty(true);
 		assertTrue(page.hasUnsavedChanges());
 		assertTrue(page.save());
 		assertEquals("saved", page.getStatusText());
 		assertEquals("saved", ((LabelAPI) getField(page, "statusLabel")).getText());
 		assertFalse(page.hasUnsavedChanges());
+
 		page.setDirty(true);
 		page.discard();
 		assertFalse(page.hasUnsavedChanges());
+
 		CustomPanelAPI secondRoot = panel(800f, 600f, new BaseCustomUIPanelPlugin());
 		page.attach(secondRoot);
 		assertTrue(children.get(firstRoot).isEmpty());
 		assertEquals(1, children.get(secondRoot).size());
+
 		page.close();
 		assertTrue(children.get(secondRoot).isEmpty());
 	}
@@ -374,6 +393,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		((TextFieldAPI) getField(row, "mapField")).setText("Unfinished number");
 		String snapshot = ((BattleNext_EditorView) editor).serializeState();
 		assertTrue(page.hasUnsavedChanges());
+
 		page.refreshContent();
 		assertSame(editor, getField(page, "quickBattleEditor"));
 		assertEquals(snapshot, ((BattleNext_EditorView) editor).serializeState());
@@ -386,6 +406,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).setText("pending");
 		assertTrue(page.hasUnsavedChanges());
+
 		page.refreshContent();
 		assertEquals("pending", ((TextFieldAPI) getField(getField(page, "editor"), "battleTimeLimitField")).getText());
 		assertTrue(page.hasUnsavedChanges());
@@ -393,6 +414,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		TooltipState state = tooltips.get(children.get(content).get(0));
 		PositionAPI save = buttonPositions.get("settings_save");
 		assertEquals(8f, state.getViewport().getY() - save.getY() - save.getHeight());
+
 		page.discard();
 		assertFalse(page.hasUnsavedChanges());
 	}
@@ -400,6 +422,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 	@ParameterizedTest
 	@ValueSource(strings = {"fleet", "rules", "tournament"})
 	void writableEditorsKeepDraftAndBaselineAcrossPageRefresh(String kind) throws Exception {
+
 		BattleNext_ManagementPage page = switch (kind) {
 			case "fleet" -> new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
 			case "rules" -> new BattleNext_RulesPage(() -> {}, Runnable::run, (description, action) -> {});
@@ -413,10 +436,12 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		TextFieldAPI field = (TextFieldAPI) getField(editor, "nameField");
 		field.setText("Draft name");
 		assertTrue(page.hasUnsavedChanges());
+
 		page.refreshContent();
 		field = (TextFieldAPI) getField(editor, "nameField");
 		assertEquals("Draft name", field.getText());
 		assertTrue(page.hasUnsavedChanges());
+
 		page.buttonPressed("back");
 		assertFalse(buttons.get("save").get());
 	}
@@ -437,12 +462,12 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertFalse(buttons.get("save").get());
 		if ("pin".equals(kind)) {
 			BattleNext_PinnedVariantStore store = (BattleNext_PinnedVariantStore) getField(page, "store");
-			var pin = store.saveVariant("Pin", source().getApi());
+			BattleNext_PinnedVariantModel pin = store.saveVariant("Pin", source().getApi());
 			page.attach(root);
 			page.buttonPressed("pin:" + pin.getSourcePath());
 		} else if ("report".equals(kind)) {
-			var store = (BattleNext_BattleReportStore) getField(page, "reportStore");
-			var report = new BattleNext_BattleReportModel();
+			BattleNext_BattleReportStore store = (BattleNext_BattleReportStore) getField(page, "reportStore");
+			BattleNext_BattleReportModel report = new BattleNext_BattleReportModel();
 			report.setId("report-1");
 			report.setName("Report");
 			store.save(report);
@@ -452,6 +477,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 			page.buttonPressed("add");
 		}
 		assertTrue(buttons.get("save").get());
+
 		List<String> dependencies = switch (kind) {
 			case "tournament" -> List.of("tournamentStore", "ruleStore");
 			case "report" -> List.of("reportStore");
@@ -472,20 +498,23 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 
 	@Test
 	void tournamentSaveIsDisabledForStartedObjectsAcrossRefresh() throws Exception {
+
 		BattleNext_TournamentPage page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (description, action) -> {});
 		CustomPanelAPI root = panel(1400f, 900f, new BaseCustomUIPanelPlugin());
 		page.attach(root);
-		var store = (BattleNext_TournamentStore) getField(page, "tournamentStore");
-		var tournament = new BattleNext_TournamentModel();
+		BattleNext_TournamentStore store = (BattleNext_TournamentStore) getField(page, "tournamentStore");
+		BattleNext_TournamentModel tournament = new BattleNext_TournamentModel();
 		tournament.setId("cup");
 		tournament.setName("Cup");
 		store.save(tournament);
 		BattleNext_StartedTournamentStore instances = (BattleNext_StartedTournamentStore) getField(page, "instances");
 		instances.save(new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta")));
+
 		page.attach(root);
 		page.buttonPressed("tournament:select:cup");
 		assertFalse(buttons.get("save").get());
 		assertFalse(page.hasUnsavedChanges());
+
 		page.refreshContent();
 		assertFalse(buttons.get("save").get());
 		assertTrue(((BattleNext_TournamentEditor) getField(page, "editor")).isReadOnly());
@@ -501,11 +530,13 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		report.setName("Original report");
 		report.addPlayerMember(new BattleNext_MemberReport("parent_variant", "parent", "Parent"));
 		store.save(report);
+
 		BattleNext_BattleReportPage page = new BattleNext_BattleReportPage(() -> {}, Runnable::run, (description, action) -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("report:report:report-1");
 		assertTrue(buttons.get("save").get());
 		assertTrue(labels.contains("report-1"));
+
 		((TextFieldAPI) getField(getField(page, "editor"), "nameField")).setText("Draft report");
 		page.buttonPressed("member:0");
 		assertEquals(1, ((Set<?>) getField(getField(getField(page, "editor"), "details"), "expandedMembers")).size());
@@ -517,6 +548,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertEquals(delete.getX(), buttonPositions.get("delete").getX() - detail.getPosition().getX());
 		assertEquals(delete.getY(), detail.getPosition().getY() + detail.getPosition().getHeight()
 				- buttonPositions.get("delete").getY() - buttonPositions.get("delete").getHeight());
+
 		assertTrue(page.save());
 		assertFalse(page.hasUnsavedChanges());
 		store.reload();

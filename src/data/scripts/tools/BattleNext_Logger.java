@@ -145,8 +145,8 @@ public class BattleNext_Logger {
 			json.put("model_type", model.getClass().getName()).put("source_type", model.getSourceType().name())
 					.put("source_path", model.getSourcePath());
 			if (model instanceof BattleNext_FleetModel fleet) {
-				json.put("folder_name", fleet.getFolderName()).put("variants", snapshot(fleet.getVariants()))
-						.put("load_errors", snapshot(fleet.getLoadErrors()));
+				json.put("folder_name", fleet.getFolderName()).put("variants", snapshot(fleet.getVariantsCopy()))
+						.put("load_errors", snapshot(fleet.getLoadErrorsCopy()));
 			}
 			return json;
 		}
@@ -192,23 +192,17 @@ public class BattleNext_Logger {
 		if (value instanceof Vector2f vector) return new JSONObject().put("x", snapshot(vector.x)).put("y", snapshot(vector.y));
 		if (value instanceof Map<?, ?> map) {
 			JSONObject json = new JSONObject();
-			for (var entry : map.entrySet()) {
-				json.put(String.valueOf(entry.getKey()), snapshot(entry.getValue()));
-			}
+			for (Map.Entry<?, ?> entry : map.entrySet()) json.put(String.valueOf(entry.getKey()), snapshot(entry.getValue()));
 			return json;
 		}
 		if (value instanceof Iterable<?> iterable) {
 			JSONArray json = new JSONArray();
-			for (Object item : iterable) {
-				json.put(snapshot(item));
-			}
+			for (Object item : iterable) json.put(snapshot(item));
 			return json;
 		}
 		if (value.getClass().isArray()) {
 			JSONArray json = new JSONArray();
-			for (int index = 0; index < Array.getLength(value); index++) {
-				json.put(snapshot(Array.get(value, index)));
-			}
+			for (int index = 0; index < Array.getLength(value); index++) json.put(snapshot(Array.get(value, index)));
 			return json;
 		}
 		return String.valueOf(value);

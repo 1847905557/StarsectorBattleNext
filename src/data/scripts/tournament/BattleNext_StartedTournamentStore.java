@@ -18,9 +18,6 @@ public class BattleNext_StartedTournamentStore {
 	public static final String FILE_NAME = FILE_NAME_WITHOUT_FORMAT + ".json";
 	public static final String PATH = "tournament/_tournaments/" + FILE_NAME;
 
-	public static String pendingRoundPath(String id) {
-		return "tournament/_tournaments/_pending/" + id + ".json";
-	}
 	private final Map<String, BattleNext_StartedTournament> entries = new LinkedHashMap<>();
 	private List<CatalogEntry> catalog = List.of();
 	private final List<String> loadErrors = new ArrayList<>();
@@ -29,7 +26,13 @@ public class BattleNext_StartedTournamentStore {
 	private long revision;
 
 	public record CatalogEntry(int index, String id, String sourceTournamentId, String raw,
-			BattleNext_StartedTournament model, String error) { }
+			BattleNext_StartedTournament model, String error) {
+
+	}
+
+	public static String pendingRoundPath(String id) {
+		return "tournament/_tournaments/_pending/" + id + ".json";
+	}
 
 	public void reload() throws IOException, JSONException {
 		loadErrors.clear();
@@ -48,7 +51,8 @@ public class BattleNext_StartedTournamentStore {
 
 	public void save(BattleNext_StartedTournament started) throws IOException, JSONException {
 		if (started.getExecutionKind() != BattleNext_StartedTournament.ExecutionKind.MANUAL) throw new IllegalArgumentException("Persistent tournament instances must use manual execution: " + started.getId());
-		if (!started.getLoadErrors().isEmpty()) throw new IllegalArgumentException("Started tournament is incomplete: " + started.getLoadErrors());
+		List<String> errors = started.getLoadErrorsCopy();
+		if (!errors.isEmpty()) throw new IllegalArgumentException("Started tournament is incomplete: " + errors);
 		commit(started, null);
 	}
 
@@ -64,11 +68,13 @@ public class BattleNext_StartedTournamentStore {
 	}
 
 	public void delete(CatalogEntry selected) throws IOException, JSONException {
+
 		JSONObject current = read();
 		JSONArray values = current.getJSONArray("instances");
 		if (selected.index() >= values.length() || !values.get(selected.index()).toString().equals(selected.raw())) {
 			throw new IllegalStateException("Started tournament entry changed: " + selected.index());
 		}
+
 		JSONArray retained = new JSONArray();
 		boolean sharedIdentity = false;
 		for (int index = 0; index < values.length(); index++) {
@@ -79,10 +85,12 @@ public class BattleNext_StartedTournamentStore {
 				sharedIdentity = true;
 			}
 		}
+
 		current.put("instances", retained);
 		if (!sharedIdentity && current.getString("activeTournamentId").equals(selected.id())) {
 			current.put("activeTournamentId", "");
 		}
+
 		write(current);
 		if (!sharedIdentity && BattleNext_EntryId.isValidPathSegment(selected.id())) {
 			BattleNext_ModFileManager.delete(pendingRoundPath(selected.id()));
@@ -91,9 +99,11 @@ public class BattleNext_StartedTournamentStore {
 	}
 
 	private void commit(BattleNext_StartedTournament updated, String selection) throws IOException, JSONException {
+
 		JSONObject current = read();
 		List<CatalogEntry> loaded = parse(current);
 		String nextActive = selection == null ? current.getString("activeTournamentId") : selection;
+
 		if (updated != null) {
 			List<CatalogEntry> matching = loaded.stream().filter(entry -> entry.id().equals(updated.getId())).toList();
 			if (matching.size() > 1) throw new IllegalArgumentException("Ambiguous started tournament ID: " + updated.getId());
@@ -110,6 +120,7 @@ public class BattleNext_StartedTournamentStore {
 				throw new IllegalArgumentException("Active tournament must reference a complete manual instance: " + selection);
 			}
 		}
+
 		current.put("activeTournamentId", nextActive);
 		write(current);
 		BattleNext_Logger.info(getClass(), "tournament.instances.committed",
@@ -134,6 +145,7 @@ public class BattleNext_StartedTournamentStore {
 	}
 
 	private List<CatalogEntry> parse(JSONObject json) throws JSONException {
+
 		List<CatalogEntry> result = new ArrayList<>();
 		JSONArray values = json.getJSONArray("instances");
 		Map<String, Integer> counts = new HashMap<>();
@@ -141,10 +153,9 @@ public class BattleNext_StartedTournamentStore {
 			JSONObject raw = values.optJSONObject(index);
 			if (raw == null) continue;
 			String id = raw.optString("id", "");
-			if (!id.isEmpty()) {
-				counts.merge(id, 1, Integer::sum);
-			}
+			if (!id.isEmpty()) counts.merge(id, 1, Integer::sum);
 		}
+
 		for (int index = 0; index < values.length(); index++) {
 			JSONObject raw = values.optJSONObject(index);
 			String id = raw == null ? "" : raw.optString("id", "");
@@ -152,8 +163,9 @@ public class BattleNext_StartedTournamentStore {
 			try {
 				BattleNext_StartedTournament started = new BattleNext_StartedTournament();
 				started.fromJson(values.getJSONObject(index));
-				if (!started.getLoadErrors().isEmpty()) {
-					result.add(new CatalogEntry(index, id, sourceId, values.get(index).toString(), started, String.join("; ", started.getLoadErrors())));
+				List<String> errors = started.getLoadErrorsCopy();
+				if (!errors.isEmpty()) {
+					result.add(new CatalogEntry(index, id, sourceId, values.get(index).toString(), started, String.join("; ", errors)));
 					continue;
 				}
 				if (counts.get(id) > 1) throw new IllegalArgumentException("Duplicate started tournament ID: " + id);
@@ -162,10 +174,12 @@ public class BattleNext_StartedTournamentStore {
 				result.add(new CatalogEntry(index, id, sourceId, values.get(index).toString(), null, exception.toString()));
 			}
 		}
+
 		return List.copyOf(result);
 	}
 
 	private void publish(JSONObject json) throws JSONException {
+
 		catalog = parse(json);
 		entries.clear();
 		for (CatalogEntry entry : catalog) {
@@ -176,11 +190,13 @@ public class BattleNext_StartedTournamentStore {
 			}
 			entries.put(entry.id(), entry.model());
 		}
+
 		activeId = json.getString("activeTournamentId");
 		BattleNext_StartedTournament selected = entries.get(activeId);
 		if (selected == null || selected.getExecutionKind() != BattleNext_StartedTournament.ExecutionKind.MANUAL) {
 			activeId = "";
 		}
+
 		loadError = "";
 		revision++;
 	}
@@ -206,8 +222,10 @@ public class BattleNext_StartedTournamentStore {
 		return started == null ? null : started.copy();
 	}
 
-	public List<BattleNext_StartedTournament> getAll() {
-		return entries.values().stream().map(BattleNext_StartedTournament::copy).toList();
+	public List<BattleNext_StartedTournament> getAllCopy() {
+		List<BattleNext_StartedTournament> result = new ArrayList<>();
+		for (BattleNext_StartedTournament started : entries.values()) result.add(started.copy());
+		return List.copyOf(result);
 	}
 
 	public List<BattleNext_StartedTournament> getForSource(String sourceId, BattleNext_StartedTournament.ExecutionKind kind) {
@@ -224,7 +242,7 @@ public class BattleNext_StartedTournamentStore {
 		return catalog;
 	}
 
-	public List<String> getLoadErrors() {
+	public List<String> getLoadErrorsCopy() {
 		List<String> errors = new ArrayList<>(loadErrors);
 		for (CatalogEntry entry : catalog) {
 			if (entry.error().isEmpty()) continue;

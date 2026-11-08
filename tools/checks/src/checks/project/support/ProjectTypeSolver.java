@@ -12,6 +12,7 @@ import java.util.List;
 
 public final class ProjectTypeSolver {
 	private ProjectTypeSolver() {
+
 	}
 
 	public static CombinedTypeSolver build(List<Path> sourceRoots, List<Path> classpath) throws IOException {

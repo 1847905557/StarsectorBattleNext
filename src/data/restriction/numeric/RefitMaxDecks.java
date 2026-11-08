@@ -13,9 +13,8 @@ public class RefitMaxDecks implements BattleNext_RestrictionScript {
 	@Override
 	public List<String> validate(BattleNext_AssembledFleet assembledFleet, BattleNext_RuleRestriction restriction) {
 		int decks = 0;
-		for (FleetMemberAPI member : assembledFleet.getMembers()) {
-			decks += member.getVariant().getWings().size();
-		}
+		for (FleetMemberAPI member : assembledFleet.getMembersReadonly()) decks += member.getVariant().getWings().size();
+
 		return BattleNext_RestrictionUtils.maximum(restriction, assembledFleet.getDefinition().getId(), decks);
 	}
 }

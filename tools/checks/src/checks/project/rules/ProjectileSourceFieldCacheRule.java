@@ -5,8 +5,8 @@ import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.Type;
 import checks.project.ProjectRule;
-import checks.project.model.RuleContext;
-import checks.project.model.SourceFile;
+import checks.project.ProjectRuleRunner.RuleContext;
+import checks.project.ProjectRuleRunner.SourceFile;
 import checks.project.model.Violation;
 import checks.project.support.AstSupport;
 
@@ -18,15 +18,13 @@ public class ProjectileSourceFieldCacheRule implements ProjectRule {
 
 	@Override
 	public List<Violation> check(SourceFile sourceFile, RuleContext context) {
+
 		List<Violation> violations = new ArrayList<>();
 		for (ClassOrInterfaceDeclaration classDeclaration : sourceFile.unit().findAll(ClassOrInterfaceDeclaration.class)) {
-			if (!hasProjectileOrMissileField(classDeclaration)) {
-				continue;
-			}
+			if (!hasProjectileOrMissileField(classDeclaration)) continue;
+
 			for (FieldDeclaration field : classDeclaration.getFields()) {
-				if (!AstSupport.isTypeNamed(field.getElementType(), "ShipAPI")) {
-					continue;
-				}
+				if (!AstSupport.isTypeNamed(field.getElementType(), "ShipAPI")) continue;
 				boolean hasSourceVariable = field.getVariables().stream()
 						.map(variable -> variable.getName())
 						.map(SimpleName::asString)
@@ -37,6 +35,7 @@ public class ProjectileSourceFieldCacheRule implements ProjectRule {
 				}
 			}
 		}
+
 		return violations;
 	}
 

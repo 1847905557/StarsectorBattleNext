@@ -3,6 +3,7 @@ package data.model.quickbattle.io;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import data.test.fixture.BattleNext_TestGameFixture;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class BattleNext_QuickBattleStandardLoaderTest extends BattleNext_TestGameFixtur
 			assertEquals("AI_Battles_Next", args[1]);
 			return csv;
 		}));
-		var rows = new BattleNext_QuickBattleStandardLoader().load();
+		List<BattleNext_QuickBattleModel> rows = new BattleNext_QuickBattleStandardLoader().load();
 		assertEquals(List.of("quick-standard-0", "quick-standard-1", "quick-standard-2"), rows.stream().map(row -> row.getId()).toList());
 		assertEquals("#", rows.get(1).toSourceLine());
 		assertEquals("c", rows.get(2).getPlayer());
@@ -36,9 +37,9 @@ class BattleNext_QuickBattleStandardLoaderTest extends BattleNext_TestGameFixtur
 		Global.setSettings(proxy(SettingsAPI.class, (method, args) -> {
 			throw new IOException("missing standard CSV");
 		}));
-		var loader = new BattleNext_QuickBattleStandardLoader();
+		BattleNext_QuickBattleStandardLoader loader = new BattleNext_QuickBattleStandardLoader();
 		assertTrue(loader.load().isEmpty());
-		assertEquals("tournament/quick_battle.csv", loader.getErrors().get(0).path());
-		assertTrue(loader.getErrors().get(0).diagnostic().contains("missing standard CSV"));
+		assertEquals("tournament/quick_battle.csv", loader.getErrorsCopy().get(0).path());
+		assertTrue(loader.getErrorsCopy().get(0).diagnostic().contains("missing standard CSV"));
 	}
 }

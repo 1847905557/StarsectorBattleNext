@@ -3,6 +3,7 @@ package data.test;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -29,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -69,9 +71,9 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void modelDependenciesKeepManagementAndThreadSchedulingInTheirOwningPackages() throws Exception {
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data/model"))) continue;
-			for (var dependency : entry.getValue().getImports()) {
+			for (ImportDeclaration dependency : entry.getValue().getImports()) {
 				String name = dependency.getNameAsString();
 				assertFalse(name.startsWith("data.scripts.ui.") || name.startsWith("java.util.concurrent."),
 						entry.getKey() + ": " + name);
@@ -81,8 +83,8 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void repositoryImportsKeepGameInternalsBehindRuntimeBindings() throws Exception {
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
-			for (var declaration : entry.getValue().getImports()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			for (ImportDeclaration declaration : entry.getValue().getImports()) {
 				String name = declaration.getNameAsString();
 				if (!name.startsWith("com.fs.")) continue;
 				assertTrue(name.startsWith("com.fs.starfarer.api."), entry.getKey() + ": " + name);
@@ -92,7 +94,7 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void missionFleetsUseVanillaAdmiralsAndDeploymentKeepsTheirInstances() throws Exception {
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data"))) continue;
 			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
 				if (!call.getNameAsString().equals("initFleet")) continue;
@@ -123,10 +125,10 @@ class BattleNext_SourceContractTest {
 
 		Set<String> controls = Set.of("BattleNext_TextField", "BattleNext_OptionField", "BattleNext_OptionPicker");
 		Set<String> directCreation = Set.of("addCheckbox", "editorTextField", "editorButton", "fixedButton", "bindField", "bindCheck");
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			Path path = entry.getKey();
 			if (!path.startsWith(Path.of("src/data"))) continue;
-			var unit = entry.getValue();
+			CompilationUnit unit = entry.getValue();
 			for (ThrowStmt statement : unit.findAll(ThrowStmt.class)) {
 				assertFalse(statement.toString().matches("(?s).*(?:Strings|strings|texts|I18nSection)\\.(?:get|format).*"), () -> path + ": " + statement);
 			}
@@ -137,7 +139,7 @@ class BattleNext_SourceContractTest {
 				Class<?> type = Class.forName(declaration.getFullyQualifiedName().orElseThrow());
 				assertTrue(BattleNext_EditorView.class.isAssignableFrom(type), path.toString());
 				for (String name : List.of("attach", "detach", "refreshContent", "close", "save", "discard", "hasUnsavedChanges")) {
-					var method = Arrays.stream(type.getMethods()).filter(value -> value.getName().equals(name)).findFirst().orElseThrow();
+					Method method = Arrays.stream(type.getMethods()).filter(value -> value.getName().equals(name)).findFirst().orElseThrow();
 					assertEquals(BattleNext_EditorView.class, method.getDeclaringClass(), path + ": " + name);
 					assertTrue(Modifier.isFinal(method.getModifiers()), path + ": " + name);
 				}
@@ -154,11 +156,11 @@ class BattleNext_SourceContractTest {
 	@Test
 	void combatInputSynchronizationAndMissionKeyboardReadsUseTheirSharedFramework() throws Exception {
 
-		var sources = BattleNext_TestSourceIndex.getInstance().getSources();
+		Map<Path, CompilationUnit> sources = BattleNext_TestSourceIndex.getInstance().getSources();
 		for (String name : List.of("BattleNext_FreeCameraPlugin", "BattleNext_RttPlugin")) {
-			var type = sources.get(Path.of("src/data/scripts/plugin", name + ".java")).getClassByName(name).orElseThrow();
+			ClassOrInterfaceDeclaration type = sources.get(Path.of("src/data/scripts/plugin", name + ".java")).getClassByName(name).orElseThrow();
 			MethodDeclaration input = type.getMethodsByName("processInputPreCoreControls").get(0);
-			var synchronization = input.findAll(MethodCallExpr.class).stream()
+			MethodCallExpr synchronization = input.findAll(MethodCallExpr.class).stream()
 					.filter(call -> call.getNameAsString().equals("updateControlState")).findFirst().orElseThrow();
 			ForEachStmt loop = input.findFirst(ForEachStmt.class).orElseThrow();
 			assertTrue(synchronization.getBegin().orElseThrow().line < loop.getBegin().orElseThrow().line, name);
@@ -167,7 +169,7 @@ class BattleNext_SourceContractTest {
 						&& call.getScope().map(Object::toString).orElse("").equals("BattleNext_CombatInput")), name + ": " + gate);
 			}
 		}
-		for (var entry : sources.entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : sources.entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data/missions"))) continue;
 			if (!entry.getKey().getFileName().toString().equals("MissionDefinition.java")) continue;
 			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
@@ -180,22 +182,22 @@ class BattleNext_SourceContractTest {
 	@Test
 	void previewMetadataAndStatusRegistrationFollowTheirNativeBoundaries() throws Exception {
 
-		var sources = BattleNext_TestSourceIndex.getInstance().getSources();
-		var preview = sources.get(Path.of("src/data/scripts/ui/widget/BattleNext_VariantPreview.java"));
+		Map<Path, CompilationUnit> sources = BattleNext_TestSourceIndex.getInstance().getSources();
+		CompilationUnit preview = sources.get(Path.of("src/data/scripts/ui/widget/BattleNext_VariantPreview.java"));
 		for (MethodCallExpr call : preview.findAll(MethodCallExpr.class)) {
 			assertFalse(Set.of("forName", "getDeclaredMethod", "findVirtual", "loadJSON", "openStream", "createFXDrone")
 					.contains(call.getNameAsString()), call::toString);
 		}
 		assertTrue(preview.findAll(MethodCallExpr.class).stream().anyMatch(call -> call.getNameAsString().equals("read")
 				&& call.getScope().map(Object::toString).orElse("").equals("BattleNext_SpriteSpec")));
-		for (var entry : sources.entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : sources.entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data"))) continue;
 			if (entry.getKey().getFileName().toString().equals("BattleNext_AllShipsStatusPlugin.java")) continue;
 			for (SimpleName name : entry.getValue().findAll(SimpleName.class)) {
 				if (!name.asString().equals("BattleNext_AllShipsStatusPlugin")) continue;
-				var type = assertInstanceOf(ClassOrInterfaceType.class, name.getParentNode().orElseThrow());
-				var creation = assertInstanceOf(ObjectCreationExpr.class, type.getParentNode().orElseThrow());
-				var registration = assertInstanceOf(MethodCallExpr.class, creation.getParentNode().orElseThrow());
+				ClassOrInterfaceType type = assertInstanceOf(ClassOrInterfaceType.class, name.getParentNode().orElseThrow());
+				ObjectCreationExpr creation = assertInstanceOf(ObjectCreationExpr.class, type.getParentNode().orElseThrow());
+				MethodCallExpr registration = assertInstanceOf(MethodCallExpr.class, creation.getParentNode().orElseThrow());
 				assertEquals("addPlugin", registration.getNameAsString(), entry.getKey().toString());
 			}
 		}
@@ -203,9 +205,10 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void simulatorControlFlowUsesMultilineBlocks() throws Exception {
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/data/simulator"))) continue;
-			var unit = entry.getValue();
+			CompilationUnit unit = entry.getValue();
 			for (ForStmt loop : unit.findAll(ForStmt.class)) {
 				assertBlock(loop.getBody());
 			}
@@ -235,7 +238,7 @@ class BattleNext_SourceContractTest {
 	void allRepositoryJavaTypeReferencesUseImports() throws Exception {
 
 		List<String> failures = new ArrayList<>();
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			for (String reference : references(entry.getValue())) {
 				failures.add(entry.getKey() + ": " + reference);
 			}
@@ -247,7 +250,7 @@ class BattleNext_SourceContractTest {
 	@ValueSource(strings = {"class Example extends java.util.ArrayList<String> {}",
 			"class Example { Object value = java.util.List.of(); }", "@org.junit.jupiter.api.Test class Example {}"})
 	void checkerFindsQualifiedTypesInDeclarationsExpressionsAndAnnotations(String source) {
-		var unit = parser.parse(source).getResult().orElseThrow();
+		CompilationUnit unit = parser.parse(source).getResult().orElseThrow();
 		assertFalse(references(unit).isEmpty());
 	}
 
@@ -262,10 +265,10 @@ class BattleNext_SourceContractTest {
 	void fixtureSourcesKeepHelpersSeparateFromTests() throws Exception {
 
 		Set<String> tests = Set.of("Test", "ParameterizedTest", "RepeatedTest", "TestFactory", "TestTemplate");
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			Path file = entry.getKey();
 			if (!file.startsWith(Path.of("src/test/java/data/test/fixture"))) continue;
-			var unit = entry.getValue();
+			CompilationUnit unit = entry.getValue();
 			for (AnnotationExpr annotation : unit.findAll(AnnotationExpr.class)) {
 				assertFalse(tests.contains(annotation.getName().getIdentifier()), () -> file + ": " + annotation);
 			}
@@ -277,7 +280,7 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void testClipboardOperationsUseOwnedClipboardInputs() throws Exception {
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/test/java"))) continue;
 			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
 				assertFalse(Set.of("getSystemClipboard", "getSystemSelection").contains(call.getNameAsString()),
@@ -288,8 +291,9 @@ class BattleNext_SourceContractTest {
 
 	@Test
 	void testTextLookupsKeepLanguageSelectionInsideTheCatalog() throws Exception {
+
 		List<String> failures = new ArrayList<>();
-		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+		for (Map.Entry<Path, CompilationUnit> entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
 			if (!entry.getKey().startsWith(Path.of("src/test/java"))) continue;
 			if (entry.getKey().getFileName().toString().equals("BattleNext_TestTextCatalog.java")) continue;
 			for (MethodCallExpr call : entry.getValue().findAll(MethodCallExpr.class)) {
@@ -308,6 +312,7 @@ class BattleNext_SourceContractTest {
 				}
 			}
 		}
+
 		assertEquals(List.of(), failures);
 	}
 
@@ -341,7 +346,10 @@ class BattleNext_SourceContractTest {
 			if (read.arguments().isEmpty()) continue;
 			Object[] values = new Object[read.arguments().size()];
 			for (int index = 0; index < values.length; index++) {
-				String type = read.arguments().get(index).calculateResolvedType().describe();
+				Expression argument = read.arguments().get(index);
+				String type = assertDoesNotThrow(() -> argument.calculateResolvedType().describe(),
+						() -> read.key() + ": " + argument + " at " + read.origin().findCompilationUnit().orElseThrow().getStorage().orElseThrow().getPath()
+								+ ":" + argument.getBegin().orElseThrow().line);
 				values[index] = switch (type) {
 					case "byte", "short", "int", "long", "java.lang.Byte", "java.lang.Short",
 							"java.lang.Integer", "java.lang.Long" -> 1;
@@ -368,6 +376,7 @@ class BattleNext_SourceContractTest {
 		for (ClassOrInterfaceType type : unit.findAll(ClassOrInterfaceType.class)) {
 			if (qualifiedType.matcher(type.getNameWithScope()).matches()) references.add(type.getNameWithScope());
 		}
+
 		for (FieldAccessExpr expression : unit.findAll(FieldAccessExpr.class)) {
 			Deque<String> names = new ArrayDeque<>();
 			Expression scope = expression;
@@ -380,6 +389,7 @@ class BattleNext_SourceContractTest {
 			String name = String.join(".", names);
 			if (qualifiedType.matcher(name).matches()) references.add(name);
 		}
+
 		for (AnnotationExpr annotation : unit.findAll(AnnotationExpr.class)) {
 			if (qualifiedType.matcher(annotation.getNameAsString()).matches()) references.add(annotation.getNameAsString());
 		}

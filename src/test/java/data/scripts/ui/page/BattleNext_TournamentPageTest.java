@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +35,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void existingManualInstancesKeepTheConfigurationEditorReadOnly() throws Exception {
+
 		for (BattleNext_StartedTournament.ExecutionKind kind : List.of(BattleNext_StartedTournament.ExecutionKind.MANUAL)) {
 			String id = kind.name().toLowerCase();
 			BattleNext_TournamentModel configuration = new BattleNext_TournamentModel(id, "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
@@ -111,6 +113,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void expandedInstanceDeletionRequiresConfirmationAndReleasesConfigurationLock() throws Exception {
+
 		BattleNext_TournamentModel configuration = new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2);
 		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
@@ -130,12 +133,14 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		instances.reload();
 		assertNotNull(instances.get(started.getId()));
 		assertTrue(editor.isReadOnly());
+
 		confirmed.remove(0).run();
 		instances.reload();
 		assertNull(instances.get(started.getId()));
 		assertEquals("", instances.getActiveId());
 		assertFalse(editor.isReadOnly());
 		assertFalse(page.hasUnsavedChanges());
+
 		((TextFieldAPI) getField(editor, "nameField")).setText("Unlocked cup");
 		assertTrue(page.save(), page.getStatusText());
 		configurations.reload();
@@ -153,21 +158,22 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 
 	@Test
 	void malformedOwnedInstanceDisplaysDiagnosticAndDeletesAfterConfirmation() throws Exception {
-		var configurations = new BattleNext_TournamentStore();
+
+		BattleNext_TournamentStore configurations = new BattleNext_TournamentStore();
 		configurations.reload();
 		configurations.save(new BattleNext_TournamentModel("cup", "Cup", TournamentBracketType.SINGLE_ELIMINATION, 1, 2));
 		String id = UUID.randomUUID().toString();
-		var broken = new BattleNext_StartedTournament(id, "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b")).toJson();
+		JSONObject broken = new BattleNext_StartedTournament(id, "cup", BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("a", "b")).toJson();
 		broken.remove("fleetIds");
-		var other = new JSONObject().put("sourceTournamentId", "other").put("id", "other");
-		var path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
+		JSONObject other = new JSONObject().put("sourceTournamentId", "other").put("id", "other");
+		Path path = directory.resolve(BattleNext_StartedTournamentStore.PATH);
 		Files.writeString(path, new JSONObject().put("formatVersion", 1).put("activeTournamentId", id)
 				.put("instances", new JSONArray().put(broken).put(other)).toString(), StandardCharsets.UTF_8);
 		List<Runnable> confirmation = new ArrayList<>();
-		var page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (label, action) -> confirmation.add(action));
+		BattleNext_TournamentPage page = new BattleNext_TournamentPage(() -> {}, Runnable::run, (label, action) -> confirmation.add(action));
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));
 		page.buttonPressed("tournament:select:cup");
-		var editor = (BattleNext_TournamentEditor) getField(page, "editor");
+		BattleNext_TournamentEditor editor = (BattleNext_TournamentEditor) getField(page, "editor");
 		assertTrue(editor.isReadOnly());
 		editor.buttonPressed("instance:toggle:error:0");
 		assertTrue(labels.stream().anyMatch(label -> label.contains("fleetIds")));
@@ -175,6 +181,7 @@ class BattleNext_TournamentPageTest extends BattleNext_TestPageFixture {
 		editor.buttonPressed("instance:delete_error:0");
 		assertEquals(1, confirmation.size());
 		assertEquals(2, new JSONObject(Files.readString(path, StandardCharsets.UTF_8)).getJSONArray("instances").length());
+
 		confirmation.remove(0).run();
 		String savedText = Files.readString(path, StandardCharsets.UTF_8);
 		JSONObject saved = new JSONObject(savedText);

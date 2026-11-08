@@ -20,6 +20,7 @@ public class RuleRegistrySyncRule implements IntegrityRule {
 	}
 
 	private static List<String> checkRuleRegistration(Set<String> ruleClasses, Set<String> registeredClasses) {
+
 		List<String> failures = new ArrayList<>();
 		for (String ruleClass : ruleClasses) {
 			if (!registeredClasses.contains(ruleClass)) {
@@ -35,6 +36,7 @@ public class RuleRegistrySyncRule implements IntegrityRule {
 				failures.add("ProjectRules.all() registers missing rule class " + registeredClass + ".");
 			}
 		}
+
 		return failures;
 	}
 }
