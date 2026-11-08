@@ -36,6 +36,11 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 		return List.copyOf(inputs);
 	}
 
+	public void removeSource(String path) {
+		errors.removeIf(error -> error.path().equals(path));
+		inputs.removeIf(input -> input.path().equals(path));
+	}
+
 	protected void reject(String path, int position, String id, String raw, Exception exception) {
 		errors.add(new LoadError(path, position, id, raw, exception.toString()));
 		BattleNext_Logger.warn(getClass(), "catalog.item.rejected", BattleNext_Logger.fields()

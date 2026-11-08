@@ -95,6 +95,16 @@ abstract class BattleNext_SimulatorServiceFixture extends BattleNext_TestFleetIo
 		assertEquals(state, task.getState());
 	}
 
+	protected void awaitImports() throws Exception {
+		long deadline = System.nanoTime() + 5_000_000_000L;
+		do {
+			BattleNext_SimulatorService.advance();
+			if (((List<?>) readField("reportImports")).isEmpty() && importQueue().isEmpty()) return;
+			if (System.nanoTime() > deadline) throw new AssertionError("Report import timed out");
+			Thread.sleep(1L);
+		} while (true);
+	}
+
 	protected BattleNext_SimulationRequest nextRequest(BattleNext_SimulatorProtocol peer) throws Exception {
 		long deadline = System.nanoTime() + 5000000000L;
 		while (System.nanoTime() < deadline) {

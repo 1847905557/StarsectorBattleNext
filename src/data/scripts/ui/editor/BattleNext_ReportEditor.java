@@ -66,10 +66,13 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 		if (!validateName(target.identity(), reportStrings.get("name"), nameField.getText(), reportStrings.get("name_required"))) return false;
 		String next = nameField.getText().trim();
 		try {
-			target.rename(reports, next);
-			savedName = next;
-			nameField.setText(next);
-			return true;
+			return persist(() -> {
+				target.rename(reports, next);
+				return true;
+			}, () -> {
+				savedName = next;
+				nameField.setText(next);
+			});
 		} catch (Exception exception) {
 			statusText = strings.get("save_failed") + ": " + exception;
 			saveErrors.failure(strings.get("save_failed"), target.identity(), exception);

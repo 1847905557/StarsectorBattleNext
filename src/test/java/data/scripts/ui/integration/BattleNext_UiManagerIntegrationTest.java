@@ -62,6 +62,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		manager.attach(panel(1400f, 900f, manager));
 		BattleNext_BattleSignals.markPendingResult("before-open");
 		manager.open();
+		settleUi(manager);
 		manager.buttonPressed(tab("SETTINGS"));
 		var status = (BattleNext_StatusBar) getField(manager, "statusBar");
 		var label = (LabelAPI) getField(status, "statusLabel");
@@ -114,6 +115,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		BattleNext_BattleSignals.markPendingResult(latest.getId());
 		manager.advance(0f);
 		manager.open();
+		settleUi(manager);
 		manager.advance(0f);
 		assertEquals("", manager.getPendingReportId());
 		manager.buttonPressed("close");
@@ -300,6 +302,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		CustomPanelAPI root = panel(1400f, 900f, manager);
 		manager.attach(root);
 		manager.open();
+		settleUi(manager);
 		Object settings = tab("SETTINGS");
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage page = (BattleNext_SettingsPage) getField(manager, "settingsPage");
@@ -363,6 +366,7 @@ class BattleNext_UiManagerIntegrationTest extends BattleNext_TestVariantFixture 
 		assertEquals(1, closes.get());
 		assertNull(getField(page, "simulatorWidget"));
 		manager.open();
+		settleUi(manager);
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		assertNotSame(page, reopened);

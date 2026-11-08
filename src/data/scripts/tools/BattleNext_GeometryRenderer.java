@@ -16,11 +16,17 @@ public class BattleNext_GeometryRenderer {
 	private static final int INITIAL_CAPACITY = 128;
 	private static final int FLOAT_BYTES = 4;
 	private static final FloatBuffer TEXTURE_UV = BufferUtils.createFloatBuffer(8);
-	private static FloatBuffer geometryData = BufferUtils.createFloatBuffer(INITIAL_CAPACITY);
+	private static final FloatBuffer GEOMETRY_DATA = BufferUtils.createFloatBuffer(INITIAL_CAPACITY);
+	private static final IntBuffer CLIP_BOX = BufferUtils.createIntBuffer(16);
+	private static FloatBuffer batchPositions = BufferUtils.createFloatBuffer(INITIAL_CAPACITY * 2);
+	private static FloatBuffer batchColors = BufferUtils.createFloatBuffer(INITIAL_CAPACITY * 4);
+	private static int batchDepth;
+	private static int batchMode;
+	private static float batchWidth;
+	private static int batchBuffer;
 
 	private static int positionVbo;
 	private static int uvVbo;
-	private static int geometryCapacity = INITIAL_CAPACITY;
 	private static boolean initialized;
 
 	private BattleNext_GeometryRenderer() {
@@ -31,8 +37,8 @@ public class BattleNext_GeometryRenderer {
 	}
 
 	public static void fillRect(float x, float y, float width, float height, Color color, float alpha) {
-		drawGeometry(new float[]{x, y, x + width, y, x, y + height, x + width, y + height},
-				GL11.GL_TRIANGLE_STRIP, color, alpha, 1f);
+		drawGeometry(new float[]{x, y, x + width, y, x, y + height,
+				x + width, y, x + width, y + height, x, y + height}, GL11.GL_TRIANGLES, color, alpha, 1f);
 	}
 
 	public static void lineLoop(float[] vertices, Color color, float alpha, float lineWidth) {
@@ -49,14 +55,15 @@ public class BattleNext_GeometryRenderer {
 
 	public static void texturedQuad(int texture, float x, float y, float width, float height,
 			float maxU, float maxV, float red, float green, float blue, float alpha) {
+		flush();
 		ensureInitialized();
-		geometryData.clear();
-		geometryData.put(x).put(y).put(x + width).put(y).put(x).put(y + height)
+		GEOMETRY_DATA.clear();
+		GEOMETRY_DATA.put(x).put(y).put(x + width).put(y).put(x).put(y + height)
 				.put(x + width).put(y + height).flip();
 		TEXTURE_UV.clear();
 		TEXTURE_UV.put(0f).put(0f).put(maxU).put(0f).put(0f).put(maxV).put(maxU).put(maxV).flip();
 		withState(() -> {
-			upload(positionVbo, geometryData);
+			upload(positionVbo, GEOMETRY_DATA);
 			upload(uvVbo, TEXTURE_UV);
 			GL11.glEnable(GL11.GL_TEXTURE_2D);
 			GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
@@ -68,6 +75,7 @@ public class BattleNext_GeometryRenderer {
 
 	public static void texturedFullscreen(int texture, float maxU, float maxV,
 			int viewportWidth, int viewportHeight) {
+		flush();
 		GL11.glPushAttrib(GL11.GL_TRANSFORM_BIT | GL11.GL_VIEWPORT_BIT | GL11.GL_ENABLE_BIT);
 		GL11.glViewport(0, 0, viewportWidth, viewportHeight);
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
@@ -89,11 +97,13 @@ public class BattleNext_GeometryRenderer {
 	}
 
 	public static GeometryClipState pushClip(float x, float y, float width, float height) {
+		flush();
 		float xScale = Global.getSettings().getScreenWidthPixels()
 				/ Math.max(1f, Global.getSettings().getScreenWidth());
 		float yScale = Global.getSettings().getScreenHeightPixels()
 				/ Math.max(1f, Global.getSettings().getScreenHeight());
-		IntBuffer box = BufferUtils.createIntBuffer(16);
+		IntBuffer box = CLIP_BOX;
+		box.clear();
 		GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
 		GeometryClipState state = new GeometryClipState(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1),
 				box.get(2), box.get(3));
@@ -115,6 +125,7 @@ public class BattleNext_GeometryRenderer {
 	}
 
 	public static void popClip(GeometryClipState state) {
+		flush();
 		if (state.enabled) {
 			GL11.glEnable(GL11.GL_SCISSOR_TEST);
 		} else {
@@ -124,23 +135,75 @@ public class BattleNext_GeometryRenderer {
 	}
 
 	private static void drawGeometry(float[] vertices, int mode, Color color, float alpha, float lineWidth) {
-		ensureInitialized();
-		ensureCapacity(vertices.length);
-		geometryData.clear();
-		geometryData.put(vertices).flip();
-		withState(() -> {
-			upload(positionVbo, geometryData);
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			GL11.glEnable(GL11.GL_BLEND);
-			GL14.glBlendEquation(GL14.GL_FUNC_ADD);
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-			GL11.glColor4f(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f,
-					color.getAlpha() / 255f * alpha);
-			if (mode == GL11.GL_POINTS) GL11.glPointSize(lineWidth);
-			if (mode == GL11.GL_LINE_LOOP || mode == GL11.GL_LINE_STRIP) GL11.glLineWidth(lineWidth);
-			bindArrays(false);
-			GL11.glDrawArrays(mode, 0, vertices.length / 2);
-		});
+		boolean immediate = batchDepth == 0;
+		if (immediate) beginBatch();
+		if (mode == GL11.GL_LINE_LOOP || mode == GL11.GL_LINE_STRIP) {
+			int segments = vertices.length / 2 - (mode == GL11.GL_LINE_STRIP ? 1 : 0);
+			for (int index = 0; index < segments; index++) {
+				int next = (index + 1) % (vertices.length / 2);
+				append(new float[]{vertices[index * 2], vertices[index * 2 + 1], vertices[next * 2], vertices[next * 2 + 1]},
+						GL11.GL_LINES, color, alpha, lineWidth);
+			}
+		} else append(vertices, mode, color, alpha, lineWidth);
+		if (immediate) endBatch();
+	}
+
+	public static void beginBatch() {
+		if (batchDepth++ > 0) return;
+		batchBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
+		GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_LINE_BIT | GL11.GL_POINT_BIT | GL11.GL_COLOR_BUFFER_BIT);
+		GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
+	}
+
+	public static void endBatch() {
+		if (--batchDepth > 0) return;
+		flush();
+		GL11.glPopClientAttrib();
+		GL11.glPopAttrib();
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, batchBuffer);
+	}
+
+	private static void append(float[] vertices, int mode, Color color, float alpha, float width) {
+		if (batchPositions.position() > 0 && (mode != batchMode || width != batchWidth)) flush();
+		batchMode = mode;
+		batchWidth = width;
+		if (batchPositions.remaining() < vertices.length) {
+			int capacity = Math.max(batchPositions.capacity() * 2, batchPositions.position() + vertices.length);
+			FloatBuffer positions = BufferUtils.createFloatBuffer(capacity);
+			FloatBuffer colors = BufferUtils.createFloatBuffer(capacity * 2);
+			batchPositions.flip();
+			batchColors.flip();
+			positions.put(batchPositions);
+			colors.put(batchColors);
+			batchPositions = positions;
+			batchColors = colors;
+		}
+		batchPositions.put(vertices);
+		for (int index = 0; index < vertices.length / 2; index++) {
+			batchColors.put(color.getRed() / 255f).put(color.getGreen() / 255f).put(color.getBlue() / 255f)
+					.put(color.getAlpha() / 255f * alpha);
+		}
+	}
+
+	public static void flush() {
+		if (batchPositions.position() == 0) return;
+		batchPositions.flip();
+		batchColors.flip();
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+		GL11.glDisable(GL11.GL_TEXTURE_2D);
+		GL11.glEnable(GL11.GL_BLEND);
+		GL14.glBlendEquation(GL14.GL_FUNC_ADD);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GL11.glLineWidth(batchWidth);
+		GL11.glPointSize(batchWidth);
+		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+		GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
+		GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+		GL11.glVertexPointer(2, 0, batchPositions);
+		GL11.glColorPointer(4, 0, batchColors);
+		GL11.glDrawArrays(batchMode, 0, batchPositions.remaining() / 2);
+		batchPositions.clear();
+		batchColors.clear();
 	}
 
 	private static void ensureInitialized() {
@@ -154,16 +217,6 @@ public class BattleNext_GeometryRenderer {
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, 8 * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
 		initialized = true;
-	}
-
-	private static void ensureCapacity(int required) {
-		if (required <= geometryCapacity) return;
-		geometryCapacity = Math.max(required, geometryCapacity * 2);
-		geometryData = BufferUtils.createFloatBuffer(geometryCapacity);
-		int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, positionVbo);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long)geometryCapacity * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
 	}
 
 	private static void upload(int buffer, FloatBuffer data) {

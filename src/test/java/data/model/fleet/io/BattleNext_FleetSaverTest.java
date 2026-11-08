@@ -22,6 +22,20 @@ import java.util.Map;
 class BattleNext_FleetSaverTest {
 
 	@ParameterizedTest
+	@ValueSource(ints = {0, 100})
+	void savingReadsOnlyActiveFilesRegardlessOfBackupHistorySize(int backups) throws Exception {
+		MemoryFiles files = new MemoryFiles();
+		files.put("tournament/alpha/fleet_data.json", "previous");
+		files.put("tournament/alpha/old.variant", "previous variant");
+		for (int index = 0; index < 100; index++) files.put("tournament/alpha/attachment-" + index + ".txt", "unrelated");
+		for (int index = 0; index < backups; index++) files.put("tournament/alpha/backup/" + index + "/fleet_data.json", "history");
+		new BattleNext_FleetSaver(files).save(fleet("alpha", "alpha", "current"));
+		assertEquals(List.of("tournament/alpha/fleet_data.json", "tournament/alpha/old.variant"), files.reads);
+		for (int index = 0; index < 100; index++) assertEquals("unrelated", files.text("tournament/alpha/attachment-" + index + ".txt"));
+		for (int index = 0; index < backups; index++) assertEquals("history", files.text("tournament/alpha/backup/" + index + "/fleet_data.json"));
+	}
+
+	@ParameterizedTest
 	@ValueSource(strings = {"data", "fleet"})
 	void numberedCsvDeleteFailureRestoresBothFilesAndKeepsThePublishedFleet(String failedFile) throws Exception {
 
@@ -212,6 +226,7 @@ class BattleNext_FleetSaverTest {
 		MemoryFiles files = new MemoryFiles();
 		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
 		files.put("tournament/alpha/stale.variant", "stale");
+		files.put("tournament/alpha/keep.txt", "unrelated");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
 		files.failDeletePath = "tournament/alpha/stale.variant";
 
@@ -221,6 +236,8 @@ class BattleNext_FleetSaverTest {
 		assertEquals("{\"id\":\"persisted\"}", files.text("tournament/alpha/fleet_data.json"));
 		assertEquals("stale", files.text("tournament/alpha/stale.variant"));
 		assertFalse(files.contains("tournament/alpha/current.variant"));
+		assertEquals("unrelated", files.text("tournament/alpha/keep.txt"));
+		assertEquals(List.of("tournament/alpha/fleet_data.json", "tournament/alpha/stale.variant"), files.reads);
 	}
 
 	@Test
@@ -242,14 +259,14 @@ class BattleNext_FleetSaverTest {
 		files.put("tournament/alpha/fleet_data.json", "{\"id\":\"persisted\"}");
 		BattleNext_FleetModel fleet = fleet("alpha", "alpha", "current");
 		files.failWritePath = "tournament/alpha/current.variant";
-		files.failDeleteDirectory = "tournament/alpha";
+		files.failRestorePath = "tournament/alpha/fleet_data.json";
 
 		IOException failure = assertThrows(IOException.class, () -> new BattleNext_FleetSaver(files).save(fleet));
 
 		assertEquals("Injected write failure: tournament/alpha/current.variant", failure.getMessage());
 		assertEquals(1, failure.getSuppressed().length);
 		assertInstanceOf(IOException.class, failure.getSuppressed()[0]);
-		assertEquals("Injected delete failure: tournament/alpha", failure.getSuppressed()[0].getMessage());
+		assertEquals("Injected restore failure: tournament/alpha/fleet_data.json", failure.getSuppressed()[0].getMessage());
 	}
 
 	private BattleNext_FleetModel fleet(String id, String folder, String variantId) throws Exception {
@@ -293,6 +310,9 @@ class BattleNext_FleetSaverTest {
 	}
 
 	private static class MemoryFiles implements BattleNext_FleetSaver.FileOperations {
+		private final List<String> reads = new ArrayList<>();
+		private String failRestorePath;
+		private boolean writeFailed;
 
 		private final Map<String, byte[]> files = new LinkedHashMap<>();
 		private String failWritePath;
@@ -336,13 +356,18 @@ class BattleNext_FleetSaverTest {
 
 		@Override
 		public byte[] readBytes(String path) throws IOException {
+			reads.add(path);
 			if (!files.containsKey(path)) throw new IOException("Missing: " + path);
 			return files.get(path).clone();
 		}
 
 		@Override
 		public void writeBytes(String path, byte[] data) throws IOException {
-			if (path.equals(failWritePath)) throw new IOException("Injected write failure: " + path);
+			if (path.equals(failWritePath)) {
+				writeFailed = true;
+				throw new IOException("Injected write failure: " + path);
+			}
+			if (writeFailed && path.equals(failRestorePath)) throw new IOException("Injected restore failure: " + path);
 			files.put(path, data.clone());
 		}
 
@@ -357,6 +382,14 @@ class BattleNext_FleetSaverTest {
 			if (path.equals(failDeleteDirectory)) throw new IOException("Injected delete failure: " + path);
 			String prefix = path.endsWith("/") ? path : path + "/";
 			files.keySet().removeIf(item -> item.equals(path) || item.startsWith(prefix));
+		}
+
+		@Override
+		public void moveDirectory(String source, String destination) throws IOException {
+			Map<String, byte[]> moved = new LinkedHashMap<>();
+			for (String path : list(source, true)) moved.put(destination + path.substring(source.length()), files.get(path));
+			deleteRecursively(source);
+			files.putAll(moved);
 		}
 	}
 }

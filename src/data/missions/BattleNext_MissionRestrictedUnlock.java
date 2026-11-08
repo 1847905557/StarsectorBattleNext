@@ -71,7 +71,7 @@ public class BattleNext_MissionRestrictedUnlock {
 			throw exception;
 		}
 		BattleNext_Logger.info(BattleNext_MissionRestrictedUnlock.class, "restricted_assets.unlocked",
-				BattleNext_Logger.fields().put("preview", preview).put("changed_count", changedTags.size()).build());
+				() -> BattleNext_Logger.fields().put("preview", preview).put("changed_count", changedTags.size()).build());
 	}
 
 	private void removeRestricted(Set<String> tags) {
@@ -88,7 +88,7 @@ public class BattleNext_MissionRestrictedUnlock {
 		changedTags.clear();
 		enabled = false;
 		BattleNext_Logger.info(BattleNext_MissionRestrictedUnlock.class, "restricted_assets.restored",
-				BattleNext_Logger.fields().put("preview", preview).build());
+				() -> BattleNext_Logger.fields().put("preview", preview).build());
 	}
 
 	public void forget() {

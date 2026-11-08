@@ -53,7 +53,11 @@ public class BattleNext_TournamentStore extends BattleNext_BaseStore<BattleNext_
 	public boolean isLocked(String id) throws IOException, JSONException {
 		BattleNext_StartedTournamentStore started = new BattleNext_StartedTournamentStore();
 		started.reload();
-		return started.hasInstances(id) || BattleNext_SimulatorService.simulatedInstances().stream().anyMatch(instance -> instance.getSourceTournamentId().equals(id));
+		return isLocked(id, started);
+	}
+
+	public boolean isLocked(String id, BattleNext_StartedTournamentStore started) {
+		return started.hasInstances(id) || BattleNext_SimulatorService.tournamentSummaries().stream().anyMatch(instance -> instance.sourceTournamentId().equals(id));
 	}
 
 	private void requireEditable(String id) throws IOException, JSONException {

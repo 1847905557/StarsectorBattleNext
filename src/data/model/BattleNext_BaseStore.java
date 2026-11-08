@@ -1,5 +1,6 @@
 package data.model;
 
+import java.util.function.Supplier;
 import data.model.BattleNext_BaseLoader.LoadError;
 import data.scripts.tools.BattleNext_EntryId;
 import data.scripts.tools.BattleNext_Logger;
@@ -42,7 +43,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public void reload() throws IOException, JSONException {
 		BattleNext_Logger.operationStarted(getClass(), "catalog.reload",
-				() -> BattleNext_Logger.fields().put("previous_entries", getAll()).build());
+				() -> BattleNext_Logger.fields().put("previous_entries", entries.size()).build());
 		try {
 			Map<String, T> loaded = new LinkedHashMap<>();
 			List<T> all = new ArrayList<>();
@@ -61,7 +62,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 					continue;
 				}
 				BattleNext_Logger.operationSucceeded(loader.getClass(), "catalog.source.load",
-						() -> BattleNext_Logger.fields().put("store", getClass()).put("models", models).build());
+						() -> BattleNext_Logger.fields().put("store", getClass()).put("models", models.size()).build());
 				all.addAll(models);
 				failures.addAll(loader.getErrors());
 				inputs.addAll(loader.getInputs());
@@ -88,10 +89,10 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 			replaceEntries(loaded);
 			succeedLoad();
 			BattleNext_Logger.operationSucceeded(getClass(), "catalog.reload",
-					() -> BattleNext_Logger.fields().put("entries", getAll()).build());
+					() -> BattleNext_Logger.fields().put("entries", entries.size()).build());
 		} catch (IOException | JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(getClass(), "catalog.reload",
-					BattleNext_Logger.fields().put("published_entries", getAll()).build(), exception);
+					BattleNext_Logger.fields().put("published_entries", entries.size()).build(), exception);
 			recordFailure(exception);
 			throw exception;
 		}
@@ -99,7 +100,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public void save(T model) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("model", model).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("model", model).build();
 		BattleNext_Logger.operationStarted(getClass(), "store.save", input);
 		try {
 			requireLoaded();
@@ -145,7 +146,7 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public void delete(String id) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("id", id).put("model", get(id)).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("id", id).put("model", get(id)).build();
 		BattleNext_Logger.operationStarted(getClass(), "store.delete", input);
 		try {
 			requireLoaded();
@@ -169,6 +170,18 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 
 	public boolean isLoaded() {
 		return loadError.isEmpty();
+	}
+
+	public void ensureLoaded() throws IOException, JSONException {
+		if (!isLoaded()) reload();
+	}
+
+	public final void publish(BattleNext_BaseStore<T> prepared) {
+		Map<String, T> loaded = new LinkedHashMap<>();
+		for (T entry : prepared.getAll()) loaded.put(entry.getId(), entry);
+		errors = prepared.getErrors();
+		loadError = prepared.getLoadError();
+		replaceEntries(loaded);
 	}
 
 	public String getLoadError() {
@@ -225,9 +238,13 @@ public abstract class BattleNext_BaseStore<T extends BattleNext_BaseModel> {
 		revision++;
 	}
 
-	private void removeEntry(String id) {
+	protected final void removeEntry(String id) {
 		entries.remove(id);
 		revision++;
+	}
+
+	protected final void removeSource(String path) {
+		errors = errors.stream().filter(error -> !error.path().equals(path)).toList();
 	}
 
 	private void succeedLoad() {

@@ -89,11 +89,16 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 
 	public BattleNext_SimulationRequest forMatch(BattleNext_TournamentModel configuration, BattleNext_StartedTournament started,
 			BattleNext_Match match, BattleNext_FleetStore fleets, int actualMap) {
+		return forMatch(configuration, started, match, fleets, actualMap, null);
+	}
+
+	public BattleNext_SimulationRequest forMatch(BattleNext_TournamentModel configuration, BattleNext_StartedTournament started,
+			BattleNext_Match match, BattleNext_FleetStore fleets, int actualMap, BattleNext_BattleValidation validation) {
 		if (kind != Kind.TOURNAMENT) throw new IllegalStateException("A tournament request is required to prepare a round");
 		try {
 			String identity = started.getId() + "/" + match.getId() + "/" + match.getRounds().size();
 			JSONObject round = new JSONObject().put("match", match.toJson()).put("actualMap", actualMap)
-					.put("player", snapshot(match.getPlayer(), fleets)).put("enemy", snapshot(match.getEnemy(), fleets))
+					.put("player", snapshot(match.getPlayer(), fleets, validation)).put("enemy", snapshot(match.getEnemy(), fleets, validation))
 					.put("sourceType", configuration.getSourceType().name()).put("sourcePath", configuration.getSourcePath())
 					.put("tournamentId", started.getId()).put("tournamentName", started.getName(configuration))
 					.put("roundNumber", match.getRounds().size() + 1);
@@ -105,11 +110,15 @@ public record BattleNext_SimulationRequest(String id, Kind kind, String sourceJs
 	}
 
 	private static JSONObject snapshot(String id, BattleNext_FleetStore fleets) throws JSONException {
+		return snapshot(id, fleets, null);
+	}
+
+	private static JSONObject snapshot(String id, BattleNext_FleetStore fleets, BattleNext_BattleValidation validation) throws JSONException {
 
 		BattleNext_FleetModel fleet = fleets.get(id);
 		if (fleet == null) throw new IllegalArgumentException("Simulation fleet reference is unavailable: " + id);
 		if (!fleet.getLoadErrors().isEmpty()) throw new IllegalArgumentException("Incomplete simulation fleet: " + fleet.getId() + ": " + fleet.getLoadErrors());
-		BattleNext_AssembledFleet assembled = new BattleNext_FleetBuilder().build(fleet);
+		BattleNext_AssembledFleet assembled = validation == null ? new BattleNext_FleetBuilder().build(fleet) : validation.assembledFleet(id);
 		if (!assembled.isComplete() || assembled.getMembers().isEmpty()) throw new IllegalArgumentException("Simulation fleet requires complete root members: " + fleet.getId() + ": " + assembled.getMemberErrors());
 		JSONObject variants = new JSONObject();
 		for (int index = 0; index < assembled.getMembers().size(); index++) {

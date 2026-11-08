@@ -54,6 +54,10 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		private ButtonAPI enabledCheckbox;
 		private LabelAPI statusLabel;
 		private ButtonAPI actionButton;
+		private String mapText;
+		private String scaleText;
+		private String rawText;
+		private boolean enabled;
 
 		private Row(int index, Object key, BattleNext_QuickBattleModel model) {
 			this.index = index;
@@ -61,6 +65,10 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			this.model = model;
 			fleets.put(Column.PLAYER, model.getPlayer());
 			fleets.put(Column.ENEMY, model.getEnemy());
+			mapText = Integer.toString(model.getMap());
+			scaleText = Float.toString(model.getMapScale());
+			rawText = model.getRawContent();
+			enabled = model.isEnabled();
 		}
 
 		public int getIndex() {
@@ -72,6 +80,13 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		}
 
 		public void setModel(BattleNext_QuickBattleModel model) {
+			if (isRaw() && model.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
+				fleets.put(Column.PLAYER, model.getPlayer());
+				fleets.put(Column.ENEMY, model.getEnemy());
+				mapText = Integer.toString(model.getMap());
+				scaleText = Float.toString(model.getMapScale());
+				setEnabled(model.isEnabled());
+			}
 			this.model = model;
 		}
 
@@ -93,11 +108,31 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		}
 
 		public boolean isEnabled() {
-			return enabledCheckbox == null ? model.isEnabled() : enabledCheckbox.isChecked();
+			return enabledCheckbox == null ? enabled : enabledCheckbox.isChecked();
 		}
 
 		public void setEnabled(boolean enabled) {
-			enabledCheckbox.setChecked(enabled);
+			this.enabled = enabled;
+			if (enabledCheckbox != null) enabledCheckbox.setChecked(enabled);
+		}
+
+		public String text(Column column) {
+			BattleNext_TextField field = getField(column);
+			return field == null ? column == Column.MAP ? mapText : scaleText : field.getText();
+		}
+
+		public String rawText() {
+			return rawField == null ? rawText : rawField.getText();
+		}
+
+		public boolean isRaw() {
+			return model.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW;
+		}
+
+		private boolean hasFocus() {
+			return fleetFields.values().stream().anyMatch(field -> field.getField().hasFocus())
+					|| mapField != null && mapField.hasFocus() || mapScaleField != null && mapScaleField.hasFocus()
+					|| rawField != null && rawField.hasFocus();
 		}
 	}
 
@@ -111,6 +146,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final Map<Object, BattleNext_TextField> fields = new LinkedHashMap<>();
+	private final Map<Object, BattleNext_TextField.EditState> savedInputs = new LinkedHashMap<>();
 	private final List<Row> rows = new ArrayList<>();
 	private BattleNext_TableWidget tableWidget;
 
@@ -129,6 +165,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void buildContent(CustomPanelAPI panel) {
+		for (int index = 0; index < entries.size(); index++) rows.add(new Row(index, identity.apply(entries.get(index)), entries.get(index)));
 
 		CustomPanelAPI tablePanel = ownPanel(panel, panel.createCustomPanel(panel.getPosition().getWidth(),
 				panel.getPosition().getHeight(), panel.getPlugin()));
@@ -149,14 +186,16 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			shares[index] = (float) (presentation.columnShares().get(index) / total);
 		}
 		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), headers, shares, entries.size(), this::addRow);
+		tableWidget.virtualize(this::releaseRow, index -> rows.get(index).hasFocus());
 		tableWidget.attach(tablePanel);
 		refreshRowStatuses();
 	}
 
 	private void addRow(int index, float rowWidth, UIRect[] cells, TooltipMakerAPI content) {
 
+		TooltipMakerAPI viewport = tableWidget.getContent();
 		BattleNext_QuickBattleModel entry = entries.get(index);
-		Row row = new Row(index, identity.apply(entry), entry);
+		Row row = rows.get(index);
 		Map<Column, UIRect> columns = new EnumMap<>(Column.class);
 		for (int column = 0; column < cells.length; column++) {
 			columns.put(presentation.columns().get(column), cells[column]);
@@ -172,12 +211,12 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			UIRect first = columns.get(Column.PLAYER);
 			UIRect last = columns.get(Column.SCALE);
 			row.rawField = addField(row, "raw", rowPanel, new UIRect(first.getX(), 0f,
-					last.getX() + last.getWidth() - first.getX(), BattleNext_PageLayout.TABLE_ROW_HEIGHT), entry.getRawContent(), content);
+					last.getX() + last.getWidth() - first.getX(), BattleNext_PageLayout.TABLE_ROW_HEIGHT), row.rawText, viewport);
 		} else {
-			addFleetCell(row, Column.PLAYER, rowPanel, columns.get(Column.PLAYER), content);
-			addFleetCell(row, Column.ENEMY, rowPanel, columns.get(Column.ENEMY), content);
-			row.mapField = addField(row, "map", rowPanel, columns.get(Column.MAP), Integer.toString(entry.getMap()), content);
-			row.mapScaleField = addField(row, "scale", rowPanel, columns.get(Column.SCALE), Float.toString(entry.getMapScale()), content);
+			addFleetCell(row, Column.PLAYER, rowPanel, columns.get(Column.PLAYER), viewport);
+			addFleetCell(row, Column.ENEMY, rowPanel, columns.get(Column.ENEMY), viewport);
+			row.mapField = addField(row, "map", rowPanel, columns.get(Column.MAP), row.mapText, viewport);
+			row.mapScaleField = addField(row, "scale", rowPanel, columns.get(Column.SCALE), row.scaleText, viewport);
 		}
 		row.statusLabel = BattleNext_PageLayout.cellLabel(rowPanel, columns.get(Column.STATUS), strings.get("unavailable"), true,
 				new BaseTooltipCreator() {
@@ -203,7 +242,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			row.enabledCheckbox = checkboxContent.addCheckbox(bounds.getWidth(), bounds.getHeight(), "", "enabled:" + index,
 					ButtonAPI.UICheckboxSize.SMALL, 0f);
 			row.enabledCheckbox.getPosition().inTL(0f, 0f);
-			row.enabledCheckbox.setChecked(entry.isEnabled());
+			row.enabledCheckbox.setChecked(row.enabled);
 			row.enabledCheckbox.setEnabled(presentation.editable() && row.rawField == null);
 			checkboxContent.setHeightSoFar(bounds.getHeight());
 			rowPanel.addUIElement(checkboxContent).inTL(bounds.getX(), bounds.getY());
@@ -213,7 +252,39 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 				action.label(), action.id(), CutStyle.ALL, false);
 		row.actionButton.setEnabled(action.enabled());
 		content.addCustom(rowPanel, 0f);
-		rows.add(row);
+	}
+
+	private void releaseRow(int index) {
+		Row row = rows.get(index);
+		row.mapText = row.text(Column.MAP);
+		row.scaleText = row.text(Column.SCALE);
+		row.rawText = row.rawText();
+		row.enabled = row.isEnabled();
+		for (Column column : List.of(Column.PLAYER, Column.ENEMY)) row.fleets.put(column, row.getFleetId(column));
+		for (BattleNext_OptionField field : row.fleetFields.values()) {
+			rememberField((BattleNext_TextField) field.getField());
+			fields.values().remove(field.getField());
+			field.close();
+		}
+		row.fleetFields.clear();
+		for (BattleNext_TextField field : new BattleNext_TextField[]{row.mapField, row.mapScaleField, row.rawField}) {
+			if (field == null) continue;
+			rememberField(field);
+			fields.values().remove(field);
+			field.close();
+		}
+		row.mapField = null;
+		row.mapScaleField = null;
+		row.rawField = null;
+		row.statusLabel = null;
+		row.enabledCheckbox = null;
+		row.actionButton = null;
+	}
+
+	private void rememberField(BattleNext_TextField field) {
+		for (var entry : fields.entrySet()) {
+			if (entry.getValue() == field) savedInputs.put(entry.getKey(), field.captureEditState());
+		}
 	}
 
 	private void addFleetCell(Row row, Column column, CustomPanelAPI owner, UIRect cell, TooltipMakerAPI viewport) {
@@ -251,6 +322,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			owner.addUIElement(content).inTL(bounds.getX(), bounds.getY());
 			row.fleetFields.put(column, option);
 			fields.put(List.of(row.key, column.name()), field);
+			BattleNext_TextField.EditState state = savedInputs.get(List.of(row.key, column.name()));
+			if (state != null) field.restoreEditState(state);
 			return;
 		}
 		row.fleetLabels.put(column, BattleNext_PageLayout.cellLabel(owner, cell, fleetId, true,
@@ -261,6 +334,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			UIRect cell, String value, TooltipMakerAPI viewport) {
 		BattleNext_TextField field = BattleNext_PageLayout.cellTextField(inputRouter, rowPanel, cell, value, presentation.editable(), viewport);
 		fields.put(List.of(row.key, role), field);
+		BattleNext_TextField.EditState state = savedInputs.get(List.of(row.key, role));
+		if (state != null) field.restoreEditState(state);
 		return field;
 	}
 
@@ -276,23 +351,30 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 		Map<Object, Boolean> enabled = new LinkedHashMap<>();
 		Map<Object, Map<Column, String>> fleets = new LinkedHashMap<>();
 		for (Row row : rows) {
-			if (row.rawField == null) {
+			if (!row.isRaw()) {
 				fleets.put(row.key, Map.of(Column.PLAYER, row.getFleetId(Column.PLAYER), Column.ENEMY, row.getFleetId(Column.ENEMY)));
 			}
-			if (row.enabledCheckbox == null) continue;
 			enabled.put(row.key, row.isEnabled());
 		}
-		return new ViewState(getContent().getExternalScroller().getYOffset(), inputRouter.getSession().captureFields(fields), fleets, enabled);
+		Map<Object, BattleNext_TextField.EditState> inputs = new LinkedHashMap<>(savedInputs);
+		inputs.putAll(inputRouter.getSession().captureFields(fields));
+		return new ViewState(getContent().getExternalScroller().getYOffset(), inputs, fleets, enabled);
 	}
 
 	public void restoreState(ViewState state) {
+		savedInputs.putAll(state.fields());
 		inputRouter.getSession().restoreFields(fields, state.fields(), presentation.editable());
 		for (Row row : rows) {
-			if (presentation.editable() && row.rawField == null && state.fleets().containsKey(row.key)) {
+			if (presentation.editable() && !row.isRaw() && state.fleets().containsKey(row.key)) {
 				row.fleets.putAll(state.fleets().get(row.key));
 			}
-			if (row.enabledCheckbox == null || !state.enabled().containsKey(row.key)) continue;
-			row.setEnabled(state.enabled().get(row.key));
+			BattleNext_TextField.EditState map = state.fields().get(List.of(row.key, "map"));
+			BattleNext_TextField.EditState scale = state.fields().get(List.of(row.key, "scale"));
+			BattleNext_TextField.EditState raw = state.fields().get(List.of(row.key, "raw"));
+			if (map != null) row.mapText = map.text();
+			if (scale != null) row.scaleText = scale.text();
+			if (raw != null) row.rawText = raw.text();
+			if (state.enabled().containsKey(row.key)) row.setEnabled(state.enabled().get(row.key));
 		}
 		getContent().getExternalScroller().setYOffset(state.scroll());
 		refreshRowStatuses();
@@ -300,6 +382,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	public void refreshRowStatuses() {
 		for (Row row : rows) {
+			if (row.statusLabel == null) continue;
 			boolean raw = row.rawField != null;
 			List<String> reasons = validation.apply(row);
 			row.statusLabel.setText(raw ? battleStrings.get("raw_row_status") : strings.get(reasons.isEmpty() ? "available" : "unavailable"));
@@ -345,6 +428,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void clearContent() {
+		if (tableWidget != null) tableWidget.close();
 		for (Row row : rows) {
 			for (BattleNext_OptionField field : row.fleetFields.values()) {
 				fields.values().remove(field.getField());
@@ -355,10 +439,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			field.close();
 		}
 		fields.clear();
+		savedInputs.clear();
 		rows.clear();
-		if (tableWidget != null) {
-			tableWidget.close();
-			tableWidget = null;
-		}
+		tableWidget = null;
 	}
 }

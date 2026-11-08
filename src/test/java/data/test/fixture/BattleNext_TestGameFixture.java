@@ -16,6 +16,8 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import data.scripts.tools.BattleNext_CsvLine;
+import data.scripts.tools.BattleNext_ModFileManager;
+import data.scripts.ui.BattleNext_UiManager;
 import data.scripts.tools.BattleNext_BattleSignals;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
@@ -219,6 +221,7 @@ public class BattleNext_TestGameFixture {
 
 	@AfterEach
 	protected void restoreGameServices() throws ReflectiveOperationException {
+		BattleNext_ModFileManager.ReadSession.deactivate();
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) ((ThreadLocal<?>) currentRouter.get(null)).get();
 		if (router != null) {
 			router.clear();
@@ -251,6 +254,15 @@ public class BattleNext_TestGameFixture {
 			rows.put(row);
 		}
 		return rows;
+	}
+
+	protected void settleUi(BattleNext_UiManager manager) throws InterruptedException {
+		long deadline = System.nanoTime() + 10_000_000_000L;
+		while (manager.isLoading()) {
+			if (System.nanoTime() > deadline) throw new AssertionError("Catalog loading timed out");
+			manager.advance(1f / 60f);
+			Thread.sleep(1L);
+		}
 	}
 
 	protected ShipHullSpecAPI hull(String id, String name, List<String> slots) {

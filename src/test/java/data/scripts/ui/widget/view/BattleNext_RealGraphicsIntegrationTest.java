@@ -57,6 +57,38 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 	private static final Color BACKGROUND = new Color(40, 60, 80);
 	private static BattleNext_TestGlContext context;
 
+	@Test
+	void fullscreenTextureFlushesEarlierGeometryBeforeChangingProjectionAndViewport() throws Exception {
+		context.reset(32, 32, 1f);
+		GL11.glClearColor(0f, 0f, 0f, 1f);
+		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+		int texture = GL11.glGenTextures();
+		try {
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+			ByteBuffer black = BufferUtils.createByteBuffer(4);
+			black.put(new byte[]{0, 0, 0, (byte) 255}).flip();
+			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, black);
+			var caller = context.captureState();
+			BattleNext_GeometryRenderer.beginBatch();
+			try {
+				BattleNext_GeometryRenderer.fillRect(20f, 20f, 8f, 8f, Color.WHITE, 1f);
+				BattleNext_GeometryRenderer.texturedFullscreen(texture, 1f, 1f, 16, 16);
+			} finally {
+				BattleNext_GeometryRenderer.endBatch();
+			}
+			ByteBuffer pixel = BufferUtils.createByteBuffer(4);
+			GL11.glReadPixels(24, 24, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
+			assertEquals(255, pixel.get(0) & 255);
+			GL11.glReadPixels(8, 8, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
+			assertEquals(0, pixel.get(0) & 255);
+			caller.assertRestored();
+		} finally {
+			GL11.glDeleteTextures(texture);
+		}
+	}
+
 	@BeforeAll
 	static void createContext() throws Exception {
 		context = new BattleNext_TestGlContext();

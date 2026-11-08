@@ -132,6 +132,14 @@ tasks.register("rttGroupsSmoke", JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 }
 
+tasks.register("performanceSmoke", JavaExec) {
+	group = "verification"
+	description = "Measures native management, picker, text, and batched geometry performance."
+	dependsOn "jar", "compileTestJava"
+	mainClass = "data.scripts.ui.BattleNext_PerformanceSmoke"
+	classpath = sourceSets.test.runtimeClasspath
+}
+
 tasks.register("distZip", Zip) {
 	group = "distribution"
 	description = "Builds a distributable mod archive under dist."

@@ -60,6 +60,7 @@ public class BattleNext_ProximityDamageSmoke {
 		System.setProperty("startRes", "800x600");
 		System.setProperty("startFS", "false");
 		System.setProperty("startSound", "false");
+		BattleNext_SimulatorMouse.getInstance();
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);
@@ -89,8 +90,13 @@ public class BattleNext_ProximityDamageSmoke {
 				var mission = access.createMission();
 				mission.initFleet(FleetSide.PLAYER, "", FleetGoal.ATTACK, true, 999);
 				mission.initFleet(FleetSide.ENEMY, "", FleetGoal.ATTACK, true, 999);
-				FleetMemberAPI player = mission.addToFleet(FleetSide.PLAYER, "wolf_CS", FleetMemberType.SHIP, "Proximity source", true);
-				FleetMemberAPI enemy = mission.addToFleet(FleetSide.ENEMY, "wolf_CS", FleetMemberType.SHIP, "Proximity target", true);
+				ShipVariantAPI unarmed = Global.getSettings().createEmptyVariant("BattleNext_proximity_unarmed", Global.getSettings().getHullSpec("wolf"));
+				FleetMemberAPI player = Global.getSettings().createFleetMember(FleetMemberType.SHIP, unarmed);
+				FleetMemberAPI enemy = Global.getSettings().createFleetMember(FleetMemberType.SHIP, unarmed.clone());
+				player.setShipName("Proximity source");
+				enemy.setShipName("Proximity target");
+				mission.addFleetMember(FleetSide.PLAYER, player);
+				mission.addFleetMember(FleetSide.ENEMY, enemy);
 				player.getRepairTracker().setCR(0.7f);
 				enemy.getRepairTracker().setCR(0.7f);
 				mission.initMap(-3000f, 3000f, -3000f, 3000f);
@@ -246,6 +252,8 @@ public class BattleNext_ProximityDamageSmoke {
 
 			scorekeeper.freeze("draw");
 			var report = scorekeeper.getFrozenReport();
+			JSONObject output = new JSONObject().put("battle", battle).put("probes", probes).put("report", report.toJson());
+			Files.writeString(reports.resolve("battle-" + battle + ".json"), output.toString(2), StandardCharsets.UTF_8);
 			for (List<BattleNext_DamageSourceReport> sources : List.of(report.getPlayerMembers().get(0).getDealtBySource(),
 					report.getEnemyMembers().get(0).getTakenBySource())) {
 				if (sources.size() != 1) throw new AssertionError("All Devastator splash must share one weapon source: " + sources.size());
@@ -260,8 +268,6 @@ public class BattleNext_ProximityDamageSmoke {
 					}
 				}
 			}
-			JSONObject output = new JSONObject().put("battle", battle).put("probes", probes).put("report", report.toJson());
-			Files.writeString(reports.resolve("battle-" + battle + ".json"), output.toString(2), StandardCharsets.UTF_8);
 			System.out.println("Proximity damage battle=" + battle + ", explosions=" + probes.length() + ", hull=" + observed[0]
 					+ ", armor=" + observed[1] + ", shields=" + observed[2] + ", emp=" + observed[3]);
 			engine.getListenerManager().removeListener(this);

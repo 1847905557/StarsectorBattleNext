@@ -145,7 +145,7 @@ public class BattleNext_BattleResultRecorder extends BaseEveryFrameCombatPlugin 
 		List<BattleNext_BattleReportModel> reports = new ArrayList<>(store.getAll());
 		reports.sort(Comparator.comparingLong(BattleNext_BattleReportModel::getCreatedAt).reversed());
 		BattleNext_Logger.info(BattleNext_BattleResultRecorder.class, "report.retention.applied",
-				() -> BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports).put("report_id", report.getId()).build());
+				() -> BattleNext_Logger.fields().put("keep_count", keepCount).put("ordered_reports", reports.stream().map(BattleNext_BattleReportModel::getId).toList()).put("report_id", report.getId()).build());
 		for (int index = keepCount; index < reports.size(); index++) {
 			store.delete(reports.get(index).getId());
 		}

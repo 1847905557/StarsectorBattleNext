@@ -94,6 +94,11 @@ public class BattleNext_BattleValidation {
 		return fleetResults.computeIfAbsent(id, this::assemble);
 	}
 
+	public BattleNext_AssembledFleet assembledFleet(String id) {
+		fleetResult(id);
+		return assembled.get(id);
+	}
+
 	private Result assemble(String id) {
 		List<Failure> failures = new ArrayList<>();
 		try {

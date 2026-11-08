@@ -44,7 +44,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			Global.getSettings().setFloat("combatStepsPerFrame", request.config().strategy() == BattleNext_SimulationConfig.Strategy.COMPATIBLE
 					? (float) request.config().stepsPerFrame() : 1f);
 			configured = true;
-			BattleNext_Logger.info(getClass(), "simulator.settings.acquired", BattleNext_Logger.fields()
+			BattleNext_Logger.info(getClass(), "simulator.settings.acquired", () -> BattleNext_Logger.fields()
 					.put("id", request.id()).put("previous_speed", previousSpeed).put("previous_steps", previousSteps)
 					.put("strategy", request.config().strategy()).put("steps_per_frame", request.config().stepsPerFrame()).build());
 		} catch (Throwable exception) {
@@ -118,7 +118,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 			Global.getSettings().setFloat("combatSpeedMult", previousSpeed);
 			Global.getSettings().setFloat("combatStepsPerFrame", previousSteps);
 			configured = false;
-			BattleNext_Logger.info(getClass(), "simulator.settings.restored", BattleNext_Logger.fields()
+			BattleNext_Logger.info(getClass(), "simulator.settings.restored", () -> BattleNext_Logger.fields()
 					.put("id", request.id()).put("speed", previousSpeed).put("steps", previousSteps).build());
 		}
 		scorekeeper.cleanup();
@@ -126,7 +126,7 @@ public class BattleNext_SimulatorController extends BaseEveryFrameCombatPlugin {
 		nativeAccess.finish(engine);
 		BattleNext_SimulationResult result = new BattleNext_SimulationResult(request.id(), outcome, reportJson,
 				engine.getTotalElapsedTime(false), System.nanoTime() - started, steps, peakHeap, diagnostic);
-		BattleNext_Logger.info(getClass(), "simulator.execution.finished", BattleNext_Logger.fields().put("result", result.toJson()).build());
+		BattleNext_Logger.info(getClass(), "simulator.execution.finished", () -> BattleNext_Logger.fields().put("id", result.id()).put("outcome", result.outcome()).build());
 		BattleNext_SimulatorWorker.complete(result);
 		engine.removePlugin(this);
 	}

@@ -103,6 +103,17 @@ public class BattleNext_ConfirmationDialog extends BattleNext_PanelBasedWidget {
 		showConfirmation();
 	}
 
+	public void saveCompleted(boolean success) {
+		if (confirmation == null || request == null || !request.confirmId().isEmpty()) return;
+		if (success) {
+			ConfirmationRequest current = request;
+			closeDialog();
+			current.onConfirmed().run();
+		} else {
+			confirmationStatus.setText(host.getSaveError());
+		}
+	}
+
 	public void handle(Object action) {
 
 		if (confirmation == null) return;

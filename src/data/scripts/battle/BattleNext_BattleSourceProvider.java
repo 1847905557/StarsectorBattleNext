@@ -31,16 +31,30 @@ public class BattleNext_BattleSourceProvider {
 	private final List<String> warnings = new ArrayList<>();
 	private final List<String> ruleWarnings = new ArrayList<>();
 	private BattleNext_StartedTournament activeTournament;
-	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
+	private final BattleNext_StartedTournamentStore startedStore;
+	private final boolean sharedCatalogs;
 	private List<String> catalogErrors = List.of();
 
 	public BattleNext_BattleSourceProvider() {
-		fleetStore = new BattleNext_FleetStore();
-		quickBattleStore = new BattleNext_QuickBattleStore();
+		this(new BattleNext_FleetStore(), new BattleNext_QuickBattleStore(), new BattleNext_TournamentStore(),
+				new BattleNext_RuleStore(), new BattleNext_StartedTournamentStore(), false);
+	}
+
+	public BattleNext_BattleSourceProvider(BattleNext_FleetStore fleets, BattleNext_QuickBattleStore quickBattles,
+			BattleNext_TournamentStore tournaments, BattleNext_RuleStore rules, BattleNext_StartedTournamentStore instances) {
+		this(fleets, quickBattles, tournaments, rules, instances, true);
+	}
+
+	private BattleNext_BattleSourceProvider(BattleNext_FleetStore fleets, BattleNext_QuickBattleStore quickBattles,
+			BattleNext_TournamentStore tournaments, BattleNext_RuleStore rules, BattleNext_StartedTournamentStore instances, boolean sharedCatalogs) {
+		fleetStore = fleets;
+		quickBattleStore = quickBattles;
 		validation = new BattleNext_BattleValidation(fleetStore);
-		tournamentStore = new BattleNext_TournamentStore();
+		tournamentStore = tournaments;
 		tournamentEngine = new BattleNext_TournamentEngine();
-		ruleStore = new BattleNext_RuleStore();
+		ruleStore = rules;
+		startedStore = instances;
+		this.sharedCatalogs = sharedCatalogs;
 	}
 
 	public List<String> reloadCatalogs() {
@@ -63,7 +77,8 @@ public class BattleNext_BattleSourceProvider {
 		List<String> errors = new ArrayList<>();
 		for (BattleNext_BaseStore<?> store : stores) {
 			try {
-				store.reload();
+				if (sharedCatalogs) store.ensureLoaded();
+				else store.reload();
 			} catch (Exception exception) {
 				errors.add(store.getLoadError());
 				BattleNext_Logger.warn(BattleNext_BattleSourceProvider.class, "battle.catalog.load.failed",
@@ -71,11 +86,11 @@ public class BattleNext_BattleSourceProvider {
 			}
 		}
 		try {
-			startedStore.reload();
+			if (sharedCatalogs) startedStore.ensureLoaded();
+			else startedStore.reload();
 		} catch (Exception exception) {
 			errors.add(startedStore.getLoadError());
 		}
-		validation.refresh();
 		catalogErrors = List.copyOf(errors);
 		return catalogErrors;
 	}

@@ -15,6 +15,43 @@ import java.util.List;
 class BattleNext_PinnedVariantStoreTest extends BattleNext_TestGameFixture {
 
 	@Test
+	void catalogReusesItsRevisionAndPublishesNewRenamedAndDeletedPinsWithoutReloading() throws Exception {
+		var store = new BattleNext_PinnedVariantStore();
+		store.reload();
+		var first = store.saveVariant("First", source().getApi());
+		var second = store.saveVariant("Second", source().getApi());
+		var catalog = store.getCatalog();
+		assertSame(catalog, store.getCatalog());
+		assertEquals(2, catalog.size());
+		store.rename(first.getPinId(), "Renamed");
+		assertNotSame(catalog, store.getCatalog());
+		assertEquals("Renamed", store.getCatalog().stream().filter(entry -> entry.pinId().equals(first.getPinId())).findFirst().orElseThrow().name());
+		int reads = dataReads.size();
+		store.deleteFile(first.getSourcePath());
+		assertEquals(List.of(second.getPinId()), store.getCatalog().stream().map(entry -> entry.pinId()).toList());
+		store.delete(second.getPinId());
+		assertTrue(store.getCatalog().isEmpty());
+		assertEquals(reads, dataReads.size());
+	}
+
+	@Test
+	void deletingOnePinPreservesGameValidationFailuresForOtherDefinitions() throws Exception {
+		var store = new BattleNext_PinnedVariantStore(model -> { });
+		store.reload();
+		var first = store.saveVariant("First", source().getApi());
+		JSONObject rejected = first.toJson().put("pinId", "rejected");
+		rejected.getJSONObject("variantJson").put("hullId", "unknown");
+		Files.writeString(directory.resolve("tournament/_pinnedVariants/rejected.json"), rejected.toString(), StandardCharsets.UTF_8);
+		store.reload();
+		store.validateDefinition("rejected");
+		assertNull(store.get("rejected"));
+		store.deleteFile(first.getSourcePath());
+		assertNull(store.get("rejected"));
+		assertNull(store.getCatalog().get(0).model());
+		assertFalse(store.getCatalog().get(0).error().isEmpty());
+	}
+
+	@Test
 	void catalogRetainsEveryErrorAndDeletesOnlyTheLoadedSourceFile() throws Exception {
 
 		BattleNext_PinnedVariantStore store = new BattleNext_PinnedVariantStore();

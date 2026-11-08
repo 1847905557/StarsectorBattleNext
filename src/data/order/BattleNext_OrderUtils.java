@@ -1,5 +1,7 @@
 package data.order;
 
+import data.scripts.order.BattleNext_AssignmentIndex;
+
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
@@ -104,6 +106,8 @@ public class BattleNext_OrderUtils {
 	public static int assignmentCount(AssignmentTargetAPI target, CombatAssignmentType type,
 			CombatTaskManagerAPI tasks, CombatEngineAPI engine) {
 
+		Integer indexed = BattleNext_AssignmentIndex.count(target, type, tasks, engine);
+		if (indexed != null) return indexed;
 		int count = 0;
 		for (AssignmentInfo assignment : tasks.getAllAssignments()) {
 			if (assignment.getTarget() != target) continue;

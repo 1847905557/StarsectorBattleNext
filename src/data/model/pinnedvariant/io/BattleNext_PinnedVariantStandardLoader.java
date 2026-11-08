@@ -14,12 +14,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLoader<BattleNext_PinnedVariantModel> {
 
 	private static final String RESOURCE_FOLDER = "tournament/_pinnedVariants";
 	private final List<String> loadErrors = new ArrayList<>();
 	private List<CatalogEntry> catalog = List.of();
+	private final Consumer<BattleNext_PinnedVariantModel> validate;
+
+	public BattleNext_PinnedVariantStandardLoader() {
+		this(model -> model.toBuilder().build());
+	}
+
+	public BattleNext_PinnedVariantStandardLoader(Consumer<BattleNext_PinnedVariantModel> validate) {
+		this.validate = validate;
+	}
 
 	public record CatalogEntry(String path, String name, String pinId, String hullId,
 			BattleNext_PinnedVariantModel model, String error, String raw) {
@@ -28,6 +38,24 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 
 	public List<CatalogEntry> getCatalog() {
 		return catalog;
+	}
+
+	@Override
+	public void removeSource(String path) {
+		super.removeSource(path);
+		catalog = catalog.stream().filter(entry -> !entry.path().equals(path)).toList();
+		loadErrors.removeIf(error -> error.startsWith(path + ":"));
+	}
+
+	public void rejectModel(String id, RuntimeException failure) {
+		List<CatalogEntry> updated = new ArrayList<>();
+		for (CatalogEntry entry : catalog) {
+			if (entry.pinId().equals(id)) {
+				updated.add(new CatalogEntry(entry.path(), entry.name(), entry.pinId(), entry.hullId(), null, failure.toString(), entry.raw()));
+				loadErrors.add(entry.path() + ": " + failure);
+			} else updated.add(entry);
+		}
+		catalog = List.copyOf(updated);
 	}
 
 	@Override
@@ -69,7 +97,7 @@ public class BattleNext_PinnedVariantStandardLoader extends BattleNext_CatalogLo
 					throw new IllegalArgumentException("Pin ID does not match file name");
 				}
 				markSource(model, path);
-				model.toBuilder().build();
+				validate.accept(model);
 				result.add(model);
 				recordInput(path, -1, pinId, raw);
 				entries.add(new CatalogEntry(path, name, pinId, hullId, model, "", raw));

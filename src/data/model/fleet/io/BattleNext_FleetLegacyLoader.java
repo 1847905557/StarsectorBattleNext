@@ -1,5 +1,6 @@
 package data.model.fleet.io;
 
+import java.util.function.Supplier;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
@@ -52,7 +53,7 @@ public class BattleNext_FleetLegacyLoader extends BattleNext_BaseLoader<BattleNe
 	protected BattleNext_FleetModel readFleet(String number, String dataPath, String fleetPath)
 			throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("number", number).put("metadata_path", dataPath).put("members_path", fleetPath).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("number", number).put("metadata_path", dataPath).put("members_path", fleetPath).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetLegacyLoader.class, "fleet.legacy.load", input);
 		try {
 

@@ -46,6 +46,7 @@ public class BattleNext_DeploymentOpeningSmoke {
 		System.setProperty("startRes", "800x600");
 		System.setProperty("startFS", "false");
 		System.setProperty("startSound", "false");
+		BattleNext_SimulatorMouse.getInstance();
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);

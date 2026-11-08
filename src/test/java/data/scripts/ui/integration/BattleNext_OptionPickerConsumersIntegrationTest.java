@@ -196,6 +196,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		if (!kind.equals("tournament")) {
 			open.invoke(picker);
 		}
+		browsePickerOption(picker, id);
 		CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
 		assertEquals(1, tooltips.get(grid).getComponents().size());

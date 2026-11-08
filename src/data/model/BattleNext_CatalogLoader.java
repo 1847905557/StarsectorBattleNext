@@ -1,5 +1,6 @@
 package data.model;
 
+import java.util.function.Supplier;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_ModFileManager;
 import org.json.JSONException;
@@ -17,7 +18,7 @@ public abstract class BattleNext_CatalogLoader<T extends BattleNext_BaseModel> e
 		beginLoad();
 		List<T> result = new ArrayList<>();
 		for (String path : catalogPaths()) {
-			BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("mod_id", MOD_ID).put("kind", kind()).build();
+			Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", MOD_ID).put("kind", kind()).build();
 			BattleNext_Logger.operationStarted(getClass(), "resource.load", input);
 			T value;
 			String raw = "";

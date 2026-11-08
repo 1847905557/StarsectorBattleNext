@@ -397,7 +397,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			PositionAPI canvas = panel.getPosition();
 			float[] visible = visibleBounds();
 			BattleNext_Logger.info(BattleNext_TournamentView.class, "tournament.chart.fitted",
-				BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("node_count", nodes.size()).put("zoom", zoom).put("canvas_x", canvas.getX()).put("canvas_y", canvas.getY()).put("canvas_width", canvas.getWidth()).put("canvas_height", canvas.getHeight()).put("visible_bounds", visible).put("first_node", project(nodes.get(0).x, nodes.get(0).y)).build());
+				() -> BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("node_count", nodes.size()).put("zoom", zoom).put("canvas_x", canvas.getX()).put("canvas_y", canvas.getY()).put("canvas_width", canvas.getWidth()).put("canvas_height", canvas.getHeight()).put("visible_bounds", visible).put("first_node", project(nodes.get(0).x, nodes.get(0).y)).build());
 		}
 	}
 
@@ -691,22 +691,32 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 	private void renderEdges(float alphaMult) {
 
-		for (Edge edge : edges) {
-			Node from = findNode(edge.from);
-			Node to = findNode(edge.to);
-			if (from == null || to == null) continue;
+		Map<String, Node> lookup = new HashMap<>();
+		for (Node node : nodes) lookup.putIfAbsent(node.id, node);
+		float[] visible = visibleBounds();
+		BattleNext_GeometryRenderer.beginBatch();
+		try {
+			for (Edge edge : edges) {
+				Node from = lookup.get(edge.from);
+				Node to = lookup.get(edge.to);
+				if (from == null || to == null) continue;
 
-			float[] start = project(from.x + from.width, from.y + from.height * 0.5f);
-			float[] end = project(to.x, to.y + to.height * 0.5f);
-			float bend = (start[0] + end[0]) * 0.5f;
-			Color color = edge.loser ? Misc.getNegativeHighlightColor() : BattleNext_UiTheme.MUTED;
-			if (to.id.equals((started == null ? "" : started.getPendingMatchId())) || from.id.equals((started == null ? "" : started.getPendingMatchId()))) {
-				color = Misc.getHighlightColor();
-			} else if (from.match != null && from.match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) {
-				color = edge.loser ? Misc.getNegativeHighlightColor() : Misc.getPositiveHighlightColor();
+				float[] start = project(from.x + from.width, from.y + from.height * 0.5f);
+				float[] end = project(to.x, to.y + to.height * 0.5f);
+				if (Math.max(start[0], end[0]) < visible[0] || Math.min(start[0], end[0]) > visible[0] + visible[2]
+						|| Math.max(start[1], end[1]) < visible[1] || Math.min(start[1], end[1]) > visible[1] + visible[3]) continue;
+				float bend = (start[0] + end[0]) * 0.5f;
+				Color color = edge.loser ? Misc.getNegativeHighlightColor() : BattleNext_UiTheme.MUTED;
+				if (to.id.equals((started == null ? "" : started.getPendingMatchId())) || from.id.equals((started == null ? "" : started.getPendingMatchId()))) {
+					color = Misc.getHighlightColor();
+				} else if (from.match != null && from.match.getStatus() == BattleNext_Match.MatchStatus.COMPLETE) {
+					color = edge.loser ? Misc.getNegativeHighlightColor() : Misc.getPositiveHighlightColor();
+				}
+				BattleNext_GeometryRenderer.lineStrip(new float[]{start[0], start[1], bend, start[1],
+						bend, end[1], end[0], end[1]}, color, alphaMult, edge.loser ? 1f : 2f);
 			}
-			BattleNext_GeometryRenderer.lineStrip(new float[]{start[0], start[1], bend, start[1],
-					bend, end[1], end[0], end[1]}, color, alphaMult, edge.loser ? 1f : 2f);
+		} finally {
+			BattleNext_GeometryRenderer.endBatch();
 		}
 	}
 
@@ -716,6 +726,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		float scale = position.getWidth() / CANVAS_WIDTH * zoom;
 		float[] visible = visibleBounds();
 
+		BattleNext_GeometryRenderer.beginBatch();
+		try {
 		for (int index = 0; index < nodes.size(); index++) {
 			Node node = nodes.get(index);
 			float[] point = project(node.x, node.y);
@@ -732,6 +744,15 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					node == hovered ? BattleNext_UiTheme.ACCENT : color, alphaMult,
 					BORDER_WIDTH);
 
+		}
+		} finally {
+			BattleNext_GeometryRenderer.endBatch();
+		}
+		for (int index = 0; index < nodes.size(); index++) {
+			Node node = nodes.get(index);
+			float[] point = project(node.x, node.y);
+			if (point[0] + node.width * scale < visible[0] || point[0] > visible[0] + visible[2]
+					|| point[1] < visible[1] || point[1] - node.height * scale > visible[1] + visible[3]) continue;
 			GL11.glPushMatrix();
 			try {
 				GL11.glTranslatef(point[0], point[1], 0f);

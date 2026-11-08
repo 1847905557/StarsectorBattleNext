@@ -1,5 +1,6 @@
 package data.scripts;
 
+import java.util.function.Supplier;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.impl.campaign.intel.bar.events.BarEventManager;
@@ -25,7 +26,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 	@Override
 	public void onApplicationLoad() {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.load", input);
 
 		BattleNext_Settings.load();
@@ -55,7 +56,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 		onDevModeF8Reload();
 		afterApplicationLoad = true;
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "application.load",
-				BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
+				() -> BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
 	}
 
 	@Override
@@ -71,7 +72,7 @@ public class BattleNextModPlugin extends BaseModPlugin {
 	@Override
 	public void onGameLoad(boolean newGame) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("new_game", newGame).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("new_game", newGame).build();
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "campaign.load", input);
 
 		BattleNext_MissionRestrictedUnlock.getInstance().forget();
@@ -105,19 +106,19 @@ public class BattleNextModPlugin extends BaseModPlugin {
 			// maybe
 		}
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "campaign.load",
-				BattleNext_Logger.fields().put("new_game", newGame).build());
+				() -> BattleNext_Logger.fields().put("new_game", newGame).build());
 	}
 
 	@Override
 	public void onDevModeF8Reload() {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build();
 		BattleNext_Logger.operationStarted(BattleNextModPlugin.class, "application.registries.reload", input);
 		reloadCsvRegistry();
 		BattleNext_ProximityDamageAttribution.register();
 		BattleNext_SimulatorService.resourcesReloaded();
 		BattleNext_Logger.operationSucceeded(BattleNextModPlugin.class, "application.registries.reload",
-				BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
+				() -> BattleNext_Logger.fields().put("mod_id", "AI_Battles_Next").build());
 	}
 
 	public static void reloadCsvRegistry() {

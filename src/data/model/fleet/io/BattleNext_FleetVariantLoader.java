@@ -12,6 +12,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 
 public class BattleNext_FleetVariantLoader {
 
@@ -20,6 +21,10 @@ public class BattleNext_FleetVariantLoader {
 	}
 
 	public static void load(BattleNext_FleetModel fleet, List<String> paths) throws IOException, JSONException {
+		load(fleet, paths, id -> Global.getSettings().doesVariantExist(id));
+	}
+
+	public static void load(BattleNext_FleetModel fleet, List<String> paths, Predicate<String> registeredVariant) throws IOException, JSONException {
 
 		BattleNext_Logger.operationStarted(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
 				() -> BattleNext_Logger.fields().put("fleet", fleet).put("paths", paths).build());
@@ -61,7 +66,7 @@ public class BattleNext_FleetVariantLoader {
 			}
 			if (fleet.hasLocalVariants()) {
 				for (String variantId : fleet.getMembers().stream().map(BattleNext_MemberModel::getVariantId).toList()) {
-					if (fleet.getVariant(variantId) == null && !Global.getSettings().doesVariantExist(variantId)) {
+					if (fleet.getVariant(variantId) == null && !registeredVariant.test(variantId)) {
 						BattleNext_Logger.warn(BattleNext_FleetVariantLoader.class, "fleet.variant.missing",
 					BattleNext_Logger.fields().put("fleet_id", fleet.getId()).put("variant_id", variantId).put("path", source).build());
 						fleet.addLoadError("Missing variant " + variantId + " in " + source);

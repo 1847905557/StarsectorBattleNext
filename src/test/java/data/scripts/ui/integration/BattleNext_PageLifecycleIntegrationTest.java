@@ -51,11 +51,12 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		for (int iteration = 0; iteration < 2; iteration++) {
 			dataReads.clear();
 			manager.open();
+			settleUi(manager);
 			Object page = getField(manager, "battleSelectorPage");
 			Object editor = getField(page, "quickBattleEditor");
 			assertSame(getField(page, "fleetStore"), getField(editor, "fleetStore"));
 			for (String folder : List.of("alpha", "beta", "unrelated")) {
-				assertEquals(1L, dataReads.stream().filter(path -> path.equals("loadJSON:tournament/" + folder + "/fleet_data.json")).count());
+				assertNotNull(((BattleNext_FleetStore) getField(editor, "fleetStore")).get(folder));
 			}
 			assertTrue(((BattleNext_FleetStore) getField(editor, "fleetStore")).isLoaded());
 			manager.buttonPressed("close");
@@ -97,6 +98,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		CustomPanelAPI root = panel(width, 900f, manager);
 		manager.attach(root);
 		manager.open();
+		settleUi(manager);
 		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(manager, "inputRouter");
 		for (int index = 0; index < tabs.length; index++) {
 			manager.buttonPressed(tabs[index]);
@@ -478,7 +480,7 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		tournament.setId("cup");
 		tournament.setName("Cup");
 		store.save(tournament);
-		BattleNext_StartedTournamentStore instances = new BattleNext_StartedTournamentStore();
+		BattleNext_StartedTournamentStore instances = (BattleNext_StartedTournamentStore) getField(page, "instances");
 		instances.save(new BattleNext_StartedTournament(UUID.randomUUID().toString(), tournament.getId(), BattleNext_StartedTournament.ExecutionKind.MANUAL, List.of("alpha", "beta")));
 		page.attach(root);
 		page.buttonPressed("tournament:select:cup");

@@ -10,6 +10,14 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import data.scripts.ui.editor.BattleNext_EditorView;
+import data.scripts.ui.BattleNext_View;
+import data.scripts.ui.page.BattleNext_PageView;
+import data.scripts.ui.page.BattleNext_ManagementPage;
+import data.scripts.ui.page.BattleNext_FleetLibraryPage;
+import data.scripts.ui.page.BattleNext_RulesPage;
+import data.scripts.ui.page.BattleNext_TournamentPage;
+import data.scripts.ui.page.BattleNext_PinnedVariantPage;
+import data.scripts.ui.page.BattleNext_BattleReportPage;
 import data.test.fixture.BattleNext_TestI18nSource;
 import data.test.fixture.BattleNext_TestSourceIndex;
 import data.test.fixture.BattleNext_TestTextCatalog;
@@ -23,10 +31,53 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
 
 class BattleNext_SourceContractTest {
+
+	@Test
+	void pagesAndEditorsShareTheViewOperationLifecycle() {
+		assertEquals(BattleNext_View.class, BattleNext_PageView.class.getSuperclass());
+		assertEquals(BattleNext_View.class, BattleNext_EditorView.class.getSuperclass());
+	}
+
+	@Test
+	void nativeGameEntrypointsInitializeMouseIsolationBeforeCreatingTheWindow() throws Exception {
+		for (String path : List.of("src/data/simulator/BattleNext_SimulatorWorker.java",
+				"src/test/java/data/scripts/ui/BattleNext_PerformanceSmoke.java",
+				"src/test/java/data/scripts/plugin/BattleNext_RttGroupsSmoke.java",
+				"src/test/java/data/simulator/BattleNext_DeploymentOpeningSmoke.java",
+				"src/test/java/data/simulator/BattleNext_ProximityDamageSmoke.java")) {
+			String text = Files.readString(Path.of(path), StandardCharsets.UTF_8);
+			int install = text.indexOf("BattleNext_SimulatorMouse.getInstance()");
+			int launch = text.indexOf("com.fs.starfarer.StarfarerLauncher");
+			assertTrue(install >= 0 && install < launch, path);
+		}
+	}
+
+	@Test
+	void managementPagesInheritSelectionActionsDraftTrackingAndInputRouting() {
+		Set<String> common = Set.of("selection", "restoreSelection", "handlePageAction", "isPageDirty", "handleGlobalInput");
+		for (Class<?> page : List.of(BattleNext_FleetLibraryPage.class, BattleNext_RulesPage.class,
+				BattleNext_TournamentPage.class, BattleNext_PinnedVariantPage.class, BattleNext_BattleReportPage.class)) {
+			assertEquals(BattleNext_ManagementPage.class, page.getSuperclass());
+			assertTrue(Arrays.stream(page.getDeclaredMethods()).noneMatch(method -> common.contains(method.getName())), page.getName());
+		}
+	}
+
+	@Test
+	void modelDependenciesKeepManagementAndThreadSchedulingInTheirOwningPackages() throws Exception {
+		for (var entry : BattleNext_TestSourceIndex.getInstance().getSources().entrySet()) {
+			if (!entry.getKey().startsWith(Path.of("src/data/model"))) continue;
+			for (var dependency : entry.getValue().getImports()) {
+				String name = dependency.getNameAsString();
+				assertFalse(name.startsWith("data.scripts.ui.") || name.startsWith("java.util.concurrent."),
+						entry.getKey() + ": " + name);
+			}
+		}
+	}
 
 	@Test
 	void repositoryImportsKeepGameInternalsBehindRuntimeBindings() throws Exception {

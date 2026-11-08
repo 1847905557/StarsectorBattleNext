@@ -59,7 +59,9 @@ class BattleNext_ResourceSaverContractTest extends BattleNext_TestGameFixture {
 			assertEquals(root(kind) + "/" + entry.getId() + ".json", entry.getSourcePath());
 			assertEquals(model(kind, entry.getId()).toJson().toString(), entry.toJson().toString());
 		}
-		assertEquals(List.of("loadJSON:" + root(kind) + "/a.json", "loadJSON:" + root(kind) + "/b.json"), dataReads);
+		List<String> expectedReads = kind.equals("report") ? List.of()
+				: List.of("loadJSON:" + root(kind) + "/a.json", "loadJSON:" + root(kind) + "/b.json");
+		assertEquals(expectedReads, dataReads);
 	}
 
 	@ParameterizedTest

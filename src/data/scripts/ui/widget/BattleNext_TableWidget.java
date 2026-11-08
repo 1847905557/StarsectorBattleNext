@@ -10,6 +10,11 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
 
 import java.util.function.BiConsumer;
+import java.util.function.IntConsumer;
+import java.util.function.IntPredicate;
+import java.util.HashMap;
+import java.util.Map;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 
 public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 
@@ -30,6 +35,15 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 	private TooltipMakerAPI content;
 	private int rowCount;
 	private boolean headerBuilt;
+	private VisibleRows visibleRows;
+	private IntConsumer releaseRow;
+	private IntPredicate keepRow;
+	private final Map<Integer, TooltipMakerAPI> mountedRows = new HashMap<>();
+
+	public void virtualize(IntConsumer release, IntPredicate keep) {
+		releaseRow = release;
+		keepRow = keep;
+	}
 
 	public BattleNext_TableWidget(CustomUIPanelPlugin inputOwner,
 			String[] headers, float[] columnShares, int rowCount, RowBuilder rowBuilder) {
@@ -60,12 +74,30 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 		rowsBounds = new UIRect(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET,
 				BattleNext_PageLayout.TABLE_HEADER_HEIGHT,
 				tableWidth + BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, availableHeight);
-		rowsPanel = ownPanel(panel, rowsBounds.createSubPanel(panel, inputOwner).getPanel());
+		rowsPanel = ownPanel(panel, rowsBounds.createSubPanel(panel, new BaseCustomUIPanelPlugin() {
+			@Override
+			public void advance(float amount) {
+				if (visibleRows != null) visibleRows.update(content.getExternalScroller().getYOffset(), availableHeight);
+			}
+		}).getPanel());
 		content = rowsPanel.createUIElement(rowsBounds.getWidth(), availableHeight, true);
 		float rowWidth = rowsBounds.getWidth() - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH;
 		UIRect[] cells = columns(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT);
-		for (int index = 0; index < rowCount; index++) {
-			rowBuilder.build(index, rowWidth, cells, content);
+		if (releaseRow == null || rowCount <= 50) {
+			for (int index = 0; index < rowCount; index++) rowBuilder.build(index, rowWidth, cells, content);
+		} else {
+			visibleRows = new VisibleRows(rowCount, index -> BattleNext_PageLayout.TABLE_ROW_HEIGHT,
+					index -> {
+						TooltipMakerAPI row = rowsPanel.createUIElement(rowWidth, BattleNext_PageLayout.TABLE_ROW_HEIGHT, false);
+						rowBuilder.build(index, rowWidth, cells, row);
+						mountedRows.put(index, row);
+						content.addCustomDoNotSetPosition(row).getPosition().inTL(0f, visibleRows.top(index));
+					}, index -> {
+						releaseRow.accept(index);
+						content.removeComponent(mountedRows.remove(index));
+					}, keepRow);
+			content.setHeightSoFar(visibleRows.height());
+			visibleRows.update(scrollOffset, availableHeight);
 		}
 		contentBuilder.accept(rowWidth, content);
 		float visibleHeight = Math.min(availableHeight,
@@ -86,6 +118,8 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 
 	@Override
 	protected void clearContent() {
+		if (visibleRows != null) visibleRows.close();
+		visibleRows = null;
 		if (content != null && content.getExternalScroller() != null) {
 			scrollOffset = content.getExternalScroller().getYOffset();
 		}

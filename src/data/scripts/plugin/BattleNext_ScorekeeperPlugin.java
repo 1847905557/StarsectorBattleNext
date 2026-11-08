@@ -61,7 +61,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 			if (!isReadyToStart()) return;
 			battleStarted = true;
 			BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.started",
-				BattleNext_Logger.fields().put("ships", engine.getShips()).build());
+				() -> BattleNext_Logger.fields().put("ships", engine.getShips()).build());
 		}
 		if (battleStarted) {
 			String winner = determineWinner();
@@ -194,7 +194,7 @@ public class BattleNext_ScorekeeperPlugin extends BaseEveryFrameCombatPlugin imp
 		}
 		frozenReport = report;
 		BattleNext_Logger.info(BattleNext_ScorekeeperPlugin.class, "battle.result.frozen",
-				BattleNext_Logger.fields().put("report", frozenReport).build());
+				() -> BattleNext_Logger.fields().put("report", frozenReport).build());
 	}
 
 	private ScoreTrackedFleetMember findTracked(ShipAPI ship) {

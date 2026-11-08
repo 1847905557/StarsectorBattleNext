@@ -3,6 +3,8 @@ package data.scripts.ui.editor;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.*;
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.BattleNext_BaseStore;
+import data.model.BattleNext_JsonModel;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.report.BattleNext_BattleReportModel;
@@ -37,6 +39,33 @@ import java.util.Map;
 import java.util.Set;
 
 class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture {
+
+	@ParameterizedTest
+	@ValueSource(strings = {"fleet", "rule", "tournament"})
+	void savingThenEditingAndRebuildingKeepsThePublishedModelIndependentFromTheDraft(String kind) throws Exception {
+		BattleNext_EditorView editor = editor(kind);
+		var store = (BattleNext_BaseStore<?>) getField(editor, "store");
+		store.reload();
+		if (kind.equals("tournament")) ((BattleNext_RuleStore) getField(editor, "ruleStore")).reload();
+		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
+		((TextFieldAPI) getField(editor, "idField")).setText("isolated");
+		((TextFieldAPI) getField(editor, "nameField")).setText("Saved");
+		assertTrue(editor.save(), editor.getStatusText());
+		var stored = (BattleNext_JsonModel) store.get("isolated");
+		String published = stored.toJson().toString();
+		long revision = store.getRevision();
+		assertNotSame(stored, getField(editor, "draft"));
+		((TextFieldAPI) getField(editor, "nameField")).setText("Second draft");
+		editor.refreshContent();
+		assertTrue(editor.hasUnsavedChanges());
+		assertEquals(published, stored.toJson().toString());
+		assertEquals(revision, store.getRevision());
+		assertEquals("Second draft", ((TextFieldAPI) getField(editor, "nameField")).getText());
+		editor.discard();
+		assertEquals("Saved", ((TextFieldAPI) getField(editor, "nameField")).getText());
+		assertFalse(editor.hasUnsavedChanges());
+		editor.close();
+	}
 
 	@ParameterizedTest
 	@CsvSource({"fleet,180", "rule,1000", "tournament,1000", "quick,1000", "pinned,1000", "report,1000", "settings,1000"})
@@ -225,13 +254,14 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			assertEquals(editor.actionsPanel.getPosition().getCenterY(), action.getCenterY(), 0.001f);
 			assertEquals(index != 0, buttons.get("probe:" + index).get());
 		}
-		Map<?, ?> registrations = (Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations");
+		BattleNext_UiInputRouter router = (BattleNext_UiInputRouter) getField(editor, "inputRouter");
+		Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
 		for (TextFieldAPI field : List.of(editor.nameField, editor.ruleField, editor.cellField)) {
 			assertEquals(List.of(editor.fieldContent), registrations.get(field));
 		}
 		List<TextFieldAPI> previousFields = List.of(editor.nameField, editor.ruleField, editor.cellField);
 		editor.refreshContent();
-		registrations = (Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations");
+		registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
 		assertEquals(Set.of(editor.nameField, editor.ruleField, editor.cellField), registrations.keySet());
 		for (TextFieldAPI field : previousFields) {
 			assertFalse(registrations.containsKey(field));
@@ -240,7 +270,7 @@ class BattleNext_EditorStandardizationTest extends BattleNext_TestVariantFixture
 			assertEquals(List.of(editor.fieldContent), registrations.get(field));
 		}
 		editor.close();
-		assertTrue(((Map<?, ?>) getField(editor.inputRouter.getSession(), "registrations")).isEmpty());
+		assertTrue(((Map<?, ?>) getField(router.getSession(), "registrations")).isEmpty());
 		assertTrue(children.get(root).isEmpty());
 	}
 

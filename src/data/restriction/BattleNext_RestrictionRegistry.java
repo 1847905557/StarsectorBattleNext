@@ -90,7 +90,7 @@ public class BattleNext_RestrictionRegistry {
 					BattleNext_Logger.fields().put("path", PATH).put("position", error.position()).put("id", error.id()).put("raw", error.raw()).put("diagnostic", error.diagnostic()).build());
 		}
 		BattleNext_Logger.operationSucceeded(BattleNext_RestrictionRegistry.class, "registry.load",
-				BattleNext_Logger.fields().put("path", PATH).put("registered_ids", entries.keySet()).build());
+				() -> BattleNext_Logger.fields().put("path", PATH).put("registered_ids", entries.keySet()).build());
 	}
 
 	public List<LoadError> getLoadErrors() {

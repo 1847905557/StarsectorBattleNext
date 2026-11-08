@@ -221,11 +221,16 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 				saveErrors.rejection(ruleStrings.get("editor_title"), ruleStrings.get("id"), rejection);
 			}
 			if (!saveErrors.isEmpty()) return false;
-			store.saveEdited(draft, baseline == null ? "" : baseline.getId());
-			baseline = copy(draft);
-			setStatus(strings.get("saved"));
-			return true;
-		} catch (IOException | JSONException | RuntimeException exception) {
+			String sourceId = baseline == null ? "" : baseline.getId();
+			BattleNext_RuleModel nextBaseline = copy(draft);
+			return persist(() -> {
+				store.saveEdited(nextBaseline, sourceId);
+				return true;
+			}, () -> {
+				baseline = nextBaseline;
+				setStatus(strings.get("saved"));
+			});
+		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_RuleEditor.class, "rule.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);
 			setStatus(failureStatus(draft.getId(), exception));

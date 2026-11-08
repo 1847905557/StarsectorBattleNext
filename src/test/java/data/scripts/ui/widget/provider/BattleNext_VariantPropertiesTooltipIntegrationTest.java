@@ -349,6 +349,9 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			CustomPanelAPI row = (CustomPanelAPI) field(picker, "row");
 			plugins.get(row).buttonPressed(buttonIds.get("TOGGLE"));
 			CustomPanelAPI popup = (CustomPanelAPI) field(picker, "popup");
+			var browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
+			browse.setAccessible(true);
+			browse.invoke(picker, pinned ? "@pinned" : root.getApi().getHullSpec().getHullId(), false);
 			BattleNext_TextField search = (BattleNext_TextField) field(picker, "search");
 			search.setText(id);
 			plugins.get(popup).advance(0f);

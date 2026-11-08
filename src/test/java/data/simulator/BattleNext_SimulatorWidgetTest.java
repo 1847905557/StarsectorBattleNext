@@ -228,6 +228,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		BattleNext_UiManager manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		manager.open();
+		settleUi(manager);
 		Object settings = buttonIds.get("SETTINGS");
 		Object fleets = buttonIds.get("FLEETS");
 		manager.buttonPressed(settings);
@@ -275,6 +276,7 @@ class BattleNext_SimulatorWidgetTest extends BattleNext_TestFleetIoFixture {
 		assertEquals(active.getId(), instances.getActiveId());
 		manager.buttonPressed("close");
 		manager.open();
+		settleUi(manager);
 		manager.buttonPressed(settings);
 		BattleNext_SettingsPage reopened = (BattleNext_SettingsPage) getField(manager, "settingsPage");
 		assertNotSame(page, reopened);

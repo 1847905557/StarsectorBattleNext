@@ -1,5 +1,6 @@
 package data.scripts.tools;
 
+import java.util.function.Supplier;
 import com.fs.starfarer.api.Global;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,10 +21,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Predicate;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class BattleNext_ModFileManager {
 
 	private static final String MOD_ID = "AI_Battles_Next";
+	private static ReflectiveModFileOperations operations;
+	private static final ThreadLocal<ReadSession> READ_SESSION = new ThreadLocal<>();
+	private static final ExecutorService FILE_WORK = Executors.newSingleThreadExecutor(task -> {
+		Thread thread = new Thread(task, "BattleNext file work");
+		thread.setDaemon(true);
+		return thread;
+	});
 
 	private BattleNext_ModFileManager() {
 
@@ -31,10 +47,11 @@ public class BattleNext_ModFileManager {
 
 
 	public static JSONObject readJson(Class<?> source, String path, String modId) throws IOException, JSONException {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "json").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "json").build();
 		BattleNext_Logger.operationStarted(source, "file.read", input);
 		try {
-			JSONObject result = Global.getSettings().loadJSON(path, modId);
+			ReadSession session = READ_SESSION.get();
+			JSONObject result = session == null || !MOD_ID.equals(modId) ? Global.getSettings().loadJSON(path, modId) : session.json(path);
 			BattleNext_Logger.operationSucceeded(source, "file.read",
 					() -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("object", result).build());
 			return result;
@@ -45,10 +62,12 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static JSONArray readCsv(Class<?> source, String path, String modId) throws IOException, JSONException {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "csv").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "csv").build();
 		BattleNext_Logger.operationStarted(source, "file.read", input);
 		try {
-			JSONArray result = Global.getSettings().loadCSV(path, modId);
+			ReadSession session = READ_SESSION.get();
+			JSONArray result = !MOD_ID.equals(modId) ? Global.getSettings().loadCSV(path, modId)
+					: session == null ? parseCsv(new String(readBytes(path), StandardCharsets.UTF_8)) : session.csv(path);
 			BattleNext_Logger.operationSucceeded(source, "file.read",
 					() -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("rows", result).build());
 			return result;
@@ -58,11 +77,31 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
+	private static JSONArray parseCsv(String text) throws JSONException {
+		JSONArray rows = new JSONArray();
+		List<String> columns = null;
+		for (String line : text.split("\\R")) {
+			if (line.isBlank() || line.stripLeading().startsWith("#")) continue;
+			List<String> cells = BattleNext_CsvLine.parse(line);
+			if (columns == null) {
+				columns = cells;
+				continue;
+			}
+			JSONObject row = new JSONObject();
+			for (int index = 0; index < columns.size(); index++) {
+				row.put(columns.get(index), index < cells.size() ? cells.get(index) : "");
+			}
+			rows.put(row);
+		}
+		return rows;
+	}
+
 	public static String readText(Class<?> source, String path, String modId) throws IOException, JSONException {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "text").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("mod_id", modId).put("format", "text").build();
 		BattleNext_Logger.operationStarted(source, "file.read", input);
 		try {
-			String result = Global.getSettings().loadText(path, modId);
+			ReadSession session = READ_SESSION.get();
+			String result = session == null || !MOD_ID.equals(modId) ? Global.getSettings().loadText(path, modId) : session.text(path);
 			BattleNext_Logger.operationSucceeded(source, "file.read", input);
 			return result;
 		} catch (IOException | JSONException | RuntimeException exception) {
@@ -72,7 +111,7 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static JSONArray readMergedCsv(Class<?> source, String key, String path) throws IOException, JSONException {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("key", key).put("path", path).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("key", key).put("path", path).build();
 		BattleNext_Logger.operationStarted(source, "resource.batch.load", input);
 		try {
 			JSONArray result = Global.getSettings().getMergedSpreadsheetData(key, path);
@@ -101,12 +140,35 @@ public class BattleNext_ModFileManager {
 					MethodType.methodType(Path.class, Path.class, Path.class, CopyOption[].class));
 			move.invoke(path.resolveSibling(path.getFileName() + ".pending"), path,
 					new CopyOption[]{StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE});
+			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 		} catch (IOException exception) {
 			throw exception;
 		} catch (Throwable exception) {
 			throw new IOException("Unable to atomically write resource: " + relativePath, exception);
 		} finally {
 			delete(staging);
+		}
+	}
+
+	public static void moveDirectory(String source, String destination) throws IOException {
+		ReflectiveModFileOperations bridge = createBridge(source);
+		ModFileOperationTarget from = resolveExisting(bridge, source);
+		ModFileOperationTarget to = resolveExisting(bridge, destination);
+		try {
+			Class<?> files = Class.forName("java.nio.file.Files", false, null);
+			MethodHandle move = MethodHandles.publicLookup().findStatic(files, "move",
+					MethodType.methodType(Path.class, Path.class, Path.class, CopyOption[].class));
+			Object parent = bridge.parent.invoke(to.file);
+			bridge.mkdirs.invoke(parent);
+			move.invoke(Path.of(from.canonicalPath), Path.of(to.canonicalPath), new CopyOption[]{StandardCopyOption.ATOMIC_MOVE});
+			if (READ_SESSION.get() != null) {
+				READ_SESSION.get().invalidateDirectory(source);
+				READ_SESSION.get().invalidateDirectory(destination);
+			}
+		} catch (IOException exception) {
+			throw exception;
+		} catch (Throwable exception) {
+			throw fileFailure(source, exception);
 		}
 	}
 
@@ -125,7 +187,7 @@ public class BattleNext_ModFileManager {
 
 	public static void writeBytes(String relativePath, byte[] data, boolean overwrite) throws IOException {
 
-		BattleNext_Logger.Fields logFields = BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).put("overwrite", overwrite).build();
+		Supplier<BattleNext_Logger.Fields> logFields = () -> BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).put("overwrite", overwrite).build();
 		BattleNext_Logger.operationStarted(BattleNext_ModFileManager.class, "file.write", logFields);
 		try {
 			if (data == null) throw new IOException("Unable to write null data: " + relativePath);
@@ -153,6 +215,7 @@ public class BattleNext_ModFileManager {
 			}
 			if (failure != null) throw writeFailure(relativePath, failure);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.write", logFields);
+			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 		} catch (IOException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_ModFileManager.class, "file.write", logFields, exception);
 			throw exception;
@@ -160,8 +223,13 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static byte[] readBytes(String relativePath) throws IOException {
+		ReadSession session = READ_SESSION.get();
+		return session == null ? readBytesUncached(relativePath) : session.bytes(relativePath);
+	}
 
-		BattleNext_Logger.Fields logFields = BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).build();
+	private static byte[] readBytesUncached(String relativePath) throws IOException {
+
+		Supplier<BattleNext_Logger.Fields> logFields = () -> BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).build();
 		BattleNext_Logger.operationStarted(BattleNext_ModFileManager.class, "file.read", logFields);
 		try {
 			ReflectiveModFileOperations bridge = createBridge(relativePath);
@@ -231,7 +299,7 @@ public class BattleNext_ModFileManager {
 
 	public static void delete(String relativePath) throws IOException {
 
-		BattleNext_Logger.Fields logFields = BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).build();
+		Supplier<BattleNext_Logger.Fields> logFields = () -> BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).build();
 		BattleNext_Logger.operationStarted(BattleNext_ModFileManager.class, "file.delete", logFields);
 		try {
 			ReflectiveModFileOperations bridge = createBridge(relativePath);
@@ -244,6 +312,7 @@ public class BattleNext_ModFileManager {
 				throw new IOException("The target is a directory: " + relativePath);
 			}
 			deleteTarget(bridge, target.file, relativePath);
+			if (READ_SESSION.get() != null) READ_SESSION.get().invalidate(relativePath);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.delete", logFields);
 		} catch (IOException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_ModFileManager.class, "file.delete", logFields, exception);
@@ -253,7 +322,7 @@ public class BattleNext_ModFileManager {
 
 	public static void deleteRecursively(String relativePath) throws IOException {
 
-		BattleNext_Logger.Fields logFields = BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).put("recursive", true).build();
+		Supplier<BattleNext_Logger.Fields> logFields = () -> BattleNext_Logger.fields().put("path", relativePath).put("mod_id", MOD_ID).put("recursive", true).build();
 		BattleNext_Logger.operationStarted(BattleNext_ModFileManager.class, "file.delete.bundle", logFields);
 		try {
 			ReflectiveModFileOperations bridge = createBridge(relativePath);
@@ -266,6 +335,7 @@ public class BattleNext_ModFileManager {
 				throw new IOException("The target is not a directory: " + relativePath);
 			}
 			deleteTree(bridge, target.file, target.rootCanonical, relativePath);
+			if (READ_SESSION.get() != null) READ_SESSION.get().invalidateDirectory(relativePath);
 			BattleNext_Logger.operationSucceeded(BattleNext_ModFileManager.class, "file.delete.bundle", logFields);
 		} catch (IOException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_ModFileManager.class, "file.delete.bundle", logFields, exception);
@@ -273,14 +343,15 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static ReflectiveModFileOperations createBridge(String relativePath) throws IOException {
+	private static synchronized ReflectiveModFileOperations createBridge(String relativePath) throws IOException {
+		if (operations != null) return operations;
 		try {
 			Class<?> fileType = Class.forName("java.io.File", false, null);
 			Class<?> inputType = Class.forName("java.io.FileInputStream", false, null);
 			Class<?> outputType = Class.forName("java.io.FileOutputStream", false, null);
 			Class<?> byteArrayOutputType = Class.forName("java.io.ByteArrayOutputStream", false, null);
 			MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-			return new ReflectiveModFileOperations(
+			operations = new ReflectiveModFileOperations(
 					lookup.findConstructor(fileType, MethodType.methodType(void.class, String.class)),
 					lookup.findVirtual(fileType, "exists", MethodType.methodType(boolean.class)),
 					lookup.findVirtual(fileType, "isDirectory", MethodType.methodType(boolean.class)),
@@ -304,6 +375,7 @@ public class BattleNext_ModFileManager {
 					lookup.findVirtual(byteArrayOutputType, "write",
 							MethodType.methodType(void.class, byte[].class, int.class, int.class)),
 					lookup.findVirtual(byteArrayOutputType, "toByteArray", MethodType.methodType(byte[].class)));
+			return operations;
 		} catch (Throwable exception) {
 			throw writeFailure(relativePath, exception);
 		}
@@ -312,7 +384,7 @@ public class BattleNext_ModFileManager {
 	private static Object resolveTarget(ReflectiveModFileOperations bridge, String relativePath, boolean overwrite) throws IOException {
 		String normalizedPath = normalizePath(relativePath);
 		try {
-			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
+			String rootPath = rootPath();
 			Object root = bridge.fileConstructor.invoke(rootPath);
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
@@ -353,7 +425,7 @@ public class BattleNext_ModFileManager {
 	private static ModFileOperationTarget resolveExisting(ReflectiveModFileOperations bridge, String relativePath) throws IOException {
 		String normalizedPath = normalizePath(relativePath);
 		try {
-			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
+			String rootPath = rootPath();
 			Object root = bridge.fileConstructor.invoke(rootPath);
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
@@ -430,7 +502,7 @@ public class BattleNext_ModFileManager {
 
 	private static List<String> listRoot(ReflectiveModFileOperations bridge, String directory, int depth, Predicate<String> descend) throws IOException {
 		try {
-			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
+			String rootPath = rootPath();
 			Object root = bridge.fileConstructor.invoke(rootPath);
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
@@ -473,6 +545,87 @@ public class BattleNext_ModFileManager {
 
 	private static String targetPath(Object target) {
 		return ((ModFileOperationTarget) target).canonicalPath;
+	}
+
+	private static String rootPath() {
+		ReadSession session = READ_SESSION.get();
+		return session == null ? Global.getSettings().getModManager().getModSpec(MOD_ID).getPath() : session.root;
+	}
+
+	public static final class ReadSession {
+		private final String root;
+		private final Map<String, byte[]> resources = new ConcurrentHashMap<>();
+		private final Map<String, JSONObject> objects = new ConcurrentHashMap<>();
+		private final Map<String, JSONArray> tables = new ConcurrentHashMap<>();
+
+		public ReadSession(String root) {
+			this.root = root;
+		}
+
+		public void activate() {
+			READ_SESSION.set(this);
+		}
+
+		public <T> CompletableFuture<T> submit(Callable<T> work) {
+			return CompletableFuture.supplyAsync(() -> {
+				activate();
+				try {
+					return work.call();
+				} catch (Exception exception) {
+					throw new CompletionException(exception);
+				} finally {
+					deactivate();
+				}
+			}, FILE_WORK);
+		}
+
+		public static void deactivate() {
+			READ_SESSION.remove();
+		}
+
+		private byte[] bytes(String path) throws IOException {
+			byte[] value = resources.get(path);
+			if (value == null) {
+				value = readBytesUncached(path);
+				resources.put(path, value);
+			}
+			return value;
+		}
+
+		private String text(String path) throws IOException {
+			return new String(bytes(path), StandardCharsets.UTF_8);
+		}
+
+		private JSONObject json(String path) throws IOException, JSONException {
+			JSONObject value = objects.get(path);
+			if (value == null) {
+				value = new JSONObject(text(path).lines().filter(line -> !line.stripLeading().startsWith("#"))
+						.collect(Collectors.joining("\n")));
+				objects.put(path, value);
+			}
+			return value;
+		}
+
+		private JSONArray csv(String path) throws IOException, JSONException {
+			JSONArray value = tables.get(path);
+			if (value != null) return value;
+			value = parseCsv(text(path));
+			tables.put(path, value);
+			return value;
+		}
+
+		public void invalidate(String path) {
+			resources.remove(path);
+			objects.remove(path);
+			tables.remove(path);
+		}
+
+		public void invalidateDirectory(String path) throws IOException {
+			String prefix = normalizePath(path) + "/";
+			resources.keySet().removeIf(key -> key.startsWith(prefix));
+			objects.keySet().removeIf(key -> key.startsWith(prefix));
+			tables.keySet().removeIf(key -> key.startsWith(prefix));
+		}
 	}
 
 	private static void ensureInsideRoot(String root, String target, String relativePath) throws IOException {

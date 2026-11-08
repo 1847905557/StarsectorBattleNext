@@ -39,6 +39,7 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		String output = runProbe(Probe.class);
 		assertTrue(output.contains("Simulator native handles bound"), output);
 		assertTrue(output.contains("Simulator mouse isolation verified"), output);
+		assertTrue(output.contains("Mouse lifecycle verified: windows=2, virtualCycles=20, desktopCalls=0"), output);
 		assertTrue(output.contains("Simulator script sandbox verified"), output);
 		assertTrue(output.contains("Native deployment limit injection verified"), output);
 		assertTrue(output.contains("Application context bindings verified"), output);
@@ -76,39 +77,52 @@ class BattleNext_SimulatorNativeIntegrationTest {
 		public static void main(String[] arguments) throws Exception {
 
 			Display.setLocation(-20000, -20000);
-			Display.create(new PixelFormat());
 			var implementation = Mouse.class.getDeclaredField("implementation");
 			implementation.setAccessible(true);
 			Object original = implementation.get(null);
+			var displayImplementation = Display.class.getDeclaredMethod("getImplementation");
+			displayImplementation.setAccessible(true);
+			Object desktop = displayImplementation.invoke(null);
+			Field desktopMouse = desktop.getClass().getDeclaredField("mouse");
+			desktopMouse.setAccessible(true);
 			AtomicInteger nativeMouseCalls = new AtomicInteger();
 			InputImplementation observed = (InputImplementation) Proxy.newProxyInstance(MouseProbe.class.getClassLoader(),
 					new Class<?>[]{InputImplementation.class}, (instance, method, values) -> {
-				if (Set.of("setCursorPosition", "grabMouse", "setNativeCursor", "pollMouse", "readMouse").contains(method.getName())) {
-					nativeMouseCalls.incrementAndGet();
-				}
-				return method.invoke(original, values);
+				nativeMouseCalls.incrementAndGet();
+				throw new AssertionError("Virtual mouse accessed desktop backend: " + method.getName());
 			});
 			implementation.set(null, observed);
 			BattleNext_SimulatorMouse isolated = BattleNext_SimulatorMouse.getInstance();
 			try {
 				if (BattleNext_SimulatorMouse.getInstance() != isolated) throw new AssertionError("Mouse backend must be reused");
-				for (int cycle = 0; cycle < 10; cycle++) {
-					Mouse.setCursorPosition(400, 300);
-					Mouse.setGrabbed(true);
-					Mouse.setGrabbed(false);
-					Mouse.setNativeCursor(null);
-					Mouse.poll();
-					if (nativeMouseCalls.get() != 0) throw new AssertionError("Virtual cursor requests reached the native mouse backend");
-					if (Mouse.isInsideWindow() || Mouse.getDWheel() != 0 || Mouse.isButtonDown(0)) throw new AssertionError("Virtual mouse must keep physical input isolated");
+				if (Display.isCreated() || !Mouse.isCreated()) throw new AssertionError("Virtual mouse must initialize before the native window");
+				for (int window = 0; window < 2; window++) {
+					Display.create(new PixelFormat());
+					if (implementation.get(null) != isolated) throw new AssertionError("Window creation replaced mouse isolation");
+					if (desktopMouse.get(desktop) != null) throw new AssertionError("Native window created a desktop mouse device");
+					for (int cycle = 0; cycle < 10; cycle++) {
+						Mouse.setCursorPosition(400, 300);
+						Mouse.setGrabbed(true);
+						Mouse.setGrabbed(false);
+						Mouse.setNativeCursor(null);
+						Mouse.poll();
+						if (Mouse.isInsideWindow() || Mouse.getDWheel() != 0 || Mouse.isButtonDown(0)) throw new AssertionError("Virtual mouse must keep physical input isolated");
+					}
+					Display.destroy();
+					if (desktopMouse.get(desktop) != null) throw new AssertionError("Native window retained a desktop mouse device");
+					if (!Mouse.isCreated() || implementation.get(null) != isolated) throw new AssertionError("Mouse isolation must survive window destruction");
 				}
 				isolated.cleanup();
+				if (Mouse.isCreated()) throw new AssertionError("Cleanup must release the virtual mouse");
 				if (implementation.get(null) != observed) throw new AssertionError("Mouse backend cleanup must restore its original owner");
 				isolated.cleanup();
+				if (nativeMouseCalls.get() != 0) throw new AssertionError("Native mouse calls: " + nativeMouseCalls.get());
 				System.out.println("Simulator mouse isolation verified");
+				System.out.println("Mouse lifecycle verified: windows=2, virtualCycles=20, desktopCalls=" + nativeMouseCalls.get());
 			} finally {
+				Display.destroy();
 				isolated.cleanup();
 				implementation.set(null, original);
-				Display.destroy();
 			}
 		}
 	}

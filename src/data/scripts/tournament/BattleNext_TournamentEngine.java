@@ -1,5 +1,6 @@
 package data.scripts.tournament;
 
+import java.util.function.Supplier;
 import data.missions.BattleNext_MissionBattleMap;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
@@ -50,7 +51,7 @@ public class BattleNext_TournamentEngine {
 
 	public void initialize(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("tournament", tournament).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.start", input);
 		try {
 			if (!tournament.getMatches().isEmpty()) throw new IllegalStateException("Tournament has already started");
@@ -85,7 +86,7 @@ public class BattleNext_TournamentEngine {
 	public void recordRound(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String matchId, String winner,
 			String reportId) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report_id", reportId).put("scope", "memory").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("winner", winner).put("report_id", reportId).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.round.record", input);
 		try {
 			for (BattleNext_Match recordedMatch : tournament.getMatches()) {
@@ -127,7 +128,7 @@ public class BattleNext_TournamentEngine {
 
 	public void rollback(BattleNext_TournamentModel configuration, BattleNext_StartedTournament tournament, String matchId) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("tournament", tournament).put("match_id", matchId).put("scope", "memory").build();
 		BattleNext_Logger.operationStarted(BattleNext_TournamentEngine.class, "tournament.rollback", input);
 		try {
 			if (tournament.findMatch(matchId) == null) {
@@ -360,8 +361,9 @@ public class BattleNext_TournamentEngine {
 			match = old;
 		}
 		tournament.addGeneratedMatch(match);
+		BattleNext_Match generated = match;
 		BattleNext_Logger.info(BattleNext_TournamentEngine.class, "tournament.match.generated",
-				BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("match", match).put("scope", "memory").build());
+				() -> BattleNext_Logger.fields().put("tournament_id", tournament.getId()).put("match", generated).put("scope", "memory").build());
 	}
 
 	private String initialPlayer(BattleNext_Match match) {

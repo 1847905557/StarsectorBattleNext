@@ -1,5 +1,6 @@
 package data.model.fleet;
 
+import java.util.function.Supplier;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_BaseStore;
 import data.model.BattleNext_LoadSource;
@@ -14,16 +15,24 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.function.Predicate;
+import com.fs.starfarer.api.Global;
 
 public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_FleetModel> {
 
-	private final BattleNext_FleetStandardLoader standardLoader = new BattleNext_FleetStandardLoader();
+	private final BattleNext_FleetStandardLoader standardLoader;
 	private final BattleNext_FleetLegacyLoader legacyLoader = new BattleNext_FleetLegacyLoader();
-	private final BattleNext_FleetLegacyFolderLoader folderLoader = new BattleNext_FleetLegacyFolderLoader();
+	private final BattleNext_FleetLegacyFolderLoader folderLoader;
 	private final BattleNext_FleetSaver saver = new BattleNext_FleetSaver();
 
 	public BattleNext_FleetStore() {
+		this(id -> Global.getSettings().doesVariantExist(id));
+	}
+
+	public BattleNext_FleetStore(Predicate<String> registeredVariant) {
 		super("Fleet catalog has not been loaded");
+		standardLoader = new BattleNext_FleetStandardLoader(registeredVariant);
+		folderLoader = new BattleNext_FleetLegacyFolderLoader(registeredVariant);
 	}
 
 	@Override
@@ -39,7 +48,7 @@ public class BattleNext_FleetStore extends BattleNext_BaseStore<BattleNext_Fleet
 	@Override
 	public void save(BattleNext_FleetModel model) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("model", model).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("model", model).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetStore.class, "fleet.store.commit", input);
 		try {
 

@@ -1,5 +1,6 @@
 package data.scripts.campaign.luna;
 
+import java.util.function.Supplier;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -24,7 +25,7 @@ public class BattleNext_CampaignFleetSnapshot {
 	static BattleNext_FleetModel capture(CampaignFleetAPI fleet, PersonAPI player,
 			FleetMemberAPI selected, ShipVariantAPI current) throws JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("player", player).put("fleet_id", fleet.getId()).put("fleet_name", fleet.getName()).put("selected_member", selected).put("current_variant", current).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("player", player).put("fleet_id", fleet.getId()).put("fleet_name", fleet.getName()).put("selected_member", selected).put("current_variant", current).build();
 		BattleNext_Logger.operationStarted(BattleNext_CampaignFleetSnapshot.class, "fleet.player.snapshot", input);
 		try {
 
@@ -52,7 +53,7 @@ public class BattleNext_CampaignFleetSnapshot {
 			}
 			snapshot.setMembers(members);
 			BattleNext_Logger.operationSucceeded(BattleNext_CampaignFleetSnapshot.class, "fleet.player.snapshot",
-					BattleNext_Logger.fields().put("fleet", snapshot).build());
+					() -> BattleNext_Logger.fields().put("fleet", snapshot).build());
 			return snapshot;
 		} catch (JSONException | RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_CampaignFleetSnapshot.class, "fleet.player.snapshot", input, exception);

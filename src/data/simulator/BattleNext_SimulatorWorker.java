@@ -58,6 +58,7 @@ public class BattleNext_SimulatorWorker {
 		receiver.setDaemon(true);
 		receiver.start();
 		try {
+			mouse = BattleNext_SimulatorMouse.getInstance();
 			Class<?> launcher = Class.forName("com.fs.starfarer.StarfarerLauncher", false, BattleNext_SimulatorWorker.class.getClassLoader());
 			MethodHandles.publicLookup().findStatic(launcher, "main", MethodType.methodType(void.class, String[].class))
 					.invoke((Object) new String[0]);
@@ -163,7 +164,7 @@ public class BattleNext_SimulatorWorker {
 		Global.getSettings().setFloat("fps", IDLE_FPS);
 		idleFpsApplied = true;
 		BattleNext_Logger.info(BattleNext_SimulatorWorker.class, "simulator.fps.idle",
-				BattleNext_Logger.fields().put("fps", IDLE_FPS).put("previous_fps", previousFps).build());
+				() -> BattleNext_Logger.fields().put("fps", IDLE_FPS).put("previous_fps", previousFps).build());
 	}
 
 	private static void restoreFrameRate() {
@@ -171,7 +172,7 @@ public class BattleNext_SimulatorWorker {
 		Global.getSettings().setFloat("fps", previousFps);
 		idleFpsApplied = false;
 		BattleNext_Logger.info(BattleNext_SimulatorWorker.class, "simulator.fps.restored",
-				BattleNext_Logger.fields().put("fps", previousFps).build());
+				() -> BattleNext_Logger.fields().put("fps", previousFps).build());
 	}
 
 	public static boolean isCancelled(String id) {

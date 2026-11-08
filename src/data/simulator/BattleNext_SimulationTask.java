@@ -23,6 +23,7 @@ public class BattleNext_SimulationTask {
 	private volatile boolean retained;
 	private volatile String importError = "";
 	private volatile long version;
+	private Summary summary;
 	private float simulationSeconds;
 	private long executionNanos;
 	private long steps;
@@ -48,6 +49,19 @@ public class BattleNext_SimulationTask {
 		return version;
 	}
 
+	public record Summary(String id, String sourceTournamentId, long startedAt, long version, State state, Metrics metrics) { }
+
+	public synchronized Summary getSummary() {
+		Summary current = summary;
+		if (current == null || current.version() != version) {
+			BattleNext_StartedTournament value = started;
+			current = new Summary(request.id(), value == null ? "" : value.getSourceTournamentId(),
+					value == null ? 0L : value.getStartedAt(), version, state, getMetrics());
+			summary = current;
+		}
+		return current;
+	}
+
 	public record Metrics(float simulationSeconds, long executionNanos, long steps, long peakHeapBytes) { }
 
 	public synchronized Metrics getMetrics() {
@@ -63,15 +77,18 @@ public class BattleNext_SimulationTask {
 	}
 
 	void publishStarted(BattleNext_StartedTournament started) {
-		this.started = started.copy();
-		version++;
+		BattleNext_StartedTournament snapshot = started.copy();
+		synchronized (this) {
+			this.started = snapshot;
+			version++;
+		}
 	}
 
 	public BattleNext_SimulationRequest getCurrentRound() {
 		return currentRound;
 	}
 
-	void prepareRound(BattleNext_SimulationRequest round) {
+	synchronized void prepareRound(BattleNext_SimulationRequest round) {
 		currentRound = round;
 		transition(State.PREPARING);
 		version++;
@@ -88,6 +105,7 @@ public class BattleNext_SimulationTask {
 	}
 
 	synchronized void committedRound() {
+		if (deletionRequested) return;
 		rounds.add(pendingRound);
 		simulationSeconds += pendingRound.simulationSeconds();
 		executionNanos += pendingRound.executionNanos();
@@ -99,9 +117,13 @@ public class BattleNext_SimulationTask {
 	}
 
 	void completeTournament() throws JSONException {
-		result = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
-				"", started.toJson().toString(), simulationSeconds, executionNanos, steps, peakHeapBytes, "");
-		imported(true);
+		Metrics metrics = getMetrics();
+		BattleNext_SimulationResult completed = new BattleNext_SimulationResult(request.id(), BattleNext_SimulationResult.Outcome.COMPLETED,
+				"", started.toJson().toString(), metrics.simulationSeconds(), metrics.executionNanos(), metrics.steps(), metrics.peakHeapBytes(), "");
+		synchronized (this) {
+			result = completed;
+			imported(true);
+		}
 	}
 
 	public void pause() {
@@ -125,7 +147,7 @@ public class BattleNext_SimulationTask {
 		version++;
 	}
 
-	void resetCancellation() {
+	synchronized void resetCancellation() {
 		cancelled = false;
 		importError = "";
 	}
@@ -172,23 +194,23 @@ public class BattleNext_SimulationTask {
 		history.add(next);
 	}
 
-	void receive(BattleNext_SimulationResult result) {
+	synchronized void receive(BattleNext_SimulationResult result) {
 		this.result = result;
 		transition(result.reportJson().isEmpty() ? State.FINISHED : State.COMMITTING);
 	}
 
-	void imported(boolean retained) {
+	synchronized void imported(boolean retained) {
 		this.retained = retained;
 		importError = "";
 		transition(State.FINISHED);
 	}
 
-	void rejectImport(Exception exception) {
+	synchronized void rejectImport(Exception exception) {
 		importError = exception.getClass().getSimpleName() + ": " + exception.getMessage();
 		transition(State.IMPORT_FAILED);
 	}
 
-	void interrupted(String diagnostic) {
+	synchronized void interrupted(String diagnostic) {
 		importError = diagnostic;
 		transition(State.PAUSED);
 	}

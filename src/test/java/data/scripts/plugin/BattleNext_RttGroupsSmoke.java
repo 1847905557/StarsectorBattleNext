@@ -11,6 +11,7 @@ import data.scripts.battlesnext.util.BattleNext_FontData;
 import data.scripts.tools.BattleNext_CombatInput;
 import data.simulator.BattleNext_SimulatorLaunch;
 import data.simulator.BattleNext_SimulatorNative;
+import data.simulator.BattleNext_SimulatorMouse;
 import org.apache.log4j.*;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.input.Keyboard;
@@ -62,6 +63,7 @@ public class BattleNext_RttGroupsSmoke {
 		System.setProperty("startRes", "800x600");
 		System.setProperty("startFS", "false");
 		System.setProperty("startSound", "false");
+		BattleNext_SimulatorMouse.getInstance();
 		Logger.getRootLogger().addAppender(new ConsoleAppender(new PatternLayout("%p %c - %m%n")));
 		Logger.getRootLogger().setLevel(Level.WARN);
 		Display.setLocation(-20000, -20000);

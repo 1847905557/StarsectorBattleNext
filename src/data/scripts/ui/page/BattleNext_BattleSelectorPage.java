@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.rule.BattleNext_RuleStore;
+import data.model.report.BattleNext_BattleReportStore;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battle.BattleNext_BattleSourceProvider;
@@ -65,21 +66,37 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	private final Map<String, BattleNext_TournamentTemplate> templates = new LinkedHashMap<>();
 	private String selectedInstanceId = "";
 	private String displayedIdentity = "";
-	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
+	private final BattleNext_StartedTournamentStore startedStore;
 	private BattleNext_QuickBattleEditor quickBattleEditor;
 	private BattleNext_TournamentDisplay tournamentDisplay;
-	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
-	private final BattleNext_TournamentStore tournamentStore = provider.getTournamentStore();
+	private final BattleNext_BattleSourceProvider provider;
+	private final BattleNext_BattleReportStore reports;
+	private final BattleNext_TournamentStore tournamentStore;
 	private final BattleNext_TournamentEngine tournamentEngine = new BattleNext_TournamentEngine();
-	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
-	private final BattleNext_RuleStore ruleStore = provider.getRuleStore();
+	private final BattleNext_FleetStore fleetStore;
+	private final BattleNext_RuleStore ruleStore;
 	private String selectedId = "";
 	private String loadError = "";
 	private BattleNext_BattleValidation.Result checkResult;
 
 	public BattleNext_BattleSelectorPage(Runnable backAction, CustomUIPanelPlugin inputOwner) {
+		this(backAction, inputOwner, new BattleNext_BattleSourceProvider());
+	}
+
+	public BattleNext_BattleSelectorPage(Runnable backAction, CustomUIPanelPlugin inputOwner, BattleNext_BattleSourceProvider provider) {
+		this(backAction, inputOwner, provider, new BattleNext_BattleReportStore());
+	}
+
+	public BattleNext_BattleSelectorPage(Runnable backAction, CustomUIPanelPlugin inputOwner, BattleNext_BattleSourceProvider provider,
+			BattleNext_BattleReportStore reports) {
 		this.backAction = backAction;
 		this.inputOwner = inputOwner;
+		this.provider = provider;
+		this.reports = reports;
+		tournamentStore = provider.getTournamentStore();
+		fleetStore = provider.getFleetStore();
+		ruleStore = provider.getRuleStore();
+		startedStore = provider.getStartedStore();
 	}
 
 	@Override
@@ -254,7 +271,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		List<String> errors = provider.reloadCatalogs();
 		loadError = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		try {
-			startedStore.reload();
+			startedStore.ensureLoaded();
 		} catch (Exception exception) {
 			loadError = strings.get("load_failed");
 			BattleNext_Logger.error(getClass(), "tournament.instances.load.failed", BattleNext_Logger.fields().build(), exception);
@@ -313,7 +330,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			reasons.add(startedStore.getLoadError());
 		}
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, started, fleetIds,
-				fleetStore, ruleStore, loadError, reasons).withCheckResult(checkResult);
+				fleetStore, ruleStore, loadError, reasons, reports).withCheckResult(checkResult);
 		List<BattleNext_TournamentDisplay.Action> actions = tournamentActions(tournament, started, reasons);
 		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, started, details, actions, inputOwner::buttonPressed);
 		tournamentDisplay.setSaveErrors(this::getSaveErrors);
@@ -381,7 +398,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 			return;
 		}
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(configuration, null,
-				templates.get(selectedId).getFleetIds(), fleetStore, ruleStore, loadError, provider.getCatalogErrors()).withCheckResult(checkResult);
+				templates.get(selectedId).getFleetIds(), fleetStore, ruleStore, loadError, provider.getCatalogErrors(), reports).withCheckResult(checkResult);
 		tournamentDisplay.update(configuration, null, details, tournamentActions(configuration, null, provider.getCatalogErrors()));
 	}
 

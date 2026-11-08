@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 
@@ -21,6 +22,40 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	private long createdAt = 0L;
 	private List<BattleNext_MemberReport> playerMembers = new ArrayList<>();
 	private List<BattleNext_MemberReport> enemyMembers = new ArrayList<>();
+	private int memberCount;
+	private Supplier<JSONObject> detailSource;
+
+	public void fromDirectory(JSONObject metadata, int members, Supplier<JSONObject> source) throws JSONException {
+		int version = metadata.optInt("formatVersion", FORMAT_VERSION);
+		if (version != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported report formatVersion: " + version);
+		id = metadata.optString("id", "");
+		name = metadata.getString("name");
+		winner = metadata.optString("winner", "draw");
+		durationMillis = metadata.optLong("durationMillis", 0L);
+		createdAt = metadata.optLong("createdAt", 0L);
+		memberCount = members;
+		detailSource = source;
+	}
+
+	public int getMemberCount() {
+		return detailSource == null ? playerMembers.size() + enemyMembers.size() : memberCount;
+	}
+
+	private void loadDetails() {
+		if (detailSource == null) return;
+		JSONObject json = detailSource.get();
+		String displayName = name;
+		try {
+			fromJson(json);
+			name = displayName;
+		} catch (JSONException exception) {
+			throw new IllegalStateException("Unable to read report details: " + id, exception);
+		}
+	}
+
+	public void prepareDetails() {
+		loadDetails();
+	}
 
 	@Override
 	public void fromJson(JSONObject json) throws JSONException {
@@ -54,10 +89,12 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 		createdAt = parsedCreatedAt;
 		playerMembers = parsedPlayers;
 		enemyMembers = parsedEnemies;
+		detailSource = null;
 	}
 
 	@Override
 	public JSONObject toJson() throws JSONException {
+		loadDetails();
 		JSONObject json = new JSONObject();
 		json.put("formatVersion", FORMAT_VERSION);
 		json.put("id", id);
@@ -112,18 +149,22 @@ public class BattleNext_BattleReportModel extends BattleNext_JsonModel {
 	}
 
 	public List<BattleNext_MemberReport> getPlayerMembers() {
+		loadDetails();
 		return Collections.unmodifiableList(playerMembers);
 	}
 
 	public List<BattleNext_MemberReport> getEnemyMembers() {
+		loadDetails();
 		return Collections.unmodifiableList(enemyMembers);
 	}
 
 	public void addPlayerMember(BattleNext_MemberReport member) {
+		loadDetails();
 		if (member != null) playerMembers.add(member);
 	}
 
 	public void addEnemyMember(BattleNext_MemberReport member) {
+		loadDetails();
 		if (member != null) enemyMembers.add(member);
 	}
 

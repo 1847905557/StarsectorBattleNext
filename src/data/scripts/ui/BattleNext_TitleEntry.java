@@ -120,7 +120,7 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
 		if (!renderChecked) {
 			BattleNext_Logger.info(BattleNext_TitleEntry.class, "title.render.initialized",
-				BattleNext_Logger.fields().put("state", Global.getCurrentState()).put("icon_loaded", entryIcon != null).build());
+				() -> BattleNext_Logger.fields().put("state", Global.getCurrentState()).put("icon_loaded", entryIcon != null).build());
 			renderChecked = true;
 		}
 		if (Global.getCurrentState() != GameState.TITLE || configurationPanel == null) {

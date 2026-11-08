@@ -95,7 +95,7 @@ public class BattleNext_TextFieldSession {
 		field.beginPointer(pointerX, pointerY, event.isShiftDown());
 	}
 
-	boolean isFocused(BattleNext_TextField field) {
+	public boolean isFocused(BattleNext_TextField field) {
 		return focusedField == field;
 	}
 

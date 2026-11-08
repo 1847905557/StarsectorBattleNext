@@ -41,6 +41,7 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 	void simulatorSessionStartsEmptyAndReportsRemainIndependent() throws Exception {
 		BattleNext_SimulationTask completed = completedTaskThroughService("Saved result");
 		BattleNext_SimulatorService.advance();
+		awaitImports();
 		assertTrue(completed.isRetained());
 		quickBattles("alpha,beta,-1,1\n");
 		BattleNext_BattleSourceProvider sources = new BattleNext_BattleSourceProvider();
@@ -89,8 +90,10 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		var manager = new BattleNext_UiManager(() -> {});
 		manager.attach(panel(1400f, 900f, manager));
 		manager.open();
+		settleUi(manager);
 		BattleNext_SimulationTask task = completedTaskThroughService("Saved simulation");
 		advance.run();
+		awaitImports();
 		manager.advance(0f);
 		var status = (BattleNext_StatusBar) getField(manager, "statusBar");
 		assertEquals(String.format(BattleNext_TestTextCatalog.text("Management", "BattleNext_management_report_updated"), task.getRequest().id()),
@@ -105,11 +108,13 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		singleton.set(null, null);
 		createOwnedService();
 		advance.run();
+		awaitImports();
 		reports.reload();
 		assertEquals(List.of(task.getRequest().id()), reports.getAll().stream().map(BattleNext_BattleReportModel::getId).toList());
 		BattleNext_Settings.save(false, true, false, false, 500f, 1f, 3f, 0, 0);
 		BattleNext_SimulationTask discarded = completedTaskThroughService("Not retained");
 		advance.run();
+		awaitImports();
 		assertFalse(discarded.isRetained());
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
@@ -145,21 +150,9 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		reports.save(existing);
 		String existingJson = existing.toJson().toString();
 		BattleNext_BattleSignals.consumePendingResult();
-		SettingsAPI settings = Global.getSettings();
-		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
-				(instance, method, args) -> {
-			if (method.getName().equals("loadJSON")) throw new IllegalStateException("Injected report read failure");
-			try {
-				return method.invoke(settings, args);
-			} catch (InvocationTargetException exception) {
-				throw exception.getCause();
-			}
-		}));
-		try {
-			BattleNext_SimulatorService.advance();
-		} finally {
-			Global.setSettings(settings);
-		}
+		Path blocked = directory.resolve("tournament/_reports/" + request.id() + ".json");
+		Files.createDirectory(blocked);
+		awaitImports();
 		assertEquals(BattleNext_SimulationTask.State.IMPORT_FAILED, task.getState());
 		BattleNext_BattleReportModel resultReport = task.getResult().report();
 		assertEquals(task.getRequest().id(), resultReport.getId());
@@ -167,13 +160,14 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertJsonEquals(expectedReport.toJson(), resultReport.toJson());
 		assertEquals(expectedResult, task.getResult());
 		assertEquals(List.of(task), service.getFailedImports());
-		assertTrue(task.getImportError().contains("Injected report read failure"));
+		assertTrue(task.getImportError().contains("directory"));
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 		reports.reload();
 		assertEquals(existingJson, reports.get("existing").toJson().toString());
 		assertNull(reports.get(request.id()));
+		Files.delete(blocked);
 		task.retryImport();
-		BattleNext_SimulatorService.advance();
+		awaitImports();
 		assertEquals(BattleNext_SimulationTask.State.FINISHED, task.getState());
 		assertTrue(service.getFailedImports().isEmpty());
 		reports.reload();
@@ -187,8 +181,9 @@ class BattleNext_SimulatorRecoveryServiceTest extends BattleNext_SimulatorServic
 		assertEquals(600L, task.getResult().steps());
 		assertEquals(1024L, task.getResult().peakHeapBytes());
 		assertEquals(request.id(), BattleNext_BattleSignals.consumePendingResult());
+		Files.delete(blocked);
 		task.retryImport();
-		BattleNext_SimulatorService.advance();
+		awaitImports();
 		assertEquals(expectedResult, task.getResult());
 		assertEquals("", BattleNext_BattleSignals.consumePendingResult());
 	}

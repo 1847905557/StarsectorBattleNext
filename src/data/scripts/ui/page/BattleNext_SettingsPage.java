@@ -10,6 +10,7 @@ import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_PageLayout;
+import data.model.report.BattleNext_BattleReportStore;
 import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_SettingsEditor;
 import data.scripts.ui.widget.BattleNext_SaveErrors;
@@ -27,7 +28,8 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_SettingsEditor editor = new BattleNext_SettingsEditor();
 	private final BattleNext_SimulatorBrowser simulatorBrowser = new BattleNext_SimulatorBrowser();
-	private final BattleNext_BattleSourceProvider simulatorSources = new BattleNext_BattleSourceProvider();
+	private final BattleNext_BattleSourceProvider simulatorSources;
+	private final BattleNext_BattleReportStore reports;
 
 	private UIRect contentRect;
 	private UIRect simulatorRect;
@@ -35,7 +37,17 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 	private boolean simulatorUnlocked;
 
 	public BattleNext_SettingsPage(Consumer<Runnable> confirmation) {
+		this(confirmation, new BattleNext_BattleSourceProvider());
+	}
+
+	public BattleNext_SettingsPage(Consumer<Runnable> confirmation, BattleNext_BattleSourceProvider sources) {
+		this(confirmation, sources, new BattleNext_BattleReportStore());
+	}
+
+	public BattleNext_SettingsPage(Consumer<Runnable> confirmation, BattleNext_BattleSourceProvider sources, BattleNext_BattleReportStore reports) {
 		this.confirmation = confirmation;
+		simulatorSources = sources;
+		this.reports = reports;
 	}
 
 	@Override
@@ -81,7 +93,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		simulatorRect.removeLatestSubPanel();
 		attachEditor(contentRect.createSubPanel(panel, panel.getPlugin()).getPanel());
 		simulatorWidget = new BattleNext_SimulatorWidget(inputRouter, overlayHost == null ? panel : overlayHost,
-				() -> simulatorUnlocked, simulatorBrowser, simulatorSources);
+				() -> simulatorUnlocked, simulatorBrowser, simulatorSources, reports);
 		simulatorWidget.attach(simulatorRect.createSubPanel(panel, panel.getPlugin()).getPanel());
 	}
 
@@ -104,7 +116,7 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 				simulatorSources.reloadCatalogs();
 				simulatorWidget.refreshContent();
 				BattleNext_Logger.info(BattleNext_SettingsPage.class, "simulator.ui.unlocked",
-						BattleNext_Logger.fields().put("scope", "management_window").build());
+						() -> BattleNext_Logger.fields().put("scope", "management_window").build());
 			});
 		}
 	}

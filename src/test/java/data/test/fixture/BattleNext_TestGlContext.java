@@ -31,7 +31,7 @@ public class BattleNext_TestGlContext implements AutoCloseable {
 		try {
 			created = new Pbuffer(800, 800, new PixelFormat(), null, null);
 			created.makeCurrent();
-			for (String name : new String[]{"initialized", "positionVbo", "uvVbo", "geometryCapacity", "geometryData"}) {
+			for (String name : new String[]{"initialized", "positionVbo", "uvVbo", "batchDepth", "batchPositions", "batchColors"}) {
 				Field field = BattleNext_GeometryRenderer.class.getDeclaredField(name);
 				field.setAccessible(true);
 				rendererState.put(field, field.get(null));
@@ -39,8 +39,8 @@ public class BattleNext_TestGlContext implements AutoCloseable {
 			for (Field field : rendererState.keySet()) {
 				switch (field.getName()) {
 					case "initialized" -> field.setBoolean(null, false);
-					case "positionVbo", "uvVbo" -> field.setInt(null, 0);
-					case "geometryData" -> {
+					case "positionVbo", "uvVbo", "batchDepth" -> field.setInt(null, 0);
+					case "batchPositions", "batchColors" -> {
 						FloatBuffer saved = (FloatBuffer) rendererState.get(field);
 						FloatBuffer working = BufferUtils.createFloatBuffer(saved.capacity());
 						FloatBuffer contents = saved.duplicate();

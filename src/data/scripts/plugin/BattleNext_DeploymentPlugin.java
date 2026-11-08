@@ -1,5 +1,6 @@
 package data.scripts.plugin;
 
+import java.util.function.Supplier;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI;
@@ -84,7 +85,7 @@ public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 
 	private void spawn(FleetSide side) {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("side", side).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("side", side).build();
 		BattleNext_Logger.operationStarted(BattleNext_DeploymentPlugin.class, "battle.deployment", input);
 		try {
 			engine.getFleetManager(side).setSuppressDeploymentMessages(true);
@@ -106,7 +107,7 @@ public class BattleNext_DeploymentPlugin extends BaseEveryFrameCombatPlugin {
 			}
 			engine.getFleetManager(side).setSuppressDeploymentMessages(false);
 			BattleNext_Logger.operationSucceeded(BattleNext_DeploymentPlugin.class, "battle.deployment",
-					BattleNext_Logger.fields().put("side", side).put("reserves", reserves).put("deployed_count", index).put("columns", columns).put("spacing", SHIP_SPACING).put("row_spacing", ROW_SPACING).build());
+					() -> BattleNext_Logger.fields().put("side", side).put("reserves", reserves).put("deployed_count", ships).put("columns", columns).put("spacing", SHIP_SPACING).put("row_spacing", ROW_SPACING).build());
 		} catch (RuntimeException exception) {
 			BattleNext_Logger.operationFailed(BattleNext_DeploymentPlugin.class, "battle.deployment", input, exception);
 			throw exception;

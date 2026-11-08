@@ -1,5 +1,6 @@
 package data.scripts.tools;
 
+import java.util.function.Supplier;
 import com.fs.starfarer.api.Global;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -94,7 +95,7 @@ public class BattleNext_Settings {
 
 	public static void save(boolean cnText, boolean fullGraphicEffect, boolean infoLog, boolean rttInBattle, float battleTimeLimit, float defaultTimeMult,
 			float boostTimeMult, int reportKeepCount, int deploymentPointLimit) {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("cn_text", cnText).put("full_graphic_effect", fullGraphicEffect)
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("cn_text", cnText).put("full_graphic_effect", fullGraphicEffect)
 				.put("info_log", infoLog).put("rtt_in_battle", rttInBattle).put("battle_time_limit", battleTimeLimit).put("default_time_mult", defaultTimeMult)
 				.put("boost_time_mult", boostTimeMult).put("report_keep_count", reportKeepCount).put("deployment_point_limit", deploymentPointLimit).build();
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.save", input);
@@ -138,7 +139,7 @@ public class BattleNext_Settings {
 	}
 
 	private static JSONObject readStored(String path) throws IOException, JSONException {
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).put("compressed", false).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).put("compressed", false).build();
 		BattleNext_Logger.operationStarted(BattleNext_Settings.class, "settings.read", input);
 		try {
 			JSONObject stored = Global.getSettings().readJSONFromCommon(path, false);

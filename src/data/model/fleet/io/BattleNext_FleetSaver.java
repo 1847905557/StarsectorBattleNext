@@ -1,5 +1,6 @@
 package data.model.fleet.io;
 
+import java.util.function.Supplier;
 import data.model.BattleNext_BaseSaver;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
@@ -43,7 +44,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 	@Override
 	public String save(BattleNext_FleetModel fleet) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("fleet", fleet).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("fleet", fleet).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.commit", input);
 		try {
 			if (!BattleNext_EntryId.isValidPathSegment(fleet.getId())) {
@@ -79,17 +80,29 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 			}
 			String fleetJson = fleet.toJson().toString(4);
 			Map<String, String> variants = prepareVariants(fleet, directory);
-			Set<String> staleVariants = findStaleVariants(directory, variants.keySet());
-			Map<String, byte[]> targetSnapshot = snapshot(directory);
-			Map<String, byte[]> oldSnapshot = oldDirectory == null || oldDirectory.equals(directory)
-					? Map.of() : snapshot(oldDirectory);
+			boolean moving = oldDirectory != null && !oldDirectory.equals(directory);
+			Map<String, byte[]> targetSnapshot = snapshot(directory, moving);
+			Map<String, byte[]> oldSnapshot = moving ? snapshot(oldDirectory, true) : Map.of();
+			List<String> staleVariants = targetSnapshot.keySet().stream()
+					.filter(file -> file.endsWith(".variant") && !variants.containsKey(file)).toList();
+			List<String> createdBackups = new ArrayList<>();
+			boolean movedHistory = false;
 
 			try {
-				if (oldDirectory != null && !oldDirectory.equals(directory)) {
-					copyBackupHistory(oldDirectory, directory);
-					createBackup(oldDirectory, directory);
+				if (moving) {
+					if (files.exists(oldDirectory + "/" + BACKUP_FOLDER)) {
+						files.moveDirectory(oldDirectory + "/" + BACKUP_FOLDER, directory + "/" + BACKUP_FOLDER);
+						movedHistory = true;
+					}
+					createBackup(oldDirectory, directory, oldSnapshot, createdBackups);
+					for (var entry : oldSnapshot.entrySet()) {
+						String name = entry.getKey().substring(oldDirectory.length() + 1);
+						if (!name.equals(DATA_FILE) && !name.endsWith(".variant") && !files.exists(directory + "/" + name)) {
+							files.writeBytes(directory + "/" + name, entry.getValue());
+						}
+					}
 				} else {
-					createBackup(directory, directory);
+					createBackup(directory, directory, targetSnapshot, createdBackups);
 				}
 				files.writeBytes(path, fleetJson.getBytes(StandardCharsets.UTF_8));
 				for (Map.Entry<String, String> variant : variants.entrySet()) {
@@ -110,8 +123,10 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 				BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.rollback",
 					() -> BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
 				try {
-					restore(directory, targetSnapshot);
-					restore(oldDirectory, oldSnapshot);
+					for (String backup : createdBackups) files.deleteRecursively(backup);
+					if (movedHistory) files.moveDirectory(directory + "/" + BACKUP_FOLDER, oldDirectory + "/" + BACKUP_FOLDER);
+					restore(directory, targetSnapshot, moving);
+					if (moving) restore(oldDirectory, oldSnapshot, true);
 					BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.rollback",
 					() -> BattleNext_Logger.fields().put("fleet", fleet).put("target_directory", directory).put("previous_directory", oldDirectory).put("target_files", targetSnapshot.keySet()).put("previous_files", oldSnapshot.keySet()).build());
 				} catch (Exception rollbackException) {
@@ -135,7 +150,7 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 	@Override
 	public void delete(BattleNext_FleetModel fleet) throws IOException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("fleet", fleet).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("fleet", fleet).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.delete", input);
 		try {
 			List<String> paths = deletionPaths(fleet);
@@ -191,24 +206,25 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		return List.of(source, source.substring(0, source.length() - "_data.csv".length()) + "_fleet.csv");
 	}
 
-	private void createBackup(String sourceDirectory, String targetDirectory) throws IOException {
+	private void createBackup(String sourceDirectory, String targetDirectory, Map<String, byte[]> active, List<String> createdBackups) throws IOException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.backup", input);
 		try {
 			String sourceData = sourceDirectory + "/" + DATA_FILE;
-			if (!files.exists(sourceData)) {
+			if (!active.containsKey(sourceData)) {
 				BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup",
 						() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
 							.put("created", false).build());
 				return;
 			}
 			String backupDirectory = nextBackupDirectory(targetDirectory);
-			files.writeBytes(backupDirectory + "/" + DATA_FILE, files.readBytes(sourceData));
-			for (String path : files.list(sourceDirectory, false)) {
+			createdBackups.add(backupDirectory);
+			files.writeBytes(backupDirectory + "/" + DATA_FILE, active.get(sourceData));
+			for (String path : active.keySet()) {
 				if (path.endsWith(".variant")) {
 					String name = path.substring(sourceDirectory.length() + 1);
-					files.writeBytes(backupDirectory + "/" + name, files.readBytes(path));
+					files.writeBytes(backupDirectory + "/" + name, active.get(path));
 				}
 			}
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup",
@@ -218,39 +234,6 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.backup.rejected", input, exception);
 			} else {
 				BattleNext_Logger.operationFailed(BattleNext_FleetSaver.class, "fleet.backup", input, exception);
-			}
-			throw exception;
-		}
-	}
-
-	private void copyBackupHistory(String sourceDirectory, String targetDirectory) throws IOException {
-
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build();
-		BattleNext_Logger.operationStarted(BattleNext_FleetSaver.class, "fleet.backup.history.copy", input);
-		try {
-			String sourceBackup = sourceDirectory + "/" + BACKUP_FOLDER;
-		if (!files.exists(sourceBackup)) {
-			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup.history.copy",
-					() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory)
-						.put("copied", false).build());
-			return;
-		}
-			String targetBackup = targetDirectory + "/" + BACKUP_FOLDER;
-			for (String path : files.list(sourceBackup, true)) {
-				String relative = path.substring(sourceBackup.length() + 1);
-				String targetPath = targetBackup + "/" + relative;
-				if (files.exists(targetPath)) {
-					throw new IOException("Backup history collision: " + targetPath);
-				}
-				files.writeBytes(targetPath, files.readBytes(path));
-			}
-			BattleNext_Logger.operationSucceeded(BattleNext_FleetSaver.class, "fleet.backup.history.copy",
-					() -> BattleNext_Logger.fields().put("source_directory", sourceDirectory).put("target_directory", targetDirectory).build());
-		} catch (IOException | RuntimeException exception) {
-			if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
-				BattleNext_Logger.warn(BattleNext_FleetSaver.class, "fleet.backup.history.copy.rejected", input, exception);
-			} else {
-				BattleNext_Logger.operationFailed(BattleNext_FleetSaver.class, "fleet.backup.history.copy", input, exception);
 			}
 			throw exception;
 		}
@@ -281,27 +264,26 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		return variants;
 	}
 
-	private Set<String> findStaleVariants(String directory, Set<String> currentVariants) throws IOException {
-		Set<String> stale = new LinkedHashSet<>();
-		if (!files.exists(directory)) return stale;
-		for (String path : files.list(directory, false)) {
-			if (path.endsWith(".variant") && !currentVariants.contains(path)) stale.add(path);
-		}
-		return stale;
+	private boolean isFleetFile(String path) {
+		return path.endsWith("/" + DATA_FILE) || path.endsWith(".variant");
 	}
 
-	private Map<String, byte[]> snapshot(String directory) throws IOException {
+	private Map<String, byte[]> snapshot(String directory, boolean moving) throws IOException {
 		if (directory == null || !files.exists(directory)) return Map.of();
 		Map<String, byte[]> snapshot = new LinkedHashMap<>();
-		for (String path : files.list(directory, true)) {
-			snapshot.put(path, files.readBytes(path));
+		for (String path : files.list(directory, false)) {
+			if (moving || isFleetFile(path)) snapshot.put(path, files.readBytes(path));
 		}
 		return snapshot;
 	}
 
-	private void restore(String directory, Map<String, byte[]> snapshot) throws IOException {
+	private void restore(String directory, Map<String, byte[]> snapshot, boolean moving) throws IOException {
 		if (directory == null) return;
-		if (files.exists(directory)) files.deleteRecursively(directory);
+		if (files.exists(directory)) {
+			for (String path : files.list(directory, false)) {
+				if (!snapshot.containsKey(path) && (moving || isFleetFile(path))) files.delete(path);
+			}
+		}
 		for (Map.Entry<String, byte[]> entry : snapshot.entrySet()) {
 			files.writeBytes(entry.getKey(), entry.getValue());
 		}
@@ -334,6 +316,8 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		void delete(String path) throws IOException;
 
 		void deleteRecursively(String path) throws IOException;
+
+		void moveDirectory(String source, String destination) throws IOException;
 	}
 
 	interface TimeProvider {
@@ -370,6 +354,11 @@ public class BattleNext_FleetSaver extends BattleNext_BaseSaver<BattleNext_Fleet
 		@Override
 		public void deleteRecursively(String path) throws IOException {
 			BattleNext_ModFileManager.deleteRecursively(path);
+		}
+
+		@Override
+		public void moveDirectory(String source, String destination) throws IOException {
+			BattleNext_ModFileManager.moveDirectory(source, destination);
 		}
 	}
 }

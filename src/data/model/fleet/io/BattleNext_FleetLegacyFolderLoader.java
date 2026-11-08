@@ -7,8 +7,20 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import com.fs.starfarer.api.Global;
 
 public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLoader {
+
+	private final Predicate<String> registeredVariant;
+
+	public BattleNext_FleetLegacyFolderLoader() {
+		this(id -> Global.getSettings().doesVariantExist(id));
+	}
+
+	public BattleNext_FleetLegacyFolderLoader(Predicate<String> registeredVariant) {
+		this.registeredVariant = registeredVariant;
+	}
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
@@ -34,7 +46,7 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 			try {
 				BattleNext_FleetModel fleet = readFleet(number, path, fleetPath);
 				fleet.setFolderName(folder);
-				BattleNext_FleetVariantLoader.load(fleet, paths);
+				BattleNext_FleetVariantLoader.load(fleet, paths, registeredVariant);
 				result.add(fleet);
 			} catch (IOException | JSONException | IllegalArgumentException exception) {
 				reject(path, -1, number, "", exception);

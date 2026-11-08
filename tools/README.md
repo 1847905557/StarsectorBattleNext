@@ -57,3 +57,4 @@
 - `projectRulesIntegrityCheck`：聚合执行检查器自身完整性检查。
 - `fixProject`：格式化、编译并执行项目静态规则。
 - `verifyProject`：只检查格式、编译并执行项目静态规则。
+- `performanceSmoke`：在原生游戏中测量管理面板、装配选择、长文本定位和批量绘制，结果保存到 `build/reports/performance/`。

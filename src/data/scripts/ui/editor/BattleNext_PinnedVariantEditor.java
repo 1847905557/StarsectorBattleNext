@@ -102,10 +102,13 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		if (!validateName(entry.path(), variantStrings.get("pin_name"), nameField.getText(), variantStrings.get("pin_name_required"))) return false;
 		String next = nameField.getText().trim();
 		try {
-			store.rename(entry.pinId(), next);
-			entry = new CatalogEntry(entry.path(), next, entry.pinId(), entry.hullId(), store.get(entry.pinId()), "", store.get(entry.pinId()).toJson().toString());
-			nameField.setText(next);
-			return true;
+			return persist(() -> {
+				store.rename(entry.pinId(), next);
+				return true;
+			}, () -> {
+				entry = new CatalogEntry(entry.path(), next, entry.pinId(), entry.hullId(), store.get(entry.pinId()), "", entry.raw());
+				nameField.setText(next);
+			});
 		} catch (Exception exception) {
 			statusText = strings.get("save_failed") + ": " + exception;
 			saveErrors.failure(strings.get("save_failed"), entry.path(), exception);

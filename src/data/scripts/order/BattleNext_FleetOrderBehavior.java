@@ -117,17 +117,19 @@ public class BattleNext_FleetOrderBehavior extends BaseEveryFrameCombatPlugin {
 			eligible.add(ship);
 			activeFields.add(BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly()));
 		}
-		for (BattleNext_OrderField field : activeFields) {
-			field.reconcile(eligible);
-		}
-		for (MemberOrders entry : orders) {
-			ShipAPI ship = deployed.get(entry.member);
-			if (ship == null || ship.getOwner() != entry.owner) continue;
-			BattleNext_OrderField field = BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly());
-			entry.processor.advance(ship, engine, field);
-		}
-		for (BattleNext_OrderField field : activeFields) {
-			field.pruneAssignments();
+		try (BattleNext_AssignmentIndex index = BattleNext_AssignmentIndex.begin(engine)) {
+			for (BattleNext_OrderField field : activeFields) {
+				field.reconcile(eligible);
+			}
+			for (MemberOrders entry : orders) {
+				ShipAPI ship = deployed.get(entry.member);
+				if (ship == null || ship.getOwner() != entry.owner) continue;
+				BattleNext_OrderField field = BattleNext_OrderField.getInstance(engine, ship.getOwner(), ship.isAlly());
+				entry.processor.advance(ship, engine, field);
+			}
+			for (BattleNext_OrderField field : activeFields) {
+				field.pruneAssignments();
+			}
 		}
 	}
 

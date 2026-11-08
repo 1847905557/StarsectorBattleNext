@@ -133,6 +133,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			}
 			assertEquals(second.id(), BattleNext_SimulatorService.status().result().id());
 			BattleNext_SimulatorService.advance();
+			awaitImports();
 			BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 			reports.reload();
 			assertEquals("Saved Match simulation", reports.get(first.id()).getName());

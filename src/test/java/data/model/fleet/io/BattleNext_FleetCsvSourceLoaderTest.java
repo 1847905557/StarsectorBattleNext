@@ -32,7 +32,7 @@ class BattleNext_FleetCsvSourceLoaderTest extends BattleNext_TestFleetIoFixture 
 		assertEquals("engage;", fleet.getMembers().get(0).getOrders());
 		assertEquals(BattleNext_LoadSource.LEGACY, fleet.getSourceType());
 		assertEquals("tournament/player01_data.csv", fleet.getSourcePath());
-		assertEquals(List.of("loadCSV:tournament/player01_data.csv", "loadCSV:tournament/player01_fleet.csv"), dataReads);
+		assertTrue(dataReads.isEmpty());
 	}
 
 	@Test

@@ -16,7 +16,12 @@ public class BattleNext_CsvLine {
 		for (int index = 0; index < line.length(); index++) {
 			char value = line.charAt(index);
 			if (value == '\"') {
-				quoted = !quoted;
+				if (quoted && index + 1 < line.length() && line.charAt(index + 1) == '\"') {
+					field.append('\"');
+					index++;
+				} else {
+					quoted = !quoted;
+				}
 			} else if (value == ',' && !quoted) {
 				result.add(field.toString().trim());
 				field.setLength(0);
@@ -30,6 +35,6 @@ public class BattleNext_CsvLine {
 
 	public static String escape(String value) {
 		String normalized = value == null ? "" : value;
-		return normalized.contains(",") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized;
+		return normalized.contains(",") || normalized.contains("\"") ? "\"" + normalized.replace("\"", "\"\"") + "\"" : normalized;
 	}
 }

@@ -1,12 +1,14 @@
 package data.simulator;
 
 import data.scripts.battlesnext.util.annotation.LifecycleEntry;
-import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Mouse;
+import org.lwjgl.input.Cursor;
+import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.InputImplementation;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
@@ -16,6 +18,7 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 	private int cursorX;
 	private int cursorY;
 	private boolean grabbed;
+	private boolean closing;
 
 	private BattleNext_SimulatorMouse(InputImplementation original) {
 		this.original = original;
@@ -29,34 +32,49 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 		if (current instanceof BattleNext_SimulatorMouse isolated) return isolated;
 		BattleNext_SimulatorMouse isolated = new BattleNext_SimulatorMouse(current);
 		implementation.set(isolated);
+		isolated.createVirtualMouse();
 		return isolated;
+	}
+
+	private void createVirtualMouse() throws ReflectiveOperationException {
+		// Initialize the virtual device before Display can create a desktop mouse.
+		Method create = Mouse.class.getDeclaredMethod("create", InputImplementation.class);
+		create.setAccessible(true);
+		create.invoke(null, this);
 	}
 
 	public void cleanup() throws ReflectiveOperationException {
 		VarHandle implementation = MethodHandles.privateLookupIn(Mouse.class, MethodHandles.lookup())
 				.findStaticVarHandle(Mouse.class, "implementation", InputImplementation.class);
 		if (implementation.get() != this) return;
+		closing = true;
+		Mouse.destroy();
 		implementation.set(original);
 	}
 
 	@Override
 	public boolean hasWheel() {
-		return original.hasWheel();
+		return true;
 	}
 
 	@Override
 	public int getButtonCount() {
-		return original.getButtonCount();
+		return 3;
 	}
 
 	@Override
-	public void createMouse() throws LWJGLException {
-		original.createMouse();
+	public void createMouse() {
 	}
 
 	@Override
 	public void destroyMouse() {
-		original.destroyMouse();
+		if (closing) return;
+		// Display recreation destroys Mouse; keep it virtual until explicit cleanup.
+		try {
+			createVirtualMouse();
+		} catch (ReflectiveOperationException exception) {
+			throw new IllegalStateException("Unable to preserve simulator mouse isolation during window recreation", exception);
+		}
 	}
 
 	@Override
@@ -81,7 +99,7 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public int getNativeCursorCapabilities() {
-		return original.getNativeCursorCapabilities();
+		return Cursor.CURSOR_ONE_BIT_TRANSPARENCY | Cursor.CURSOR_8_BIT_ALPHA | Cursor.CURSOR_ANIMATION;
 	}
 
 	@Override
@@ -97,52 +115,50 @@ public class BattleNext_SimulatorMouse implements InputImplementation {
 
 	@Override
 	public int getMinCursorSize() {
-		return original.getMinCursorSize();
+		return 1;
 	}
 
 	@Override
 	public int getMaxCursorSize() {
-		return original.getMaxCursorSize();
+		return 64;
 	}
 
 	@Override
-	public void createKeyboard() throws LWJGLException {
-		original.createKeyboard();
+	public void createKeyboard() {
 	}
 
 	@Override
 	public void destroyKeyboard() {
-		original.destroyKeyboard();
 	}
 
 	@Override
 	public void pollKeyboard(ByteBuffer keys) {
-		original.pollKeyboard(keys);
+		for (int index = 0; index < keys.capacity(); index++) {
+			keys.put(index, (byte) 0);
+		}
 	}
 
 	@Override
 	public void readKeyboard(ByteBuffer buffer) {
-		original.readKeyboard(buffer);
 	}
 
 	@Override
-	public Object createCursor(int width, int height, int hotspotX, int hotspotY, int imageCount, IntBuffer images, IntBuffer delays) throws LWJGLException {
-		return original.createCursor(width, height, hotspotX, hotspotY, imageCount, images, delays);
+	public Object createCursor(int width, int height, int hotspotX, int hotspotY, int imageCount, IntBuffer images, IntBuffer delays) {
+		return new Object();
 	}
 
 	@Override
 	public void destroyCursor(Object cursor) {
-		original.destroyCursor(cursor);
 	}
 
 	@Override
 	public int getWidth() {
-		return original.getWidth();
+		return Display.getWidth();
 	}
 
 	@Override
 	public int getHeight() {
-		return original.getHeight();
+		return Display.getHeight();
 	}
 
 	@Override

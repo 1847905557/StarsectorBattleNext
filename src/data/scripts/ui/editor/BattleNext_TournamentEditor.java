@@ -50,17 +50,26 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	private TextFieldAPI mapField;
 	private final BattleNext_RuleSourceProvider ruleSource;
 	private CheckBoxGroup bracketGroup;
-	private final BattleNext_StartedTournamentStore startedStore = new BattleNext_StartedTournamentStore();
-	private final BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
+	private final BattleNext_StartedTournamentStore startedStore;
+	private final BattleNext_BattleReportStore reports;
 	private final Set<String> expandedInstances = new HashSet<>();
 	private Consumer<String> deleteInstance;
 	private Consumer<CatalogEntry> deleteInvalidInstance;
 	private Consumer<String> retryRound;
 	private final Map<String, Long> instanceVersions = new LinkedHashMap<>();
+	private long displayedInstances;
+	private long displayedReports;
 
 	public BattleNext_TournamentEditor(BattleNext_TournamentStore store, BattleNext_RuleStore ruleStore) {
+		this(store, ruleStore, new BattleNext_StartedTournamentStore(), new BattleNext_BattleReportStore());
+	}
+
+	public BattleNext_TournamentEditor(BattleNext_TournamentStore store, BattleNext_RuleStore ruleStore,
+			BattleNext_StartedTournamentStore instances, BattleNext_BattleReportStore reports) {
 		this.store = store;
 		this.ruleStore = ruleStore;
+		startedStore = instances;
+		this.reports = reports;
 		ruleSource = new BattleNext_RuleSourceProvider(ruleStore);
 	}
 
@@ -74,7 +83,8 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			}
 			baseline = source;
 			statusText = "";
-			locked = store.isLocked(source == null ? "" : source.getId());
+			startedStore.ensureLoaded();
+			locked = store.isLocked(source == null ? "" : source.getId(), startedStore);
 			draft = next;
 			idField = null;
 			return true;
@@ -107,7 +117,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	public void refreshInstances() {
 		try {
 			boolean wasLocked = locked;
-			locked = store.isLocked(baseline == null ? "" : baseline.getId());
+			locked = store.isLocked(baseline == null ? "" : baseline.getId(), startedStore);
 			if (wasLocked != locked) {
 				deserialize();
 			} else {
@@ -119,8 +129,12 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 	}
 
 	public void advanceInstances() {
-		if (baseline != null && BattleNext_SimulatorService.simulatedInstances().stream()
-				.anyMatch(instance -> instance.getSourceTournamentId().equals(baseline.getId()) && !instanceVersions.containsKey(instance.getId()))) {
+		if (displayedInstances != startedStore.getRevision() || displayedReports != reports.getRevision()) {
+			refreshInstances();
+			return;
+		}
+		if (baseline != null && BattleNext_SimulatorService.tournamentSummaries().stream()
+				.anyMatch(instance -> instance.sourceTournamentId().equals(baseline.getId()) && !instanceVersions.containsKey(instance.id()))) {
 			refreshInstances();
 			return;
 		}
@@ -137,13 +151,13 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		instanceVersions.clear();
 		rowsContent.addTitle(battleStrings.get("tournament_instance"));
 		try {
-			startedStore.reload();
+			startedStore.ensureLoaded();
 		} catch (Exception exception) {
 			rowsContent.addPara(exception.toString(), 5f);
 			return;
 		}
 		try {
-			reports.reload();
+			reports.ensureLoaded();
 		} catch (Exception exception) {
 			rowsContent.addPara(exception.toString(), 5f);
 		}
@@ -152,6 +166,8 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 				rowsContent.addPara(error, 5f);
 			}
 		}
+		displayedInstances = startedStore.getRevision();
+		displayedReports = reports.getRevision();
 		List<BattleNext_StartedTournament> instances = new ArrayList<>(startedStore.getAll().stream()
 				.filter(instance -> baseline != null && instance.getSourceTournamentId().equals(baseline.getId()))
 				.toList());
@@ -362,10 +378,14 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			draft.setMapId(map);
 			BattleNext_TournamentModel nextBaseline = new BattleNext_TournamentModel();
 			nextBaseline.fromJson(draft.toJson());
-			store.saveEdited(draft, baseline == null ? "" : baseline.getId());
-			baseline = nextBaseline;
-			statusText = strings.get("saved");
-			return true;
+			String sourceId = baseline == null ? "" : baseline.getId();
+			return persist(() -> {
+				store.saveEdited(nextBaseline, sourceId);
+				return true;
+			}, () -> {
+				baseline = nextBaseline;
+				statusText = strings.get("saved");
+			});
 		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_TournamentEditor.class, "tournament.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).put("input_state", serializeState()).build(), exception);

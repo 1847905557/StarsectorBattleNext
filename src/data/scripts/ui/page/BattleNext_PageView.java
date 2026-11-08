@@ -3,22 +3,21 @@ package data.scripts.ui.page;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.editor.BattleNext_EditorView;
-import data.scripts.ui.widget.BattleNext_SaveErrors;
+import data.scripts.ui.BattleNext_View;
 
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
-public abstract class BattleNext_PageView {
+public abstract class BattleNext_PageView extends BattleNext_View {
 
 	protected CustomPanelAPI panel;
 	protected CustomPanelAPI overlayHost;
-	protected BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
-	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	protected String status = "";
 	protected LabelAPI statusLabel;
-	protected final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private CustomPanelAPI owner;
 
 	public final void setInputRouter(BattleNext_UiInputRouter router) {
@@ -64,6 +63,7 @@ public abstract class BattleNext_PageView {
 	}
 
 	public final void close() {
+		clearOperation();
 		saveErrors.clear();
 		clearPageOverlays();
 		if (editorView() != null) editorView().close();
@@ -121,7 +121,18 @@ public abstract class BattleNext_PageView {
 	}
 
 	public void advance(float amount) {
+		if (editorView() != null) editorView().advance(amount);
+	}
 
+	public String selection() {
+		return "";
+	}
+
+	public void restoreSelection(String id) {
+	}
+
+	public void catalogChanged() {
+		refreshContent();
 	}
 
 	protected abstract void loadPageState();
@@ -131,7 +142,7 @@ public abstract class BattleNext_PageView {
 	protected abstract void refreshPage();
 
 	protected void bindPageInput() {
-
+		if (editorView() != null) editorView().setInputRouter(inputRouter);
 	}
 
 	protected BattleNext_EditorView editorView() {
@@ -142,7 +153,55 @@ public abstract class BattleNext_PageView {
 		BattleNext_EditorView editor = editorView();
 		editor.setInputRouter(inputRouter);
 		editor.setOverlayHost(overlayHost == null ? panel : overlayHost);
+		editor.setPersistence(persistence());
 		editor.attach(host);
+	}
+
+	@Override
+	public final void setPersistence(Function<Callable<Boolean>, CompletableFuture<Boolean>> persistence) {
+		super.setPersistence(persistence);
+		if (editorView() != null) editorView().setPersistence(persistence);
+	}
+
+	@Override
+	public final boolean isSaving() {
+		return super.isSaving() || editorView() != null && editorView().isSaving();
+	}
+
+	protected final void persistMutation(Callable<Boolean> write, Runnable publish) {
+		persistMutation(write, publish, strings.get("saving"), strings.get("delete_failed"));
+	}
+
+	public final void persistMutation(Callable<Boolean> write, Runnable publish, String status, String failure) {
+		try {
+			perform(write, publish, status, failure, false);
+			if (isSaving()) setStatus(status);
+		} catch (Exception exception) {
+			setStatus(failure + ": " + exception.getMessage());
+		}
+	}
+
+	public final Boolean completeSave() {
+		boolean own = super.isSaving();
+		boolean pending = isSaving();
+		Boolean completed = own ? completeOperation() : editorView() == null ? null : editorView().completeSave();
+		if (pending && !isSaving()) {
+			if (!own && (completed != null || !editorView().getSaveErrors().isEmpty())) status = editorView().getStatusText();
+			if (Boolean.TRUE.equals(completed)) savePublished();
+			updatePageControls();
+			updateStatus();
+		}
+		return completed;
+	}
+
+	protected void afterSave() {
+	}
+
+	protected void savePublished() {
+	}
+
+	public final void refreshAfterSave() {
+		afterSave();
 	}
 
 	protected void establishPageState() {
@@ -150,7 +209,7 @@ public abstract class BattleNext_PageView {
 	}
 
 	protected void clearPageOverlays() {
-
+		if (editorView() != null) editorView().closeOverlays();
 	}
 
 	protected void clearPageResources() {
@@ -184,6 +243,11 @@ public abstract class BattleNext_PageView {
 	protected final void setStatus(String value) {
 		status = value;
 		updateStatus();
+	}
+
+	@Override
+	protected final void operationStatus(String value) {
+		setStatus(value);
 	}
 
 	private void releasePanel() {

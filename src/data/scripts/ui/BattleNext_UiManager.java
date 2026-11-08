@@ -3,14 +3,12 @@ package data.scripts.ui;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
-import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_BattleSignals;
-import data.scripts.tools.BattleNext_Logger;
 import data.scripts.tools.BattleNext_Settings;
-import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.page.*;
+import data.scripts.ui.BattleNext_ManagementSession.Catalogs;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_StatusBar;
 import org.lwjgl.input.Keyboard;
@@ -50,9 +48,13 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
-	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 	private final BattleNext_I18nSection simulatorStrings = BattleNext_I18nSection.getInstance("Simulator", "BattleNext_simulator_");
-	private final BattleNext_TournamentStore tournamentStore = new BattleNext_TournamentStore();
+	private Catalogs data;
+	private BattleNext_ManagementSession catalogs;
+	private boolean loading;
+	private String refreshSelection = "";
+	private LabelAPI loadingLabel;
+	private ButtonAPI refreshButton;
 	private final BattleNext_ConfirmationDialog confirmationDialog = new BattleNext_ConfirmationDialog(this, inputRouter);
 	private BattleNext_StatusBar statusBar;
 	private TooltipMakerAPI headingContent;
@@ -89,8 +91,45 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	public void open() {
 		clearReportNotification();
 		currentPage = BattleManagementPage.BATTLE_SELECTOR;
-		refreshState();
-		showPage();
+		startLoading();
+	}
+
+	public boolean isLoading() {
+		return loading;
+	}
+
+	public boolean isSaving() {
+		return attachedView != null && attachedView.isSaving();
+	}
+
+	private void startLoading() {
+		if (attachedView != null) attachedView.close();
+		attachedView = null;
+		if (catalogs != null) catalogs.close();
+		catalogs = null;
+		data = null;
+		activeTournamentId = "";
+		battleSelectorPage = null;
+		fleetPage = null;
+		variantPage = null;
+		reportPage = null;
+		tournamentPage = null;
+		rulesPage = null;
+		settingsPage = null;
+		loading = true;
+		refreshButton.setEnabled(false);
+		showLoadingPage();
+		catalogs = new BattleNext_ManagementSession();
+		catalogs.activate();
+		catalogs.start();
+	}
+
+	private void showLoadingPage() {
+		bodyRect.removeLatestSubPanel();
+		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
+		TooltipMakerAPI content = body.createUIElement(bodyRect.getWidth(), bodyRect.getHeight(), false);
+		loadingLabel = content.addPara(strings.format("loading", loadingText(catalogs == null ? "" : catalogs.loading())), 0f);
+		body.addUIElement(content).inTL(8f, 8f);
 	}
 
 	@Override
@@ -103,14 +142,37 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void advance(float amount) {
+		if (catalogs != null) {
+			catalogs.activate();
+			if (!loading && !isSaving() && catalogs.advance() && attachedView != null) attachedView.catalogChanged();
+			if (loading) {
+				loadingLabel.setText(strings.format("loading", loadingText(catalogs.loading())));
+				if (catalogs.isReady()) {
+					data = catalogs.data();
+					loading = false;
+					refreshButton.setEnabled(true);
+					refreshState();
+					showPage();
+					attachedView.restoreSelection(refreshSelection);
+					refreshSelection = "";
+					if (!catalogs.errors().isEmpty()) statusBar.showError(String.join(" | ", catalogs.errors()));
+				}
+			}
+		}
 		if (attachedView != null) {
+			Boolean saved = attachedView.completeSave();
+			if (saved != null) {
+				if (confirmationDialog.isActive()) confirmationDialog.saveCompleted(saved);
+				else if (saved) attachedView.refreshAfterSave();
+			}
 			String savedId = BattleNext_BattleSignals.consumePendingResult();
 			if (!savedId.isEmpty()) {
+				if (catalogs != null) catalogs.refreshReports();
 				reportId = savedId;
 				statusBar.reportSaved(reportId);
 			}
 		}
-		if (attachedView != null && !confirmationDialog.isActive()) {
+		if (attachedView != null && !attachedView.isSaving() && !confirmationDialog.isActive()) {
 			attachedView.advance(amount);
 		}
 	}
@@ -121,6 +183,8 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 
 	@Override
 	public void buttonPressed(Object buttonId) {
+		if (catalogs != null) catalogs.activate();
+		if (attachedView != null && attachedView.isSaving()) return;
 		if (confirmationDialog.isActive()) {
 			confirmationDialog.handle(buttonId);
 			return;
@@ -137,6 +201,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 			requestClose();
 			return;
 		}
+		if ("refresh".equals(buttonId)) {
+			if (loading) return;
+			confirmNavigation(() -> {
+				refreshSelection = attachedView == null ? "" : attachedView.selection();
+				startLoading();
+			});
+			return;
+		}
+		if (attachedView == null) return;
 		boolean cnText = BattleNext_Settings.isCnTextEnabled();
 		activeView().buttonPressed(buttonId);
 		if (cnText != BattleNext_Settings.isCnTextEnabled()) {
@@ -148,6 +221,10 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	}
 
 	public boolean handleGlobalInput(List<InputEventAPI> events) {
+		if (attachedView != null && attachedView.isSaving()) {
+			for (InputEventAPI event : events) event.consume();
+			return true;
+		}
 
 		if (!confirmationDialog.isActive() && attachedView != null && attachedView.handleGlobalInput(events)) return true;
 		if (inputRouter.handleGlobalInput(events)) return true;
@@ -210,11 +287,15 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 
 		float closeWidth = Math.min(SHELL_CLOSE_MAX_WIDTH, footerRect.getWidth() * SHELL_CLOSE_WIDTH_SHARE);
-		float statusWidth = footerRect.getWidth() - closeWidth - SHELL_STATUS_CLOSE_GAP;
+		float refreshWidth = Math.min(120f, closeWidth);
+		float statusWidth = footerRect.getWidth() - closeWidth - refreshWidth - SHELL_STATUS_CLOSE_GAP * 2f;
 		TooltipMakerAPI footer = panel.createUIElement(statusWidth, footerRect.getHeight(), false);
 		statusBar = new BattleNext_StatusBar(statusWidth, footerRect.getHeight());
 		statusBar.attach(footer, panel);
 		panel.addUIElement(footer).inTL(footerRect.getX(), footerRect.getY());
+		refreshButton = BattleNext_PageLayout.fixedButton(panel,
+				new UIRect(footerRect.getX() + statusWidth + SHELL_STATUS_CLOSE_GAP, footerRect.getY(), refreshWidth, footerRect.getHeight()),
+				strings.get("refresh"), "refresh", CutStyle.BOTTOM, false);
 		closeButton = BattleNext_PageLayout.fixedButton(panel,
 				new UIRect(footerRect.getX() + footerRect.getWidth() - closeWidth,
 						footerRect.getY(), closeWidth, footerRect.getHeight()),
@@ -228,6 +309,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 					managementStrings.get(BattleManagementPage.values()[index].titleKey));
 		}
 		BattleNext_PageLayout.refreshButton(headingContent, closeButton, strings.get("close"));
+		BattleNext_PageLayout.refreshButton(headingContent, refreshButton, strings.get("refresh"));
 		statusBar.refreshText();
 	}
 
@@ -238,14 +320,20 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		if (attachedView != null) {
 			attachedView.close();
 		}
+		attachedView = null;
 		for (int index = 0; index < tabButtons.length; index++) {
 			tabButtons[index].setEnabled(BattleManagementPage.values()[index] != currentPage);
+		}
+		if (loading) {
+			showLoadingPage();
+			return;
 		}
 		bodyRect.removeLatestSubPanel();
 		CustomPanelAPI body = bodyRect.createSubPanel(panel, this).getPanel();
 		BattleNext_PageView view = activeView();
 		view.setInputRouter(inputRouter);
 		view.setOverlayHost(panel);
+		if (catalogs != null) view.setPersistence(catalogs::persist);
 		view.attach(body);
 		attachedView = view;
 	}
@@ -257,41 +345,59 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 	private BattleNext_PageView viewFor(BattleManagementPage page) {
 		if (page == BattleManagementPage.BATTLE_SELECTOR) {
 			if (battleSelectorPage == null) {
-				battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this);
+				battleSelectorPage = new BattleNext_BattleSelectorPage(this::returnToBattleSelector, this,
+						data().source(), data().reports());
 			}
 			return battleSelectorPage;
 		}
 		if (page == BattleManagementPage.FLEETS) {
 			if (fleetPage == null) fleetPage = new BattleNext_FleetLibraryPage(this::returnToBattleSelector,
-					this::confirmNavigation, this::confirmDelete);
+					this::confirmNavigation, this::confirmDelete, data().fleets(), data().variants());
 			return fleetPage;
 		}
 		if (page == BattleManagementPage.REPORTS) {
 			if (reportPage == null) reportPage = new BattleNext_BattleReportPage(this::returnToBattleSelector,
-					this::confirmNavigation, this::confirmDelete);
+					this::confirmNavigation, this::confirmDelete, data().reports());
 			return reportPage;
 		}
 		if (page == BattleManagementPage.VARIANTS) {
 			if (variantPage == null) {
 				variantPage = new BattleNext_PinnedVariantPage(this::returnToBattleSelector,
-						this::confirmNavigation, this::confirmDelete);
+						this::confirmNavigation, this::confirmDelete, data().pins());
 			}
 			return variantPage;
 		}
 		if (page == BattleManagementPage.TOURNAMENTS) {
 			if (tournamentPage == null) tournamentPage = new BattleNext_TournamentPage(this::returnToBattleSelector,
-					this::confirmNavigation, this::confirmDelete);
+					this::confirmNavigation, this::confirmDelete, data());
 			return tournamentPage;
 		}
 		if (page == BattleManagementPage.RULES) {
 			if (rulesPage == null) rulesPage = new BattleNext_RulesPage(this::returnToBattleSelector,
-					this::confirmNavigation, this::confirmDelete);
+					this::confirmNavigation, this::confirmDelete, data().rules());
 			return rulesPage;
 		}
 		if (settingsPage == null) {
-			settingsPage = new BattleNext_SettingsPage(this::confirmSimulatorEnable);
+			settingsPage = new BattleNext_SettingsPage(this::confirmSimulatorEnable, data().source(), data().reports());
 		}
 		return settingsPage;
+	}
+
+	private Catalogs data() {
+		if (data == null) data = Catalogs.create();
+		return data;
+	}
+
+	private String loadingText(String stage) {
+		return switch (stage) {
+			case "fleets" -> managementStrings.get("page_fleets");
+			case "quick_battles" -> battleStrings.get("quick_battle");
+			case "rules" -> managementStrings.get("page_rules");
+			case "tournaments", "instances" -> managementStrings.get("page_tournaments");
+			case "reports" -> managementStrings.get("page_reports");
+			case "variants" -> managementStrings.get("page_pinned_variants");
+			default -> managementStrings.get("heading");
+		};
 	}
 
 	private void requestPage(BattleManagementPage page) {
@@ -334,28 +440,30 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		}
 		settingsPage = null;
 		battleSelectorPage = null;
+		loading = false;
+		if (catalogs != null) catalogs.close();
+		catalogs = null;
+		data = null;
 		closeAction.run();
 	}
 
 	private boolean hasUnsavedChanges() {
-		return activeView().hasUnsavedChanges();
+		return attachedView != null && attachedView.hasUnsavedChanges();
 	}
 
 	private void requestSource(String id) {
-
 		battleSelectorPage.closeOverlays();
-
-		if (hasUnsavedChanges()) {
-			confirmationDialog.request(() -> {
-				if (applySource(id)) {
-					showPage();
-				}
-			});
-			return;
-		}
-		if (applySource(id)) {
+		confirmNavigation(() -> battleSelectorPage.persistMutation(() -> {
+			if (!id.isEmpty() && data().tournaments().get(id) == null) {
+				throw new IllegalArgumentException("Selected tournament is missing: " + id);
+			}
+			if (id.isEmpty()) data().instances().activate("");
+			return true;
+		}, () -> {
+			battleSelectorPage.selectSource(id);
+			refreshState();
 			showPage();
-		}
+		}, strings.get("saving"), battleStrings.get("source_save_failed")));
 	}
 
 	private void confirmNavigation(Runnable action) {
@@ -378,33 +486,17 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 				simulatorStrings.get("confirm_message"), action);
 	}
 
-	private boolean applySource(String id) {
-
-		try {
-			tournamentStore.reload();
-			if (!id.isEmpty() && tournamentStore.get(id) == null) {
-				throw new IllegalArgumentException("Selected tournament is missing: " + id);
-			}
-			if (id.isEmpty()) {
-				new BattleNext_StartedTournamentStore().activate("");
-			}
-			battleSelectorPage.selectSource(id);
-			refreshState();
-			return true;
-		} catch (Exception exception) {
-			statusBar.showFailure(battleStrings.get("source_save_failed"), id, exception);
-			BattleNext_Logger.error(getClass(), "battle.source.save.failed", BattleNext_Logger.fields().put("id", id).build(), exception);
-			return false;
-		}
-	}
-
 	private void refreshState() {
+		if (loading) return;
+		if (catalogs != null) {
+			activeTournamentId = data.instances().getActiveId();
+			statusBar.update("", activeTournamentId, reportId);
+			return;
+		}
 		String error = "";
 		try {
-			tournamentStore.reload();
-			BattleNext_StartedTournamentStore started = new BattleNext_StartedTournamentStore();
-			started.reload();
-			activeTournamentId = started.getActiveId();
+			data().instances().ensureLoaded();
+			activeTournamentId = data().instances().getActiveId();
 		} catch (Exception exception) {
 			error = strings.get("load_failed") + ": " + exception.getMessage();
 		}

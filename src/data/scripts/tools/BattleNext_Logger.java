@@ -56,12 +56,24 @@ public class BattleNext_Logger {
 		emit(Level.WARN, source, event, "degraded", fields, null);
 	}
 
+	public static void warn(Class<?> source, String event, Supplier<Fields> fields) {
+		warn(source, event, fields.get());
+	}
+
+	public static void warn(Class<?> source, String event, Supplier<Fields> fields, Throwable exception) {
+		warn(source, event, fields.get(), exception);
+	}
+
 	public static void warn(Class<?> source, String event, Fields fields, Throwable exception) {
 		emit(Level.WARN, source, event, "degraded", fields, exception);
 	}
 
 	public static void error(Class<?> source, String event, Fields fields, Throwable exception) {
 		emit(Level.ERROR, source, event, "failed", fields, exception);
+	}
+
+	public static void error(Class<?> source, String event, Supplier<Fields> fields, Throwable exception) {
+		error(source, event, fields.get(), exception);
 	}
 
 	public static void operationStarted(Class<?> source, String event, Fields fields) {
@@ -84,6 +96,10 @@ public class BattleNext_Logger {
 
 	public static void operationFailed(Class<?> source, String event, Fields fields, Throwable exception) {
 		emit(Level.ERROR, source, event, "failed", fields, exception);
+	}
+
+	public static void operationFailed(Class<?> source, String event, Supplier<Fields> fields, Throwable exception) {
+		operationFailed(source, event, fields.get(), exception);
 	}
 
 	static String format(Class<?> source, String event, String phase, Fields fields, Throwable exception) throws JSONException {

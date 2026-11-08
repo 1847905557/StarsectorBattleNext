@@ -2,12 +2,12 @@ package data.scripts.ui.editor;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
-import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_View;
 import data.scripts.ui.widget.*;
 
 import java.util.ArrayList;
@@ -17,18 +17,17 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
-public abstract class BattleNext_EditorView {
+public abstract class BattleNext_EditorView extends BattleNext_View {
 
-	protected BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
 	protected CustomPanelAPI panel;
 	protected CustomPanelAPI overlayHost;
 	protected String statusText = "";
-	protected final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private CustomPanelAPI owner;
 	private String baseline;
 
-	protected final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private boolean restoring;
 	private boolean draftCaptured;
 
@@ -290,6 +289,52 @@ public abstract class BattleNext_EditorView {
 		tooltipWidgets.remove(widget);
 	}
 
+	protected final RowContent mountRow(Runnable build) {
+		int firstTooltip = tooltipWidgets.size();
+		int firstPanel = panelWidgets.size();
+		Set<Object> previous = new LinkedHashSet<>(fields.keySet());
+		build.run();
+		Set<Object> keys = new LinkedHashSet<>(fields.keySet());
+		keys.removeAll(previous);
+		Map<Object, BattleNext_TextField> rowFields = new LinkedHashMap<>();
+		for (Object key : keys) rowFields.put(key, fields.get(key));
+		inputRouter.getSession().restoreFields(rowFields, inputs, true);
+		return new RowContent(keys, List.copyOf(tooltipWidgets.subList(firstTooltip, tooltipWidgets.size())),
+				List.copyOf(panelWidgets.subList(firstPanel, panelWidgets.size())));
+	}
+
+	protected final class RowContent implements AutoCloseable {
+		private final Set<Object> keys;
+		private final List<BattleNext_TooltipBasedWidget> tooltips;
+		private final List<BattleNext_PanelBasedWidget> panels;
+
+		private RowContent(Set<Object> keys, List<BattleNext_TooltipBasedWidget> tooltips, List<BattleNext_PanelBasedWidget> panels) {
+			this.keys = keys;
+			this.tooltips = tooltips;
+			this.panels = panels;
+		}
+
+		public boolean hasFocus() {
+			return keys.stream().map(fields::get).anyMatch(inputRouter.getSession()::isFocused);
+		}
+
+		@Override
+		public void close() {
+			for (Object key : keys) {
+				BattleNext_TextField field = fields.remove(key);
+				if (field != null) inputs.put(key, field.captureEditState());
+			}
+			for (BattleNext_TooltipBasedWidget widget : tooltips) release(widget);
+			for (BattleNext_PanelBasedWidget widget : panels) {
+				widget.close();
+				panelWidgets.remove(widget);
+			}
+		}
+	}
+
+	public void advance(float amount) {
+	}
+
 	public abstract void buttonPressed(Object buttonId);
 
 	public final boolean handleGlobalInput(List<InputEventAPI> events) {
@@ -325,6 +370,7 @@ public abstract class BattleNext_EditorView {
 	}
 
 	public final boolean serialize() {
+		if (isSaving()) return false;
 		saveErrors.clear();
 		statusText = "";
 		if (!submitDraft()) return false;
@@ -335,6 +381,21 @@ public abstract class BattleNext_EditorView {
 	}
 
 	protected abstract boolean submitDraft();
+
+	public final Boolean completeSave() {
+		return completeOperation();
+	}
+
+	@Override
+	protected final void operationStatus(String value) {
+		statusText = value;
+	}
+
+	@Override
+	protected final void commitPublished() {
+		baseline = draftState();
+		statusText = strings.get("saved");
+	}
 
 	protected final boolean validateName(String subject, String field, String name, String message) {
 		if (!name.isBlank()) return true;
@@ -386,6 +447,7 @@ public abstract class BattleNext_EditorView {
 	}
 
 	public final void close() {
+		clearOperation();
 		detach();
 		saveErrors.clear();
 		statusText = "";
@@ -411,6 +473,7 @@ public abstract class BattleNext_EditorView {
 	}
 
 	private void releaseContent() {
+		releaseRows();
 		for (int index = tooltipWidgets.size() - 1; index >= 0; index--) {
 			tooltipWidgets.get(index).close();
 		}
@@ -424,5 +487,8 @@ public abstract class BattleNext_EditorView {
 		viewports.clear();
 		owner.removeComponent(panel);
 		panel = null;
+	}
+
+	protected void releaseRows() {
 	}
 }

@@ -5,8 +5,28 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_BattleReportModelTest {
+
+	@Test
+	void failedDetailParsingKeepsTheDirectorySnapshotAndCanBeRetried() throws Exception {
+		JSONObject metadata = new JSONObject().put("id", "report").put("name", "Directory");
+		JSONObject complete = new JSONObject(metadata.toString()).put("playerMembers", new JSONArray()).put("enemyMembers", new JSONArray());
+		AtomicInteger attempts = new AtomicInteger();
+		var report = new BattleNext_BattleReportModel();
+		report.fromDirectory(metadata, 2, () -> attempts.incrementAndGet() == 1 ? metadata : complete);
+		assertThrows(IllegalStateException.class, report::prepareDetails);
+		assertEquals(2, report.getMemberCount());
+		assertEquals("Directory", report.getName());
+		report.prepareDetails();
+		assertEquals(2, attempts.get());
+		assertEquals(0, report.getMemberCount());
+		report.prepareDetails();
+		assertEquals(2, attempts.get());
+		metadata.put("formatVersion", 2);
+		assertThrows(IllegalArgumentException.class, () -> report.fromDirectory(metadata, 0, () -> complete));
+	}
 
 	@Test
 	void roundTripPreservesBothSidesAndNestedDamageSources() throws Exception {

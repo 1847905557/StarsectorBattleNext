@@ -1,5 +1,6 @@
 package data.model.fleet.io;
 
+import java.util.function.Supplier;
 import data.model.BattleNext_BaseLoader;
 import data.model.BattleNext_LoadSource;
 import data.model.fleet.BattleNext_FleetModel;
@@ -13,12 +14,23 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import com.fs.starfarer.api.Global;
 
 public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<BattleNext_FleetModel> {
 
 	private static final String BASE_FOLDER = "tournament";
 	private static final String BASE_ROOT = BASE_FOLDER + "/";
 	private static final String DATA_FILE = "fleet_data.json";
+	private final Predicate<String> registeredVariant;
+
+	public BattleNext_FleetStandardLoader() {
+		this(id -> Global.getSettings().doesVariantExist(id));
+	}
+
+	public BattleNext_FleetStandardLoader(Predicate<String> registeredVariant) {
+		this.registeredVariant = registeredVariant;
+	}
 
 	@Override
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
@@ -46,7 +58,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 
 	private BattleNext_FleetModel read(String path, List<String> paths, JSONObject json) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("path", path).build();
+		Supplier<BattleNext_Logger.Fields> input = () -> BattleNext_Logger.fields().put("path", path).build();
 		BattleNext_Logger.operationStarted(BattleNext_FleetStandardLoader.class, "fleet.resource.load", input);
 		try {
 			String normalizedPath = path.replace("\\", "/");
@@ -61,7 +73,7 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 			if (!BattleNext_EntryId.isValidPathSegment(fleet.getId())) throw new IllegalArgumentException("Invalid fleet ID: " + fleet.getId());
 			fleet.setFolderName(folderName);
 			markSource(fleet, path);
-			BattleNext_FleetVariantLoader.load(fleet, paths);
+			BattleNext_FleetVariantLoader.load(fleet, paths, registeredVariant);
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetStandardLoader.class, "fleet.resource.load",
 					() -> BattleNext_Logger.fields().put("path", path).put("fleet", fleet).build());
 			return fleet;

@@ -292,6 +292,7 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 	}
 
 	protected class Side {
+		private int assignmentReads;
 		private final Map<ShipAPI, AssignmentInfo> assigned = new IdentityHashMap<>();
 		private final List<AssignmentInfo> assignments = new ArrayList<>();
 		private int retreats;
@@ -300,7 +301,10 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 		private boolean refuse;
 		private final CombatTaskManagerAPI tasks = proxy(CombatTaskManagerAPI.class, (method, args) -> switch (method) {
 			case "getAssignmentFor" -> assigned.get(args[0]);
-			case "getAllAssignments" -> List.copyOf(assignments);
+			case "getAllAssignments" -> {
+				assignmentReads++;
+				yield List.copyOf(assignments);
+			}
 			case "createAssignment" -> assignment((CombatAssignmentType) args[0], (AssignmentTargetAPI) args[1]);
 			case "giveAssignment" -> { if (!refuse) assigned.put(((DeployedFleetMemberAPI) args[0]).getShip(), (AssignmentInfo) args[1]); yield null; }
 			case "orderSearchAndDestroy" -> { assigned.remove(((DeployedFleetMemberAPI) args[0]).getShip()); yield null; }
@@ -320,6 +324,9 @@ public class BattleNext_TestOrderFixture extends BattleNext_TestGameFixture {
 
 		public CombatTaskManagerAPI getTasks() {
 			return tasks;
+		}
+		public int getAssignmentReads() {
+			return assignmentReads;
 		}
 		public List<AssignmentInfo> getAssignments() {
 			return assignments;

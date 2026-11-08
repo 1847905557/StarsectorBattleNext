@@ -272,7 +272,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 			return false;
 		}
 		BattleNext_Logger.operationStarted(BattleNext_RefitPanelPlugin.class, "refit.commit",
-				BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build());
+				() -> BattleNext_Logger.fields().put("member", member).put("draft", draft).put("saved_s_mods", savedSMods).put("saved_d_mods", savedDMods).build());
 		ShipVariantAPI original = null;
 		ShipVariantAPI originalMember = null;
 		Object display = null;
@@ -292,7 +292,7 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 					MethodType.methodType(void.class)).invoke(refitScreen);
 			committed = true;
 			BattleNext_Logger.operationSucceeded(BattleNext_RefitPanelPlugin.class, "refit.commit",
-				BattleNext_Logger.fields().put("member", member).put("variant", current).put("scope", "Mission refit").build());
+				() -> BattleNext_Logger.fields().put("member", member).put("variant", current).put("scope", "Mission refit").build());
 			ShipVariantAPI saved = currentVariant();
 			draft = saved.clone();
 			savedSMods = sModsOf(draft);

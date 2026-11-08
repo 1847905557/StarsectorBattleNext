@@ -53,7 +53,7 @@ class BattleNext_FleetCsvPackageIntegrationTest extends BattleNext_TestFleetIoFi
 		variants.put("local_middle", new JSONObject().put("variantId", "local_middle").put("hullId", "middle")
 				.put("fluxVents", 17).put("modules", new JSONObject().put("nested", "local_child")));
 		variants.put("local_child", new JSONObject().put("variantId", "local_child").put("hullId", "child").put("fluxVents", 13));
-		List<String> reads = new ArrayList<>(List.of("loadCSV:" + metadataPath, "loadCSV:" + membersPath));
+		List<String> reads = new ArrayList<>();
 		for (var entry : variants.entrySet()) {
 			String path = "tournament/" + folder + "/" + entry.getKey() + ".variant";
 			write(path, entry.getValue().toString());

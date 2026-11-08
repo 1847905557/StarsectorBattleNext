@@ -18,6 +18,12 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.List;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.text.BreakIterator;
+import java.util.function.ToDoubleFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -52,6 +58,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private CustomPanelAPI panel;
 	private TooltipMakerAPI textHost;
 	private LabelAPI textLabel;
+	private TextLayout layout;
 	private final float width;
 	private final float height;
 	private final TooltipMakerAPI[] viewports;
@@ -85,6 +92,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		textHost.setParaSmallInsignia();
 		textHost.setParaFontColor(textColor);
 		textLabel = textHost.addPara("", 0f);
+		layout = null;
 		textLabel.setAlignment(Alignment.LMID);
 		textLabel.setColor(textColor);
 		textHost.setHeightSoFar(height);
@@ -171,7 +179,70 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	}
 
 	private float getMaxScroll() {
-		return Math.max(0f, textLabel.computeTextWidth(text) - getContentWidth());
+		return Math.max(0f, textLayout().width() - getContentWidth());
+	}
+
+	private TextLayout textLayout() {
+		if (layout == null || !layout.text.equals(text)) layout = new TextLayout(text, textLabel::computeTextWidth);
+		return layout;
+	}
+
+	static final class TextLayout {
+		private final String text;
+		private final int[] boundaries;
+		private final float[] positions;
+
+		TextLayout(String text, ToDoubleFunction<String> measure) {
+			this.text = text;
+			BreakIterator characters = BreakIterator.getCharacterInstance(Locale.ROOT);
+			characters.setText(text);
+			int[] offsets = new int[text.length() + 1];
+			float[] widths = new float[offsets.length];
+			Map<String, Float> measured = new HashMap<>();
+			String previous = "";
+			int count = 1;
+			int start = characters.first();
+			for (int end = characters.next(); end != BreakIterator.DONE; end = characters.next()) {
+				String character = text.substring(start, end);
+				float advance = measured.computeIfAbsent(previous + character, value -> (float) measure.applyAsDouble(value));
+				if (!previous.isEmpty()) advance -= measured.computeIfAbsent(previous, value -> (float) measure.applyAsDouble(value));
+				offsets[count] = end;
+				widths[count] = widths[count - 1] + advance;
+				count++;
+				previous = character;
+				start = end;
+			}
+			boundaries = Arrays.copyOf(offsets, count);
+			positions = Arrays.copyOf(widths, count);
+		}
+
+		float width() {
+			return positions[positions.length - 1];
+		}
+
+		float position(int offset) {
+			int index = Arrays.binarySearch(boundaries, offset);
+			return positions[index >= 0 ? index : -index - 2];
+		}
+
+		int nearest(float x) {
+			int index = Arrays.binarySearch(positions, x);
+			if (index >= 0) return boundaries[index];
+			int next = -index - 1;
+			if (next == 0) return 0;
+			if (next == positions.length) return text.length();
+			return boundaries[x - positions[next - 1] <= positions[next] - x ? next - 1 : next];
+		}
+
+		int previous(int offset) {
+			int index = Arrays.binarySearch(boundaries, offset);
+			return boundaries[Math.max(0, index >= 0 ? index - 1 : -index - 2)];
+		}
+
+		int next(int offset) {
+			int index = Arrays.binarySearch(boundaries, offset);
+			return boundaries[Math.min(boundaries.length - 1, index >= 0 ? index + 1 : -index - 1)];
+		}
 	}
 
 	private void clampScroll() {
@@ -181,8 +252,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private void refreshVisual() {
 		float contentWidth = getContentWidth();
 		int safeCursor = Math.max(0, Math.min(cursor, text.length()));
-		float cursorX = textLabel.computeTextWidth(text.substring(0, safeCursor));
-		float totalWidth = textLabel.computeTextWidth(text);
+		float cursorX = textLayout().position(safeCursor);
+		float totalWidth = textLayout().width();
 		if (cursorX - scroll > contentWidth) scroll = cursorX - contentWidth;
 		if (cursorX - scroll < 0f) scroll = cursorX;
 		if (totalWidth <= contentWidth) scroll = 0f;
@@ -231,7 +302,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			return;
 		}
 		if (cursor <= 0) return;
-		int previous = Character.offsetByCodePoints(text, cursor, -1);
+		int previous = textLayout().previous(cursor);
 		text = text.substring(0, previous) + text.substring(cursor);
 		cursor = previous;
 		anchor = cursor;
@@ -244,7 +315,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			return;
 		}
 		if (cursor >= text.length()) return;
-		int next = Character.offsetByCodePoints(text, cursor, 1);
+		int next = textLayout().next(cursor);
 		text = text.substring(0, cursor) + text.substring(next);
 		anchor = cursor;
 		notifyChanged();
@@ -267,16 +338,25 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 
 	void insertPastedText(String clipboard) {
 		if (!editable) return;
-		boolean accepted = false;
+		StringBuilder accepted = new StringBuilder();
 		boolean rejected = false;
+		int available = maxChars < 0 ? Integer.MAX_VALUE : maxChars - text.length() + selectionEnd() - selectionStart();
 		for (int offset = 0; offset < clipboard.length();) {
 			int codePoint = clipboard.codePointAt(offset);
-			if (insertCodePoint(codePoint)) accepted = true;
-			else rejected = true;
+			int length = Character.charCount(codePoint);
+			if (isAcceptedInputCodePoint(codePoint) && accepted.length() + length <= available) {
+				if (!limitByStringWidth || textLabel.computeTextWidth(text.substring(0, selectionStart()) + accepted
+						+ new String(Character.toChars(codePoint))
+						+ text.substring(selectionEnd())) <= width - pad * 2f) accepted.appendCodePoint(codePoint);
+				else rejected = true;
+			} else rejected = true;
 			offset += Character.charCount(codePoint);
 		}
-		if (accepted) soundSink.accept(TYPE_SOUND_ID);
-		if (rejected || !accepted) soundSink.accept(BUZZ_SOUND_ID);
+		if (!accepted.isEmpty()) {
+			replaceSelection(accepted.toString());
+			soundSink.accept(TYPE_SOUND_ID);
+		}
+		if (rejected || accepted.isEmpty()) soundSink.accept(BUZZ_SOUND_ID);
 	}
 
 	void playFocusSound() {
@@ -336,11 +416,11 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 		switch (key) {
 			case Keyboard.KEY_LEFT:
 				pendingHighSurrogate = 0;
-				moveCursor(cursor > 0 ? Character.offsetByCodePoints(text, cursor, -1) : 0, extend);
+				moveCursor(textLayout().previous(cursor), extend);
 				break;
 			case Keyboard.KEY_RIGHT:
 				pendingHighSurrogate = 0;
-				moveCursor(cursor < text.length() ? Character.offsetByCodePoints(text, cursor, 1) : cursor, extend);
+				moveCursor(textLayout().next(cursor), extend);
 				break;
 			case Keyboard.KEY_HOME:
 				pendingHighSurrogate = 0;
@@ -391,20 +471,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private int cursorForMouse(float mouseX) {
 		clampScroll();
 		float localX = mouseX - getPosition().getX() - pad + scroll;
-		float totalWidth = textLabel.computeTextWidth(text);
-		if (localX <= 0f) return 0;
-		if (localX >= totalWidth) return text.length();
-		int best = 0;
-		float bestDistance = Float.MAX_VALUE;
-		for (int i = 0; i <= text.length(); i += i < text.length()
-				? Character.charCount(text.codePointAt(i)) : 1) {
-			float distance = Math.abs(textLabel.computeTextWidth(text.substring(0, i)) - localX);
-			if (distance < bestDistance) {
-				bestDistance = distance;
-				best = i;
-			}
-		}
-		return best;
+		return textLayout().nearest(localX);
 	}
 
 	boolean updateDragFromPointer(float mouseX, float mouseY, boolean preserveAnchor) {
@@ -466,8 +533,8 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 			clipState = BattleNext_GeometryRenderer.pushClip(position.getX() + field.pad, position.getY(),
 					Math.max(1f, position.getWidth() - field.pad * 2f), position.getHeight());
 			if (field.hasSelection()) {
-				float start = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionStart()));
-				float end = field.textLabel.computeTextWidth(field.text.substring(0, field.selectionEnd()));
+				float start = field.textLayout().position(field.selectionStart());
+				float end = field.textLayout().position(field.selectionEnd());
 				BattleNext_GeometryRenderer.fillRect(field.panel.getPosition().getX() + field.pad + start - field.scroll,
 						field.panel.getPosition().getY() + SELECTION_VERTICAL_INSET, end - start,
 						field.height - SELECTION_VERTICAL_INSET * 2f,
@@ -482,7 +549,7 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 					&& ((int) (field.blink * CURSOR_BLINK_CYCLES_PER_SECOND)
 							% CURSOR_BLINK_PHASE_COUNT == 0)) {
 				float x = field.panel.getPosition().getX() + field.pad
-						+ field.textLabel.computeTextWidth(field.text.substring(0, field.cursor)) - field.scroll;
+						+ field.textLayout().position(field.cursor) - field.scroll;
 				BattleNext_GeometryRenderer.fillRect(x,
 						field.panel.getPosition().getY() + CARET_VERTICAL_INSET, CARET_WIDTH,
 						field.height - CARET_VERTICAL_INSET * 2f, field.textColor, alphaMult);

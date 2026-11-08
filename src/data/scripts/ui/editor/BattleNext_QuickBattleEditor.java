@@ -126,20 +126,20 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		List<String> errors = store.isLoaded() ? provider.getCatalogErrors() : provider.reloadQuickBattleCatalog();
 		statusText = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		entries.clear();
-		entries.addAll(store.getAll());
+		entries.addAll(store.getAll().stream().map(BattleNext_QuickBattleModel::copy).toList());
 		loaded = true;
 		rowKeys.clear();
 	}
 
 	private boolean promoteEditedRawRows() {
 		for (Row row : display.getRows()) {
-			if (row.getModel().getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW || row.getRawField().hasFocus()) {
+			if (row.getModel().getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW || row.getRawField() != null && row.getRawField().hasFocus()) {
 				continue;
 			}
 			BattleNext_QuickBattleModel parsed = BattleNext_QuickBattleModel.parseLine(
-					row.getRawField().getText(), row.getModel().usesLegacyIds());
+					row.rawText(), row.getModel().usesLegacyIds());
 			if (parsed != null && parsed.getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-				row.getModel().promoteRaw(row.getRawField().getText());
+				row.getModel().promoteRaw(row.rawText());
 				refreshContent();
 				return true;
 			}
@@ -152,7 +152,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 			return List.of();
 		}
 		return validation.quickBattleErrors(row.getFleetId(Column.PLAYER), row.getFleetId(Column.ENEMY),
-				row.getField(Column.MAP).getText(), row.getField(Column.SCALE).getText());
+				row.text(Column.MAP), row.text(Column.SCALE));
 	}
 
 	private void removeRow(int index) {
@@ -225,10 +225,8 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 				String id = row.getFleetId(column);
 				value.append(id.length()).append(':').append(id);
 			}
-			for (TextFieldAPI field : new TextFieldAPI[]{row.getField(Column.MAP), row.getField(Column.SCALE), row.getRawField()}) {
-				if (field != null) {
-					value.append(field.getText().length()).append(':').append(field.getText());
-				}
+			for (String field : row.isRaw() ? List.of(row.rawText()) : List.of(row.text(Column.MAP), row.text(Column.SCALE))) {
+				value.append(field.length()).append(':').append(field);
 			}
 		}
 		return value.toString();
@@ -247,20 +245,21 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 			return false;
 		}
 		try {
-			deleteRemovedEntries();
-			for (BattleNext_QuickBattleModel entry : entries) {
-				if (entry.getId().isEmpty()) entry.setId(mintId());
-				store.save(entry);
-			}
-		} catch (IOException | JSONException | RuntimeException exception) {
+			return persist(() -> {
+				deleteRemovedEntries();
+				for (BattleNext_QuickBattleModel entry : entries) {
+					if (entry.getId().isEmpty()) entry.setId(mintId());
+					store.save(entry.copy());
+				}
+				return true;
+			}, () -> setStatus(strings.get("saved")));
+		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_QuickBattleEditor.class, "quick_battle.editor.commit.failed",
 				BattleNext_Logger.fields().put("entries", entries).put("input_state", serializeState()).build(), exception);
 			saveErrors.failure(strings.get("save_failed"), "tournament/quick_battle.csv / tournament/PvP_matches.csv", exception);
 			setStatus(saveErrors.summary());
 			return false;
 		}
-		setStatus(strings.get("saved"));
-		return true;
 	}
 
 	@Override
@@ -274,8 +273,8 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		for (int index = 0; index < display.getRows().size(); index++) {
 			Row row = display.getRows().get(index);
 			BattleNext_QuickBattleModel model = row.getModel().copy();
-			if (row.getRawField() != null) {
-				model.promoteRaw(row.getRawField().getText());
+			if (row.isRaw()) {
+				model.promoteRaw(row.rawText());
 				parsed.add(model);
 				continue;
 			}
@@ -286,9 +285,9 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 							row.getFleetId(column), strings.get("error_required"));
 				}
 			}
-			Integer map = saveErrors.integer(subject, battleStrings.get("map_number_label"), row.getField(Column.MAP).getText(),
+			Integer map = saveErrors.integer(subject, battleStrings.get("map_number_label"), row.text(Column.MAP),
 					BattleNext_MissionBattleMap.RANDOM_MAP_ID, BattleNext_MissionBattleMap.LAST_MAP_ID);
-			Float mapScale = saveErrors.number(subject, battleStrings.get("map_scale_label"), row.getField(Column.SCALE).getText(), true);
+			Float mapScale = saveErrors.number(subject, battleStrings.get("map_scale_label"), row.text(Column.SCALE), true);
 			if (map == null || mapScale == null) continue;
 			model.setPlayer(row.getFleetId(Column.PLAYER));
 			model.setEnemy(row.getFleetId(Column.ENEMY));
@@ -306,12 +305,10 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		for (int index = 0; index < display.getRows().size(); index++) {
 			Row row = display.getRows().get(index);
 			BattleNext_QuickBattleModel next = parsed.get(target++);
+			changedShape |= row.isRaw() != (next.getRowType() == BattleNext_QuickBattleModel.QuickBattleRowType.RAW);
 			rowKeys.put(next, rowKeys.get(row.getModel()));
 			rowKeys.remove(row.getModel());
 			row.setModel(next);
-			if (row.getRawField() != null && row.getModel().getRowType() != BattleNext_QuickBattleModel.QuickBattleRowType.RAW) {
-				changedShape = true;
-			}
 		}
 		if (changedShape) {
 			refreshContent();

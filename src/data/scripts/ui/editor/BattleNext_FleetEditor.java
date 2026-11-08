@@ -11,6 +11,7 @@ import data.model.BattleNext_LoadSource;
 import data.model.BattleNext_BaseStore.EditRejectionReason;
 import data.model.fleet.BattleNext_FleetModel;
 import data.model.fleet.BattleNext_FleetStore;
+import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
@@ -22,6 +23,9 @@ import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_PanelBasedWidget.VisibleRows;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.widget.provider.*;
 import org.json.JSONException;
 
@@ -32,8 +36,15 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private static final float MEMBER_DETAIL_INSET = 8f;
 
 	private final BattleNext_FleetStore store;
-	private final BattleNext_VariantSourceProvider variantSource = new BattleNext_VariantSourceProvider();
-	private final BattleNext_FleetMemberProvider memberSource = new BattleNext_FleetMemberProvider();
+	private VisibleRows visibleMembers;
+	private TooltipMakerAPI memberViewport;
+	private float memberTop;
+	private boolean releasingRows;
+	private final Map<Integer, CustomPanelAPI> memberPanels = new LinkedHashMap<>();
+	private final Map<Integer, RowContent> memberContent = new LinkedHashMap<>();
+	private final Map<Object, Float> memberHeights = new IdentityHashMap<>();
+	private final BattleNext_VariantSourceProvider variantSource;
+	private final BattleNext_FleetMemberProvider memberSource;
 	private final BattleNext_I18nSection fleetStrings = BattleNext_I18nSection.getInstance("Fleet", "BattleNext_fleet_");
 	private final BattleNext_I18nSection memberStrings = BattleNext_I18nSection.getInstance("Member", "BattleNext_member_");
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
@@ -66,7 +77,13 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	}
 
 	public BattleNext_FleetEditor(BattleNext_FleetStore store) {
+		this(store, new BattleNext_VariantCatalog(new BattleNext_PinnedVariantStore()));
+	}
+
+	public BattleNext_FleetEditor(BattleNext_FleetStore store, BattleNext_VariantCatalog catalog) {
 		this.store = store;
+		variantSource = new BattleNext_VariantSourceProvider(catalog);
+		memberSource = new BattleNext_FleetMemberProvider(catalog);
 	}
 
 	public void open(BattleNext_FleetModel source, boolean clone) {
@@ -108,11 +125,62 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private void fillMembers(TooltipMakerAPI rowsContent, float columnWidth) {
 		rowsContent.addTitle(fleetStrings.get("members_heading"));
 		memberFields.clear();
-		for (int index = 0; index < draft.getMembers().size(); index++) {
-			addMember(index, draft.getMembers().get(index), rowsContent, columnWidth);
-		}
+		memberFields.addAll(Collections.nCopies(draft.getMembers().size(), null));
+		memberViewport = rowsContent;
+		memberTop = rowsContent.getHeightSoFar();
+		visibleMembers = new VisibleRows(draft.getMembers().size(),
+				index -> expandedMembers.contains(index) ? memberHeights.getOrDefault(memberKeys.get(index), 680f) : 44f,
+				index -> mountMember(index, columnWidth), this::releaseMember,
+				index -> memberContent.get(index).hasFocus());
+		visibleMembers.update(0f, panel.getPosition().getHeight());
+		rowsContent.setHeightSoFar(memberTop + visibleMembers.height());
 		addMemberButton = createButton(rowsContent, columnWidth, fleetStrings.get("add_member"), "add_member");
 		memberPicker = createPicker(memberSource, BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addMembers);
+	}
+
+	private void mountMember(int index, float width) {
+		CustomPanelAPI row = panel.createCustomPanel(width, 44f, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI content = row.createUIElement(width, 0f, false);
+		RowContent owned = mountRow(() -> addMember(index, draft.getMembers().get(index), content, width));
+		memberPanels.put(index, row);
+		memberContent.put(index, owned);
+		float height = content.getHeightSoFar();
+		row.getPosition().setSize(width, height);
+		row.addUIElement(content).inTL(0f, 0f);
+		memberViewport.addCustomDoNotSetPosition(row);
+		memberHeights.put(memberKeys.get(index), height);
+		visibleMembers.setHeight(index, height);
+		positionMembers();
+	}
+
+	private void positionMembers() {
+		for (var entry : memberPanels.entrySet()) entry.getValue().getPosition().inTL(0f, memberTop + visibleMembers.top(entry.getKey()));
+		memberViewport.setHeightSoFar(memberTop + visibleMembers.height() + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 16f);
+		if (addMemberButton != null) addMemberButton.getPosition().inTL(0f, memberTop + visibleMembers.height() + 8f);
+	}
+
+	private void releaseMember(int index) {
+		if (!releasingRows) readMember(index, draft.getMembers().get(index));
+		memberContent.remove(index).close();
+		memberFields.set(index, null);
+		memberViewport.removeComponent(memberPanels.remove(index));
+	}
+
+	@Override
+	public void advance(float amount) {
+		if (visibleMembers != null) {
+			visibleMembers.update(memberViewport.getExternalScroller().getYOffset(), panel.getPosition().getHeight());
+			positionMembers();
+		}
+	}
+
+	@Override
+	protected void releaseRows() {
+		releasingRows = true;
+		if (visibleMembers != null) visibleMembers.close();
+		releasingRows = false;
+		visibleMembers = null;
+		addMemberButton = null;
 	}
 
 	private void addMembers(List<String> ids) {
@@ -139,7 +207,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				hull == null ? "" : hull.getSpriteName(), true, member.getPortrait(),
 				hullName, member.getName(), "", "", null);
 		FleetMemberEditorFields fields = new FleetMemberEditorFields();
-		memberFields.add(fields);
+		memberFields.set(index, fields);
 		BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expanded, 0f, header,
 				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float areaWidth = columnWidth - MEMBER_DETAIL_INSET * 2f;
@@ -151,22 +219,22 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 					new EditorAction(fleetStrings.get("move_down"), "move_member_down:" + index, index + 1 < draft.getMembers().size()));
 			Object memberKey = memberKeys.get(index);
 			fields.variantField = createOptionField(List.of(memberKey, "variant"), bodyPanel, fieldContent, fieldArea,
-					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
+					variantStrings.get("label"), member.getVariantId(), variantSource, BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, memberViewport);
 			fields.nameField = createTextField(List.of(memberKey, "name"), bodyPanel, fieldContent, fieldArea,
-					memberStrings.get("ship_name"), member.getName(), true, fieldContent, rowsContent);
+					memberStrings.get("ship_name"), member.getName(), true, fieldContent, memberViewport);
 			fields.officerPersonalityField = createOptionField(List.of(memberKey, "personality"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_personality"), member.getPersonality(), new BattleNext_PersonalitySourceProvider(),
-					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
+					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, memberViewport);
 			fields.officerSkillsField = createOptionField(List.of(memberKey, "skills"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_skills"), String.join(",", member.getSkills()), new BattleNext_OfficerSkillSourceProvider(),
-					BattleNext_OptionField.OptionSelectionMode.MULTIPLE, fieldContent, rowsContent);
+					BattleNext_OptionField.OptionSelectionMode.MULTIPLE, fieldContent, memberViewport);
 			fields.officerPortraitField = createOptionField(List.of(memberKey, "portrait"), bodyPanel, fieldContent, fieldArea,
 					memberStrings.get("officer_portrait"), member.getPortrait(), new BattleNext_PortraitSourceProvider(),
-					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, rowsContent);
+					BattleNext_OptionField.OptionSelectionMode.SINGLE, fieldContent, memberViewport);
 			fields.ordersField = createTextField(List.of(memberKey, "orders"), bodyPanel, fieldContent, fieldArea,
-					memberStrings.get("orders"), member.getOrders(), true, fieldContent, rowsContent);
+					memberStrings.get("orders"), member.getOrders(), true, fieldContent, memberViewport);
 			fields.tagsField = createTextField(List.of(memberKey, "tags"), bodyPanel, fieldContent, fieldArea,
-					memberStrings.get("tags"), String.join(",", member.getTags()), true, fieldContent, rowsContent);
+					memberStrings.get("tags"), String.join(",", member.getTags()), true, fieldContent, memberViewport);
 			createMemberActions(fieldContent, areaWidth,
 					new EditorAction(fleetStrings.get("remove_member"), "remove_member:" + index, true),
 					new EditorAction(fleetStrings.get("copy_member"), "copy_member:" + index, true));
@@ -325,8 +393,8 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		if (result.renamedIds() > 0 || result.affectedMembers() > 0) {
 			draft = result.candidate();
 			for (int index = 0; index < memberFields.size(); index++) {
-				TextFieldAPI field = memberFields.get(index).variantField;
-				if (field != null) field.setText(draft.getMembers().get(index).getVariantId());
+				FleetMemberEditorFields fields = memberFields.get(index);
+				if (fields != null && fields.variantField != null) fields.variantField.setText(draft.getMembers().get(index).getVariantId());
 			}
 			refreshStructure();
 		}
@@ -378,17 +446,22 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 					fleetStrings.get(rejection.getReason() == EditRejectionReason.DUPLICATE_FOLDER ? "folder_name" : "id"), rejection);
 			}
 			if (!saveErrors.isEmpty()) return false;
-			store.saveEdited(draft, baseline == null || baselineClone ? "" : baseline.getId());
+			String sourceId = baseline == null || baselineClone ? "" : baseline.getId();
+			return persist(() -> {
+				store.saveEdited(draft, sourceId);
+				return true;
+			}, () -> {
+				baseline = copy(draft, false);
+				draft = copy(baseline, false);
+				baselineClone = false;
+				setStatus(strings.get("saved"));
+			});
 		} catch (Exception exception) {
 			BattleNext_Logger.error(BattleNext_FleetEditor.class, "fleet.editor.commit.failed",
 				BattleNext_Logger.fields().put("draft", draft).build(), exception);
 			setStatus(failureStatus(draft.getId(), exception));
 			return false;
 		}
-		baseline = copy(draft, false);
-		baselineClone = false;
-		setStatus(strings.get("saved"));
-		return true;
 	}
 
 	@Override
@@ -463,18 +536,21 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		target.setDescription(descriptionField.getText());
 		target.setSkills(split(commanderSkillsField.getText()));
 		target.setTags(split(tagsField.getText()));
-		List<BattleNext_MemberModel> members = new ArrayList<>();
 		for (int index = 0; index < draft.getMembers().size(); index++) {
-			FleetMemberEditorFields fields = memberFields.size() > index ? memberFields.get(index) : null;
-			BattleNext_MemberModel existing = draft.getMembers().get(index);
-			members.add(new BattleNext_MemberModel(value(fields == null ? null : fields.variantField, existing.getVariantId()), value(fields == null ? null : fields.nameField, existing.getName()),
-					value(fields == null ? null : fields.officerPersonalityField, existing.getPersonality()),
-					split(value(fields == null ? null : fields.officerSkillsField, String.join(",", existing.getSkills()))),
-					value(fields == null ? null : fields.officerPortraitField, existing.getPortrait()),
-					value(fields == null ? null : fields.ordersField, existing.getOrders()),
-					split(value(fields == null ? null : fields.tagsField, String.join(",", existing.getTags())))));
+			readMember(index, target.getMembers().get(index));
 		}
-		target.setMembers(members);
+	}
+
+	private void readMember(int index, BattleNext_MemberModel member) {
+		FleetMemberEditorFields fields = memberFields.get(index);
+		if (fields == null) return;
+		member.setVariantId(value(fields.variantField, member.getVariantId()));
+		member.setName(value(fields.nameField, member.getName()));
+		member.setPersonality(value(fields.officerPersonalityField, member.getPersonality()));
+		member.setSkills(split(value(fields.officerSkillsField, String.join(",", member.getSkills()))));
+		member.setPortrait(value(fields.officerPortraitField, member.getPortrait()));
+		member.setOrders(value(fields.ordersField, member.getOrders()));
+		member.setTags(split(value(fields.tagsField, String.join(",", member.getTags()))));
 	}
 
 	@Override
@@ -491,5 +567,6 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	@Override
 	protected void closeEditorState() {
 		variantPrefixField = null;
+		memberHeights.clear();
 	}
 }

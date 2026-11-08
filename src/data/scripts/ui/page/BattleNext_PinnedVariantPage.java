@@ -2,13 +2,11 @@ package data.scripts.ui.page;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.BaseTooltipCreator;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.model.pinnedvariant.io.BattleNext_PinnedVariantStandardLoader.CatalogEntry;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.ui.BattleNext_PageLayout;
-import data.scripts.ui.editor.BattleNext_EditorView;
 import data.scripts.ui.editor.BattleNext_PinnedVariantEditor;
 
 import java.util.Comparator;
@@ -19,12 +17,7 @@ import java.util.function.Consumer;
 public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
-
-	private final Runnable backAction;
-	private final Consumer<Runnable> navigation;
-	private final BiConsumer<String, Runnable> deletion;
 	private final BattleNext_PinnedVariantStore store;
-	private String selectedPath = "";
 	private final BattleNext_PinnedVariantEditor editor;
 
 	public BattleNext_PinnedVariantPage(Runnable backAction, Consumer<Runnable> navigation,
@@ -32,28 +25,15 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 		this(backAction, navigation, deletion, new BattleNext_PinnedVariantStore());
 	}
 
-	BattleNext_PinnedVariantPage(Runnable backAction, Consumer<Runnable> navigation,
+	public BattleNext_PinnedVariantPage(Runnable backAction, Consumer<Runnable> navigation,
 			BiConsumer<String, Runnable> deletion, BattleNext_PinnedVariantStore store) {
-		this.backAction = backAction;
-		this.navigation = navigation;
-		this.deletion = deletion;
+		super(backAction, navigation, deletion, "pin:");
 		this.store = store;
 		editor = new BattleNext_PinnedVariantEditor(store);
 	}
 
 	@Override
-	protected void loadPageState() {
-
-		selectedPath = "";
-		status = "";
-		try {
-			store.reload();
-		} catch (Exception exception) {
-			status = strings.get("load_failed") + ": " + exception;
-		}
-	}
-	@Override
-	protected BattleNext_EditorView editorView() {
+	protected BattleNext_PinnedVariantEditor editorView() {
 		return editor;
 	}
 
@@ -70,16 +50,6 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 	@Override
 	protected String promptText() {
 		return variantStrings.get("select_pinned");
-	}
-
-	@Override
-	protected boolean isListLoaded() {
-		return store.isLoaded();
-	}
-
-	@Override
-	protected String listError() {
-		return store.getLoadError();
 	}
 
 	@Override
@@ -109,102 +79,21 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 					String hull = entry.hullId();
 					try {
 						var spec = Global.getSettings().getHullSpec(hull);
-						if (spec != null) {
-							hull = spec.getHullName();
-						}
+						if (spec != null) hull = spec.getHullName();
 					} catch (RuntimeException exception) {
 						hull += " / " + exception;
 					}
 					tooltip.addPara(hull, 5f);
 					tooltip.addPara(entry.path(), 5f);
-					if (!entry.error().isEmpty()) {
-						tooltip.addPara(entry.error(), 5f);
-					}
+					if (!entry.error().isEmpty()) tooltip.addPara(entry.error(), 5f);
 				}
 			});
 		}
-	}
-
-	@Override
-	protected void buildDetail(CustomPanelAPI contentPanel) {
-		attachEditor(contentPanel);
-	}
-
-	@Override
-	protected boolean isDetailOpen() {
-		return selected() != null;
-	}
-
-	@Override
-	protected boolean hasSelection() {
-		return selected() != null;
 	}
 
 	@Override
 	protected boolean isDetailEditable() {
 		return selected().model() != null;
-	}
-
-	@Override
-	protected boolean isSaveDataLoaded() {
-		return store.isLoaded();
-	}
-
-	@Override
-	protected boolean canDelete() {
-		return store.isLoaded();
-	}
-
-	@Override
-	protected void handlePageAction(Object buttonId) {
-
-		if (buttonId instanceof String id && id.startsWith("pin:")) {
-			navigation.accept(() -> {
-				selectedPath = id.substring(4);
-								CatalogEntry entry = selected();
-				editor.open(entry);
-						refreshContent();
-			});
-		} else if ("save".equals(buttonId)) {
-			save();
-		} else if ("back".equals(buttonId)) {
-			if (selectedPath.isEmpty()) {
-				backAction.run();
-			} else {
-				navigation.accept(() -> {
-					selectedPath = "";
-					refreshContent();
-				});
-			}
-		} else if ("delete".equals(buttonId) && store.isLoaded()) {
-			CatalogEntry entry = selected();
-			if (entry == null) return;
-			deletion.accept(entry.name(), () -> {
-				try {
-					store.deleteFile(entry.path());
-					selectedPath = "";
-					setStatus(strings.get("deleted"));
-					refreshContent();
-				} catch (Exception exception) {
-					setStatus(strings.get("save_failed") + ": " + exception);
-				}
-			});
-		}
-	}
-
-	@Override
-	protected boolean isPageDirty() {
-		return !selectedPath.isEmpty() && editor.hasUnsavedChanges();
-	}
-
-	@Override
-	protected void reloadSavedData() throws Exception {
-		store.reload();
-	}
-
-	@Override
-	protected void discardPage() {
-		editor.discard();
 	}
 
 	public static List<CatalogEntry> sorted(List<CatalogEntry> entries) {
@@ -213,6 +102,33 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 	}
 
 	private CatalogEntry selected() {
-		return store.getCatalog().stream().filter(entry -> entry.path().equals(selectedPath)).findFirst().orElse(null);
+		return store.getCatalog().stream().filter(entry -> entry.path().equals(selectedId)).findFirst().orElse(null);
+	}
+
+	@Override
+	protected boolean selectionAvailable(String id) {
+		return store.getCatalog().stream().anyMatch(entry -> entry.path().equals(id));
+	}
+
+	@Override
+	protected boolean openEditor(String id) {
+		selectedId = id;
+		editor.open(selected());
+		return true;
+	}
+
+	@Override
+	protected String deleteDescription() {
+		return selected().name();
+	}
+
+	@Override
+	protected void deleteSelection(String path) throws Exception {
+		store.deleteFile(path);
+	}
+
+	@Override
+	protected BattleNext_PinnedVariantStore catalog() {
+		return store;
 	}
 }

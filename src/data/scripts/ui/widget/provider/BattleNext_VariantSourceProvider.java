@@ -6,29 +6,29 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.loading.HullModSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import data.model.pinnedvariant.BattleNext_PinnedVariantModel;
 import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip.VariantSection;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
-import org.json.JSONException;
-
-import java.io.IOException;
 import java.util.*;
 
 public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvider {
 
 	public static final String PINNED_PREFIX = "pinned:";
-	private final BattleNext_PinnedVariantStore pinnedVariants;
+	private final BattleNext_VariantCatalog catalog;
 
 	public BattleNext_VariantSourceProvider() {
 		this(new BattleNext_PinnedVariantStore());
 	}
 
 	public BattleNext_VariantSourceProvider(BattleNext_PinnedVariantStore pinnedVariants) {
-		this.pinnedVariants = pinnedVariants;
+		this(new BattleNext_VariantCatalog(pinnedVariants));
+	}
+
+	public BattleNext_VariantSourceProvider(BattleNext_VariantCatalog catalog) {
+		this.catalog = catalog;
 	}
 
 	private final BattleNext_I18nSection variantStrings = BattleNext_I18nSection.getInstance("Variant", "BattleNext_variant_");
@@ -39,42 +39,41 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 		return 1;
 	}
 
+	public void resourcesReloaded() {
+		catalog.resourcesReloaded();
+	}
+
 	@Override
 	public List<OptionChoice> getOptions() {
-		List<OptionChoice> options = new ArrayList<>();
-		List<OptionChoice> standardOptions = new ArrayList<>();
-		List<OptionChoice> pinnedOptions = new ArrayList<>();
-		for (String id : Global.getSettings().getAllVariantIds()) {
-			ShipVariantAPI variant = loadVariant(id);
-			if (variant == null || variant.isFighter()) continue;
-			standardOptions.add(new OptionChoice(id, label(variant)));
-		}
-		standardOptions.sort(Comparator.comparing(OptionChoice::getId));
-		try {
-			pinnedVariants.reload();
-		} catch (IOException | JSONException | RuntimeException exception) {
-			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.options.pins.unavailable",
-				BattleNext_Logger.fields().put("load_error", pinnedVariants.getLoadError()).build(), exception);
-		}
-		if (pinnedVariants.isLoaded()) {
-			for (BattleNext_PinnedVariantModel pin : pinnedVariants.getAll()) {
-				ShipVariantAPI variant = pinnedVariants.resolve(pin.getPinId());
-				if (variant.isFighter()) continue;
-				pinnedOptions.add(new OptionChoice(PINNED_PREFIX + pin.getPinId(), pin.getDisplayName()));
-			}
-		}
-		pinnedOptions.sort(Comparator.comparing(OptionChoice::getId));
-		options.addAll(pinnedOptions);
-		options.addAll(standardOptions);
-		return options;
+		return catalog.options();
+	}
+
+	@Override
+	public boolean groupsChoices() {
+		return true;
+	}
+
+	@Override
+	public List<OptionChoice> getGroups() {
+		getOptions();
+		return catalog.hulls();
+	}
+
+	@Override
+	public List<OptionChoice> getGroupOptions(String id) {
+		getOptions();
+		return catalog.group(id);
+	}
+
+	@Override
+	public String getGroupIcon(String id) {
+		return catalog.icon(id);
 	}
 
 	@Override
 	public String getIconPath(String id) {
-		ShipVariantAPI variant = loadVariant(id);
-		if (variant == null || variant.getHullSpec() == null) return "";
-		String sprite = variant.getHullSpec().getSpriteName();
-		return sprite == null ? "" : sprite;
+		getOptions();
+		return catalog.icon(id);
 	}
 
 	@Override
@@ -227,32 +226,7 @@ public class BattleNext_VariantSourceProvider extends BattleNext_BaseSourceProvi
 	}
 
 	public ShipVariantAPI resolve(String id) {
-		if (!id.startsWith(PINNED_PREFIX)) return Global.getSettings().getVariant(id);
-		if (!pinnedVariants.isLoaded()) {
-			try {
-				pinnedVariants.reload();
-			} catch (IOException | JSONException exception) {
-				throw new IllegalStateException("Unable to load pinned variants", exception);
-			}
-		}
-		return pinnedVariants.resolve(id.substring(PINNED_PREFIX.length()));
+		return catalog.resolve(id);
 	}
 
-	private ShipVariantAPI loadVariant(String id) {
-		if (id == null || id.isEmpty()) return null;
-		try {
-			return resolve(id);
-		} catch (RuntimeException exception) {
-			BattleNext_Logger.warn(BattleNext_VariantSourceProvider.class, "variant.resolve.degraded",
-				BattleNext_Logger.fields().put("variant_id", id).put("fallback", "Omitted option or missing icon").build(), exception);
-			return null;
-		}
-	}
-
-	private String label(ShipVariantAPI variant) {
-		ShipHullSpecAPI hull = variant.getHullSpec();
-		String hullName = hull.getHullName();
-		String variantName = variant.getDisplayName();
-		return hullName + " - " + variantName;
-	}
 }

@@ -19,6 +19,7 @@ import data.scripts.ui.page.BattleNext_PinnedVariantPage;
 import data.scripts.ui.widget.BattleNext_OptionField;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
+import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
 import data.scripts.ui.widget.BattleNext_TableWidget;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -91,6 +92,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 					}
 				}));
 		try {
+			((BattleNext_VariantSourceProvider) getField(editor, "memberSource")).resourcesReloaded();
 			editor.buttonPressed("add_member");
 			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(editor, "memberPicker");
 			for (String id : ids) {
@@ -104,6 +106,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 	}
 
 	protected void clickPickerOption(BattleNext_OptionPicker picker, String id) throws Exception {
+		browsePickerOption(picker, id);
 		CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
 		for (UIComponentAPI component : tooltips.get(content).getComponents()) {
@@ -122,6 +125,18 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 			return;
 		}
 		throw new AssertionError("Picker option missing: " + id);
+	}
+
+	protected void browsePickerOption(BattleNext_OptionPicker picker, String id) throws Exception {
+		var source = (BattleNext_OptionPicker.OptionChoiceSource) getField(picker, "source");
+		if (source.groupsChoices()) {
+			String group = id.startsWith("pinned:") ? "@pinned" : source.getGroups().stream()
+					.filter(hull -> source.getGroupOptions(hull.getId()).stream().anyMatch(option -> option.getId().equals(id)))
+					.map(BattleNext_OptionPicker.OptionChoice::getId).findFirst().orElseThrow();
+			var browse = BattleNext_OptionPicker.class.getDeclaredMethod("browse", String.class, boolean.class);
+			browse.setAccessible(true);
+			browse.invoke(picker, group, false);
+		}
 	}
 
 	protected BattleNext_OptionPicker openQuickBattleFleet(BattleNext_QuickBattleDisplay display, int index,

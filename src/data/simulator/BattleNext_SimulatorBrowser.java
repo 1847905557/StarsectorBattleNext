@@ -45,7 +45,7 @@ public class BattleNext_SimulatorBrowser {
 		String previous = selectedId;
 		selectedId = id;
 		BattleNext_Logger.info(BattleNext_SimulatorBrowser.class, "simulator.source.selected",
-				BattleNext_Logger.fields().put("previous_id", previous).put("selected_id", id).build());
+				() -> BattleNext_Logger.fields().put("previous_id", previous).put("selected_id", id).build());
 	}
 
 	public BattleNext_QuickBattleDisplay.ViewState getQuickBattleState() {

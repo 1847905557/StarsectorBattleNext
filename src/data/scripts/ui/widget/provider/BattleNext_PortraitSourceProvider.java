@@ -73,7 +73,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 			for (String path : BattleNext_ModFileManager.list(MOD_PORTRAIT_ROOT, true)) {
 				if (!isPortraitFile(path)) continue;
 				BattleNext_Logger.operationStarted(BattleNext_PortraitSourceProvider.class, "texture.load",
-						BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build());
+						() -> BattleNext_Logger.fields().put("path", path).put("root", MOD_PORTRAIT_ROOT).build());
 				try {
 					Global.getSettings().loadTexture(path);
 				} catch (RuntimeException exception) {
@@ -82,7 +82,7 @@ public class BattleNext_PortraitSourceProvider extends BattleNext_BaseSourceProv
 					continue;
 				}
 				BattleNext_Logger.operationSucceeded(BattleNext_PortraitSourceProvider.class, "texture.load",
-						BattleNext_Logger.fields().put("path", path).build());
+						() -> BattleNext_Logger.fields().put("path", path).build());
 				result.add(new OptionChoice(path, fileName(path)));
 			}
 		} catch (IOException exception) {

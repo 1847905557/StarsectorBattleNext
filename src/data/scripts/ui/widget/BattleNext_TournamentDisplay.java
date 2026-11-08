@@ -112,6 +112,11 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	public static Details details(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started, List<String> fleetIds,
 			BattleNext_FleetStore fleets, BattleNext_RuleStore rules, String loadError, List<String> warnings) {
+		return details(tournament, started, fleetIds, fleets, rules, loadError, warnings, new BattleNext_BattleReportStore());
+	}
+
+	public static Details details(BattleNext_TournamentModel tournament, BattleNext_StartedTournament started, List<String> fleetIds,
+			BattleNext_FleetStore fleets, BattleNext_RuleStore rules, String loadError, List<String> warnings, BattleNext_BattleReportStore reports) {
 		Map<String, String> names = new LinkedHashMap<>();
 		for (String id : fleetIds) {
 			if (fleets.get(id) == null) continue;
@@ -120,9 +125,8 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		Set<String> reportIds = new LinkedHashSet<>();
 		List<String> diagnostics = new ArrayList<>(warnings);
 		if (started != null) {
-			BattleNext_BattleReportStore reports = new BattleNext_BattleReportStore();
 			try {
-				reports.reload();
+				reports.ensureLoaded();
 				reports.getAll().forEach(report -> reportIds.add(report.getId()));
 			} catch (Exception exception) {
 				diagnostics.add(exception.toString());
