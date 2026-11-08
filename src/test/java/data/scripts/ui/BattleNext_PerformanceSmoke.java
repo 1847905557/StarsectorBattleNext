@@ -7,16 +7,30 @@ import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
+import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.input.InputEventClass;
+import com.fs.starfarer.api.input.InputEventType;
 import com.sun.management.ThreadMXBean;
 import data.model.fleet.BattleNext_FleetStore;
 import data.model.fleet.BattleNext_FleetModel;
+import data.model.quickbattle.BattleNext_QuickBattleModel;
 import java.util.Map;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_ModFileManager;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TextField;
+import data.scripts.ui.widget.BattleNext_TableWidget;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
+import data.scripts.ui.widget.BattleNext_QuickBattleDisplay.Column;
+import data.scripts.ui.widget.BattleNext_PanelBasedWidget.VisibleRows;
+import data.scripts.ui.editor.BattleNext_FleetEditor;
+import data.scripts.ui.page.BattleNext_FleetLibraryPage;
 import data.scripts.ui.widget.provider.BattleNext_VariantSourceProvider;
+import data.scripts.ui.widget.provider.BattleNext_FleetMemberProvider;
 import data.simulator.BattleNext_SimulatorLaunch;
 import data.simulator.BattleNext_SimulatorNative;
 import data.simulator.BattleNext_SimulatorMouse;
@@ -43,8 +57,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 
 public final class BattleNext_PerformanceSmoke {
 
@@ -123,6 +140,15 @@ public final class BattleNext_PerformanceSmoke {
 		private BattleNext_UiManager manager;
 		private CustomPanelAPI root;
 		private int stage;
+		private BattleNext_FleetEditor fleetEditor;
+		private ScrollPanelAPI fleetScroller;
+		private int fleetFrame;
+		private final JSONArray fleetFrames = new JSONArray();
+		private BattleNext_OptionPicker scrollPicker;
+		private BattleNext_QuickBattleDisplay scrollTable;
+		private CustomPanelAPI tablePanel;
+		private int scrollFrame;
+		private JSONArray scrollFrames = new JSONArray();
 
 		@Override
 		public void renderInUICoords(ViewportAPI viewport) {
@@ -204,6 +230,94 @@ public final class BattleNext_PerformanceSmoke {
 					picker.close();
 					stage++;
 				} else if (stage == 4) {
+					if (fleetEditor == null) {
+						Object[] tabs = Class.forName("data.scripts.ui.BattleNext_UiManager$BattleManagementPage").getEnumConstants();
+						manager.buttonPressed(Arrays.stream(tabs).filter(tab -> tab.toString().equals("FLEETS")).findFirst().orElseThrow());
+						BattleNext_FleetLibraryPage page = (BattleNext_FleetLibraryPage) field(manager, "fleetPage");
+						BattleNext_ManagementSession session = (BattleNext_ManagementSession) field(manager, "catalogs");
+						BattleNext_FleetModel fleet = session.data().fleets().getAllCopy().stream()
+								.max(Comparator.comparingInt(entry -> entry.getMembersReadonly().size())).orElseThrow();
+						page.buttonPressed("fleet:" + fleet.getId());
+						fleetEditor = (BattleNext_FleetEditor) field(page, "editor");
+						fleetScroller = ((TooltipMakerAPI) field(fleetEditor, "memberViewport")).getExternalScroller();
+						results.put("scroll_fleet_id", fleet.getId());
+					}
+					PositionAPI mouseArea = fleetScroller.getPosition();
+					BattleNext_SimulatorMouse.getInstance().setCursorPosition((int) mouseArea.getCenterX(), (int) mouseArea.getCenterY());
+					int wheelDelta = fleetFrame / 40 % 2 == 0 ? -120 : 120;
+					float before = fleetScroller.getYOffset();
+					InputEventAPI wheel = wheelEvent(wheelDelta, mouseArea);
+					root.processInput(new ArrayList<>(List.of(wheel)));
+					root.advance(1f / 60f);
+					manager.advance(1f / 60f);
+					capture("fleet-wheel-" + fleetFrame + ".png");
+					verifyVisibleRows((VisibleRows) field(fleetEditor, "visibleMembers"), fleetScroller, 0f);
+					verifyFleetScroll(wheel, wheelDelta, before);
+					fleetFrame++;
+					if (fleetFrame == 120) {
+						if (fleetScroller.getYOffset() == 0f) {
+							throw new AssertionError("Wheel input did not scroll the fleet");
+						}
+						results.put("fleet_scroll_frames", fleetFrames);
+						System.out.println("FLEET WHEEL VERIFIED frames=" + fleetFrame);
+						stage++;
+					}
+				} else if (stage == 5) {
+					if (scrollPicker == null) {
+						fleetEditor.buttonPressed("add_member");
+						scrollPicker = (BattleNext_OptionPicker) field(fleetEditor, "memberPicker");
+					}
+					TooltipMakerAPI grid = (TooltipMakerAPI) field(scrollPicker, "grid");
+					if (scrollWheel("add-member", grid.getExternalScroller())) {
+						scrollPicker.closeOverlays();
+						scrollPicker = null;
+						stage++;
+					}
+				} else if (stage == 6) {
+					if (scrollPicker == null) {
+						BattleNext_ManagementSession session = (BattleNext_ManagementSession) field(manager, "catalogs");
+						BattleNext_FleetMemberProvider source = new BattleNext_FleetMemberProvider(session.data().variants());
+						List<String> selected = source.getOptions().stream().limit(60).map(BattleNext_OptionPicker.OptionChoice::id).toList();
+						scrollPicker = new BattleNext_OptionPicker(new BattleNext_UiInputRouter(), root, source,
+								BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, () -> selected, ignored -> {});
+						scrollPicker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(200f, 500f, 200f, 30f));
+						((CustomPanelAPI) field(scrollPicker, "popup")).getPlugin().buttonPressed("browse:selected");
+						results.put("selected_picker_items", selected.size());
+					}
+					TooltipMakerAPI grid = (TooltipMakerAPI) field(scrollPicker, "grid");
+					if (scrollWheel("selected-members", grid.getExternalScroller())) {
+						scrollPicker.close();
+						scrollPicker = null;
+						stage++;
+					}
+				} else if (stage == 7) {
+					if (scrollTable == null) {
+						JSONArray tableSizes = new JSONArray();
+						for (int count : new int[]{0, 1, 50, 51}) {
+							createScrollingTable(count);
+							root.advance(1f / 60f);
+							capture("quick-battle-" + count + "-initial.png");
+							BattleNext_TableWidget table = (BattleNext_TableWidget) field(scrollTable, "tableWidget");
+							Map<?, ?> mounted = (Map<?, ?>) field(table, "mountedRows");
+							if (field(table, "visibleRows") == null || (count == 1 && mounted.size() != 1)
+									|| (count >= 50 && (mounted.isEmpty() || mounted.size() >= count))) {
+								throw new AssertionError("Native table must mount rows dynamically at count=" + count);
+							}
+							tableSizes.put(new JSONObject().put("rows", count).put("mounted", mounted.size()));
+							scrollTable.close();
+							root.removeComponent(tablePanel);
+						}
+						results.put("dynamic_table_sizes", tableSizes);
+						createScrollingTable(100);
+					}
+					if (scrollWheel("quick-battle", scrollTable.getContent().getExternalScroller())) {
+						if (!scrollTable.getRowsReadonly().get(0).text(Column.MAP).equals("17")
+								|| scrollTable.getRowsReadonly().get(0).isEnabled()) throw new AssertionError("Native table scroll changed draft data");
+						scrollTable.close();
+						root.removeComponent(tablePanel);
+						stage++;
+					}
+				} else if (stage == 8) {
 					TooltipMakerAPI host = root.createUIElement(400f, 30f, false);
 					BattleNext_TextField text = new BattleNext_TextField(new BattleNext_UiInputRouter(), root, 400f, 30f);
 					text.attach(host, root);
@@ -214,7 +328,7 @@ public final class BattleNext_PerformanceSmoke {
 					measure("text_8000_click", 20, 4d, () -> locate.invoke(text, text.getPosition().getX() + 100f));
 					text.close();
 					stage++;
-				} else if (stage == 5) {
+				} else if (stage == 9) {
 					measure("rectangles_1000", 20, 8d, () -> {
 						BattleNext_GeometryRenderer.beginBatch();
 						try {
@@ -225,7 +339,7 @@ public final class BattleNext_PerformanceSmoke {
 						GL11.glFinish();
 					});
 					stage++;
-				} else if (stage == 6) {
+				} else if (stage == 10) {
 					Files.writeString(output.resolve("measurements.json"), results.toString(2), StandardCharsets.UTF_8);
 					if (!failures.isEmpty()) throw new AssertionError(failures);
 					System.out.println("PERFORMANCE VERIFIED");
@@ -237,6 +351,112 @@ public final class BattleNext_PerformanceSmoke {
 				exception.printStackTrace();
 				System.exit(1);
 			}
+		}
+
+		private boolean scrollWheel(String name, ScrollPanelAPI scroller) throws Exception {
+			PositionAPI area = scroller.getPosition();
+			BattleNext_SimulatorMouse.getInstance().setCursorPosition((int) area.getCenterX(), (int) area.getCenterY());
+			int delta = (scrollFrame < 20 ? scrollFrame / 10 : scrollFrame / 3) % 2 == 0 ? -120 : 120;
+			float before = scroller.getYOffset();
+			int eventCount = scrollFrame < 20 ? 1 : scrollFrame < 40 ? 12 : 4;
+			List<InputEventAPI> events = new ArrayList<>();
+			for (int index = 0; index < eventCount; index++) events.add(wheelEvent(delta, area));
+			root.processInput(events);
+			root.advance(1f / 60f);
+			manager.advance(1f / 60f);
+			float after = scroller.getYOffset();
+			if (events.stream().noneMatch(InputEventAPI::isConsumed) || (delta < 0 ? after < before : after > before)) {
+				throw new AssertionError("Native wheel dispatch failed for " + name + " at " + scrollFrame);
+			}
+			VisibleRows rows = name.equals("quick-battle")
+					? (VisibleRows) field(field(scrollTable, "tableWidget"), "visibleRows") : (VisibleRows) field(scrollPicker, "visibleRows");
+			if (scrollFrame >= 40) {
+				float fraction = new float[]{0f, 1f, 0.5f, 0.02f, 0.98f}[scrollFrame % 5];
+				scroller.setYOffset(Math.max(0f, rows.height() - area.getHeight()) * fraction);
+			}
+			capture(name + "-wheel-" + scrollFrame + ".png");
+			int visibleCount = verifyVisibleRows(rows, scroller, name.equals("quick-battle") ? 0f : 8f);
+			scrollFrames.put(new JSONObject().put("frame", scrollFrame).put("delta", delta).put("events", eventCount)
+					.put("scroll", scroller.getYOffset()).put("visible_rows", visibleCount));
+			if (++scrollFrame < 60) return false;
+			if (scroller.getYOffset() == 0f) throw new AssertionError("Native wheel did not move " + name);
+			results.put(name + "_wheel_frames", scrollFrames);
+			System.out.println("SCROLL VERIFIED kind=" + name + " events=" + scrollFrame);
+			scrollFrame = 0;
+			scrollFrames = new JSONArray();
+			return true;
+		}
+
+		private int verifyVisibleRows(VisibleRows rows, ScrollPanelAPI scroller, float inset) throws Exception {
+			PositionAPI content = rows.getPanel().getPosition();
+			PositionAPI viewport = scroller.getPosition();
+			float scroll = content.getY() + content.getHeight() - viewport.getY() - viewport.getHeight() - inset;
+			float[] offsets = (float[]) field(rows, "offsets");
+			Set<Integer> mounted = (Set<Integer>) field(rows, "mounted");
+			int visible = 0;
+			for (int index = 0; index + 1 < offsets.length; index++) {
+				if (offsets[index + 1] <= scroll + 0.01f || offsets[index] >= scroll + viewport.getHeight() - 0.01f) continue;
+				visible++;
+				if (!mounted.contains(index)) throw new AssertionError("Visible row missing before draw: stage=" + stage
+						+ ", frame=" + scrollFrame + ", row=" + index + ", actual_scroll=" + scroll + ", scroller=" + scroller.getYOffset());
+			}
+			List<?> children = (List<?>) rows.getPanel().getClass().getMethod("getChildrenCopy").invoke(rows.getPanel());
+			for (Object child : children) {
+				if (!(child instanceof UIComponentAPI component)) continue;
+				PositionAPI position = component.getPosition();
+				float top = content.getY() + content.getHeight() - position.getY() - position.getHeight() - inset;
+				if (position.getY() >= viewport.getY() + viewport.getHeight() || position.getY() + position.getHeight() <= viewport.getY()) continue;
+				boolean aligned = false;
+				for (int index : mounted) {
+					if (Math.abs(offsets[index] - top) < 0.1f) aligned = true;
+				}
+				if (!aligned) throw new AssertionError("Drawn row position differs from its mounted offset at " + top);
+			}
+			return visible;
+		}
+
+		private void createScrollingTable(int count) throws Exception {
+			BattleNext_ManagementSession session = (BattleNext_ManagementSession) field(manager, "catalogs");
+			List<BattleNext_FleetModel> fleets = session.data().fleets().getAllCopy();
+			List<BattleNext_QuickBattleModel> entries = IntStream.range(0, count)
+					.mapToObj(index -> new BattleNext_QuickBattleModel(fleets.get(0).getId(), fleets.get(1).getId(), index, 1f)).toList();
+			tablePanel = root.createCustomPanel(root.getPosition().getWidth() - 32f, root.getPosition().getHeight() - 32f,
+					new BaseCustomUIPanelPlugin() {
+				@Override
+				public void renderBelow(float alphaMult) {
+					BattleNext_GeometryRenderer.fillRect(tablePanel.getPosition(), Color.BLACK, alphaMult);
+				}
+			});
+			root.addComponent(tablePanel).inTL(16f, 16f);
+			BattleNext_QuickBattleDisplay.Presentation presentation = new BattleNext_QuickBattleDisplay.Presentation(
+					List.of(Column.NUMBER, Column.PLAYER, Column.ENEMY, Column.MAP, Column.SCALE, Column.STATUS, Column.ENABLED, Column.ACTIONS),
+					List.of(0.05f, 0.2f, 0.2f, 0.08f, 0.08f, 0.15f, 0.08f, 0.16f), true,
+					row -> new BattleNext_QuickBattleDisplay.Action("Delete", row.getIndex(), true), ignored -> {});
+			scrollTable = new BattleNext_QuickBattleDisplay(new BattleNext_UiInputRouter(), entries, presentation,
+					entry -> entry, row -> List.of(), session.data().fleets(), root);
+			scrollTable.attach(tablePanel);
+			if (count > 0) {
+				scrollTable.getRowsReadonly().get(0).getField(Column.MAP).setText("17");
+				scrollTable.getRowsReadonly().get(0).setEnabled(false);
+			}
+			results.put("scroll_table_rows", entries.size());
+		}
+
+		private InputEventAPI wheelEvent(int delta, PositionAPI bounds) throws ReflectiveOperationException {
+			return (InputEventAPI) Class.forName("com.fs.starfarer.util.A.C")
+					.getConstructor(InputEventClass.class, InputEventType.class, int.class, int.class, int.class, char.class)
+					.newInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_SCROLL,
+							(int) bounds.getCenterX(), (int) bounds.getCenterY(), delta, '\0');
+		}
+
+		private void verifyFleetScroll(InputEventAPI wheel, int delta, float before) throws Exception {
+			float after = fleetScroller.getYOffset();
+			if (!wheel.isConsumed()) throw new AssertionError("Fleet must consume the native wheel event at frame " + fleetFrame);
+			if (delta < 0 ? after < before : after > before) {
+				throw new AssertionError("Fleet scrolled against the wheel direction at frame " + fleetFrame);
+			}
+			fleetFrames.put(new JSONObject().put("frame", fleetFrame).put("wheel_delta", delta)
+					.put("before", before).put("scroll", after));
 		}
 
 		private void measure(String name, int count, double limit, Work work) throws Throwable {

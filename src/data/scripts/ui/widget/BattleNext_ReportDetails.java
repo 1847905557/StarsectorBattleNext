@@ -115,7 +115,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 					reportStrings.get("final_hull") + ": " + formatPercent(member.getFinalHullFraction())
 							+ "  " + reportStrings.get("final_cr") + ": " + formatPercent(member.getFinalCr()), null);
 
-			LabelAPI nameLabel = BattleNext_ExpandablePanel.add(detailContent, detailPanel, width, expanded, bodyHeight,
+			LabelAPI nameLabel = BattleNext_ExpandablePanel.add(detailContent, detailContent, detailPanel, width, expanded, bodyHeight,
 					header, () -> buttonPressed(action), this::buttonPressed,
 					bodyPanel -> addMemberBody(bodyPanel, row, sources, width, bodyHeight));
 			nameLabel.highlightLast(side);

@@ -137,6 +137,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 					|| mapField != null && mapField.hasFocus() || mapScaleField != null && mapScaleField.hasFocus()
 					|| rawField != null && rawField.hasFocus();
 		}
+
 	}
 
 	private final List<BattleNext_QuickBattleModel> entries;
@@ -191,8 +192,8 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 			shares[index] = (float) (presentation.columnShares().get(index) / total);
 		}
 
-		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), headers, shares, entries.size(), this::addRow);
-		tableWidget.virtualize(this::releaseRow, index -> rows.get(index).hasFocus());
+		tableWidget = new BattleNext_TableWidget(panel.getPlugin(), headers, shares, entries.size(), this::addRow,
+				this::releaseRow, index -> rows.get(index).hasFocus());
 		tableWidget.attach(tablePanel);
 		refreshRowStatuses();
 	}

@@ -232,8 +232,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		CustomPanelAPI tablePanel = panel.createCustomPanel(tableArea.getWidth(), tableArea.getHeight(), panel.getPlugin());
 		rowsContent.addComponent(tablePanel).inTL(tableArea.getX(), tableArea.getY());
 
+		Map<Integer, RowContent> rows = new LinkedHashMap<>();
 		BattleNext_TableWidget tableWidget = own(new BattleNext_TableWidget(panel.getPlugin(), headers, columnShares,
-				rowCount, rowBuilder, contentBuilder));
+				rowCount, (index, width, cells, content) -> rows.put(index, mountRow(() -> rowBuilder.build(index, width, cells, content))),
+				index -> rows.remove(index).close(), index -> rows.get(index).hasFocus(), contentBuilder));
 		tableWidget.attach(tablePanel);
 		bindViewport(key, tableWidget.getContent());
 		return tableWidget;
@@ -270,6 +272,18 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		checks.put(key, button);
 	}
 
+	protected final String fieldText(Object key, String initialValue) {
+		BattleNext_TextField field = fields.get(key);
+		if (field != null) return field.getText();
+		BattleNext_TextField.EditState state = inputs.get(key);
+		return state == null ? initialValue : state.text();
+	}
+
+	protected final boolean checkValue(Object key, boolean initialValue) {
+		ButtonAPI check = checks.get(key);
+		return check == null ? checked.getOrDefault(key, initialValue) : check.isChecked();
+	}
+
 	protected final void bindViewport(Object key, TooltipMakerAPI viewport) {
 		viewports.put(key, viewport);
 	}
@@ -294,26 +308,34 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		int firstTooltip = tooltipWidgets.size();
 		int firstPanel = panelWidgets.size();
 		Set<Object> previous = new LinkedHashSet<>(fields.keySet());
+		Set<Object> previousChecks = new LinkedHashSet<>(checks.keySet());
 
 		build.run();
 
 		Set<Object> keys = new LinkedHashSet<>(fields.keySet());
 		keys.removeAll(previous);
+		Set<Object> checkKeys = new LinkedHashSet<>(checks.keySet());
+		checkKeys.removeAll(previousChecks);
 		Map<Object, BattleNext_TextField> rowFields = new LinkedHashMap<>();
 		for (Object key : keys) rowFields.put(key, fields.get(key));
 
 		inputRouter.getSession().restoreFields(rowFields, inputs, true);
-		return new RowContent(keys, List.copyOf(tooltipWidgets.subList(firstTooltip, tooltipWidgets.size())),
+		for (Object key : checkKeys) {
+			if (checked.containsKey(key)) checks.get(key).setChecked(checked.get(key));
+		}
+		return new RowContent(keys, checkKeys, List.copyOf(tooltipWidgets.subList(firstTooltip, tooltipWidgets.size())),
 				List.copyOf(panelWidgets.subList(firstPanel, panelWidgets.size())));
 	}
 
 	protected final class RowContent implements AutoCloseable {
 		private final Set<Object> keys;
+		private final Set<Object> checkKeys;
 		private final List<BattleNext_TooltipBasedWidget> tooltips;
 		private final List<BattleNext_PanelBasedWidget> panels;
 
-		private RowContent(Set<Object> keys, List<BattleNext_TooltipBasedWidget> tooltips, List<BattleNext_PanelBasedWidget> panels) {
+		private RowContent(Set<Object> keys, Set<Object> checkKeys, List<BattleNext_TooltipBasedWidget> tooltips, List<BattleNext_PanelBasedWidget> panels) {
 			this.keys = keys;
+			this.checkKeys = checkKeys;
 			this.tooltips = tooltips;
 			this.panels = panels;
 		}
@@ -326,7 +348,11 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		public void close() {
 			for (Object key : keys) {
 				BattleNext_TextField field = fields.remove(key);
-				if (field != null) inputs.put(key, field.captureEditState());
+				if (field != null && !restoring) inputs.put(key, field.captureEditState());
+			}
+			for (Object key : checkKeys) {
+				ButtonAPI check = checks.remove(key);
+				if (!restoring) checked.put(key, check.isChecked());
 			}
 
 			for (BattleNext_TooltipBasedWidget widget : tooltips) release(widget);

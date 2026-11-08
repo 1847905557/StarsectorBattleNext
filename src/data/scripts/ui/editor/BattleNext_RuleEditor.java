@@ -33,8 +33,6 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 
 	private final BattleNext_RuleStore store;
-	private final Map<String, ButtonAPI> enabledCheckboxes = new LinkedHashMap<>();
-	private final Map<String, TextFieldAPI> valueFields = new LinkedHashMap<>();
 
 	private BattleNext_RuleModel draft;
 	private BattleNext_RuleModel baseline;
@@ -77,9 +75,6 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void buildEditorContent() {
-		enabledCheckboxes.clear();
-		valueFields.clear();
-
 		createColumns("metadata", "restrictions", (metadataContent, columnWidth) -> {
 			metadataContent.addTitle(ruleStrings.get("editor_title"));
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(columnWidth);
@@ -111,12 +106,10 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		if (spec == null) {
 			createTextCell(rowPanel, cells[VALUE_COLUMN], displayValue(restriction), false, null, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 		} else {
-			TextFieldAPI valueField = createCellField(List.of("restriction", restriction.getId()), rowPanel,
+			createCellField(List.of("restriction", restriction.getId()), rowPanel,
 					cells[VALUE_COLUMN], displayValue(restriction), rowsContent, restrictionsContent);
-			valueFields.put(restriction.getId(), valueField);
-			ButtonAPI enabledCheckbox = createCellCheckbox(List.of("enabled", restriction.getId()), rowPanel,
+			createCellCheckbox(List.of("enabled", restriction.getId()), rowPanel,
 					cells[ENABLED_COLUMN], "rule:enabled:" + index, restriction.isEnabled(), true, null);
-			enabledCheckboxes.put(restriction.getId(), enabledCheckbox);
 		}
 		createActions(rowPanel, cells[ACTIONS_COLUMN],
 				new EditorAction("^", "rule:up:" + index, index > 0),
@@ -205,13 +198,8 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 		append(state, nameField.getText());
 		for (BattleNext_RuleRestriction restriction : draft.getRestrictionsReadonly()) {
 			append(state, restriction.getId());
-			if (enabledCheckboxes.containsKey(restriction.getId())) {
-				append(state, Boolean.toString(enabledCheckboxes.get(restriction.getId()).isChecked()));
-				append(state, valueFields.get(restriction.getId()).getText());
-			} else {
-				append(state, Boolean.toString(restriction.isEnabled()));
-				append(state, displayValue(restriction));
-			}
+			append(state, Boolean.toString(checkValue(List.of("enabled", restriction.getId()), restriction.isEnabled())));
+			append(state, fieldText(List.of("restriction", restriction.getId()), displayValue(restriction)));
 		}
 
 		return state.toString();
@@ -263,14 +251,15 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 
 		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>();
 		for (BattleNext_RuleRestriction current : draft.getRestrictionsReadonly()) {
-			if (!enabledCheckboxes.containsKey(current.getId())) {
+			if (BattleNext_RestrictionRegistry.getInstance().get(current.getId()) == null) {
 				restrictions.add(current);
 				continue;
 			}
 
 			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(current.getId(), current.getType());
-			restriction.setEnabled(enabledCheckboxes.get(current.getId()).isChecked());
-			String input = valueFields.get(current.getId()).getText().trim();
+			restriction.setEnabled(checkValue(List.of("enabled", current.getId()), current.isEnabled()));
+			String text = fieldText(List.of("restriction", current.getId()), displayValue(current));
+			String input = text.trim();
 			try {
 				if ("number".equals(current.getType())) {
 					restriction.setValue(Double.parseDouble(input));
@@ -285,7 +274,7 @@ public class BattleNext_RuleEditor extends BattleNext_EditorView {
 				if (validate) {
 					String reason = "number".equals(current.getType()) ? strings.get("error_nonnegative")
 							: strings.get(List.of(input.split(",", -1)).stream().anyMatch(String::isBlank) ? "error_list_empty" : "error_list_duplicate");
-					saveErrors.field(ruleStrings.get("editor_title") + " / " + draft.getId(), current.getId(), valueFields.get(current.getId()).getText(), reason);
+					saveErrors.field(ruleStrings.get("editor_title") + " / " + draft.getId(), current.getId(), text, reason);
 				}
 				if ("number".equals(current.getType())) {
 					restriction.setValue(current.getValue());

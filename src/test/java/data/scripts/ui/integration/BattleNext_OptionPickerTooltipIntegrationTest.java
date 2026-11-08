@@ -38,7 +38,8 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 			TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(target);
 			TooltipBinding binding = tooltipBindings.get(target);
 			assertInstanceOf(BaseTooltipCreator.class, creator);
-			assertSame(tooltips.get(grid), binding.owner());
+			assertTrue(binding.owner().getComponents().contains(target));
+			assertTrue(pickerTiles(grid).contains(target));
 			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, binding.location());
 			assertFalse(binding.recreateEveryFrame());
 			assertFalse(creator.isTooltipExpandable(null));
@@ -172,8 +173,8 @@ class BattleNext_OptionPickerTooltipIntegrationTest extends BattleNext_TestPageF
 		float offset = Math.min(100f, grid.getHeightSoFar() - scroller.getPosition().getHeight());
 		scroller.setYOffset(offset);
 		assertEquals(offset, scroller.getYOffset());
-		UIComponentAPI first = tooltips.get(grid).getComponents().get(0);
-		UIComponentAPI visible = tooltips.get(grid).getComponents().get(15);
+		UIComponentAPI first = pickerTiles(grid).get(0);
+		UIComponentAPI visible = pickerTiles(grid).get(15);
 		AtomicBoolean consumed = new AtomicBoolean();
 		assertFalse(scroller.getPosition().containsEvent(click(first, consumed)));
 		assertTrue(scroller.getPosition().containsEvent(click(visible, consumed)));

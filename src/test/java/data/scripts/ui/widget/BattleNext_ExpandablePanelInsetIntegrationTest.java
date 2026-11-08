@@ -33,7 +33,7 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 					"graphics/ship.png", portrait, portrait ? "graphics/portrait.png" : "",
 					"Alpha", "Wolf", summary ? "Damage" : "", summary ? "CR" : "", null);
-			BattleNext_ExpandablePanel.add(list, owner, width, expanded, 60f, header,
+			BattleNext_ExpandablePanel.add(list, list, owner, width, expanded, 60f, header,
 					() -> {}, ignored -> {}, body -> {});
 			owner.addUIElement(list).inTL(11f, 13f);
 			CustomPanelAPI root = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
@@ -115,7 +115,7 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 		BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
 				primary ? "graphics/ship.png" : "", portrait, loadedPortrait ? "graphics/portrait.png" : "",
 				"Alpha", "Wolf", "", "", null);
-		BattleNext_ExpandablePanel.add(list, owner, 400f, true, 100f, header,
+		BattleNext_ExpandablePanel.add(list, list, owner, 400f, true, 100f, header,
 				() -> {}, ignored -> {}, body -> {});
 		owner.addUIElement(list).inTL(11f, 13f);
 		CustomPanelAPI root = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
@@ -132,4 +132,5 @@ class BattleNext_ExpandablePanelInsetIntegrationTest extends BattleNext_TestPage
 					((TooltipMakerAPI) children.get(top).get(0)).getPosition().getX() - top.getPosition().getX());
 		}
 	}
+
 }

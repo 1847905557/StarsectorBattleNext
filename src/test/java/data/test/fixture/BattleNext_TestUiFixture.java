@@ -4,6 +4,7 @@ import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.awt.Color;
@@ -58,6 +59,21 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 			}
 			owner = owner.getSuperclass();
 		}
+	}
+
+	protected List<UIComponentAPI> pickerTiles(TooltipMakerAPI viewport) {
+		return tooltips.get(viewport).getComponents().stream().filter(CustomPanelAPI.class::isInstance)
+				.flatMap(canvas -> children.getOrDefault(canvas, List.of()).stream())
+				.flatMap(row -> tooltips.get(children.get(row).get(0)).getComponents().stream())
+				.sorted(Comparator.comparingDouble((UIComponentAPI tile) -> -tile.getPosition().getY())
+						.thenComparingDouble(tile -> tile.getPosition().getX())).toList();
+	}
+
+	protected List<CustomPanelAPI> tableRows(BattleNext_TableWidget table) throws Exception {
+		Map<Integer, CustomPanelAPI> mounted = (Map<Integer, CustomPanelAPI>) getField(table, "mountedRows");
+		return mounted.entrySet().stream().sorted(Map.Entry.comparingByKey())
+				.map(entry -> (TooltipMakerAPI) children.get(entry.getValue()).get(0))
+				.map(content -> (CustomPanelAPI) tooltips.get(content).getComponents().get(0)).toList();
 	}
 
 	protected BattleNext_OptionPicker.OptionChoiceSource optionSource() {

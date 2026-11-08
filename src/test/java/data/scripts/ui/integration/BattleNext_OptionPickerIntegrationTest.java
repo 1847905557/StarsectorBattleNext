@@ -22,6 +22,40 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture {
 
+	@Test
+	void scrollingReleasesAndRecreatesTilesInsideOneStableScrollContainer() throws Exception {
+		List<BattleNext_OptionPicker.OptionChoice> options = new ArrayList<>();
+		for (int index = 0; index < 300; index++) options.add(new BattleNext_OptionPicker.OptionChoice("id_" + index, "Choice " + index));
+		BattleNext_OptionPicker.OptionChoiceSource source = proxy(BattleNext_OptionPicker.OptionChoiceSource.class,
+				(method, args) -> switch (method) {
+					case "getOptions" -> options;
+					case "getMaxStack" -> 1;
+					default -> null;
+				});
+		CustomPanelAPI owner = panel(540f, 700f, new BaseCustomUIPanelPlugin());
+		BattleNext_OptionPicker picker = new BattleNext_OptionPicker(new BattleNext_UiInputRouter(), owner, source,
+				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, ignored -> {});
+		picker.openAt(owner, () -> new BattleNext_OptionPicker.Anchor(20f, 400f, 30f, 28f));
+		TooltipMakerAPI grid = (TooltipMakerAPI) getField(picker, "grid");
+		List<UIComponentAPI> scrollChildren = List.copyOf(tooltips.get(grid).getComponents());
+		List<UIComponentAPI> initial = pickerTiles(grid);
+		assertFalse(initial.isEmpty());
+		assertTrue(initial.size() < options.size());
+		UIComponentAPI first = initial.get(0);
+		grid.getExternalScroller().setYOffset(1500f);
+		((CustomPanelAPI) getField(picker, "popup")).getPlugin().advance(0f);
+		assertEquals(scrollChildren, tooltips.get(grid).getComponents());
+		assertFalse(pickerTiles(grid).contains(first));
+		assertTrue(pickerTiles(grid).size() < options.size());
+		grid.getExternalScroller().setYOffset(0f);
+		((CustomPanelAPI) getField(picker, "popup")).getPlugin().advance(0f);
+		UIComponentAPI recreated = pickerTiles(grid).get(0);
+		assertNotSame(first, recreated);
+		assertEquals(options.get(0), getField(((CustomPanelAPI) recreated).getPlugin(), "option"));
+		picker.close();
+		assertTrue(((Map<?, ?>) getField(picker, "rowPanels")).isEmpty());
+	}
+
 	@ParameterizedTest
 	@CsvSource({"160,true", "240,true", "320,true", "540,false", "540,true"})
 	void searchRowUsesGridColumnBoundariesThroughFilteringScrollingAndReopening(int width, boolean deferred) throws Exception {
@@ -64,7 +98,13 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			assertSearchGridAlignment(picker);
 			CustomPanelAPI initialGrid = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI initialContent = (TooltipMakerAPI) children.get(initialGrid).get(0);
-			CustomPanelAPI firstTile = (CustomPanelAPI) tooltips.get(initialContent).getComponents().get(0);
+			List<UIComponentAPI> mountedTiles = List.copyOf(tooltips.get(initialContent).getComponents());
+			for (float offset : new float[]{300f, 1000f, 0f, 500f, 0f}) {
+				initialContent.getExternalScroller().setYOffset(offset);
+				((CustomPanelAPI) getField(picker, "popup")).getPlugin().advance(0f);
+				assertEquals(mountedTiles, tooltips.get(initialContent).getComponents());
+			}
+			CustomPanelAPI firstTile = (CustomPanelAPI) pickerTiles(initialContent).get(0);
 			TooltipMakerAPI textHost = (TooltipMakerAPI) children.get(firstTile).get(0);
 			LabelAPI text = (LabelAPI) tooltips.get(textHost).getComponents().get(0);
 			assertEquals("Option 0", text.getText());
@@ -103,7 +143,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		CustomPanelAPI popup = (CustomPanelAPI) getField(picker, "popup");
 		CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-		List<UIComponentAPI> tiles = tooltips.get(grid).getComponents();
+		List<UIComponentAPI> tiles = pickerTiles(grid);
 		PositionAPI first = tiles.get(0).getPosition();
 		float right = (float) tiles.stream().mapToDouble(tile -> tile.getPosition().getX()
 				+ tile.getPosition().getWidth()).max().orElseThrow();
@@ -288,8 +328,8 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(10f, 600f, 100f, 18f));
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			CustomPanelAPI first = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
-			CustomPanelAPI second = (CustomPanelAPI) tooltips.get(grid).getComponents().get(1);
+			CustomPanelAPI first = (CustomPanelAPI) pickerTiles(grid).get(0);
+			CustomPanelAPI second = (CustomPanelAPI) pickerTiles(grid).get(1);
 			Map<String, Integer> selection = (Map<String, Integer>) getField(picker, "selection");
 			clickTile(first);
 			assertTrue(selection.isEmpty());
@@ -304,7 +344,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			picker.openAt(root, () -> new BattleNext_OptionPicker.Anchor(10f, 600f, 100f, 18f));
 			gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			second = (CustomPanelAPI) tooltips.get(grid).getComponents().get(1);
+			second = (CustomPanelAPI) pickerTiles(grid).get(1);
 			clickTile(second);
 			clickTile(second);
 			press(picker, "popup", "CONFIRM");

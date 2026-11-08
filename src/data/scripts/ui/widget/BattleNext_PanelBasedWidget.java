@@ -1,8 +1,13 @@
 package data.scripts.ui.widget;
 
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_GeometryRenderer.GeometryClipState;
 import data.scripts.ui.BattleNext_UiInputRouter;
 
 import java.util.ArrayList;
@@ -115,11 +120,17 @@ public abstract class BattleNext_PanelBasedWidget {
 	protected abstract void buildContent(CustomPanelAPI panel);
 
 	public static final class VisibleRows implements AutoCloseable {
+
 		private final float[] offsets;
 		private final IntConsumer mount;
 		private final IntConsumer release;
 		private final IntPredicate keep;
 		private final Set<Integer> mounted = new LinkedHashSet<>();
+
+		private CustomPanelAPI panel;
+		private TooltipMakerAPI viewport;
+		private float rowInset;
+		private float previousScroll;
 
 		public VisibleRows(int count, IntToDoubleFunction height, IntConsumer mount, IntConsumer release, IntPredicate keep) {
 			offsets = new float[count + 1];
@@ -127,6 +138,31 @@ public abstract class BattleNext_PanelBasedWidget {
 			this.mount = mount;
 			this.release = release;
 			this.keep = keep;
+		}
+
+		public void attach(CustomPanelAPI owner, TooltipMakerAPI viewport, float width, float rowInset) {
+			this.viewport = viewport;
+			this.rowInset = rowInset;
+			panel = owner.createCustomPanel(width, height(), new BaseCustomUIPanelPlugin() {
+				private GeometryClipState clip;
+
+				@Override
+				public void renderBelow(float alphaMult) {
+					update();
+					clip = BattleNext_GeometryRenderer.pushClip(viewport.getExternalScroller().getPosition());
+				}
+
+				@Override
+				public void render(float alphaMult) {
+					BattleNext_GeometryRenderer.popClip(clip);
+				}
+			});
+			viewport.addCustom(panel, 0f);
+			panel.getPosition().inTL(0f, viewport.getHeightSoFar() - height());
+		}
+
+		public CustomPanelAPI getPanel() {
+			return panel;
 		}
 
 		public float top(int index) {
@@ -143,16 +179,29 @@ public abstract class BattleNext_PanelBasedWidget {
 		}
 
 		public void update(float scroll, float viewportHeight) {
-			int first = index(Math.max(0f, scroll - viewportHeight));
-			int last = index(scroll + viewportHeight * 2f);
+			update(scroll, viewportHeight, viewportHeight);
+		}
+
+		public void update() {
+			PositionAPI visible = viewport.getExternalScroller().getPosition();
+			PositionAPI content = panel.getPosition();
+			float scroll = content.getY() + content.getHeight() - visible.getY() - visible.getHeight() - rowInset;
+			float padding = visible.getHeight() + Math.min(Math.abs(scroll - previousScroll), visible.getHeight() * 2f);
+			previousScroll = scroll;
+			update(scroll, visible.getHeight(), padding);
+		}
+
+		private void update(float scroll, float viewportHeight, float padding) {
+			int first = index(Math.max(0f, scroll - padding));
+			for (int row = first; row <= index(scroll + viewportHeight + padding) && row < offsets.length - 1; row++) {
+				if (mounted.add(row)) mount.accept(row);
+			}
+			int last = index(scroll + viewportHeight + padding);
 			for (int row : Set.copyOf(mounted)) {
 				if ((row < first || row > last) && !keep.test(row)) {
 					release.accept(row);
 					mounted.remove(row);
 				}
-			}
-			for (int row = first; row <= last && row < offsets.length - 1; row++) {
-				if (mounted.add(row)) mount.accept(row);
 			}
 		}
 

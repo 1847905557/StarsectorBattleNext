@@ -30,6 +30,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,6 +67,58 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 	}
 
 	@Test
+	void ruleTablePreservesUnmountedInputAndCheckboxesThroughValidationDiscardAndSave() throws Exception {
+		JSONArray entries = new JSONArray();
+		List<BattleNext_RuleRestriction> restrictions = new ArrayList<>();
+		for (int index = 0; index < 70; index++) {
+			String id = "limit_" + index;
+			entries.put(new JSONObject().put("id", id).put("name", id).put("type", "number").put("script", "number").put("desc", "Limit"));
+			BattleNext_RuleRestriction restriction = new BattleNext_RuleRestriction(id, "number");
+			restriction.setEnabled(true);
+			restrictions.add(restriction);
+		}
+		BattleNext_RestrictionRegistry.getInstance().load(entries, name -> (BattleNext_RestrictionScript) (fleet, restriction) -> List.of());
+		BattleNext_RuleModel model = new BattleNext_RuleModel("virtual_rule", "Virtual rule");
+		model.setRestrictions(restrictions);
+		BattleNext_RuleStore store = new BattleNext_RuleStore();
+		store.reload();
+		store.save(model);
+		store.reload();
+		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(store);
+		editor.open(store.get("virtual_rule"));
+		attachEditor(editor, panel(1000f, 240f, new BaseCustomUIPanelPlugin()));
+		this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("limit_0").setText("pending");
+		this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limit_0").setChecked(false);
+		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+		table.getContent().getExternalScroller().setYOffset(2000f);
+		((CustomPanelAPI) getField(table, "rowsPanel")).getPlugin().advance(0f);
+		assertFalse(rowBindings(editor, "fields", "restriction").containsKey("limit_0"));
+		assertFalse(editor.save());
+		assertEquals(1, editor.getSaveErrors().size());
+		assertTrue(editor.getSaveErrors().get(0).contains("limit_0 = \"pending\""));
+		table.getContent().getExternalScroller().setYOffset(0f);
+		((CustomPanelAPI) getField(table, "rowsPanel")).getPlugin().advance(0f);
+		assertEquals("pending", this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("limit_0").getText());
+		assertFalse(this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limit_0").isChecked());
+		editor.discard();
+		assertEquals("0.0", this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("limit_0").getText());
+		assertTrue(this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limit_0").isChecked());
+		this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("limit_0").setText("17");
+		this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limit_0").setChecked(false);
+		table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+		table.getContent().getExternalScroller().setYOffset(2000f);
+		((CustomPanelAPI) getField(table, "rowsPanel")).getPlugin().advance(0f);
+		assertFalse(rowBindings(editor, "fields", "restriction").containsKey("limit_0"));
+		assertTrue(editor.save(), editor.getStatusText());
+		store.reload();
+		assertEquals(17d, store.get("virtual_rule").getRestriction("limit_0").getValue());
+		assertFalse(store.get("virtual_rule").getRestriction("limit_0").isEnabled());
+		editor.close();
+		assertTrue(((Map<?, ?>) getField(editor, "fields")).isEmpty());
+		assertTrue(((Map<?, ?>) getField(editor, "checks")).isEmpty());
+	}
+
+	@Test
 	void saveAggregatesNameIdAndNumericRestrictionErrorsBeforePersistence() throws Exception {
 
 		BattleNext_RuleStore store = new BattleNext_RuleStore();
@@ -82,7 +136,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		((TextFieldAPI) getField(editor, "idField")).setText("bad?id");
 		((TextFieldAPI) getField(editor, "nameField")).setText("");
-		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+		Map<String, TextFieldAPI> values = rowBindings(editor, "fields", "restriction");
 		values.get("limitNumber").setText("first-invalid");
 		values.get("anotherNumber").setText("second-invalid");
 		assertFalse(editor.save());
@@ -143,13 +197,13 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		((TextFieldAPI) getField(editor, "idField")).setText("draft_rule");
 		((TextFieldAPI) getField(editor, "nameField")).setText("Draft rule");
 		confirmRestrictions(editor, List.of("limitNumber"));
-		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
-		Map<String, ButtonAPI> enabled = (Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes");
+		Map<String, TextFieldAPI> values = rowBindings(editor, "fields", "restriction");
+		Map<String, ButtonAPI> enabled = rowBindings(editor, "checks", "enabled");
 		values.get("limitNumber").setText("12");
 		enabled.get("limitNumber").setChecked(false);
 		confirmRestrictions(editor, List.of("limitList"));
-		values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
-		enabled = (Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes");
+		values = rowBindings(editor, "fields", "restriction");
+		enabled = rowBindings(editor, "checks", "enabled");
 		assertEquals(Set.of("limitNumber", "limitList"), values.keySet());
 		assertEquals(values.keySet(), enabled.keySet());
 		assertEquals("12", values.get("limitNumber").getText());
@@ -168,7 +222,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		assertEquals(List.of("limitNumber"), draft.getRestrictionsReadonly().stream().map(entry -> entry.getId()).toList());
 		editor.discard();
 		assertFalse(editor.hasUnsavedChanges());
-		assertEquals(Set.of("limitNumber", "limitList"), ((Map<?, ?>) getField(editor, "valueFields")).keySet());
+		assertEquals(Set.of("limitNumber", "limitList"), rowBindings(editor, "fields", "restriction").keySet());
 		assertTrue(router.isEmpty());
 	}
 
@@ -181,21 +235,21 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		editor.setInputRouter(router);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
 		confirmRestrictions(editor, List.of("limitNumber"));
-		Map<String, TextFieldAPI> values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+		Map<String, TextFieldAPI> values = rowBindings(editor, "fields", "restriction");
 		values.get("limitNumber").setText("pending");
-		((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").setChecked(false);
+		this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limitNumber").setChecked(false);
 		editor.refreshContent();
-		values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+		values = rowBindings(editor, "fields", "restriction");
 		assertEquals("pending", values.get("limitNumber").getText());
-		assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").isChecked());
+		assertFalse(this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limitNumber").isChecked());
 		values.get("limitNumber").setText("12");
 		for (int iteration = 0; iteration < 2; iteration++) {
 			List<?> previousFields = List.copyOf(((Map<?, ?>) getField(router.getSession(), "registrations")).keySet());
 			confirmRestrictions(editor, List.of("limitList"));
-			TextFieldAPI added = ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("limitList");
+			TextFieldAPI added = this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("limitList");
 			editor.buttonPressed("rule:remove:1");
 			Map<?, ?> registrations = (Map<?, ?>) getField(router.getSession(), "registrations");
-			values = (Map<String, TextFieldAPI>) getField(editor, "valueFields");
+			values = rowBindings(editor, "fields", "restriction");
 			assertEquals(Set.of("limitNumber"), values.keySet());
 			assertEquals(Set.of(getField(editor, "idField"), getField(editor, "nameField"), values.get("limitNumber")), registrations.keySet());
 			for (Object previous : previousFields) {
@@ -203,7 +257,7 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 			}
 			assertFalse(registrations.containsKey(added));
 			assertEquals("12", values.get("limitNumber").getText());
-			assertFalse(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("limitNumber").isChecked());
+			assertFalse(this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("limitNumber").isChecked());
 			assertTrue(router.isEmpty());
 		}
 		editor.close();
@@ -221,22 +275,31 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
 		editor.open(source);
 		attachEditor(editor, panel(1000f, 700f, new BaseCustomUIPanelPlugin()));
-		assertTrue(((Map<?, ?>) getField(editor, "valueFields")).isEmpty());
+		assertTrue(rowBindings(editor, "fields", "restriction").isEmpty());
 		String missing = BattleNext_TestTextCatalog.text("Rule", "BattleNext_rule_missing_restriction");
 		assertRestrictionRow(editor, missing, List.of(missing, "lateLimit  [number]"));
 		BattleNext_RestrictionRegistry.getInstance().load(new JSONArray().put(new JSONObject()
 				.put("id", "lateLimit").put("name", "lateLimit").put("type", "number").put("script", "late").put("desc", "Late limit")),
 				name -> (BattleNext_RestrictionScript) (fleet, value) -> List.of());
 		editor.refreshContent();
-		assertEquals("9.0", ((Map<String, TextFieldAPI>) getField(editor, "valueFields")).get("lateLimit").getText());
+		assertEquals("9.0", this.<TextFieldAPI>rowBindings(editor, "fields", "restriction").get("lateLimit").getText());
 		assertRestrictionRow(editor, "lateLimit", List.of("lateLimit", "lateLimit  [number]", "Late limit"));
-		assertTrue(((Map<String, ButtonAPI>) getField(editor, "enabledCheckboxes")).get("lateLimit").isChecked());
+		assertTrue(this.<ButtonAPI>rowBindings(editor, "checks", "enabled").get("lateLimit").isChecked());
 		assertFalse(editor.hasUnsavedChanges());
+	}
+
+	private <T> Map<String, T> rowBindings(BattleNext_RuleEditor editor, String field, String role) throws Exception {
+		Map<?, T> bindings = (Map<?, T>) getField(editor, field);
+		Map<String, T> result = new LinkedHashMap<>();
+		for (Map.Entry<?, T> entry : bindings.entrySet()) {
+			if (entry.getKey() instanceof List<?> key && role.equals(key.get(0))) result.put((String) key.get(1), entry.getValue());
+		}
+		return result;
 	}
 
 	private void assertRestrictionRow(BattleNext_RuleEditor editor, String name, List<String> expected) throws Exception {
 		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
-		CustomPanelAPI row = (CustomPanelAPI) tooltips.get(table.getContent()).getComponents().get(0);
+		CustomPanelAPI row = tableRows(table).get(0);
 		LabelAPI label = children.get(row).stream().filter(TooltipMakerAPI.class::isInstance)
 				.map(TooltipMakerAPI.class::cast).flatMap(cell -> tooltips.get(cell).getComponents().stream())
 				.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).findFirst().orElseThrow();

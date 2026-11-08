@@ -13,6 +13,7 @@ import data.scripts.tournament.BattleNext_StartedTournamentStore;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.widget.BattleNext_QuickBattleDisplay;
+import data.scripts.ui.widget.BattleNext_TableWidget;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import org.json.JSONObject;
 import static org.junit.jupiter.api.Assertions.*;
@@ -82,7 +83,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			socket.setTcpNoDelay(true);
 			widget.attach(root);
 			BattleNext_QuickBattleDisplay display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
-			List<CustomPanelAPI> rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
+			List<CustomPanelAPI> rows = tableRows((BattleNext_TableWidget) getField(display, "tableWidget"));
 			String invalid = "simulator:quick:" + display.getRowsReadonly().get(2).getModel().getId();
 			rows.get(2).getPlugin().buttonPressed(invalid);
 			assertEquals(BattleNext_SimulatorService.Phase.IDLE, BattleNext_SimulatorService.status().phase());
@@ -149,7 +150,7 @@ class BattleNext_SimulatorServiceTest extends BattleNext_SimulatorServiceFixture
 			service.close();
 			assertFalse(Files.exists(runtime));
 			display = (BattleNext_QuickBattleDisplay) getField(widget, "quickBattleDisplay");
-			rows = tooltips.get(display.getContent()).getComponents().stream().map(CustomPanelAPI.class::cast).toList();
+			rows = tableRows((BattleNext_TableWidget) getField(display, "tableWidget"));
 			rows.get(1).getPlugin().buttonPressed(action);
 			assertEquals("IllegalStateException: Simulator service is closed", browser.getStatusError());
 			assertEquals("", browser.getSelectedId());

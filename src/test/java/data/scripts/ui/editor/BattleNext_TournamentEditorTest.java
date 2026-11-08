@@ -203,8 +203,8 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		if (!searchText.isEmpty()) {
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			assertEquals(1, tooltips.get(grid).getComponents().size());
-			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
+			assertEquals(1, pickerTiles(grid).size());
+			CustomPanelAPI card = (CustomPanelAPI) pickerTiles(grid).get(0);
 			AtomicBoolean consumed = new AtomicBoolean();
 			InputEventAPI click = proxy(InputEventAPI.class, (method, arguments) -> switch (method) {
 				case "isLMBDownEvent" -> true;

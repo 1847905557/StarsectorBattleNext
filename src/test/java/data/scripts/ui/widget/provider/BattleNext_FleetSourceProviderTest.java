@@ -139,7 +139,7 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 			plugins.get(popup).advance(0f);
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(grid).getComponents().get(0);
+			CustomPanelAPI card = (CustomPanelAPI) pickerTiles(grid).get(0);
 			TooltipMakerAPI caption = (TooltipMakerAPI) children.get(card).get(0);
 			assertEquals(List.of("Raw\nfleet"), tooltips.get(caption).getComponents().stream()
 					.filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());

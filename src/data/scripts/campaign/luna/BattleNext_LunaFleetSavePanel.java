@@ -156,7 +156,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 				BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(hull.getSpriteName(),
 						true, member.getPortrait(), member.getName(), hull.getHullName() + " / " + json.optString("displayName"), "", "", null);
 				int key = index;
-				BattleNext_ExpandablePanel.add(membersContent, membersPanel, width, expandedMembers.contains(index), 0f,
+				BattleNext_ExpandablePanel.add(membersContent, membersContent, membersPanel, width, expandedMembers.contains(index), 0f,
 						header, () -> buttonPressed(key), this::buttonPressed,
 						body -> buildMemberBody(body, member, width));
 			}

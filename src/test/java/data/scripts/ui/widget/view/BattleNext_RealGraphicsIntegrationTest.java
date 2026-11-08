@@ -17,8 +17,10 @@ import data.scripts.tournament.BattleNext_StartedTournament.ExecutionKind;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.widget.BattleNext_ExpandablePanel;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.scripts.ui.widget.BattleNext_VariantDetails;
+import data.scripts.ui.widget.BattleNext_PanelBasedWidget.VisibleRows;
 import data.test.fixture.BattleNext_TestGlContext;
 import data.test.fixture.BattleNext_TestGlContext.State;
 import data.test.fixture.BattleNext_TestTournamentViewFixture;
@@ -49,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -59,6 +62,139 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 	private static final Color FOREGROUND = new Color(175, 175, 175, 180);
 	private static final Color BACKGROUND = new Color(40, 60, 80);
 	private static BattleNext_TestGlContext context;
+
+	@Test
+	void virtualRowsFillEveryVisiblePixelAfterScrollJumpsAtDrawTime() throws Exception {
+		context.reset(100, 100, 1f);
+		SettingsAPI previous = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+			if (Set.of("getScreenWidth", "getScreenHeight", "getScreenWidthPixels", "getScreenHeightPixels")
+					.contains(method.getName())) return 100f;
+			try {
+				return method.invoke(previous, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		Map<Integer, CustomPanelAPI> mounted = new LinkedHashMap<>();
+		VisibleRows[] holder = new VisibleRows[1];
+		try (VisibleRows rows = new VisibleRows(1000, index -> 20f, index -> {
+			CustomPanelAPI canvas = holder[0].getPanel();
+			CustomPanelAPI[] row = new CustomPanelAPI[1];
+			row[0] = canvas.createCustomPanel(100f, 20f, new BaseCustomUIPanelPlugin() {
+				@Override
+				public void renderBelow(float alphaMult) {
+					BattleNext_GeometryRenderer.fillRect(row[0].getPosition(), index % 2 == 0 ? Color.GREEN : Color.BLUE, alphaMult);
+				}
+			});
+			mounted.put(index, row[0]);
+			canvas.addComponent(row[0]).inTL(0f, 8f + index * 20f);
+		}, index -> holder[0].getPanel().removeComponent(mounted.remove(index)), ignored -> false)) {
+			holder[0] = rows;
+			CustomPanelAPI owner = panel(100f, 100f, new BaseCustomUIPanelPlugin());
+			TooltipMakerAPI viewport = owner.createUIElement(100f, 80f, true);
+			rows.attach(owner, viewport, 100f, 8f);
+			rows.getPanel().getPosition().setSize(100f, rows.height() + 16f);
+			viewport.setHeightSoFar(rows.height() + 16f);
+			owner.addUIElement(viewport).inTL(0f, 0f);
+			ByteBuffer pixels = BufferUtils.createByteBuffer(100 * 100 * 4);
+			for (float offset : new float[]{0f, 12000f, 4000f, 19800f, 0f}) {
+				rows.update(0f, 80f);
+				viewport.getExternalScroller().setYOffset(offset);
+				GL11.glDisable(GL11.GL_SCISSOR_TEST);
+				GL11.glClearColor(1f, 0f, 1f, 1f);
+				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+				State caller = context.captureState();
+				rows.getPanel().getPlugin().renderBelow(1f);
+				try {
+					for (CustomPanelAPI row : mounted.values()) row.getPlugin().renderBelow(1f);
+				} finally {
+					rows.getPanel().getPlugin().render(1f);
+				}
+				caller.assertRestored();
+				GL11.glReadPixels(0, 0, 100, 100, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+				for (int y = 20; y < 100; y++) {
+					float contentY = 100f - y - 0.5f + offset - 8f;
+					Color expected = contentY < 0f ? Color.MAGENTA : ((int) (contentY / 20f)) % 2 == 0 ? Color.GREEN : Color.BLUE;
+					int pixel = (y * 100 + 10) * 4;
+					assertEquals(expected.getRed(), pixels.get(pixel) & 255, "Red at scroll=" + offset + ", y=" + y);
+					assertEquals(expected.getGreen(), pixels.get(pixel + 1) & 255, "Green at scroll=" + offset + ", y=" + y);
+					assertEquals(expected.getBlue(), pixels.get(pixel + 2) & 255, "Blue at scroll=" + offset + ", y=" + y);
+				}
+				assertTrue(mounted.size() < 1000);
+			}
+			assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
+		} finally {
+			Global.setSettings(previous);
+		}
+		assertTrue(mounted.isEmpty());
+	}
+
+	@Test
+	void wholeCardClipsItsChildrenToTheOuterScrollingViewport() throws Exception {
+
+		context.reset(100, 100, 1f);
+		SettingsAPI previous = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[]{SettingsAPI.class}, (instance, method, args) -> {
+			if (Set.of("getScreenWidth", "getScreenHeight", "getScreenWidthPixels", "getScreenHeightPixels")
+					.contains(method.getName())) return 100f;
+			try {
+				return method.invoke(previous, args);
+			} catch (InvocationTargetException exception) {
+				throw exception.getCause();
+			}
+		}));
+		try {
+			CustomPanelAPI owner = panel(100f, 100f, new BaseCustomUIPanelPlugin());
+			TooltipMakerAPI viewport = owner.createUIElement(100f, 30f, true);
+			CustomPanelAPI row = owner.createCustomPanel(100f, 144f, new BaseCustomUIPanelPlugin());
+			TooltipMakerAPI content = row.createUIElement(100f, 0f, false);
+			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(
+					null, false, "", "Alpha", "", "", "", null);
+			BattleNext_ExpandablePanel.add(content, viewport, row, 100f, true, 100f, header,
+					() -> {}, ignored -> {}, body -> {});
+			row.addUIElement(content).inTL(0f, 0f);
+			viewport.addCustomDoNotSetPosition(row).getPosition().inTL(0f, 0f);
+			viewport.setHeightSoFar(144f);
+			owner.addUIElement(viewport).inTL(0f, 0f);
+			CustomPanelAPI card = (CustomPanelAPI) tooltips.get(content).getComponents().get(0);
+			CustomPanelAPI top = (CustomPanelAPI) children.get(card).get(0);
+			CustomPanelAPI body = (CustomPanelAPI) children.get(card).get(1);
+			ByteBuffer pixel = BufferUtils.createByteBuffer(4);
+			for (boolean parentClip : List.of(false, true)) {
+				GL11.glDisable(GL11.GL_SCISSOR_TEST);
+				GL11.glClearColor(1f, 0f, 1f, 1f);
+				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+				if (parentClip) {
+					GL11.glEnable(GL11.GL_SCISSOR_TEST);
+					GL11.glScissor(0, 0, 30, 100);
+				}
+				State caller = context.captureState();
+				card.getPlugin().renderBelow(1f);
+				try {
+					top.getPlugin().renderBelow(1f);
+					body.getPlugin().renderBelow(1f);
+					BattleNext_GeometryRenderer.fillRect(20f, 50f, 20f, 40f, Color.WHITE, 1f);
+					top.getPlugin().render(1f);
+				} finally {
+					card.getPlugin().render(1f);
+				}
+				caller.assertRestored();
+				for (int[] sample : new int[][]{{10, 60}, {25, 60}, {25, 80}, {35, 80}}) {
+					GL11.glReadPixels(sample[0], sample[1], 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
+					int expectedGreen = sample[1] == 80 && (!parentClip || sample[0] < 30) ? 255 : 0;
+					assertEquals(255, pixel.get(0) & 255);
+					assertEquals(expectedGreen, pixel.get(1) & 255);
+					assertEquals(255, pixel.get(2) & 255);
+				}
+			}
+			assertEquals(GL11.GL_NO_ERROR, GL11.glGetError());
+		} finally {
+			Global.setSettings(previous);
+		}
+	}
 
 	@Test
 	void fullscreenTextureFlushesEarlierGeometryBeforeChangingProjectionAndViewport() throws Exception {

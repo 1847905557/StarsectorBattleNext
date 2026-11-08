@@ -136,7 +136,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private boolean selectedOnly;
 	private TooltipMakerAPI grid;
 	private VisibleRows visibleRows;
-	private final Map<Integer, List<CustomPanelAPI>> rowTiles = new HashMap<>();
+	private final Map<Integer, CustomPanelAPI> rowPanels = new HashMap<>();
 
 	public BattleNext_OptionPicker(BattleNext_UiInputRouter inputRouter, CustomPanelAPI overlayHost,
 			float buttonWidth, float buttonHeight, String title, float topGap, OptionChoiceSource source,
@@ -372,28 +372,31 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		float rowHeight = selectedOnly ? 40f : TILE_SIZE + TILE_GAP;
 		visibleRows = new VisibleRows(count, row -> rowHeight,
 				row -> mountGridRow(row, columns, rowHeight, visible), this::releaseGridRow, row -> false);
-		grid.setHeightSoFar(POPUP_INSET * 2f + visibleRows.height());
+		visibleRows.attach(gridPanel, grid, width, POPUP_INSET);
+		visibleRows.getPanel().getPosition().setSize(width, POPUP_INSET * 2f + visibleRows.height());
+		visibleRows.update(0f, height);
+		grid.setHeightSoFar(POPUP_INSET * 2f + count * rowHeight);
 
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
 		popup.addComponent(gridPanel).inTL(POPUP_INSET, top);
-		visibleRows.update(0f, height);
 	}
 
 	private void mountGridRow(int row, int columns, float rowHeight, List<OptionChoice> visible) {
-		List<CustomPanelAPI> tiles = new ArrayList<>();
-		rowTiles.put(row, tiles);
+		CustomPanelAPI canvas = visibleRows.getPanel();
+		CustomPanelAPI rowPanel = canvas.createCustomPanel(canvas.getPosition().getWidth(), rowHeight, new BaseCustomUIPanelPlugin());
+		TooltipMakerAPI tiles = rowPanel.createUIElement(rowPanel.getPosition().getWidth(), rowHeight, false);
+		rowPanels.put(row, rowPanel);
 		for (int index = row * columns; index < Math.min(visible.size(), (row + 1) * columns); index++) {
 			OptionChoice option = visible.get(index);
 			boolean group = source.groupsChoices() && category.isEmpty() && !selectedOnly;
 			OptionPickerTilePlugin tilePlugin = new OptionPickerTilePlugin(option, group);
-			CustomPanelAPI tile = gridPanel.createCustomPanel(selectedOnly ? gridPanel.getPosition().getWidth() - 16f : TILE_SIZE,
+			CustomPanelAPI tile = rowPanel.createCustomPanel(selectedOnly ? rowPanel.getPosition().getWidth() - 16f : TILE_SIZE,
 					selectedOnly ? 36f : TILE_SIZE, selectedOnly ? new BaseCustomUIPanelPlugin() {
 				@Override
 				public void buttonPressed(Object id) {
 					new OptionPickerPopupPlugin().buttonPressed(id);
 				}
 			} : tilePlugin);
-			tiles.add(tile);
 			if (selectedOnly) {
 				TooltipMakerAPI label = tile.createUIElement(tile.getPosition().getWidth() - 112f, 36f, false);
 				label.addPara(label.shortenString(option.label + " x" + selection.get(option.id), label.getWidthSoFar()), 0f);
@@ -416,8 +419,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				badge.setHeightSoFar(badgeHeight);
 				tile.addUIElement(badge).inBL(0f, TILE_COUNT_BOTTOM_INSET);
 			}
-			grid.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP), POPUP_INSET + row * rowHeight);
-			grid.addTooltipTo(new BaseTooltipCreator() {
+			tiles.addCustomDoNotSetPosition(tile).getPosition().inTL(POPUP_INSET + index % columns * (TILE_SIZE + TILE_GAP), 0f);
+			tiles.addTooltipTo(new BaseTooltipCreator() {
 				@Override
 				public float getTooltipWidth(Object tooltipParam) {
 					return source.getTooltipWidth();
@@ -431,10 +434,12 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 				}
 			}, tile, TooltipMakerAPI.TooltipLocation.RIGHT, false);
 		}
+		rowPanel.addUIElement(tiles).inTL(0f, 0f);
+		canvas.addComponent(rowPanel).inTL(0f, POPUP_INSET + row * rowHeight);
 	}
 
 	private void releaseGridRow(int row) {
-		for (CustomPanelAPI tile : rowTiles.remove(row)) grid.removeComponent(tile);
+		visibleRows.getPanel().removeComponent(rowPanels.remove(row));
 	}
 
 	private void browse(String nextCategory, boolean pending) {
@@ -674,7 +679,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		public void advance(float amount) {
 			if (search == null || popup == null) return;
 
-			if (visibleRows != null) visibleRows.update(grid.getExternalScroller().getYOffset(), gridPanel.getPosition().getHeight());
+			if (visibleRows != null) visibleRows.update();
 			if (!isRowVisible()) {
 				clearOverlays();
 				return;

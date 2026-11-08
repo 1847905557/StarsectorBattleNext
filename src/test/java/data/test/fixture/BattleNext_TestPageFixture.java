@@ -114,7 +114,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 		browsePickerOption(picker, id);
 		CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
-		for (UIComponentAPI component : tooltips.get(content).getComponents()) {
+		for (UIComponentAPI component : pickerTiles(content)) {
 			if (!(component instanceof CustomPanelAPI tile)) continue;
 			OptionChoice option = (OptionChoice) getField(tile.getPlugin(), "option");
 			if (!option.id().equals(id)) continue;
@@ -161,7 +161,7 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 		if (!id.isEmpty()) {
 			CustomPanelAPI grid = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI content = (TooltipMakerAPI) children.get(grid).get(0);
-			for (UIComponentAPI component : tooltips.get(content).getComponents()) {
+			for (UIComponentAPI component : pickerTiles(content)) {
 				if (!(component instanceof CustomPanelAPI tile)) continue;
 				OptionChoice option = (OptionChoice) getField(tile.getPlugin(), "option");
 				if (!option.id().equals(id)) continue;
@@ -195,15 +195,14 @@ public class BattleNext_TestPageFixture extends BattleNext_TestUiFixture {
 		assertTrue(button.getPosition().getX() + button.getPosition().getWidth()
 				<= tableBounds.getX() + tableBounds.getWidth() + 0.001f);
 
-		int rows = 0;
-		for (UIComponentAPI component : tooltips.get(table.getContent()).getComponents()) {
-			if (component == pickerRow) continue;
-			assertEquals(left, component.getPosition().getX(), 0.001f);
-			rows++;
+		Map<Integer, CustomPanelAPI> mounted = (Map<Integer, CustomPanelAPI>) getField(table, "mountedRows");
+		for (CustomPanelAPI slot : mounted.values()) {
+			TooltipMakerAPI rowContent = (TooltipMakerAPI) children.get(slot).get(0);
+			assertEquals(left, tooltips.get(rowContent).getComponents().get(0).getPosition().getX(), 0.001f);
 		}
-		PositionAPI contentBounds = table.getContent().getPosition();
-		assertEquals(rows * BattleNext_PageLayout.TABLE_ROW_HEIGHT + BattleNext_PageLayout.EDITOR_BUTTON_GAP,
-				contentBounds.getY() + contentBounds.getHeight() - pickerRow.getPosition().getY() - pickerRow.getPosition().getHeight(), 0.001f);
+		PositionAPI canvas = tooltips.get(table.getContent()).getComponents().get(0).getPosition();
+		assertEquals(BattleNext_PageLayout.EDITOR_BUTTON_GAP,
+				canvas.getY() - pickerRow.getPosition().getY() - pickerRow.getPosition().getHeight(), 0.001f);
 	}
 
 	protected BattleNext_PinnedVariantPage page(BattleNext_PinnedVariantStore store,

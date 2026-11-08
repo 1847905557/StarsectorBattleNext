@@ -198,7 +198,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			String identity = entry.id().isEmpty() ? BattleNext_StartedTournamentStore.PATH + " / " + entry.index() : entry.id();
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(null, false, "", identity, "",
 					strings.get("load_failed"), "", null);
-			BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expandedInstances.contains(key), 0f, header,
+			BattleNext_ExpandablePanel.add(rowsContent, rowsContent, panel, columnWidth, expandedInstances.contains(key), 0f, header,
 					() -> buttonPressed("instance:toggle:" + key), this::buttonPressed, body -> {
 				float areaWidth = columnWidth - 16f;
 				TooltipMakerAPI details = body.createUIElement(areaWidth, 0f, false);
@@ -226,7 +226,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(null, false, "",
 					instance.getName(draft), kind, phase,
 					tournamentStrings.format("chart_finished_matches", BattleNext_TournamentDisplay.completedMatches(instance), instance.getPlayableMatchTotal(draft)), null);
-			BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expandedInstances.contains(instance.getId()), 0f, header,
+			BattleNext_ExpandablePanel.add(rowsContent, rowsContent, panel, columnWidth, expandedInstances.contains(instance.getId()), 0f, header,
 					() -> buttonPressed("instance:toggle:" + instance.getId()), this::buttonPressed, body -> {
 
 				float areaWidth = columnWidth - 16f;

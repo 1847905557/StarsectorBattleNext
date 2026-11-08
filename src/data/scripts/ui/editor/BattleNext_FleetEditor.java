@@ -128,12 +128,12 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		memberFields.addAll(Collections.nCopies(draft.getMembersReadonly().size(), null));
 		memberViewport = rowsContent;
 		memberTop = rowsContent.getHeightSoFar();
-
 		visibleMembers = new VisibleRows(draft.getMembersReadonly().size(),
 				index -> expandedMembers.contains(index) ? memberHeights.getOrDefault(memberKeys.get(index), 680f) : 44f,
 				index -> mountMember(index, columnWidth), this::releaseMember,
 				index -> memberContent.get(index).hasFocus());
-		visibleMembers.update(0f, panel.getPosition().getHeight());
+		visibleMembers.attach(panel, rowsContent, columnWidth, 0f);
+		visibleMembers.update(-memberTop, rowsContent.getPosition().getHeight());
 		rowsContent.setHeightSoFar(memberTop + visibleMembers.height());
 
 		addMemberButton = createButton(rowsContent, columnWidth, fleetStrings.get("add_member"), "add_member");
@@ -141,17 +141,16 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	}
 
 	private void mountMember(int index, float width) {
-		CustomPanelAPI row = panel.createCustomPanel(width, 44f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI canvas = visibleMembers.getPanel();
+		CustomPanelAPI row = canvas.createCustomPanel(width, 44f, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = row.createUIElement(width, 0f, false);
 		RowContent owned = mountRow(() -> addMember(index, draft.getMembersReadonly().get(index), content, width));
 		memberPanels.put(index, row);
 		memberContent.put(index, owned);
-
 		float height = content.getHeightSoFar();
 		row.getPosition().setSize(width, height);
 		row.addUIElement(content).inTL(0f, 0f);
-		memberViewport.addCustomDoNotSetPosition(row);
-
+		canvas.addComponent(row).inTL(0f, visibleMembers.top(index));
 		memberHeights.put(memberKeys.get(index), height);
 		visibleMembers.setHeight(index, height);
 		positionMembers();
@@ -159,8 +158,10 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
 	private void positionMembers() {
 		for (Map.Entry<Integer, CustomPanelAPI> entry : memberPanels.entrySet()) {
-			entry.getValue().getPosition().inTL(0f, memberTop + visibleMembers.top(entry.getKey()));
+			entry.getValue().getPosition().inTL(0f, visibleMembers.top(entry.getKey()));
 		}
+		CustomPanelAPI canvas = visibleMembers.getPanel();
+		canvas.getPosition().setSize(canvas.getPosition().getWidth(), visibleMembers.height());
 		memberViewport.setHeightSoFar(memberTop + visibleMembers.height() + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 16f);
 		if (addMemberButton != null) addMemberButton.getPosition().inTL(0f, memberTop + visibleMembers.height() + 8f);
 	}
@@ -169,13 +170,13 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		if (!releasingRows) readMember(index, draft.getMembersReadonly().get(index));
 		memberContent.remove(index).close();
 		memberFields.set(index, null);
-		memberViewport.removeComponent(memberPanels.remove(index));
+		visibleMembers.getPanel().removeComponent(memberPanels.remove(index));
 	}
 
 	@Override
 	public void advance(float amount) {
 		if (visibleMembers != null) {
-			visibleMembers.update(memberViewport.getExternalScroller().getYOffset(), panel.getPosition().getHeight());
+			visibleMembers.update();
 			positionMembers();
 		}
 	}
@@ -218,7 +219,7 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 				hullName, member.getName(), "", "", null);
 		memberFields.set(index, null);
 
-		BattleNext_ExpandablePanel.add(rowsContent, panel, columnWidth, expanded, 0f, header,
+		BattleNext_ExpandablePanel.add(rowsContent, memberViewport, panel, columnWidth, expanded, 0f, header,
 				() -> buttonPressed("toggle_member:" + index), this::buttonPressed, bodyPanel -> {
 			float areaWidth = columnWidth - MEMBER_DETAIL_INSET * 2f;
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
@@ -601,5 +602,8 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	protected void closeEditorState() {
 		variantPrefixField = null;
 		memberHeights.clear();
+		memberFields.clear();
+		memberViewport = null;
+		addMemberButton = null;
 	}
 }

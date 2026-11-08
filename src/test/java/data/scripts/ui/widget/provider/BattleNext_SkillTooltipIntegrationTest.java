@@ -434,11 +434,11 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		for (int rebuild = 0; rebuild < 2; rebuild++) {
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			UIComponentAPI tile = tooltips.get(grid).getComponents().get(0);
+			UIComponentAPI tile = pickerTiles(grid).get(0);
 			TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(tile);
 			assertEquals(520f, creator.getTooltipWidth(null));
 			assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
-			assertSame(tooltips.get(grid), tooltipBindings.get(tile).owner());
+			assertTrue(tooltipBindings.get(tile).owner().getComponents().contains(tile));
 			TooltipMakerAPI content = tooltip(creator.getTooltipWidth(null), 0f, false);
 			creator.createTooltip(content, false, null);
 			assertEquals(SKILL_ID, textValues(content).get(1));

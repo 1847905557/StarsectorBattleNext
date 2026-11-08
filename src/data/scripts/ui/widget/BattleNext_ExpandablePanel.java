@@ -6,6 +6,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
 import data.scripts.tools.BattleNext_GeometryRenderer;
+import data.scripts.tools.BattleNext_GeometryRenderer.GeometryClipState;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.BattleNext_UiTheme;
@@ -40,13 +41,25 @@ public class BattleNext_ExpandablePanel {
 
 	}
 
-	public static LabelAPI add(TooltipMakerAPI list, CustomPanelAPI owner, float width,
+	public static LabelAPI add(TooltipMakerAPI list, TooltipMakerAPI viewport, CustomPanelAPI owner, float width,
 			boolean expanded, float bodyHeight, Header header, Runnable onToggle,
 			Consumer<Object> onBodyAction, Consumer<CustomPanelAPI> buildBody) {
 
 		CustomPanelAPI root = owner.createCustomPanel(width, panelHeight(expanded, bodyHeight),
-				new BaseCustomUIPanelPlugin());
-		HeaderPlugin headerPlugin = new HeaderPlugin(expanded, list, onToggle);
+				new BaseCustomUIPanelPlugin() {
+			private GeometryClipState clip;
+
+			@Override
+			public void renderBelow(float alphaMult) {
+				clip = BattleNext_GeometryRenderer.pushClip(visiblePosition(viewport));
+			}
+
+			@Override
+			public void render(float alphaMult) {
+				BattleNext_GeometryRenderer.popClip(clip);
+			}
+		});
+		HeaderPlugin headerPlugin = new HeaderPlugin(expanded, viewport, onToggle);
 		CustomPanelAPI top = root.createCustomPanel(width, HEADER_HEIGHT, headerPlugin);
 		headerPlugin.setPosition(top.getPosition());
 		LabelAPI firstLine = addHeaderContent(top, width, header, headerPlugin);
@@ -150,6 +163,11 @@ public class BattleNext_ExpandablePanel {
 		return false;
 	}
 
+	private static PositionAPI visiblePosition(TooltipMakerAPI viewport) {
+		ScrollPanelAPI scroller = viewport.getExternalScroller();
+		return scroller == null ? viewport.getPosition() : scroller.getPosition();
+	}
+
 	private static class HeaderPlugin extends BaseCustomUIPanelPlugin {
 		private final boolean expanded;
 		private final TooltipMakerAPI viewport;
@@ -211,7 +229,7 @@ public class BattleNext_ExpandablePanel {
 		@Override
 		public void processInput(List<InputEventAPI> events) {
 			if (position != null) {
-				handleHeaderInput(events, position, visiblePosition(),
+				handleHeaderInput(events, position, visiblePosition(viewport),
 						() -> Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_PRESSED_SOUND_ID, 1f, 1f),
 						onToggle);
 			}
@@ -223,17 +241,13 @@ public class BattleNext_ExpandablePanel {
 			float scale = Global.getSettings().getScreenScaleMult();
 			float x = Mouse.getX() / scale;
 			float y = Mouse.getY() / scale;
-			boolean inside = contains(position, x, y) && contains(visiblePosition(), x, y);
+			boolean inside = contains(position, x, y) && contains(visiblePosition(viewport), x, y);
 			if (hoverEntered(hovered, inside)) {
 				Global.getSoundPlayer().playUISound(BattleNext_UiTheme.BUTTON_HOVER_SOUND_ID, 1f, 1f);
 			}
 			hovered = inside;
 		}
 
-		private PositionAPI visiblePosition() {
-			ScrollPanelAPI scroller = viewport.getExternalScroller();
-			return scroller == null ? viewport.getPosition() : scroller.getPosition();
-		}
 	}
 
 	static class BodyPlugin extends BaseCustomUIPanelPlugin {

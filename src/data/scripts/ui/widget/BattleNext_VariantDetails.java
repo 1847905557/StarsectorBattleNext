@@ -329,7 +329,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 			BattleNext_ExpandablePanel.Header header = new BattleNext_ExpandablePanel.Header(icon, false, "",
 					variantStrings.format("weapon_group_summary", index + 1, count),
 					mode + " / " + status, "", "", BattleNext_UiTheme.ACCENT);
-			BattleNext_ExpandablePanel.add(list, owner, width, open, bodyHeight, header,
+			BattleNext_ExpandablePanel.add(list, list, owner, width, open, bodyHeight, header,
 					() -> {
 						if (!interactive.getAsBoolean()) return;
 						if (!expanded.add(key)) {

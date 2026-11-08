@@ -366,10 +366,10 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			plugins.get(popup).advance(0f);
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			UIComponentAPI tile = tooltips.get(grid).getComponents().get(0);
+			UIComponentAPI tile = pickerTiles(grid).get(0);
 			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(tile).location());
 			assertFalse(tooltipBindings.get(tile).recreateEveryFrame());
-			assertSame(tooltips.get(grid), tooltipBindings.get(tile).owner());
+			assertTrue(tooltipBindings.get(tile).owner().getComponents().contains(tile));
 			assertEquals(360f, attachedTooltips.get(tile).getTooltipWidth(null));
 			TooltipMakerAPI hover = tooltip(360f, 0f, false);
 			attachedTooltips.get(tile).createTooltip(hover, false, null);

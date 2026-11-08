@@ -96,7 +96,7 @@ class BattleNext_WeaponGroupModeIconIntegrationTest extends BattleNext_TestVaria
 		BattleNext_ExpandablePanel.Header data = new BattleNext_ExpandablePanel.Header("graphics/ship.png",
 				portrait, portrait ? "graphics/portrait.png" : "", kind, "Detail", "", "",
 				tint ? BattleNext_UiTheme.ACCENT : null);
-		BattleNext_ExpandablePanel.add(list, owner, 380f, false, 0f, data, () -> {}, ignored -> {}, body -> {});
+		BattleNext_ExpandablePanel.add(list, list, owner, 380f, false, 0f, data, () -> {}, ignored -> {}, body -> {});
 		owner.addUIElement(list).inTL(0f, 0f);
 		CustomPanelAPI root = (CustomPanelAPI) tooltips.get(list).getComponents().get(0);
 		CustomPanelAPI top = (CustomPanelAPI) children.get(root).get(0);

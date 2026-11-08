@@ -202,11 +202,11 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 		browsePickerOption(picker, id);
 		CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 		TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-		assertEquals(1, tooltips.get(grid).getComponents().size());
-		UIComponentAPI card = tooltips.get(grid).getComponents().get(0);
+		assertEquals(1, pickerTiles(grid).size());
+		UIComponentAPI card = pickerTiles(grid).get(0);
 		TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(card);
 		assertEquals(width, creator.getTooltipWidth(null));
-		assertSame(tooltips.get(grid), tooltipBindings.get(card).owner());
+		assertTrue(tooltipBindings.get(card).owner().getComponents().contains(card));
 		assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(card).location());
 		assertFalse(tooltipBindings.get(card).recreateEveryFrame());
 		TooltipMakerAPI content = tooltip(width, 0f, false);

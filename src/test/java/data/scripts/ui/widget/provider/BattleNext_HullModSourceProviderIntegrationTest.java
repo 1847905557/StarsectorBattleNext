@@ -334,10 +334,10 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			plugins.get(popup).advance(0f);
 			CustomPanelAPI gridPanel = (CustomPanelAPI) getField(picker, "gridPanel");
 			TooltipMakerAPI grid = (TooltipMakerAPI) children.get(gridPanel).get(0);
-			UIComponentAPI card = tooltips.get(grid).getComponents().get(0);
+			UIComponentAPI card = pickerTiles(grid).get(0);
 			assertEquals(TooltipMakerAPI.TooltipLocation.RIGHT, tooltipBindings.get(card).location());
 			assertFalse(tooltipBindings.get(card).recreateEveryFrame());
-			assertSame(tooltips.get(grid), tooltipBindings.get(card).owner());
+			assertTrue(tooltipBindings.get(card).owner().getComponents().contains(card));
 			TooltipMakerAPI.TooltipCreator creator = attachedTooltips.get(card);
 			assertEquals(360f, creator.getTooltipWidth(null));
 			TooltipMakerAPI content = tooltip(360f, 0f, false);
@@ -359,7 +359,8 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			CustomPanelAPI emptyGrid = (CustomPanelAPI) getField(picker, "gridPanel");
 			List<UIComponentAPI> empty = tooltips.get(children.get(emptyGrid).get(0)).getComponents();
 			assertEquals(List.of(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_picker_no_options")),
-					empty.stream().map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+					empty.stream().filter(LabelAPI.class::isInstance).map(LabelAPI.class::cast).map(LabelAPI::getText).toList());
+			assertTrue(pickerTiles((TooltipMakerAPI) children.get(emptyGrid).get(0)).isEmpty());
 
 			search.grabFocus(false);
 			assertTrue(search.hasFocus());
