@@ -168,11 +168,11 @@ public class BattleNext_FleetLibraryPage extends BattleNext_ManagementPage {
 						status = strings.get("deleted");
 						refreshContent();
 					} catch (IOException | JSONException | RuntimeException exception) {
-						setStatus(strings.get("save_failed") + ": " + exception.getMessage());
+						setStatus(strings.get("delete_failed") + ": " + exception.getMessage());
 					}
 				});
 			} catch (IOException | RuntimeException exception) {
-				setStatus(strings.get("save_failed") + ": " + exception.getMessage());
+				setStatus(strings.get("delete_failed") + ": " + exception.getMessage());
 			}
 		} else if ("back".equals(buttonId)) {
 			if (draftOpen) navigation.accept(() -> { selectedId = ""; draftOpen = false; refreshContent(); });

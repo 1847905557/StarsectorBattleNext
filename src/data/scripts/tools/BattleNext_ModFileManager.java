@@ -12,6 +12,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.CopyOption;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -282,6 +283,7 @@ public class BattleNext_ModFileManager {
 					lookup.findVirtual(fileType, "getName", MethodType.methodType(String.class)),
 					lookup.findVirtual(fileType, "getCanonicalPath", MethodType.methodType(String.class)),
 					lookup.findVirtual(fileType, "getAbsolutePath", MethodType.methodType(String.class)),
+					lookup.findVirtual(Path.class, "toRealPath", MethodType.methodType(Path.class, LinkOption[].class)),
 					lookup.findVirtual(fileType, "getParentFile", MethodType.methodType(fileType)),
 					lookup.findVirtual(fileType, "mkdirs", MethodType.methodType(boolean.class)),
 					lookup.findVirtual(fileType, "listFiles", MethodType.methodType(fileType.arrayType())),
@@ -351,8 +353,8 @@ public class BattleNext_ModFileManager {
 			if (!(boolean) bridge.exists.invoke(root) || !(boolean) bridge.directoryCheck.invoke(root)) {
 				throw new IOException("Mod root is missing: " + rootPath);
 			}
-			Object target = bridge.fileConstructor.invoke(rootPath + "/" + normalizedPath);
 			String rootCanonical = (String) bridge.canonicalPath.invoke(root);
+			Object target = bridge.fileConstructor.invoke(rootCanonical + "/" + normalizedPath);
 			String targetCanonical = (String) bridge.canonicalPath.invoke(target);
 			ensureInsideRoot(rootCanonical, targetCanonical, normalizedPath);
 			if (samePath(rootCanonical, targetCanonical)) {
@@ -400,8 +402,8 @@ public class BattleNext_ModFileManager {
 	private static void deleteTree(ReflectiveModFileOperations bridge, Object target, String rootCanonical, String relativePath)
 			throws IOException {
 		try {
-			String canonical = (String) bridge.canonicalPath.invoke(target);
-			String absolute = (String) bridge.absolutePath.invoke(target);
+			String absolute = Path.of((String) bridge.absolutePath.invoke(target)).normalize().toString();
+			String canonical = ((Path) bridge.realPath.invoke(Path.of(absolute), new LinkOption[0])).toString();
 			ensureInsideRoot(rootCanonical, canonical, relativePath);
 			if (!samePath(canonical, absolute)) {
 				throw new IOException("Symbolic links are not allowed in recursive deletion: " + relativePath);
@@ -530,6 +532,7 @@ public class BattleNext_ModFileManager {
 		private final MethodHandle name;
 		private final MethodHandle canonicalPath;
 		private final MethodHandle absolutePath;
+		private final MethodHandle realPath;
 		private final MethodHandle parent;
 		private final MethodHandle mkdirs;
 		private final MethodHandle listFiles;
@@ -547,7 +550,7 @@ public class BattleNext_ModFileManager {
 
 		private ReflectiveModFileOperations(MethodHandle fileConstructor, MethodHandle exists, MethodHandle directoryCheck,
 				MethodHandle regularFile, MethodHandle name, MethodHandle canonicalPath,
-				MethodHandle absolutePath, MethodHandle parent, MethodHandle mkdirs,
+				MethodHandle absolutePath, MethodHandle realPath, MethodHandle parent, MethodHandle mkdirs,
 				MethodHandle listFiles, MethodHandle delete, MethodHandle inputConstructor, MethodHandle read,
 				MethodHandle outputConstructor, MethodHandle write, MethodHandle flush, MethodHandle close,
 				MethodHandle closeInput, MethodHandle byteArrayOutputConstructor, MethodHandle byteArrayWrite,
@@ -559,6 +562,7 @@ public class BattleNext_ModFileManager {
 			this.name = name;
 			this.canonicalPath = canonicalPath;
 			this.absolutePath = absolutePath;
+			this.realPath = realPath;
 			this.parent = parent;
 			this.mkdirs = mkdirs;
 			this.listFiles = listFiles;
