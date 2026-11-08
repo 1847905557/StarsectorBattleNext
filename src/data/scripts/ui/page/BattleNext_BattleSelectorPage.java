@@ -127,7 +127,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		if (selectedId.isEmpty()) {
 			if (quickBattleEditor == null) {
-				quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner);
+				quickBattleEditor = new BattleNext_QuickBattleEditor(backAction, inputOwner, provider);
 			}
 			attachEditor(contentPanel);
 		} else {
@@ -251,7 +251,7 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	}
 
 	private void load() {
-		List<String> errors = provider.reloadTournamentCatalog();
+		List<String> errors = provider.reloadCatalogs();
 		loadError = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		try {
 			startedStore.reload();

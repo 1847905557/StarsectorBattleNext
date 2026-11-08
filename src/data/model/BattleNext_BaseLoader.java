@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 
@@ -66,8 +67,12 @@ public abstract class BattleNext_BaseLoader<T extends BattleNext_BaseModel> {
 	protected BattleNext_BaseLoader() {}
 
 	protected List<String> paths(String directory, boolean recursive) {
+		return paths(directory, recursive ? Integer.MAX_VALUE : 1, path -> true);
+	}
+
+	protected List<String> paths(String directory, int depth, Predicate<String> descend) {
 		try {
-			return BattleNext_ModFileManager.list(directory, recursive);
+			return BattleNext_ModFileManager.list(directory, depth, descend);
 		} catch (IOException exception) {
 			reject(directory, -1, "", "", exception);
 			return List.of();

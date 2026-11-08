@@ -21,8 +21,8 @@ public class BattleNext_FleetVariantLoader {
 
 	public static void load(BattleNext_FleetModel fleet, List<String> paths) throws IOException, JSONException {
 
-		BattleNext_Logger.Fields input = BattleNext_Logger.fields().put("fleet", fleet).put("paths", paths).build();
-		BattleNext_Logger.operationStarted(BattleNext_FleetVariantLoader.class, "fleet.variants.load", input);
+		BattleNext_Logger.operationStarted(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
+				() -> BattleNext_Logger.fields().put("fleet", fleet).put("paths", paths).build());
 		try {
 
 			String source = fleet.getSourcePath().replace('\\', '/');
@@ -71,7 +71,8 @@ public class BattleNext_FleetVariantLoader {
 			BattleNext_Logger.operationSucceeded(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
 					() -> BattleNext_Logger.fields().put("fleet", fleet).build());
 		} catch (RuntimeException exception) {
-			BattleNext_Logger.operationFailed(BattleNext_FleetVariantLoader.class, "fleet.variants.load", input, exception);
+			BattleNext_Logger.operationFailed(BattleNext_FleetVariantLoader.class, "fleet.variants.load",
+					BattleNext_Logger.fields().put("fleet", fleet).put("paths", paths).build(), exception);
 			throw exception;
 		}
 	}

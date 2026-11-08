@@ -5,7 +5,6 @@ import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
-import data.scripts.tools.BattleNext_Logger;
 
 public class BattleNext_MemberBuilder {
 
@@ -34,9 +33,6 @@ public class BattleNext_MemberBuilder {
 		String name = definition.getName();
 		if (name.isBlank()) {
 			name = member.getVariant().getHullSpec().getHullName();
-			BattleNext_Logger.warn(BattleNext_MemberBuilder.class, "member.name.defaulted", BattleNext_Logger.fields()
-					.put("member", definition).put("hull_id", member.getVariant().getHullSpec().getHullId())
-					.put("name", name).build());
 		}
 		member.setShipName(name);
 		if (!definition.getPersonality().isEmpty()) {

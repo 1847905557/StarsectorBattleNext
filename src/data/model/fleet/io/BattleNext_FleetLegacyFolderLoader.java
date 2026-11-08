@@ -15,7 +15,8 @@ public class BattleNext_FleetLegacyFolderLoader extends BattleNext_FleetLegacyLo
 		beginLoad();
 
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = paths("tournament", true);
+		List<String> paths = paths("tournament", 2,
+				path -> !BattleNext_EntryId.isReservedFolder(path.substring(path.lastIndexOf('/') + 1)));
 		for (String path : paths) {
 			String[] segments = path.split("/");
 			if (segments.length != 3) continue;

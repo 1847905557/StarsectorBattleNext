@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 
 public class BattleNext_ModFileManager {
 
@@ -210,8 +211,12 @@ public class BattleNext_ModFileManager {
 	}
 
 	public static List<String> list(String directory, boolean recursive) throws IOException {
+		return list(directory, recursive ? Integer.MAX_VALUE : 1, path -> true);
+	}
+
+	public static List<String> list(String directory, int depth, Predicate<String> descend) throws IOException {
 		ReflectiveModFileOperations bridge = createBridge(directory);
-		return listRoot(bridge, normalizePath(directory), recursive);
+		return listRoot(bridge, normalizePath(directory), depth, descend);
 	}
 
 	public static List<String> listJson(String directory) throws IOException {
@@ -423,7 +428,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static List<String> listRoot(ReflectiveModFileOperations bridge, String directory, boolean recursive) throws IOException {
+	private static List<String> listRoot(ReflectiveModFileOperations bridge, String directory, int depth, Predicate<String> descend) throws IOException {
 		try {
 			String rootPath = Global.getSettings().getModManager().getModSpec(MOD_ID).getPath();
 			Object root = bridge.fileConstructor.invoke(rootPath);
@@ -436,7 +441,7 @@ public class BattleNext_ModFileManager {
 				throw new IOException("Not a directory: " + rootPath + "/" + directory);
 			}
 			List<String> result = new ArrayList<>();
-			collect(bridge, folder, directory, recursive, result);
+			collect(bridge, folder, directory, depth, descend, result);
 			Collections.sort(result);
 			return result;
 		} catch (IOException exception) {
@@ -446,7 +451,7 @@ public class BattleNext_ModFileManager {
 		}
 	}
 
-	private static void collect(ReflectiveModFileOperations bridge, Object folder, String relative, boolean recursive, List<String> result)
+	private static void collect(ReflectiveModFileOperations bridge, Object folder, String relative, int depth, Predicate<String> descend, List<String> result)
 			throws IOException {
 		try {
 			Object[] children = (Object[]) bridge.listFiles.invoke(folder);
@@ -455,8 +460,8 @@ public class BattleNext_ModFileManager {
 				String path = relative + "/" + (String) bridge.name.invoke(child);
 				if ((boolean) bridge.regularFile.invoke(child)) {
 					result.add(path);
-				} else if (recursive && (boolean) bridge.directoryCheck.invoke(child)) {
-					collect(bridge, child, path, true, result);
+				} else if (depth > 1 && (boolean) bridge.directoryCheck.invoke(child) && descend.test(path)) {
+					collect(bridge, child, path, depth - 1, descend, result);
 				}
 			}
 		} catch (IOException exception) {

@@ -24,7 +24,8 @@ public class BattleNext_FleetStandardLoader extends BattleNext_BaseLoader<Battle
 	public List<BattleNext_FleetModel> load() throws IOException, JSONException {
 		beginLoad();
 		List<BattleNext_FleetModel> result = new ArrayList<>();
-		List<String> paths = paths(BASE_FOLDER, true);
+		List<String> paths = paths(BASE_FOLDER, 2,
+				path -> !BattleNext_EntryId.isReservedFolder(path.substring(path.lastIndexOf('/') + 1)));
 		List<String> dataPaths = paths.stream().filter(BattleNext_FleetStandardLoader::isFleetDataPath)
 				.filter(path -> !BattleNext_EntryId.isReservedFolder(fleetFolder(path))).toList();
 		for (String path : dataPaths) {

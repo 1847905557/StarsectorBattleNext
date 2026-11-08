@@ -1,5 +1,7 @@
 package data.scripts.battle;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import data.model.tournament.BattleNext_TournamentModel;
 import data.model.tournament.BattleNext_TournamentStore;
 import data.scripts.tournament.BattleNext_StartedTournament;
@@ -12,8 +14,45 @@ import data.scripts.tools.BattleNext_Settings;
 import data.test.fixture.BattleNext_TestTextCatalog;
 
 import java.util.List;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class BattleNext_BattleSourceProviderTest extends BattleNext_TestFleetIoFixture {
+
+	@Test
+	void catalogLoadingDefersAssemblyAndValidationCachesOnlyRequestedFleetsUntilReload() throws Exception {
+		standard("alpha", "alpha", "parent_variant");
+		standard("beta", "beta", "child_variant");
+		AtomicInteger builds = new AtomicInteger();
+		SettingsAPI delegate = Global.getSettings();
+		Global.setSettings((SettingsAPI) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{SettingsAPI.class},
+				(instance, method, args) -> {
+					if (method.getName().equals("createFleetMember")) builds.incrementAndGet();
+					try {
+						return method.invoke(delegate, args);
+					} catch (InvocationTargetException exception) {
+						throw exception.getCause();
+					}
+				}));
+		var provider = new BattleNext_BattleSourceProvider();
+		assertTrue(provider.reloadCatalogs().isEmpty());
+		assertEquals(0, builds.get());
+		var validation = provider.getValidation();
+		assertTrue(validation.fleetResult("alpha").failures().isEmpty());
+		assertEquals(1, builds.get());
+		assertTrue(validation.fleetResult("alpha").failures().isEmpty());
+		assertEquals(1, builds.get());
+		assertTrue(validation.fleetResult("beta").failures().isEmpty());
+		assertEquals(2, builds.get());
+		standard("beta", "beta", "missing_variant");
+		assertTrue(provider.reloadCatalogs().isEmpty());
+		assertEquals(2, builds.get());
+		assertTrue(validation.fleetResult("alpha").failures().isEmpty());
+		assertEquals(3, builds.get());
+		assertEquals(BattleNext_BattleValidation.FailureKind.ASSEMBLY, validation.fleetResult("beta").failures().get(0).kind());
+		assertEquals(3, builds.get());
+	}
 
 	@Test
 	void explicitQuickBattleLoadingRetainsValidRowsAndSharesPvpValidation() throws Exception {

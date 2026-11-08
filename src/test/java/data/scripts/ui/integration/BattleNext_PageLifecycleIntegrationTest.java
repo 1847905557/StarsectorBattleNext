@@ -40,6 +40,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture {
 
 	@Test
+	void openingManagementLoadsEachFleetOnceAndSharesTheCatalogWithQuickBattles() throws Exception {
+		var fleets = new BattleNext_FleetStore();
+		fleets.reload();
+		for (String id : List.of("alpha", "beta", "unrelated")) {
+			fleets.save(new BattleNext_FleetModel(id, id, List.of(), List.of(), List.of()));
+		}
+		var manager = new BattleNext_UiManager(() -> {});
+		manager.attach(panel(1400f, 900f, manager));
+		for (int iteration = 0; iteration < 2; iteration++) {
+			dataReads.clear();
+			manager.open();
+			Object page = getField(manager, "battleSelectorPage");
+			Object editor = getField(page, "quickBattleEditor");
+			assertSame(getField(page, "fleetStore"), getField(editor, "fleetStore"));
+			for (String folder : List.of("alpha", "beta", "unrelated")) {
+				assertEquals(1L, dataReads.stream().filter(path -> path.equals("loadJSON:tournament/" + folder + "/fleet_data.json")).count());
+			}
+			assertTrue(((BattleNext_FleetStore) getField(editor, "fleetStore")).isLoaded());
+			manager.buttonPressed("close");
+		}
+	}
+
+	@Test
 	void abandoningAnInvalidDraftClearsErrorsBeforeTheNextEditingSession() throws Exception {
 		var page = new BattleNext_FleetLibraryPage(() -> {}, Runnable::run, (description, action) -> {});
 		page.attach(panel(1400f, 900f, new BaseCustomUIPanelPlugin()));

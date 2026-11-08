@@ -39,10 +39,10 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
-	private final BattleNext_BattleSourceProvider provider = new BattleNext_BattleSourceProvider();
-	private final BattleNext_QuickBattleStore store = provider.getQuickBattleStore();
-	private final BattleNext_FleetStore fleetStore = provider.getFleetStore();
-	private final BattleNext_BattleValidation validation = provider.getValidation();
+	private final BattleNext_BattleSourceProvider provider;
+	private final BattleNext_QuickBattleStore store;
+	private final BattleNext_FleetStore fleetStore;
+	private final BattleNext_BattleValidation validation;
 	private final BattleNext_I18nSection battleStrings = BattleNext_I18nSection.getInstance("Battle", "BattleNext_battle_");
 	private final List<BattleNext_QuickBattleModel> entries = new ArrayList<>();
 	private final Map<BattleNext_QuickBattleModel, Object> rowKeys = new IdentityHashMap<>();
@@ -53,8 +53,16 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	private boolean loaded;
 
 	public BattleNext_QuickBattleEditor(Runnable backAction, CustomUIPanelPlugin inputOwner) {
+		this(backAction, inputOwner, new BattleNext_BattleSourceProvider());
+	}
+
+	public BattleNext_QuickBattleEditor(Runnable backAction, CustomUIPanelPlugin inputOwner, BattleNext_BattleSourceProvider provider) {
 		this.backAction = backAction;
 		this.inputOwner = inputOwner;
+		this.provider = provider;
+		store = provider.getQuickBattleStore();
+		fleetStore = provider.getFleetStore();
+		validation = provider.getValidation();
 	}
 
 	@Override
@@ -115,7 +123,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 	}
 
 	private void load() {
-		List<String> errors = provider.reloadQuickBattleCatalog();
+		List<String> errors = store.isLoaded() ? provider.getCatalogErrors() : provider.reloadQuickBattleCatalog();
 		statusText = errors.isEmpty() ? "" : strings.get("load_failed") + ": " + String.join(" | ", errors);
 		entries.clear();
 		entries.addAll(store.getAll());
@@ -313,6 +321,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	@Override
 	protected void restoreDraft() {
+		provider.reloadQuickBattleCatalog();
 		load();
 		viewState = null;
 	}

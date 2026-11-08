@@ -83,22 +83,6 @@ public class BattleNext_BattleValidation {
 		fleetResults.clear();
 		ruleResults.clear();
 		fleetRevision = fleets.getRevision();
-		BattleNext_FleetBuilder builder = new BattleNext_FleetBuilder();
-		for (BattleNext_FleetModel fleet : fleets.getAll()) {
-			List<Failure> failures = new ArrayList<>();
-			try {
-				BattleNext_AssembledFleet result = builder.build(fleet);
-				assembled.put(fleet.getId(), result);
-				for (String error : result.getMemberErrors()) {
-					failures.add(new Failure(FailureKind.ASSEMBLY, fleet.getId(), fleet.getId() + " " + error));
-				}
-			} catch (RuntimeException exception) {
-				failures.add(new Failure(FailureKind.ASSEMBLY, fleet.getId(), fleet.getId() + ": " + exception.getMessage()));
-				BattleNext_Logger.warn(BattleNext_BattleValidation.class, "battle.fleet.validation.failed",
-						BattleNext_Logger.fields().put("fleet_id", fleet.getId()).build(), exception);
-			}
-			fleetResults.put(fleet.getId(), new Result(failures));
-		}
 	}
 
 	public Result fleetResult(String id) {
@@ -107,7 +91,23 @@ public class BattleNext_BattleValidation {
 		}
 		Result reference = referenceResult(id);
 		if (reference.isBlocking()) return reference;
-		return fleetResults.get(id);
+		return fleetResults.computeIfAbsent(id, this::assemble);
+	}
+
+	private Result assemble(String id) {
+		List<Failure> failures = new ArrayList<>();
+		try {
+			BattleNext_AssembledFleet result = new BattleNext_FleetBuilder().build(fleets.get(id));
+			assembled.put(id, result);
+			for (String error : result.getMemberErrors()) {
+				failures.add(new Failure(FailureKind.ASSEMBLY, id, id + " " + error));
+			}
+		} catch (RuntimeException exception) {
+			failures.add(new Failure(FailureKind.ASSEMBLY, id, id + ": " + exception.getMessage()));
+			BattleNext_Logger.warn(BattleNext_BattleValidation.class, "battle.fleet.validation.failed",
+					BattleNext_Logger.fields().put("fleet_id", id).build(), exception);
+		}
+		return new Result(failures);
 	}
 
 	public Result referenceResult(String id) {

@@ -4,11 +4,31 @@ import data.test.fixture.BattleNext_TestFleetIoFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 class BattleNext_ModFileManagerTest extends BattleNext_TestFleetIoFixture {
+
+	@Test
+	void boundedListingVisitsOnlySelectedDirectoriesAndKeepsTheirImmediateFiles() throws Exception {
+		write("tournament/player1_data.csv", "root\n");
+		write("tournament/fleet/fleet_data.json", "{}\n");
+		write("tournament/fleet/local.variant", "{}\n");
+		write("tournament/fleet/backup/fleet_data.json", "{}\n");
+		write("tournament/_reports/report.json", "{}\n");
+		List<String> visited = new ArrayList<>();
+		List<String> paths = BattleNext_ModFileManager.list("tournament", 2, path -> {
+			visited.add(path);
+			return !path.endsWith("/_reports");
+		});
+		assertEquals(List.of("tournament/fleet/fleet_data.json", "tournament/fleet/local.variant", "tournament/player1_data.csv"), paths);
+		assertEquals(List.of("tournament/_reports", "tournament/fleet"), visited.stream().sorted().toList());
+		assertEquals(5, BattleNext_ModFileManager.list("tournament", true).size());
+	}
 
 	@ParameterizedTest
 	@ValueSource(strings = {"", ".", "starsector-core/.."})
