@@ -18,7 +18,7 @@ public class BattleNext_OptionField extends BattleNext_TooltipBasedWidget {
 	}
 
 	private static final float PICKER_BUTTON_WIDTH = 32f;
-	private static final float PICKER_ROW_TOP_GAP = 2f;
+	private static final float PICKER_ROW_TOP_GAP = BattleNext_PageLayout.CONTROL_GAP;
 
 	private final BattleNext_OptionPicker.OptionChoiceSource source;
 	private final OptionSelectionMode mode;

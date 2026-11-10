@@ -1,5 +1,6 @@
 package data.scripts.campaign.luna;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -39,7 +40,7 @@ class BattleNext_LunaPinnedVariantPanelTest extends BattleNext_TestVariantFixtur
 		assertEquals("Parent - Unsubmitted", name(display).getText());
 		assertAligned(display);
 		PositionAPI grid = detailBounds(display);
-		assertEquals(width - 40f, grid.getWidth());
+		assertEquals(width - BattleNext_PageLayout.SECTION_GAP * 4f, grid.getWidth());
 		for (String key : List.of("plugins", "modules", "groups", "wings")) {
 			TooltipState state = tooltips.get(lists(display).get(key));
 			assertTrue(state.isScrollable());

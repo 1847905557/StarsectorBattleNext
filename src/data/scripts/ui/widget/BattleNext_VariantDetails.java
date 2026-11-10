@@ -127,8 +127,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 					SECTION_HEADER_HEIGHT);
 			lists.put(entry.getKey(), zone.list());
 			if (zone.list().getExternalScroller() != null) {
-				float limit = Math.max(0f, zone.list().getHeightSoFar() - zone.height());
-				zone.list().getExternalScroller().setYOffset(Math.min(limit, offsets.getOrDefault(entry.getKey(), 0f)));
+				BattleNext_PageLayout.restoreScrollOffset(zone.list(), zone.height(), offsets.getOrDefault(entry.getKey(), 0f));
 			}
 		}
 	}
@@ -184,7 +183,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 				SECTION_HEADER_HEIGHT);
 		lists.put("identity", identity);
 		if (identity.getExternalScroller() != null) {
-			identity.getExternalScroller().setYOffset(Math.min(Math.max(0f, identity.getHeightSoFar() - identityHeight), offset));
+			BattleNext_PageLayout.restoreScrollOffset(identity, identityHeight, offset);
 		}
 	}
 
@@ -364,7 +363,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		TooltipMakerAPI text = row.createUIElement(textWidth, WEAPON_ROW_HEIGHT, false);
 		BattleNext_UiTheme.configure(text);
 		text.setTextWidthOverride(textWidth);
-		LabelAPI label = text.addPara(text.shortenString(title, Math.max(1f, textWidth - 4f)), 0f);
+		LabelAPI label = text.addPara(text.shortenString(title, Math.max(1f, textWidth)), 0f);
 		label.getPosition().inTL(0f, (WEAPON_ROW_HEIGHT - label.getPosition().getHeight()) * 0.5f);
 		text.setHeightSoFar(WEAPON_ROW_HEIGHT);
 		row.addUIElement(text).inTL(textX, 0f);
@@ -372,7 +371,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		list.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
 			public float getTooltipWidth(Object tooltipParam) {
-				return 360f;
+				return BattleNext_EquipmentTooltip.WIDTH;
 			}
 
 			@Override
@@ -473,7 +472,7 @@ public class BattleNext_VariantDetails extends BattleNext_PanelBasedWidget {
 		caption.addTooltipToPrevious(new BaseTooltipCreator() {
 			@Override
 			public float getTooltipWidth(Object tooltipParam) {
-				return 360f;
+				return BattleNext_EquipmentTooltip.WIDTH;
 			}
 
 			@Override

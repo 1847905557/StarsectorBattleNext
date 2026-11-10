@@ -27,6 +27,7 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float CAMERA_BASE_SPEED = 0.3f;
 	private static final float CAMERA_ACCEL_PER_SEC = 0.3f;
 	private static final float CAMERA_MAX_SPEED = 2f;
+	private static final float CAMERA_DIAGONAL = (float) (1 / Math.sqrt(2));
 
 	// Viewport fraction multiplier applied per mouse wheel notch.
 	private static final float CAMERA_ZOOM_STEP = 1.1f;
@@ -132,8 +133,8 @@ public class BattleNext_FreeCameraPlugin extends BaseEveryFrameCombatPlugin {
 				float speed = Math.min(CAMERA_BASE_SPEED + CAMERA_ACCEL_PER_SEC * moveHoldTime, CAMERA_MAX_SPEED);
 				if (dx != 0f && dy != 0f) {
 					// 1 / sqrt(2), keeps diagonal speed equal to axis speed.
-					dx *= 0.7071f;
-					dy *= 0.7071f;
+					dx *= CAMERA_DIAGONAL;
+					dy *= CAMERA_DIAGONAL;
 				}
 				center.x += dx * speed * viewportWidth * amount;
 				center.y += dy * speed * viewportHeight * amount;

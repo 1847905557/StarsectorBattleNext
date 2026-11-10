@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -39,10 +40,10 @@ public class BattleNext_TextField extends BattleNext_TooltipBasedWidget implemen
 	private static final Color DEFAULT_BORDER = new Color(35, 105, 123, 220);
 	private static final Color SELECTION_COLOR = new Color(0.35f, 0.75f, 0.9f, 0.35f);
 	private static final float CARET_WIDTH = 2f;
-	private static final float DEFAULT_TEXT_SIDE_PADDING = 3f;
+	private static final float DEFAULT_TEXT_SIDE_PADDING = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float TEXT_LABEL_WIDTH_OVERHANG = 4f;
-	private static final float SELECTION_VERTICAL_INSET = 3f;
-	private static final float CARET_VERTICAL_INSET = 4f;
+	private static final float SELECTION_VERTICAL_INSET = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float CARET_VERTICAL_INSET = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float CURSOR_BLINK_CYCLES_PER_SECOND = 2f;
 	private static final int CURSOR_BLINK_PHASE_COUNT = 2;
 	private static final float CURSOR_BLINK_PERIOD = 2f;

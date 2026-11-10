@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -182,8 +183,8 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 		assertEquals(labels.get(2).getPosition().getWidth(), attribution.getPosition().getWidth());
 		assertEquals(labels.get(2).getPosition().getX(), attribution.getPosition().getX());
 		assertTrue(attribution.getPosition().getHeight() > paragraphLineHeight);
-		assertGap(labels.get(2), attribution, 5f);
-		assertGap(attribution, labels.get(4), 5f);
+		assertGap(labels.get(2), attribution, BattleNext_PageLayout.CONTROL_GAP);
+		assertGap(attribution, labels.get(4), BattleNext_PageLayout.CONTROL_GAP);
 		assertEquals(520f, attribution.getPosition().getWidth());
 		assertEquals(0f, content.getPosition().getWidth());
 		assertTrue(previews.isEmpty());
@@ -219,8 +220,8 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 
 		List<LabelAPI> labels = textLabels(content);
 		assertGap(labels.get(4), labels.get(5), 8f);
-		assertGap(labels.get(5), labels.get(6), 5f);
-		assertGap(labels.get(6), labels.get(7), 5f);
+		assertGap(labels.get(5), labels.get(6), BattleNext_PageLayout.CONTROL_GAP);
+		assertGap(labels.get(6), labels.get(7), BattleNext_PageLayout.CONTROL_GAP);
 		assertGap(labels.get(7), labels.get(8), 8f);
 		assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(labels.get(5).getPosition()));
 		assertEquals(Misc.getStoryOptionColor(), labelColors.get(labels.get(8).getPosition()));
@@ -304,7 +305,7 @@ class BattleNext_SkillTooltipIntegrationTest extends BattleNext_TestSkillFixture
 			LabelAPI after = labels.get(labels.size() - 1);
 			assertEquals("default", labelFonts.get(after.getPosition()));
 			assertEquals(Misc.getHighlightColor(), labelColors.get(after.getPosition()));
-			assertGap(labels.get(5), labels.get(6), 5f);
+			assertGap(labels.get(5), labels.get(6), BattleNext_PageLayout.CONTROL_GAP);
 			assertEquals(List.of("Custom first 20%", "Custom second 30%"), textValues(content).subList(6, 8));
 		}
 

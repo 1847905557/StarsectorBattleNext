@@ -67,7 +67,7 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			TooltipMakerAPI footerStatus = panel.createUIElement(statusRect.getWidth(), statusRect.getHeight(), false);
 			statusLabel = footerStatus.addPara(status, 0f);
 			footerStatus.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), footerStatus.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
-			statusLabel.getPosition().inTL(0f, BattleNext_PageLayout.MANAGEMENT_FOOTER_STATUS_TOP_INSET);
+			statusLabel.getPosition().inTL(0f, (statusRect.getHeight() - statusLabel.getPosition().getHeight()) * 0.5f);
 			footerStatus.setHeightSoFar(statusRect.getHeight());
 
 			panel.addUIElement(footerStatus).inTL(statusRect.getX(), statusRect.getY());
@@ -110,7 +110,23 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 			status = "";
 		}
 
-		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect);
+		float buttonWidth = BattleNext_PageLayout.MANAGEMENT_DELETE_BUTTON_WIDTH;
+		float buttonHeight = BattleNext_PageLayout.MANAGEMENT_DELETE_BUTTON_HEIGHT;
+		UIRect actions = BattleNext_PageLayout.managementActionsRect(detailRect, buttonHeight);
+		UIRect deleteRect = BattleNext_PageLayout.managementDeleteButtonLocalRect(actions, buttonWidth, buttonHeight);
+		UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(actions, deleteRect);
+		String noteText = sourceNote();
+		TooltipMakerAPI note = null;
+		LabelAPI noteLabel = null;
+		if (!noteText.isEmpty()) {
+			note = detailPanel.createUIElement(noteRect.getWidth(), 0f, false);
+			note.setTextWidthOverride(noteRect.getWidth());
+			noteLabel = note.addPara(note.shortenString(noteText, noteRect.getWidth()), 0f);
+			actions = BattleNext_PageLayout.managementActionsRect(detailRect, Math.max(buttonHeight, noteLabel.getPosition().getHeight()));
+			deleteRect = BattleNext_PageLayout.managementDeleteButtonLocalRect(actions, buttonWidth, buttonHeight);
+			noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(actions, deleteRect);
+		}
+		UIRect editorRect = BattleNext_PageLayout.managementEditorRect(detailRect, actions);
 		CustomPanelAPI contentPanel = detailPanel.createCustomPanel(editorRect.getWidth(), editorRect.getHeight(),
 				detailPanel.getPlugin());
 		detailPanel.addComponent(contentPanel).inTL(editorRect.getX() - detailRect.getX(),
@@ -119,17 +135,15 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 
 		if (hasSelection()) {
 			ButtonAPI delete = BattleNext_PageLayout.fixedButton(detailPanel,
-					BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect),
+					deleteRect,
 					strings.get("delete"), "delete", CutStyle.ALL, true);
 			delete.setEnabled(canDelete());
 		}
 
-		String noteText = sourceNote();
-		if (!noteText.isEmpty()) {
-			UIRect noteRect = BattleNext_PageLayout.managementSourceNoteLocalRect(detailRect);
-			TooltipMakerAPI note = detailPanel.createUIElement(noteRect.getWidth(), noteRect.getHeight(), false);
-			note.addPara(note.shortenString(noteText,
-					detailRect.getWidth() - BattleNext_PageLayout.MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE), 0f);
+		if (note != null) {
+			noteLabel.getPosition().inTL(0f, (noteRect.getHeight() - noteLabel.getPosition().getHeight()) * 0.5f);
+			note.getPosition().setSize(noteRect.getWidth(), noteRect.getHeight());
+			note.setHeightSoFar(noteRect.getHeight());
 			detailPanel.addUIElement(note).inTL(noteRect.getX(), noteRect.getY());
 		}
 	}
@@ -324,8 +338,8 @@ public abstract class BattleNext_ManagementPage extends BattleNext_PageView {
 				@Override
 				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					tooltip.addPara(title + " / " + error.position(), 0f);
-					tooltip.addPara(error.diagnostic(), 5f);
-					tooltip.addPara(error.raw(), 5f);
+					tooltip.addPara(error.diagnostic(), BattleNext_PageLayout.CONTROL_GAP);
+					tooltip.addPara(error.raw(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 			}, TooltipMakerAPI.TooltipLocation.RIGHT);
 		}

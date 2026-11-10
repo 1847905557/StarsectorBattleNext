@@ -23,8 +23,7 @@ import java.util.Locale;
 public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 
 	private static final float TOP_MARGIN = 8f;
-	static final float SPRITE_WIDTH = 220f;
-	static final float SPRITE_HEIGHT = 110f;
+	private static final float SPRITE_SCALE = 0.5f;
 	static final float TIMER_FONT_SIZE = 24f;
 	private static final float TRANSITION_TIME = 0.5f;
 	private static final Color TEXT_COLOR = Color.WHITE;
@@ -35,6 +34,7 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 	private CombatEngineAPI engine;
 	private BattleNext_FontData.TextObject timerText;
 	private SpriteEntity timeoutSprite;
+	private float spriteHeight;
 	private int displayedSecond = -1;
 	private float resultStart = -1f;
 	private float resultTimerAlpha;
@@ -118,8 +118,8 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 		}
 	}
 
-	static Vector2f clockCenter(float screenWidth, float screenHeight) {
-		return new Vector2f(screenWidth * 0.5f, screenHeight - TOP_MARGIN - SPRITE_HEIGHT * 0.5f);
+	private Vector2f clockCenter(float screenWidth, float screenHeight) {
+		return new Vector2f(screenWidth * 0.5f, screenHeight - TOP_MARGIN - spriteHeight * 0.5f);
 	}
 
 	private void applyTimeout() {
@@ -145,7 +145,8 @@ public class BattleNext_BattleClockPlugin extends BaseEveryFrameCombatPlugin {
 		timeoutSprite = BattleNext_BoxBasedUtils.addSprite(sprite, CombatEngineLayers.JUST_BELOW_WIDGETS);
 		timeoutSprite.setCustomPrimeMatrix();
 		timeoutSprite.setPrimeMatrix(TransformUtil.createWindowOrthoMatrix(null));
-		timeoutSprite.setBaseSizePerTiles(SPRITE_WIDTH * 0.5f, SPRITE_HEIGHT * 0.5f);
+		spriteHeight = sprite.getHeight() * SPRITE_SCALE;
+		timeoutSprite.setBaseSizePerTiles(sprite.getWidth() * SPRITE_SCALE * 0.5f, spriteHeight * 0.5f);
 		timeoutSprite.setNormalBlend();
 		timeoutSprite.getMaterialData().setColor(Color.WHITE);
 		timeoutSprite.getMaterialData().setColorAlpha(0f);

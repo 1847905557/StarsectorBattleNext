@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -250,7 +251,7 @@ class BattleNext_VariantPropertiesTooltipIntegrationTest extends BattleNext_Test
 			PositionAPI previous = rendered.get(index - 1).getPosition();
 			float gap = previous.getY() - label.getPosition().getY() - label.getPosition().getHeight();
 			boolean row = index > 4 && !heading && !footer;
-			assertEquals(index == 4 || row ? 2f : 8f, gap);
+			assertEquals(index == 4 || row ? BattleNext_PageLayout.CONTROL_GAP : 8f, gap);
 		}
 		if (!empty.isEmpty()) {
 			assertEquals(summary, rendered.get(rendered.size() - 1).getText());

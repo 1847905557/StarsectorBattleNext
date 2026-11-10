@@ -33,7 +33,7 @@ import java.util.function.Function;
 
 public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 
-	private static final float INSET = 10f;
+	private static final float INSET = BattleNext_PageLayout.SECTION_GAP;
 	private final Runnable closeAction;
 	private final BattleNext_FleetStore store;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
@@ -163,7 +163,7 @@ public class BattleNext_LunaFleetSavePanel extends BaseCustomUIPanelPlugin {
 		}
 		membersContent.addSpacer(INSET);
 		membersPanel.addUIElement(membersContent).inTL(-BattleNext_PageLayout.CUSTOM_COMPONENT_LEFT_INSET, 0f);
-		membersContent.getExternalScroller().setYOffset(Math.min(offset, Math.max(0f, membersContent.getHeightSoFar() - height)));
+		BattleNext_PageLayout.restoreScrollOffset(membersContent, height, offset);
 		saveButton.setText(strings.get(saved ? "saved" : "save"));
 		saveButton.setEnabled(!closed && snapshot != null && !saved);
 	}

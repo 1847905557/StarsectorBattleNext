@@ -1,5 +1,6 @@
 package data.scripts.ui.integration;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -81,7 +82,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			case "getSpriteName" -> "graphics/parent.png";
 			case "getDescriptionId" -> "parent_text";
 			case "getHullSize" -> ShipAPI.HullSize.FRIGATE;
-			case "getSuppliesToRecover" -> 5f;
+			case "getSuppliesToRecover" -> BattleNext_PageLayout.CONTROL_GAP;
 			case "getHints" -> EnumSet.noneOf(ShipHullSpecAPI.ShipTypeHints.class);
 			case "getDefenseType" -> ShieldAPI.ShieldType.OMNI;
 			case "getNoCRLossTime" -> 1000f;
@@ -238,7 +239,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(components.get(0).getPosition()));
 			PositionAPI titlePosition = components.get(0).getPosition();
 			PositionAPI idPosition = components.get(1).getPosition();
-			assertEquals(5f, titlePosition.getY() - idPosition.getY() - idPosition.getHeight());
+			assertEquals(BattleNext_PageLayout.CONTROL_GAP, titlePosition.getY() - idPosition.getY() - idPosition.getHeight());
 			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 0", ((LabelAPI) components.get(2)).getText());
 			assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0", ((LabelAPI) components.get(3)).getText());
 			assertEquals(8f, components.get(5).getPosition().getHeight());
@@ -249,7 +250,7 @@ class BattleNext_OptionPickerConsumersIntegrationTest extends BattleNext_TestVar
 			assertEquals(BattleNext_UiTheme.ACCENT, labelColors.get(components.get(0).getPosition()));
 			assertEquals("default", labelFonts.get(components.get(2).getPosition()));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(2).getPosition()));
-			assertEquals(5f, components.get(0).getPosition().getY() - components.get(1).getPosition().getY()
+			assertEquals(BattleNext_PageLayout.CONTROL_GAP, components.get(0).getPosition().getY() - components.get(1).getPosition().getY()
 					- components.get(1).getPosition().getHeight());
 			assertEquals(8f, components.get(1).getPosition().getY() - components.get(2).getPosition().getY()
 					- components.get(2).getPosition().getHeight());

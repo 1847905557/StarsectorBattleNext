@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.characters.SkillSpecAPI.SkillEffectSpecAPI;
@@ -23,11 +24,11 @@ public class BattleNext_SkillSourceProvider extends BattleNext_BaseSourceProvide
 	private static final float ADVANCED_SKILL_LEVEL_THRESHOLD = 1f;
 	private static final int ADVANCED_SKILL_MAX_STACK = 2;
 	private static final int BASIC_SKILL_MAX_STACK = 1;
-	private static final float SCOPE_GAP = 5f;
+	private static final float SCOPE_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float TOOLTIP_WIDTH = 520f;
-	private static final float AUTHOR_GAP = 5f;
-	private static final float EFFECT_GROUP_GAP = 8f;
-	private static final float EFFECT_GAP = 5f;
+	private static final float AUTHOR_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float EFFECT_GROUP_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float EFFECT_GAP = BattleNext_PageLayout.CONTROL_GAP;
 
 	private final BattleNext_I18nSection commonStrings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 

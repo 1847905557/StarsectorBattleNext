@@ -37,9 +37,9 @@ class BattleNext_TitleEntryTest {
 		assertEquals(96f, BattleNext_TitleEntry.ENTRY_WIDTH);
 		assertEquals(24f, BattleNext_TitleEntry.ENTRY_HEIGHT);
 		assertEquals(8f, BattleNext_TitleEntry.ENTRY_BORDER_WIDTH);
-		assertTrue(BattleNext_TitleEntry.containsEntry(5f, 133f));
-		assertTrue(BattleNext_TitleEntry.containsEntry(117f, 173f));
-		assertFalse(BattleNext_TitleEntry.containsEntry(118f, 150f));
+		assertTrue(BattleNext_TitleEntry.containsEntry(BattleNext_PageLayout.SECTION_GAP, 133f));
+		assertTrue(BattleNext_TitleEntry.containsEntry(BattleNext_PageLayout.SECTION_GAP + BattleNext_TitleEntry.ENTRY_WIDTH + BattleNext_TitleEntry.ENTRY_BORDER_WIDTH * 2f, 173f));
+		assertFalse(BattleNext_TitleEntry.containsEntry(BattleNext_PageLayout.SECTION_GAP + BattleNext_TitleEntry.ENTRY_WIDTH + BattleNext_TitleEntry.ENTRY_BORDER_WIDTH * 2f + 1f, 150f));
 		assertFalse(BattleNext_TitleEntry.containsEntry(30f, 174f));
 		assertSame(Color.GRAY, BattleNext_TitleEntry.iconTint(false, Color.GRAY, Color.CYAN));
 		assertSame(Color.CYAN, BattleNext_TitleEntry.iconTint(true, Color.GRAY, Color.CYAN));

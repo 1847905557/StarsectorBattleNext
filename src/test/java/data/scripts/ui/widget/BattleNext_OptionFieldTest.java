@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -79,7 +80,7 @@ class BattleNext_OptionFieldTest extends BattleNext_TestPageFixture {
 		assertEquals(32f, buttonRow.getPosition().getWidth());
 		assertEquals(28f, buttonRow.getPosition().getHeight());
 		assertEquals("...", buttonLabels.get("TOGGLE"));
-		assertEquals(30f, tooltips.get(host).getUsedHeight());
+		assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT + BattleNext_PageLayout.CONTROL_GAP, tooltips.get(host).getUsedHeight());
 		assertSame(overlay, getField(picker, "overlayHost"));
 		owner.addUIElement(host).inTL(0f, 0f);
 

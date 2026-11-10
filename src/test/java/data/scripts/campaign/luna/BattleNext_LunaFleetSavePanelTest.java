@@ -1,5 +1,6 @@
 package data.scripts.campaign.luna;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -201,8 +202,8 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		assertEquals(1, children.get(root).size());
 		assertTrue(name.getPosition().getX() >= root.getPosition().getX());
 		assertTrue(name.getPosition().getX() + name.getPosition().getWidth() <= root.getPosition().getX() + width);
-		assertEquals(root.getPosition().getY() + 10f, buttonPositions.get("fleet_capture_save").getY());
-		assertEquals(root.getPosition().getY() + 10f, buttonPositions.get("fleet_capture_close").getY());
+		assertEquals(root.getPosition().getY() + BattleNext_PageLayout.SECTION_GAP, buttonPositions.get("fleet_capture_save").getY());
+		assertEquals(root.getPosition().getY() + BattleNext_PageLayout.SECTION_GAP, buttonPositions.get("fleet_capture_close").getY());
 		assertTrue(buttonPositions.get("fleet_capture_save").getX() + buttonPositions.get("fleet_capture_save").getWidth()
 				< buttonPositions.get("fleet_capture_close").getX());
 		String id = ((BattleNext_FleetModel) getField(display, "snapshot")).getId();
@@ -253,8 +254,8 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		BattleNext_TextField name = (BattleNext_TextField) getField(display, "name");
 		assertTrue(name.getPosition().getX() >= root.getPosition().getX());
 		assertTrue(name.getPosition().getX() + name.getPosition().getWidth() <= root.getPosition().getX() + 320f);
-		assertEquals(root.getPosition().getY() + 10f, buttonPositions.get("fleet_capture_save").getY());
-		assertEquals(root.getPosition().getY() + 10f, buttonPositions.get("fleet_capture_close").getY());
+		assertEquals(root.getPosition().getY() + BattleNext_PageLayout.SECTION_GAP, buttonPositions.get("fleet_capture_save").getY());
+		assertEquals(root.getPosition().getY() + BattleNext_PageLayout.SECTION_GAP, buttonPositions.get("fleet_capture_close").getY());
 		assertTrue(buttonPositions.get("fleet_capture_save").getX() + buttonPositions.get("fleet_capture_save").getWidth()
 				< buttonPositions.get("fleet_capture_close").getX());
 		PositionAPI field = name.getPosition();
@@ -277,10 +278,10 @@ class BattleNext_LunaFleetSavePanelTest extends BattleNext_TestCampaignFleetFixt
 		CustomPanelAPI body = (CustomPanelAPI) children.get(expanded).get(1);
 		TooltipMakerAPI detail = (TooltipMakerAPI) children.get(body).get(0);
 		assertTrue(tooltips.get(detail).getComponents().get(0).getPosition().getHeight() > paragraphLineHeight);
-		assertEquals(detail.getHeightSoFar() + 20f, body.getPosition().getHeight());
+		assertEquals(detail.getHeightSoFar() + BattleNext_PageLayout.SECTION_GAP * 2f, body.getPosition().getHeight());
 		for (CustomPanelAPI row : memberRows(display)) {
-			assertEquals(300f, row.getPosition().getWidth());
-			assertEquals(root.getPosition().getX() + 10f, row.getPosition().getX());
+			assertEquals(320f - BattleNext_PageLayout.SECTION_GAP * 2f, row.getPosition().getWidth());
+			assertEquals(root.getPosition().getX() + BattleNext_PageLayout.SECTION_GAP, row.getPosition().getX());
 		}
 		display.close();
 	}

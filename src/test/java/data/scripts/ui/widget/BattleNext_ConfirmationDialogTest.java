@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -8,6 +9,10 @@ import data.test.fixture.BattleNext_TestPageFixture;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,6 +61,42 @@ class BattleNext_ConfirmationDialogTest extends BattleNext_TestPageFixture {
 			assertTrue(children.get(root).isEmpty());
 			assertTrue(((List<?>) getField(dialog, "ownedPanels")).isEmpty());
 		}
+		dialog.close();
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {1, 40})
+	void measuredChineseMessageKeepsStatusAndButtonsBelowItsContent(int repeats) throws Exception {
+		BattleNext_ConfirmationDialog dialog = new BattleNext_ConfirmationDialog(
+				new BattleNext_ConfirmationDialog.ConfirmationDialogHost() {
+					@Override
+					public boolean saveCurrentPage() {
+						return true;
+					}
+
+					@Override
+					public String getSaveError() {
+						return "";
+					}
+
+					@Override
+					public void discardCurrentPage() {
+
+					}
+				}, new BattleNext_UiInputRouter());
+		dialog.attach(panel(800f, 1200f, new BaseCustomUIPanelPlugin()));
+		dialog.requestAction("确认", "舰队与成员信息。".repeat(repeats), () -> {});
+		CustomPanelAPI popup = (CustomPanelAPI) getField(dialog, "confirmation");
+		TooltipMakerAPI message = (TooltipMakerAPI) children.get(popup).get(0);
+		TooltipMakerAPI status = (TooltipMakerAPI) getField(dialog, "confirmationStatusContent");
+		PositionAPI button = buttonPositions.get("action_confirm");
+		PositionAPI text = tooltips.get(message).getViewport();
+		PositionAPI statusBounds = tooltips.get(status).getViewport();
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, text.getY() - statusBounds.getY() - statusBounds.getHeight());
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, statusBounds.getY() - button.getY() - button.getHeight());
+		assertTrue(popup.getPosition().getHeight() >= 160f);
+		assertTrue(text.getHeight() >= tooltips.get(message).getUsedHeight());
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, button.getY() - popup.getPosition().getY());
 		dialog.close();
 	}
 

@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
@@ -21,8 +22,7 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 	private static final float LABEL_WIDTH_SHARE = 0.25f;
 	private static final float BUTTON_MAX_WIDTH = 420f;
 	private static final float BUTTON_WIDTH_SHARE = 0.45f;
-	private static final float CONTROL_GAP = 12f;
-	private static final float LABEL_TOP_INSET = 5f;
+	private static final float CONTROL_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	private final CustomPanelAPI overlayHost;
 	private final BattleNext_DropdownField.DropdownSelectionListener listener;
@@ -53,7 +53,7 @@ public class BattleNext_BattleSourceField extends BattleNext_PanelBasedWidget {
 		TooltipMakerAPI label = labelRect.beginTooltip(contentPanel, false);
 		label.setParaOrbitronLarge();
 		this.label = label.addPara(battleStrings.get("source_label"), 0f);
-		this.label.getPosition().inTL(0f, LABEL_TOP_INSET);
+		this.label.getPosition().inTL(0f, (areaHeight - this.label.getPosition().getHeight()) * 0.5f);
 		label.setHeightSoFar(areaHeight);
 		labelRect.addTooltip();
 		CustomPanelAPI buttonPanel = new UIRect(groupX + labelWidth + CONTROL_GAP, 0f,

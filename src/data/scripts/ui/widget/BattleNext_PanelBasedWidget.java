@@ -1,17 +1,13 @@
 package data.scripts.ui.widget;
 
-import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_GeometryRenderer.GeometryClipState;
 import data.scripts.ui.BattleNext_UiInputRouter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -19,19 +15,16 @@ import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
 import java.util.function.IntToDoubleFunction;
 
-public abstract class BattleNext_PanelBasedWidget {
+public abstract class BattleNext_PanelBasedWidget extends BattleNext_Widget {
 
 	protected CustomPanelAPI panel;
-	protected BattleNext_UiInputRouter inputRouter;
-
-	private final List<OwnedPanel> ownedPanels = new ArrayList<>();
 
 	protected BattleNext_PanelBasedWidget() {
 		this(BattleNext_UiInputRouter.current());
 	}
 
 	protected BattleNext_PanelBasedWidget(BattleNext_UiInputRouter inputRouter) {
-		this.inputRouter = inputRouter;
+		super(inputRouter);
 	}
 
 	public final CustomPanelAPI attach(CustomPanelAPI panel) {
@@ -52,6 +45,7 @@ public abstract class BattleNext_PanelBasedWidget {
 		return panel;
 	}
 
+	@Override
 	public final void close() {
 		closeOverlays();
 		clearContent();
@@ -60,41 +54,8 @@ public abstract class BattleNext_PanelBasedWidget {
 		clearPageState();
 	}
 
-	public final void closeOverlays() {
-		clearOverlays();
-	}
-
-	public final boolean handleGlobalInput(List<InputEventAPI> events) {
-		return handleWidgetInput(events);
-	}
-
 	public final CustomPanelAPI getPanel() {
 		return panel;
-	}
-
-	protected final <T extends CustomPanelAPI> T ownPanel(UIPanelAPI parent, T child) {
-		ownedPanels.add(new OwnedPanel(parent, child));
-		return child;
-	}
-
-	protected final void releasePanel(CustomPanelAPI child) {
-		for (int index = ownedPanels.size() - 1; index >= 0; index--) {
-			OwnedPanel owned = ownedPanels.get(index);
-			if (owned.child != child) continue;
-			owned.parent.removeComponent(child);
-			ownedPanels.remove(index);
-			return;
-		}
-	}
-
-	private void clearOwnedPanels() {
-		while (!ownedPanels.isEmpty()) {
-			releasePanel(ownedPanels.get(ownedPanels.size() - 1).child);
-		}
-	}
-
-	private record OwnedPanel(UIPanelAPI parent, CustomPanelAPI child) {
-
 	}
 
 	protected void bindInput() {
@@ -103,18 +64,6 @@ public abstract class BattleNext_PanelBasedWidget {
 
 	protected void clearPageState() {
 
-	}
-
-	protected void clearContent() {
-
-	}
-
-	protected void clearOverlays() {
-
-	}
-
-	protected boolean handleWidgetInput(List<InputEventAPI> events) {
-		return false;
 	}
 
 	protected abstract void buildContent(CustomPanelAPI panel);
@@ -173,6 +122,10 @@ public abstract class BattleNext_PanelBasedWidget {
 			return offsets[offsets.length - 1];
 		}
 
+		public void mount(int row) {
+			if (mounted.add(row)) mount.accept(row);
+		}
+
 		public void setHeight(int row, float height) {
 			float difference = height - (offsets[row + 1] - offsets[row]);
 			for (int index = row + 1; index < offsets.length; index++) offsets[index] += difference;
@@ -194,7 +147,7 @@ public abstract class BattleNext_PanelBasedWidget {
 		private void update(float scroll, float viewportHeight, float padding) {
 			int first = index(Math.max(0f, scroll - padding));
 			for (int row = first; row <= index(scroll + viewportHeight + padding) && row < offsets.length - 1; row++) {
-				if (mounted.add(row)) mount.accept(row);
+				mount(row);
 			}
 			int last = index(scroll + viewportHeight + padding);
 			for (int row : Set.copyOf(mounted)) {

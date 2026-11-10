@@ -7,9 +7,6 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 
 public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 
-	private static final float STATUS_TEXT_RIGHT_RESERVE = 10f;
-	private static final float STATUS_TEXT_TOP_INSET = 5f;
-
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 
@@ -31,10 +28,10 @@ public class BattleNext_StatusBar extends BattleNext_TooltipBasedWidget {
 	@Override
 	protected void buildContent(TooltipMakerAPI host, CustomPanelAPI panelOwner) {
 		content = host;
-		textWidth = width - STATUS_TEXT_RIGHT_RESERVE;
+		textWidth = width;
 		statusLabel = content.addPara(strings.get("ready"), 0f);
 		content.addTooltipTo(BattleNext_SaveErrors.tooltip(saveErrors::getMessagesCopy), content.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
-		statusLabel.getPosition().inTL(0f, STATUS_TEXT_TOP_INSET);
+		statusLabel.getPosition().inTL(0f, (height - statusLabel.getPosition().getHeight()) * 0.5f);
 		content.setHeightSoFar(height);
 	}
 

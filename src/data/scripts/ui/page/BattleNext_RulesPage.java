@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
 import data.model.rule.BattleNext_RuleStore;
@@ -14,8 +15,8 @@ public class BattleNext_RulesPage extends BattleNext_ManagementPage {
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection ruleStrings = BattleNext_I18nSection.getInstance("Rule", "BattleNext_rule_");
 
-	private static final float RULE_LIST_ERROR_TOP_GAP = 5f;
-	private static final float RULE_LIST_EMPTY_TOP_GAP = 8f;
+	private static final float RULE_LIST_ERROR_TOP_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float RULE_LIST_EMPTY_TOP_GAP = BattleNext_PageLayout.SECTION_GAP;
 	private final BattleNext_RuleStore store;
 	private final BattleNext_RuleEditor editor;
 

@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -89,7 +90,7 @@ class BattleNext_FleetSourceProviderTest extends BattleNext_TestPageFixture {
 		assertEquals(BattleNext_UiTheme.MUTED, labelColors.get(components.get(1).getPosition()));
 		PositionAPI title = components.get(0).getPosition();
 		PositionAPI identifier = components.get(1).getPosition();
-		assertEquals(5f, title.getY() - identifier.getY() - identifier.getHeight());
+		assertEquals(BattleNext_PageLayout.CONTROL_GAP, title.getY() - identifier.getY() - identifier.getHeight());
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_ships") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_fighter_wings") + ": 0", ((LabelAPI) components.get(2)).getText());
 		assertEquals(BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_dp") + ": 0 - " + BattleNext_TestTextCatalog.text("Fleet", "BattleNext_fleet_base_fp") + ": 0", ((LabelAPI) components.get(3)).getText());
 		assertEquals(8f, components.get(5).getPosition().getHeight());

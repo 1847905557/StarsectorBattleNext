@@ -1,5 +1,6 @@
 package data.scripts.plugin;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
@@ -26,14 +27,20 @@ import java.util.Map;
 
 public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
-	private static final float PLATE_WIDTH = 360f;
-	private static final float PLATE_HEIGHT = 80f;
+	private static final float SIDEBAR_SCALE = 0.5f;
+	private static final float SIDEBAR_LEFT_INSET = BattleNext_PageLayout.SECTION_GAP;
+	private static final float OPENING_TEXT_INSET = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SIDEBAR_TEXT_INSET = BattleNext_PageLayout.SECTION_GAP;
 	private static final float END_DURATION = 11.25f;
 
 	private final BattleNext_ScorekeeperPlugin scorekeeper;
 	private final String playerName;
 	private final String enemyName;
-	private final Map<String, SpriteEntity> sprites = new HashMap<>();
+	private final Map<String, Visual> sprites = new HashMap<>();
+
+	private record Visual(SpriteEntity entity, float width, float height) {
+
+	}
 
 	private CombatEngineAPI engine;
 	private BattleNext_FontData.TextObject playerText;
@@ -76,13 +83,16 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 			else entity.setNormalBlend();
 			entity.getMaterialData().setColor(Color.WHITE);
 			entity.getMaterialData().setColorAlpha(0f);
-			sprites.put(key, entity);
+			sprites.put(key, new Visual(entity, sprite.getWidth(), sprite.getHeight()));
 		}
 
-		playerText = nameText(playerName, Misc.getPositiveHighlightColor(), 320f, 48f);
-		enemyText = nameText(enemyName, Misc.getNegativeHighlightColor(), 320f, 48f);
-		playerSidebarText = nameText(playerName, Misc.getPositiveHighlightColor(), 156f, 24f);
-		enemySidebarText = nameText(enemyName, Misc.getNegativeHighlightColor(), 156f, 24f);
+		float plateWidth = sprites.get("plateOpeningPlayer").width();
+		float openingTextWidth = plateWidth - OPENING_TEXT_INSET * 2f;
+		float sidebarTextWidth = plateWidth * SIDEBAR_SCALE - SIDEBAR_TEXT_INSET * 2f;
+		playerText = nameText(playerName, Misc.getPositiveHighlightColor(), openingTextWidth, 48f);
+		enemyText = nameText(enemyName, Misc.getNegativeHighlightColor(), openingTextWidth, 48f);
+		playerSidebarText = nameText(playerName, Misc.getPositiveHighlightColor(), sidebarTextWidth, 48f * SIDEBAR_SCALE);
+		enemySidebarText = nameText(enemyName, Misc.getNegativeHighlightColor(), sidebarTextWidth, 48f * SIDEBAR_SCALE);
 
 		drawText = BattleNext_FontData.getOrbitronBold();
 		drawText.setText(BattleNext_I18nSection.getInstance("Combat", "BattleNext_combat_").get("draw"));
@@ -137,8 +147,8 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
 	public void cleanup() {
 		graphicEnabled = false;
-		for (SpriteEntity entity : sprites.values()) {
-			entity.delete();
+		for (Visual visual : sprites.values()) {
+			visual.entity().delete();
 		}
 		sprites.clear();
 		if (playerText != null) playerText.dispose();
@@ -153,8 +163,8 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 		if (engine == null || !graphicEnabled || !visualsInitialized) return;
 
 		float elapsed = engine.getTotalElapsedTime(false);
-		for (SpriteEntity entity : sprites.values()) {
-			entity.getMaterialData().setColorAlpha(0f);
+		for (Visual visual : sprites.values()) {
+			visual.entity().getMaterialData().setColorAlpha(0f);
 		}
 
 		float width = Global.getSettings().getScreenWidth();
@@ -169,20 +179,23 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 	}
 
 	private void drawSidebar(float height, float alpha) {
-		drawSprite("plateSidebarPlayer", 100f, height * 0.5f + 40f, 180f, 40f, alpha);
-		drawSprite("plateSidebarEnemy", 100f, height * 0.5f - 40f, 180f, 40f, alpha);
-		drawName(playerSidebarText, 100f, height * 0.5f + 40f, alpha);
-		drawName(enemySidebarText, 100f, height * 0.5f - 40f, alpha);
+		Visual plate = sprites.get("plateSidebarPlayer");
+		float x = SIDEBAR_LEFT_INSET + plate.width() * SIDEBAR_SCALE * 0.5f;
+		float offset = plate.height() * SIDEBAR_SCALE;
+		drawSprite("plateSidebarPlayer", x, height * 0.5f + offset, SIDEBAR_SCALE, alpha);
+		drawSprite("plateSidebarEnemy", x, height * 0.5f - offset, SIDEBAR_SCALE, alpha);
+		drawName(playerSidebarText, x, height * 0.5f + offset, alpha);
+		drawName(enemySidebarText, x, height * 0.5f - offset, alpha);
 	}
 
 	private void renderOpening(float elapsed, float width, float height) {
 		if (elapsed >= 0.5f && elapsed < 4.4f) {
 			float offset = elapsed < 1f ? (1f - elapsed) * 3000f : -10f * (elapsed - 1f);
 			float alpha = elapsed < 1f ? 1f : fade(elapsed - 1f, 0f, 3.2f, 0.2f);
-			float playerX = width * 0.5f + PLATE_WIDTH * 1.2f + offset;
-			float enemyX = width * 0.5f - PLATE_WIDTH * 1.2f - offset;
-			drawSprite("plateOpeningPlayer", playerX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
-			drawSprite("plateOpeningEnemy", enemyX, height * 0.5f, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+			float playerX = width * 0.5f + sprites.get("plateOpeningPlayer").width() * 1.2f + offset;
+			float enemyX = width * 0.5f - sprites.get("plateOpeningPlayer").width() * 1.2f - offset;
+			drawSprite("plateOpeningPlayer", playerX, height * 0.5f, 1f, alpha);
+			drawSprite("plateOpeningEnemy", enemyX, height * 0.5f, 1f, alpha);
 			drawName(playerText, playerX, height * 0.5f, alpha);
 			drawName(enemyText, enemyX, height * 0.5f, alpha);
 		}
@@ -190,10 +203,10 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 
 		float time = elapsed - 1f;
 		drawSprite("BattleNext_versus", width * 0.5f, height * 0.5f + 105f - time * 42f,
-				180f, 420f, fade(time, 0f, 3.2f, 0.2f));
+				1f, fade(time, 0f, 3.2f, 0.2f));
 		if (time < 0.5f) {
 			drawSprite("BattleNext_versusFlash", width * 0.5f, height * 0.5f + 105f - time * 42f,
-					180f, 420f, 1f - time / 0.5f);
+					1f, 1f - time / 0.5f);
 		}
 	}
 
@@ -214,20 +227,18 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 				? playerText : enemyText;
 		float winnerY = height * 0.5f - 50f + time * 5f;
 		float alpha = fade(time, 0.25f, 10f, 1f);
-		drawSprite("plateWinner", width * 0.5f, winnerY, PLATE_WIDTH, PLATE_HEIGHT, alpha);
+		drawSprite("plateWinner", width * 0.5f, winnerY, 1f, alpha);
 		drawName(winnerText, width * 0.5f, winnerY, alpha);
 
 		float bannerTime = time;
 		String key = "shame".equals(endingKey) ? "BattleNext_shame" : "BattleNext_win";
 		float centerY = height * 0.5f + ("shame".equals(endingKey) ? 0f : 120f - bannerTime * 3f);
 		drawSprite(key, width * 0.5f, centerY,
-				"shame".equals(endingKey) ? 764f : 440f,
-				"shame".equals(endingKey) ? 629f : 220f,
+				1f,
 				fade(bannerTime, 0.25f, 10f, 0.5f));
 		if (bannerTime < 0.5f) {
 			drawSprite(key + "Flash", width * 0.5f, centerY,
-					"shame".equals(endingKey) ? 764f : 440f,
-					"shame".equals(endingKey) ? 629f : 220f,
+					1f,
 					fade(bannerTime, 0.25f, 10f, 0.5f) * (1f - bannerTime / 0.5f));
 		}
 	}
@@ -276,10 +287,11 @@ public class BattleNext_PageantPlugin extends BaseEveryFrameCombatPlugin {
 		text.draw(x - text.getWidth() * 0.5f, y + text.getHeight() * 0.5f);
 	}
 
-	private void drawSprite(String key, float x, float y, float width, float height, float alpha) {
+	private void drawSprite(String key, float x, float y, float scale, float alpha) {
 		if (alpha <= 0f) return;
-		SpriteEntity entity = sprites.get(key);
-		entity.setBaseSizePerTiles(width * 0.5f, height * 0.5f);
+		Visual visual = sprites.get(key);
+		SpriteEntity entity = visual.entity();
+		entity.setBaseSizePerTiles(visual.width() * scale * 0.5f, visual.height() * scale * 0.5f);
 		entity.setLocation(x, y);
 		entity.getMaterialData().setColorAlpha(alpha);
 	}

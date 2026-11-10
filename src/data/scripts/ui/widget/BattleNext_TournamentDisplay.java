@@ -66,14 +66,13 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 
 	}
 
-	private static final float TITLE_GAP = 10f;
-	private static final float CONTENT_WIDTH_RESERVE = 12f;
+	private static final float TITLE_GAP = BattleNext_PageLayout.SECTION_GAP;
 	private static final float ACTION_BUTTON_WIDTH = 180f;
-	private static final float DETAIL_GAP = 6f;
-	private static final float SECTION_GAP = 10f;
-	private static final float FLEET_GAP = 5f;
-	private static final float MATCH_GAP = 5f;
-	private static final float WARNING_GAP = 4f;
+	private static final float DETAIL_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float SECTION_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float FLEET_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float MATCH_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float WARNING_GAP = BattleNext_PageLayout.CONTROL_GAP;
 
 	private BattleNext_TournamentModel tournament;
 	private BattleNext_StartedTournament started;
@@ -229,7 +228,7 @@ public class BattleNext_TournamentDisplay extends BattleNext_PanelBasedWidget {
 		}
 		chart.setReportIds(details.reportIds());
 		chart.setEditable(isEditable(), this::selectFleet);
-		float availableWidth = Math.max(1f, rows[1].getWidth() - CONTENT_WIDTH_RESERVE);
+		float availableWidth = Math.max(1f, rows[1].getWidth() - BattleNext_PageLayout.SECTION_GAP * 2f);
 		canvas = chart.attach(viewport, content, viewport.getPosition(), inputRouter, availableWidth);
 		if (isEditable()) {
 			fleetPicker = new BattleNext_OptionPicker(inputRouter, overlayHost, fleetSource,

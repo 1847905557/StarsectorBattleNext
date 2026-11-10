@@ -310,6 +310,7 @@ public class BattleNext_TestUiFixture extends BattleNext_TestGameFixture {
 					titleColor = (Color) args[0];
 					yield null;
 				}
+				case "beginSubTooltip" -> tooltip((Float) args[0], 0f, false);
 				case "createLabel" -> {
 					LabelAPI label = label((String) args[0], (Float) args[2]);
 					labels.add((String) args[0]);

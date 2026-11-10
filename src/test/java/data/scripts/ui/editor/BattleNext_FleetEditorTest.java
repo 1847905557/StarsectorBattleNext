@@ -387,7 +387,7 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		TooltipMakerAPI viewport = ((TooltipMakerAPI[]) getField(variant, "viewports"))[1];
 		List<UIComponentAPI> memberRows = tooltips.get(viewport).getComponents();
 		assertEquals(memberRows.get(0).getPosition().getHeight() + BattleNext_ExpandablePanel.ROW_GAP
-				+ member.getHeight() + BattleNext_PageLayout.EDITOR_BUTTON_GAP + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT,
+				+ member.getHeight() + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 16f,
 				tooltips.get(viewport).getMountedHeight());
 
 		List<?> members = (List<?>) getField(editor, "memberFields");
@@ -429,8 +429,8 @@ class BattleNext_FleetEditorTest extends BattleNext_TestPageFixture {
 		for (int index = 0; index < 7; index++) {
 			PositionAPI label = components.get(firstLabel + index * 2).getPosition();
 			PositionAPI input = components.get(firstLabel + index * 2 + 1).getPosition();
-			assertEquals(5f, previous.getY() - label.getY() - label.getHeight());
-			assertEquals(pickerIndices.contains(index) ? 2f : 0f,
+			assertEquals(BattleNext_PageLayout.EDITOR_LABEL_GAP, previous.getY() - label.getY() - label.getHeight());
+			assertEquals(pickerIndices.contains(index) ? BattleNext_PageLayout.CONTROL_GAP : 0f,
 					label.getY() - input.getY() - input.getHeight());
 			assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT, input.getHeight());
 			assertEquals(firstInput.getX(), input.getX());

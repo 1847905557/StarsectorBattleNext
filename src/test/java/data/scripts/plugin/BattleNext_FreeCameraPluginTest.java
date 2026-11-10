@@ -346,6 +346,18 @@ class BattleNext_FreeCameraPluginTest extends BattleNext_TestGameFixture {
 	}
 
 	@Test
+	void diagonalMovementHasUnitLengthInViewportCoordinates() {
+		toggleCamera();
+		keys.add(Keyboard.KEY_D);
+		keys.add(Keyboard.KEY_W);
+		camera.advance(0.1f, List.of());
+		double horizontal = center.x / 2400f;
+		double vertical = center.y / 1350f;
+		assertEquals(0.033, Math.hypot(horizontal, vertical), 0.0000001);
+		assertEquals(horizontal, vertical, 0.0000001);
+	}
+
+	@Test
 	void resumingMovementStartsAtBaseAccelerationWithSavedViewport() {
 
 		toggleCamera();

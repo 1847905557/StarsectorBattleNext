@@ -23,10 +23,10 @@ import java.util.function.Supplier;
 public class BattleNext_EquipmentTooltip {
 
 	public static final float WIDTH = 360f;
-	private static final float KEY_GAP = 5f;
-	private static final float BODY_GAP = 8f;
-	private static final float ROW_GAP = 2f;
-	private static final float BOTTOM_INSET = 8f;
+	private static final float KEY_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float BODY_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float BOTTOM_INSET = BattleNext_PageLayout.SECTION_GAP;
 
 	private static final BattleNext_I18nSection STRINGS = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 

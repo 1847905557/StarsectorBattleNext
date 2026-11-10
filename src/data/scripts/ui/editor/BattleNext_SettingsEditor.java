@@ -53,7 +53,7 @@ public class BattleNext_SettingsEditor extends BattleNext_EditorView {
 		UIRect fieldArea = new UIRect(0f, 0f, areaWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT);
 		fieldContent.setTextWidthOverride(areaWidth);
 		BattleNext_PageLayout.contentTitle(fieldContent, settingsStrings.get("heading"), areaWidth, 0f);
-		fieldContent.addPara(settingsStrings.get("description"), 10f);
+		fieldContent.addPara(settingsStrings.get("description"), BattleNext_PageLayout.SECTION_GAP);
 
 		cnTextCheckbox = createCheckbox("cn_text", fieldContent, fieldArea, settingsStrings.get("cn_text"), "cnText", cnText, true);
 		fullGraphicEffectCheckbox = createCheckbox("graphics", fieldContent, fieldArea, settingsStrings.get("full_graphic_effect"), "fullGraphicEffect", graphics, true);

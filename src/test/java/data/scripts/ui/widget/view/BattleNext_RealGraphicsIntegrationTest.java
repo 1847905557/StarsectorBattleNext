@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.view;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -366,7 +367,7 @@ class BattleNext_RealGraphicsIntegrationTest extends BattleNext_TestVariantFixtu
 			GL11.glDisable(GL11.GL_SCISSOR_TEST);
 			GL11.glDisable(GL11.GL_BLEND);
 			GL11.glClearColor(1f, 0f, 1f, 1f);
-			int horizontal = Math.round(field.getPosition().getX() + 3f
+			int horizontal = Math.round(field.getPosition().getX() + BattleNext_PageLayout.CONTROL_GAP
 					+ field.getTextLabelAPI().computeTextWidth("abc"));
 			int vertical = Math.round(field.getPosition().getY() + 14f);
 			ByteBuffer pixel = BufferUtils.createByteBuffer(4);

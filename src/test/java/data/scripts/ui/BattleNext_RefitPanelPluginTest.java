@@ -41,7 +41,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI right = panel(180f, 560f, new BaseCustomUIPanelPlugin());
 		root.addComponent(right).inTL(700f, 63f);
 		for (String name : List.of("panel", "rightPanel")) {
-			Field field = BattleNext_RefitPanelPlugin.class.getDeclaredField(name);
+			Field field = ("panel".equals(name) ? BattleNext_BasePanelPlugin.class : BattleNext_RefitPanelPlugin.class).getDeclaredField(name);
 			field.setAccessible(true);
 			field.set(plugin, "panel".equals(name) ? root : right);
 		}
@@ -59,7 +59,7 @@ class BattleNext_RefitPanelPluginTest extends BattleNext_TestPageFixture {
 			assertEquals(30f, row.getHeight());
 			assertEquals(right.getPosition().getX(), row.getX());
 			float top = right.getPosition().getY() + right.getPosition().getHeight() - row.getY() - row.getHeight();
-			assertEquals(picker == sMods ? 0f : 36f, top);
+			assertEquals(picker == sMods ? 0f : 30f + BattleNext_PageLayout.CONTROL_GAP, top);
 			assertEquals(picker == sMods ? BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_s_mods") : BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mods"), getField(picker, "title"));
 			picker.close();
 		}

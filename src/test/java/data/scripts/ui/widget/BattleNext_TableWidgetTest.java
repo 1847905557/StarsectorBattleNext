@@ -38,7 +38,7 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 		assertEquals(root.getPosition().getWidth(), tooltips.get(header).getViewport().getWidth());
 		TooltipState state = tooltips.get(table.getContent());
 		assertEquals(count * 38f + 35f, state.getMountedHeight());
-		assertEquals(Math.min(222f, state.getMountedHeight() + 10f), state.getViewport().getHeight());
+		assertEquals(Math.min(222f, state.getMountedHeight() + BattleNext_PageLayout.TABLE_ROW_BOTTOM_PADDING), state.getViewport().getHeight());
 		assertTrue(state.isScrollable());
 		if (count >= 20) assertTrue(mounted.size() < count);
 		table.close();
@@ -57,7 +57,7 @@ class BattleNext_TableWidgetTest extends BattleNext_TestUiFixture {
 		LabelAPI following = content.addPara("Following paragraph", 5f);
 		for (String title : new String[]{"Management heading with a long title 50%", "管理窗口标题与中文文本 50%"}) {
 			BattleNext_PageLayout.refreshHeading(content, heading, width, title);
-			assertEquals(content.shortenString(title, content.getWidthSoFar()), heading.getText());
+			assertEquals(content.shortenString(title, width - BattleNext_PageLayout.SECTION_GAP * 2f), heading.getText());
 			assertEquals("Following paragraph", following.getText());
 		}
 		owner.addUIElement(content).inTL(0f, 0f);

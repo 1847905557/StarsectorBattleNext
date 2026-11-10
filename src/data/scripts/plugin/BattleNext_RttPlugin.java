@@ -30,7 +30,7 @@ public class BattleNext_RttPlugin extends BaseEveryFrameCombatPlugin {
 	private static final float RING_PADDING = 30f;
 	private static final float GROUP_FONT_SIZE = 16f;
 	private static final float GROUP_TEXT_GAP = 4f;
-	private static final float RING_DIAGONAL = 0.70710677f;
+	private static final float RING_DIAGONAL = (float) (1 / Math.sqrt(2));
 	private static final Color SELECTION_COLOR = new Color(75, 215, 230, 230);
 	private static final Color DRAG_FILL = new Color(75, 215, 230, 48);
 	private static final Color MOVE_COLOR = new Color(75, 215, 230, 190);

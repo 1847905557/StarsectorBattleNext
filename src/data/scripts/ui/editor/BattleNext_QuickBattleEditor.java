@@ -30,12 +30,9 @@ import java.util.Map;
 public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 	private static final int FOOTER_BUTTON_COUNT = 3;
-	private static final float FOOTER_BUTTON_GAP = 10f;
+	private static final float FOOTER_BUTTON_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float FOOTER_BUTTON_MAX_WIDTH = 150f;
 
-	private static final float STATUS_CONTENT_WIDTH_RESERVE = 10f;
-	private static final float STATUS_INITIAL_TEXT_RESERVE = 15f;
-	private static final float STATUS_TOP_INSET = 5f;
 
 	private final Runnable backAction;
 	private final CustomUIPanelPlugin inputOwner;
@@ -72,11 +69,11 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 
 		if (!loaded) load();
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] bottom = root.splitVerticallyReverse(BattleNext_PageLayout.CONTENT_BOTTOM);
-		UIRect[] table = bottom[0].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN, 0f, 0f)
-				.splitVertically(BattleNext_PageLayout.TABLE_HEADER_HEIGHT);
-		UIRect tableRect = BattleNext_PageLayout.pageContentRect(new UIRect(0f, table[0].getY(), table[0].getWidth(),
-				table[0].getHeight() + table[1].getHeight()));
+		UIRect footerRect = new UIRect(BattleNext_PageLayout.PAGE_CONTENT_INSET,
+				root.getHeight() - BattleNext_PageLayout.PAGE_CONTENT_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
+				root.getWidth() - BattleNext_PageLayout.PAGE_CONTENT_INSET * 2f, BattleNext_PageLayout.FOOTER_HEIGHT);
+		UIRect tableRect = BattleNext_PageLayout.pageContentRect(new UIRect(0f, 0f, root.getWidth(),
+				footerRect.getY() - BattleNext_PageLayout.SECTION_GAP));
 		CustomPanelAPI tablePanel = tableRect.createSubPanel(panel, inputOwner).getPanel();
 		BattleNext_QuickBattleDisplay.Presentation presentation = new BattleNext_QuickBattleDisplay.Presentation(
 				List.of(Column.NUMBER, Column.PLAYER, Column.ENEMY, Column.MAP, Column.SCALE, Column.STATUS, Column.ENABLED, Column.ACTIONS),
@@ -86,8 +83,6 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 				entry -> rowKeys.computeIfAbsent(entry, ignored -> new Object()), this::validationErrors, fleetStore, overlayHost));
 		display.attach(tablePanel);
 
-		UIRect footerRect = bottom[1].shrink(0f, BattleNext_PageLayout.FOOTER_MARGIN,
-				BattleNext_PageLayout.PAGE_CONTENT_INSET, BattleNext_PageLayout.PAGE_CONTENT_INSET);
 		float buttonWidth = Math.min(FOOTER_BUTTON_MAX_WIDTH,
 				(footerRect.getWidth() - FOOTER_BUTTON_GAP * (FOOTER_BUTTON_COUNT - 1)) / FOOTER_BUTTON_COUNT);
 		createFixedButton(panel,
@@ -103,13 +98,13 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 				strings.get("back"), "back", true, true);
 		float statusX = footerRect.getX() + FOOTER_BUTTON_COUNT * (buttonWidth + FOOTER_BUTTON_GAP);
 		float statusWidth = footerRect.getWidth() - (statusX - footerRect.getX());
-		statusContent = panel.createUIElement(statusWidth - STATUS_CONTENT_WIDTH_RESERVE,
+		statusContent = panel.createUIElement(statusWidth,
 				BattleNext_PageLayout.FOOTER_HEIGHT, false);
 		statusLabel = statusContent.addPara(statusContent.shortenString(
-				getStatusText(), statusWidth - STATUS_INITIAL_TEXT_RESERVE),
+				getStatusText(), statusWidth),
 				0f);
 		statusContent.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), statusContent.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
-		statusLabel.getPosition().inTL(0f, STATUS_TOP_INSET);
+		statusLabel.getPosition().inTL(0f, (footerRect.getHeight() - statusLabel.getPosition().getHeight()) * 0.5f);
 		statusContent.setHeightSoFar(BattleNext_PageLayout.FOOTER_HEIGHT);
 		panel.addUIElement(statusContent).inTL(statusX, footerRect.getY());
 
@@ -193,7 +188,7 @@ public class BattleNext_QuickBattleEditor extends BattleNext_EditorView {
 		statusText = value;
 		if (statusLabel != null) {
 			statusLabel.setText(statusContent.shortenString(value,
-					statusContent.getPosition().getWidth() - STATUS_CONTENT_WIDTH_RESERVE));
+					statusContent.getWidthSoFar()));
 		}
 	}
 

@@ -3,6 +3,7 @@ package data.scripts.ui.widget;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.test.fixture.BattleNext_TestPageFixture;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +37,7 @@ class BattleNext_DropdownFieldTest extends BattleNext_TestPageFixture {
 			assertTrue(field.isOpen());
 			CustomPanelAPI popup = (CustomPanelAPI) getField(field, "popup");
 			assertTrue(children.get(root).contains(popup));
-			assertEquals(35f, popup.getPosition().getHeight());
+			assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT + BattleNext_PageLayout.BUTTON_VERTICAL_GAP, popup.getPosition().getHeight());
 			assertEquals(buttonPanel.getPosition().getWidth(), popup.getPosition().getWidth());
 			field.closeOverlays();
 			assertFalse(field.isOpen());

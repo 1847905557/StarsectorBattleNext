@@ -18,7 +18,7 @@ public class BattleNext_SimulatorProtocol implements AutoCloseable {
 	private final InputStream input;
 	private final OutputStream output;
 	private final String token;
-	private final byte[] header = new byte[4];
+	private final byte[] header = new byte[Integer.BYTES];
 	private int headerRead;
 	private byte[] payload;
 	private int payloadRead;
@@ -34,7 +34,7 @@ public class BattleNext_SimulatorProtocol implements AutoCloseable {
 		byte[] bytes = new JSONObject().put("version", VERSION).put("token", token).put("type", type).put("payload", payload)
 				.toString().getBytes(StandardCharsets.UTF_8);
 		if (bytes.length > MAX_BYTES) throw new IOException("Simulator frame exceeds the byte limit");
-		output.write(ByteBuffer.allocate(4).putInt(bytes.length).array());
+		output.write(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array());
 		output.write(bytes);
 		output.flush();
 	}

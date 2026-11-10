@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
@@ -149,7 +150,7 @@ class BattleNext_FleetTooltipIntegrationTest extends BattleNext_TestUiFixture {
 					: index == 1 ? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index == 0) continue;
 			PositionAPI previous = text.get(index - 1).getPosition();
-			assertEquals(index == 1 ? 5f : index == 3 || index > 4 ? 2f : 8f,
+			assertEquals(index == 1 ? BattleNext_PageLayout.CONTROL_GAP : index == 3 || index > 4 ? BattleNext_PageLayout.CONTROL_GAP : 8f,
 					previous.getY() - position.getY() - position.getHeight());
 		}
 		List<UIComponentAPI> components = tooltips.get(tooltip).getComponents();

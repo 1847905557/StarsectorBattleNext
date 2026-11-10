@@ -27,12 +27,22 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	public static final float CANVAS_WIDTH = 1200f;
 	public static final float CANVAS_HEIGHT = 400f;
 	protected static final float NODE_WIDTH = 220f;
-	protected static final float NODE_HEIGHT = 66f;
-	private static final float NODE_TEXT_INSET = 6f;
+	private static final float NODE_TEXT_INSET = BattleNext_PageLayout.SECTION_GAP;
 	private static final float NODE_TEXT_ROW_HEIGHT = 18f;
-	private static final float NODE_SCORE_GAP = 6f;
-	private static final float TOOLBAR_HEIGHT = 40f;
-	private static final float FIT_MARGIN = 24f;
+	protected static final float NODE_HEIGHT = NODE_TEXT_ROW_HEIGHT * 3f + NODE_TEXT_INSET * 2f;
+	protected static final float COLUMN_GAP = BattleNext_PageLayout.SECTION_GAP;
+	protected static final float ROW_GAP = BattleNext_PageLayout.SECTION_GAP;
+	protected static final float COLUMN_STEP = NODE_WIDTH + COLUMN_GAP;
+	protected static final float ROW_STEP = NODE_HEIGHT + ROW_GAP;
+	protected static final float LAYOUT_LEFT = BattleNext_PageLayout.SECTION_GAP;
+	private static final float NODE_SCORE_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float TOOLBAR_INSET = BattleNext_PageLayout.SECTION_GAP;
+	private static final float FIT_BUTTON_WIDTH = 100f;
+	private static final float RESET_BUTTON_WIDTH = 78f;
+	private static final float TOOLBAR_BUTTON_HEIGHT = 24f;
+	private static final float TOOLBAR_HEIGHT = TOOLBAR_BUTTON_HEIGHT + TOOLBAR_INSET * 2f;
+	protected static final float LAYOUT_TOP = TOOLBAR_HEIGHT + BattleNext_PageLayout.SECTION_GAP;
+	private static final float FIT_MARGIN = BattleNext_PageLayout.SECTION_GAP;
 	private static final float ZOOM_STEP = 1.05f;
 	private static final float MAX_ZOOM = 2.5f;
 	private static final float BORDER_WIDTH = 2f;
@@ -203,7 +213,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 
 		if (!layoutError.isEmpty()) {
 			errorLabel = host.createLabel(tournamentStrings.get("chart_error") + ": " + layoutError,
-					Misc.getNegativeHighlightColor(), width - 48f);
+					Misc.getNegativeHighlightColor(), width - BattleNext_PageLayout.SECTION_GAP * 2f);
 		}
 		tooltipTarget = host.createRect(TOOLTIP_TARGET_COLOR, 0f);
 		host.addCustomDoNotSetPosition(tooltipTarget);
@@ -221,15 +231,17 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		host.getPosition().setSize(width, height);
 		panel.addUIElement(host).inTL(0f, 0f);
 		fitButton = BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(width - 194f, 8f, 100f, 24f), tournamentStrings.get("chart_fit"),
+				new UIRect(width - TOOLBAR_INSET * 2f - RESET_BUTTON_WIDTH - FIT_BUTTON_WIDTH,
+						TOOLBAR_INSET, FIT_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT), tournamentStrings.get("chart_fit"),
 				"view:fit", CutStyle.ALL, false);
 		resetButton = BattleNext_PageLayout.fixedButton(panel,
-				new UIRect(width - 86f, 8f, 78f, 24f), tournamentStrings.get("chart_zoom_100"),
+				new UIRect(width - TOOLBAR_INSET - RESET_BUTTON_WIDTH,
+						TOOLBAR_INSET, RESET_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT), tournamentStrings.get("chart_zoom_100"),
 				"view:reset", CutStyle.ALL, false);
 		panel.getPosition().setSize(width, height);
 		CustomPanelAPI row = owner.createCustomPanel(availableWidth, height, null);
 		row.addComponent(panel).inTL((availableWidth - width) * 0.5f, 0f);
-		scroller.addCustom(row, 10f);
+		scroller.addCustom(row, BattleNext_PageLayout.SECTION_GAP);
 		fitAll();
 		return panel;
 	}
@@ -260,9 +272,9 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 					enemy = source("W" + round + "-" + (index * 2 + 2), false);
 				}
 
-				float y = 60f + (index + 0.5f) * 110f * (1 << round) - NODE_HEIGHT * 0.5f;
+				float y = LAYOUT_TOP + (index + 0.5f) * ROW_STEP * (1 << round) - NODE_HEIGHT * 0.5f;
 				addMatchNode("W" + (round + 1) + "-" + (index + 1), stage, player, enemy,
-						40f + round * 300f, y, NODE_WIDTH, NODE_HEIGHT, false);
+						LAYOUT_LEFT + round * COLUMN_STEP, y, NODE_WIDTH, NODE_HEIGHT, false);
 			}
 		}
 	}
@@ -362,10 +374,10 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 	}
 
 	private void appendUnmappedMatches() {
-		float y = 40f;
+		float y = LAYOUT_TOP;
 
 		for (Node node : nodes) {
-			y = Math.max(y, node.y + node.height + 20f);
+			y = Math.max(y, node.y + node.height + ROW_GAP);
 		}
 
 		for (BattleNext_Match match : (started == null ? List.<BattleNext_Match>of() : started.getMatchesReadonly())) {
@@ -374,8 +386,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			Participant player = new Participant(match.getPlayer(), "", false, true);
 			Participant enemy = new Participant(match.getEnemy(), "", false, true);
 			nodes.add(new Node(match.getId(), match.getStage(), player, enemy, match,
-					20f, y, NODE_WIDTH, NODE_HEIGHT, tournamentStrings.format("chart_unmapped_match", match.getId()), ""));
-			y += NODE_HEIGHT + 20f;
+					LAYOUT_LEFT, y, NODE_WIDTH, NODE_HEIGHT, tournamentStrings.format("chart_unmapped_match", match.getId()), ""));
+			y += NODE_HEIGHT + ROW_GAP;
 		}
 	}
 
@@ -768,8 +780,8 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			}
 		}
 		if (errorLabel != null) {
-			errorLabel.getPosition().setLocation(position.getX() + 24f,
-					position.getY() + position.getHeight() - TOOLBAR_HEIGHT - 80f);
+			errorLabel.getPosition().setLocation(position.getX() + BattleNext_PageLayout.SECTION_GAP,
+					position.getY() + position.getHeight() - TOOLBAR_HEIGHT - BattleNext_PageLayout.SECTION_GAP - errorLabel.getPosition().getHeight());
 			errorLabel.render(alphaMult);
 		}
 	}
@@ -794,7 +806,7 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 		return Integer.toString(participant.fleetId.equals(node.match.getPlayer()) ? node.match.getPlayerWins() : node.match.getEnemyWins());
 	}
 
-	private Node findNode(String id) {
+	protected Node findNode(String id) {
 		for (Node node : nodes) {
 			if (node.id.equals(id)) return node;
 		}
@@ -837,8 +849,9 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			float textWidth = node.width - NODE_TEXT_INSET * 2f;
 			idLabel.setText(host.shortenString(node.id.isEmpty() ? node.title : node.id, textWidth));
 			idLabel.setColor(stateColor(node));
-			idLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT)
-					.setSize(textWidth, NODE_TEXT_ROW_HEIGHT);
+			float idHeight = idLabel.computeTextHeight(idLabel.getText());
+			idLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - (NODE_TEXT_ROW_HEIGHT + idHeight) * 0.5f)
+					.setSize(textWidth, idHeight);
 
 			String playerScore = node.id.isEmpty() ? "" : participantScore(node, node.player);
 			String enemyScore = node.id.isEmpty() ? "" : participantScore(node, node.enemy);
@@ -855,14 +868,18 @@ public abstract class BattleNext_TournamentView extends BaseCustomUIPanelPlugin 
 			enemyScoreLabel.setColor(participantColor(node, node.enemy));
 			enemyNameLabel.setColor(participantColor(node, node.enemy));
 
-			playerScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
-					.setSize(scoreWidth, NODE_TEXT_ROW_HEIGHT);
-			playerNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f)
-					.setSize(nameWidth, NODE_TEXT_ROW_HEIGHT);
-			enemyScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 3f)
-					.setSize(scoreWidth, NODE_TEXT_ROW_HEIGHT);
-			enemyNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 3f)
-					.setSize(nameWidth, NODE_TEXT_ROW_HEIGHT);
+			float playerScoreLabelHeight = playerScoreLabel.computeTextHeight(playerScoreLabel.getText());
+			playerScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 1f - (NODE_TEXT_ROW_HEIGHT + playerScoreLabelHeight) * 0.5f)
+					.setSize(scoreWidth, playerScoreLabelHeight);
+			float playerNameLabelHeight = playerNameLabel.computeTextHeight(playerNameLabel.getText());
+			playerNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 1f - (NODE_TEXT_ROW_HEIGHT + playerNameLabelHeight) * 0.5f)
+					.setSize(nameWidth, playerNameLabelHeight);
+			float enemyScoreLabelHeight = enemyScoreLabel.computeTextHeight(enemyScoreLabel.getText());
+			enemyScoreLabel.getPosition().setLocation(NODE_TEXT_INSET, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f - (NODE_TEXT_ROW_HEIGHT + enemyScoreLabelHeight) * 0.5f)
+					.setSize(scoreWidth, enemyScoreLabelHeight);
+			float enemyNameLabelHeight = enemyNameLabel.computeTextHeight(enemyNameLabel.getText());
+			enemyNameLabel.getPosition().setLocation(nameX, -NODE_TEXT_INSET - NODE_TEXT_ROW_HEIGHT * 2f - (NODE_TEXT_ROW_HEIGHT + enemyNameLabelHeight) * 0.5f)
+					.setSize(nameWidth, enemyNameLabelHeight);
 		}
 
 		private void render(float alphaMult) {

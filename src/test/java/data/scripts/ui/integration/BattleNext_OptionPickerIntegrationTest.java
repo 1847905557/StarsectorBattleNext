@@ -1,5 +1,6 @@
 package data.scripts.ui.integration;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.*;
@@ -108,7 +109,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 			TooltipMakerAPI textHost = (TooltipMakerAPI) children.get(firstTile).get(0);
 			LabelAPI text = (LabelAPI) tooltips.get(textHost).getComponents().get(0);
 			assertEquals("Option 0", text.getText());
-			assertEquals(60f, text.getPosition().getWidth());
+			assertEquals(firstTile.getPosition().getWidth() - BattleNext_PageLayout.CONTROL_GAP * 2f, text.getPosition().getWidth());
 			assertEquals(firstTile.getPosition().getCenterX(), text.getPosition().getCenterX(), 0.001f);
 			assertEquals(firstTile.getPosition().getCenterY(), text.getPosition().getCenterY(), 0.001f);
 			BattleNext_TextField search = (BattleNext_TextField) getField(picker, "search");
@@ -186,7 +187,7 @@ class BattleNext_OptionPickerIntegrationTest extends BattleNext_TestPageFixture 
 		assertEquals(252f, popup.getPosition().getX() - overlay.getPosition().getX());
 		float popupTop = overlay.getPosition().getY() + 700f
 				- popup.getPosition().getY() - popup.getPosition().getHeight();
-		assertEquals(top == 12 ? 44f : 236f, popupTop);
+		assertEquals(top == 12 ? top + 30f + BattleNext_PageLayout.CONTROL_GAP : top - 420f - BattleNext_PageLayout.CONTROL_GAP, popupTop);
 		assertEquals("S-mod", buttonLabels.get("TOGGLE"));
 
 		picker.closeOverlays();

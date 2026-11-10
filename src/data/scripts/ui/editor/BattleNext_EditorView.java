@@ -36,8 +36,8 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	private final Map<Object, Boolean> checked = new LinkedHashMap<>();
 	private final Map<Object, TooltipMakerAPI> viewports = new LinkedHashMap<>();
 	private final Map<Object, Float> offsets = new LinkedHashMap<>();
-	private final List<BattleNext_TooltipBasedWidget> tooltipWidgets = new ArrayList<>();
-	private final List<BattleNext_PanelBasedWidget> panelWidgets = new ArrayList<>();
+	private final List<BattleNext_Widget> tooltipWidgets = new ArrayList<>();
+	private final List<BattleNext_Widget> panelWidgets = new ArrayList<>();
 
 	protected final void beginSession() {
 		close();
@@ -226,9 +226,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 			BiConsumer<Float, TooltipMakerAPI> contentBuilder) {
 
 		rowsContent.addTitle(title);
-		float areaHeight = Math.max(1f, panel.getPosition().getHeight() - BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT);
+		float top = rowsContent.getHeightSoFar() + BattleNext_PageLayout.EDITOR_TABLE_TITLE_GAP;
+		float areaHeight = Math.max(1f, panel.getPosition().getHeight() - top);
 		UIRect tableArea = BattleNext_PageLayout.pageContentRect(new UIRect(0f,
-				BattleNext_PageLayout.EDITOR_TABLE_TITLE_HEIGHT, areaWidth, areaHeight));
+				top, areaWidth, areaHeight));
 		CustomPanelAPI tablePanel = panel.createCustomPanel(tableArea.getWidth(), tableArea.getHeight(), panel.getPlugin());
 		rowsContent.addComponent(tablePanel).inTL(tableArea.getX(), tableArea.getY());
 
@@ -298,9 +299,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 		return widget;
 	}
 
-	protected final void release(BattleNext_TooltipBasedWidget widget) {
+	protected final void release(BattleNext_Widget widget) {
 		widget.close();
 		tooltipWidgets.remove(widget);
+		panelWidgets.remove(widget);
 	}
 
 	protected final RowContent mountRow(Runnable build) {
@@ -330,10 +332,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	protected final class RowContent implements AutoCloseable {
 		private final Set<Object> keys;
 		private final Set<Object> checkKeys;
-		private final List<BattleNext_TooltipBasedWidget> tooltips;
-		private final List<BattleNext_PanelBasedWidget> panels;
+		private final List<BattleNext_Widget> tooltips;
+		private final List<BattleNext_Widget> panels;
 
-		private RowContent(Set<Object> keys, Set<Object> checkKeys, List<BattleNext_TooltipBasedWidget> tooltips, List<BattleNext_PanelBasedWidget> panels) {
+		private RowContent(Set<Object> keys, Set<Object> checkKeys, List<BattleNext_Widget> tooltips, List<BattleNext_Widget> panels) {
 			this.keys = keys;
 			this.checkKeys = checkKeys;
 			this.tooltips = tooltips;
@@ -355,11 +357,8 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 				if (!restoring) checked.put(key, check.isChecked());
 			}
 
-			for (BattleNext_TooltipBasedWidget widget : tooltips) release(widget);
-			for (BattleNext_PanelBasedWidget widget : panels) {
-				widget.close();
-				panelWidgets.remove(widget);
-			}
+			for (BattleNext_Widget widget : tooltips) release(widget);
+			for (BattleNext_Widget widget : panels) release(widget);
 		}
 	}
 
@@ -370,10 +369,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	public abstract void buttonPressed(Object buttonId);
 
 	public final boolean handleGlobalInput(List<InputEventAPI> events) {
-		for (BattleNext_TooltipBasedWidget widget : List.copyOf(tooltipWidgets)) {
+		for (BattleNext_Widget widget : List.copyOf(tooltipWidgets)) {
 			if (widget.handleGlobalInput(events)) return true;
 		}
-		for (BattleNext_PanelBasedWidget widget : List.copyOf(panelWidgets)) {
+		for (BattleNext_Widget widget : List.copyOf(panelWidgets)) {
 			if (widget.handleGlobalInput(events)) return true;
 		}
 		return false;
@@ -475,10 +474,10 @@ public abstract class BattleNext_EditorView extends BattleNext_View {
 	protected abstract void restoreDraft();
 
 	public final void closeOverlays() {
-		for (BattleNext_TooltipBasedWidget widget : tooltipWidgets) {
+		for (BattleNext_Widget widget : tooltipWidgets) {
 			widget.closeOverlays();
 		}
-		for (BattleNext_PanelBasedWidget widget : panelWidgets) {
+		for (BattleNext_Widget widget : panelWidgets) {
 			widget.closeOverlays();
 		}
 	}

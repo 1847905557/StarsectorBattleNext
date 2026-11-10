@@ -92,7 +92,7 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			statusContent = contentPanel.createUIElement(footer.getWidth(), footer.getHeight(), false);
 			BattleNext_UiTheme.configure(statusContent);
 			statusLabel = statusContent.addPara("", 0f);
-			statusLabel.getPosition().inTL(0f, 5f);
+			statusLabel.getPosition().inTL(0f, (footer.getHeight() - statusLabel.getPosition().getHeight()) * 0.5f);
 			statusContent.addTooltipToPrevious(new BaseTooltipCreator() {
 				@Override
 				public float getTooltipWidth(Object tooltipParam) {
@@ -114,14 +114,14 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 			sourceField = new BattleNext_BattleSourceField(inputRouter, overlayHost, this::selectSource);
 			sourceField.attach(sourcePanel);
 			sourceField.configure(sources.getTournamentStore(), browser.getSelectedId());
-			float top = area.getY() + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 12f;
+			float top = area.getY() + sourcePanel.getPosition().getHeight() + BattleNext_PageLayout.SECTION_GAP;
 			if (!sources.getCatalogErrors().isEmpty()) {
 				TooltipMakerAPI error = contentPanel.createUIElement(area.getWidth(), 0f, false);
 				BattleNext_UiTheme.configure(error);
 				error.setTextWidthOverride(area.getWidth());
 				error.addPara(strings.get("load_failed") + ": " + String.join(" | ", sources.getCatalogErrors()), 0f).getPosition().inTL(0f, 0f);
 				contentPanel.addUIElement(error).inTL(area.getX(), top);
-				top += error.getHeightSoFar() + 8f;
+				top += error.getHeightSoFar() + BattleNext_PageLayout.SECTION_GAP;
 			}
 			bodyRect = new UIRect(area.getX(), top, area.getWidth(), Math.max(0f, footer.getY() - BattleNext_PageLayout.FOOTER_MARGIN - top));
 			buildBody();
@@ -138,16 +138,16 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		description.setAlignment(Alignment.MID);
 		description.getPosition().inTL(0f, 0f);
 		warning.setHeightSoFar(description.getPosition().getHeight());
-		LabelAPI emphasized = warning.addPara(simulatorStrings.get("warned"), Misc.getNegativeHighlightColor(), 12f);
+		LabelAPI emphasized = warning.addPara(simulatorStrings.get("warned"), Misc.getNegativeHighlightColor(), BattleNext_PageLayout.SECTION_GAP);
 		emphasized.autoSizeToWidth(textWidth);
 		emphasized.setAlignment(Alignment.MID);
-		emphasized.getPosition().inTL(0f, description.getPosition().getHeight() + 12f);
-		float textHeight = description.getPosition().getHeight() + 12f + emphasized.getPosition().getHeight();
+		emphasized.getPosition().inTL(0f, description.getPosition().getHeight() + BattleNext_PageLayout.SECTION_GAP);
+		float textHeight = description.getPosition().getHeight() + BattleNext_PageLayout.SECTION_GAP + emphasized.getPosition().getHeight();
 		warning.setHeightSoFar(textHeight);
-		float top = (areaHeight - textHeight - 12f - buttonHeight) * 0.5f;
+		float top = (areaHeight - textHeight - BattleNext_PageLayout.SECTION_GAP - buttonHeight) * 0.5f;
 		contentPanel.addUIElement(warning).inTL(BattleNext_PageLayout.PAGE_CONTENT_INSET, top);
 		BattleNext_PageLayout.fixedButton(contentPanel,
-				new UIRect((areaWidth - buttonWidth) * 0.5f, top + textHeight + 12f, buttonWidth, buttonHeight),
+				new UIRect((areaWidth - buttonWidth) * 0.5f, top + textHeight + BattleNext_PageLayout.SECTION_GAP, buttonWidth, buttonHeight),
 				simulatorStrings.get("enable"), "simulator_enable", CutStyle.ALL, true);
 	}
 
@@ -205,8 +205,8 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 				: started == null ? sources.getCatalogErrors() : sources.tournamentErrors(tournament, fleetIds);
 		BattleNext_TournamentDisplay.Details details = BattleNext_TournamentDisplay.details(tournament, started, fleetIds,
 				sources.getFleetStore(), sources.getRuleStore(), task == null ? "" : task.getImportError(), reasons, reports).withCheckResult(browser.getCheckResult());
-		CustomPanelAPI displayPanel = new UIRect(0f, BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 8f, bodyRect.getWidth(),
-				Math.max(1f, bodyRect.getHeight() - BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT - 8f))
+		CustomPanelAPI displayPanel = new UIRect(0f, instancePanel.getPosition().getHeight() + BattleNext_PageLayout.SECTION_GAP, bodyRect.getWidth(),
+				Math.max(1f, bodyRect.getHeight() - instancePanel.getPosition().getHeight() - BattleNext_PageLayout.SECTION_GAP))
 				.createSubPanel(bodyPanel, bodyPanel.getPlugin()).getPanel();
 		tournamentDisplay = new BattleNext_TournamentDisplay(inputRouter, tournament, started, details, tournamentActions(task), this::handleTournamentAction);
 		if (started == null && browser.getSelectedInstanceId().isEmpty()) {
@@ -372,11 +372,11 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 		tooltip.addPara(simulatorStrings.format("status", simulatorStrings.get(status.phase().name().toLowerCase(Locale.ROOT)),
 				status.current() == null ? "—" : status.current().label(), status.queued()), 5f);
 		if (!browser.getStatusError().isEmpty()) {
-			tooltip.addPara(browser.getStatusError(), 5f);
+			tooltip.addPara(browser.getStatusError(), BattleNext_PageLayout.CONTROL_GAP);
 		}
 		for (BattleNext_SimulationRequest request : new BattleNext_SimulationRequest[]{status.current(), status.recentRequest()}) {
 			if (request == null) continue;
-			tooltip.addPara(request.id() + " - " + request.label(), 5f);
+			tooltip.addPara(request.id() + " - " + request.label(), BattleNext_PageLayout.CONTROL_GAP);
 			if (request.kind() == BattleNext_SimulationRequest.Kind.MATCH) {
 				try {
 					tooltip.addPara(simulatorStrings.format("map", request.source().getJSONObject("match").getInt("map"),
@@ -396,12 +396,12 @@ public class BattleNext_SimulatorWidget extends BattleNext_PanelBasedWidget {
 								result.executionNanos() / 1000000000d, result.report().getName()) : result.diagnostic();
 				String outcome = result.outcome() == BattleNext_SimulationResult.Outcome.BUDGET_EXCEEDED
 						? tournamentStrings.get("round_draw") : result.outcome().name();
-				tooltip.addPara(outcome + ": " + details, 5f);
+				tooltip.addPara(outcome + ": " + details, BattleNext_PageLayout.CONTROL_GAP);
 				if (!result.reportJson().isEmpty() && !result.diagnostic().isEmpty()) {
-					tooltip.addPara(result.diagnostic(), 5f);
+					tooltip.addPara(result.diagnostic(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 				if (!status.importError().isEmpty()) {
-					tooltip.addPara(status.importError(), 5f);
+					tooltip.addPara(status.importError(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 			} catch (JSONException exception) {
 				throw new IllegalStateException("Invalid simulator result", exception);

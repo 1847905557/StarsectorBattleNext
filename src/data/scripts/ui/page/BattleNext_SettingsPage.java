@@ -69,8 +69,9 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel, managementStrings.get("page_settings"));
-		UIRect area = BattleNext_PageLayout.pageContentRect(new UIRect(0f, BattleNext_PageLayout.CONTENT_TOP,
-				root.getWidth(), root.getHeight() - BattleNext_PageLayout.CONTENT_TOP - 4f));
+		float top = BattleNext_PageLayout.HEADER_HEIGHT + BattleNext_PageLayout.SECTION_GAP;
+		UIRect area = BattleNext_PageLayout.pageContentRect(new UIRect(0f, top,
+				root.getWidth(), root.getHeight() - top - BattleNext_PageLayout.SECTION_GAP));
 		float columnWidth = (float) Math.floor((area.getWidth() - BattleNext_PageLayout.EDITOR_COLUMN_GAP) * SETTINGS_WIDTH_SHARE);
 		UIRect footer = new UIRect(area.getX(), area.getY() + area.getHeight() - BattleNext_PageLayout.FOOTER_HEIGHT,
 				columnWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
@@ -83,11 +84,11 @@ public class BattleNext_SettingsPage extends BattleNext_PageView {
 		BattleNext_PageLayout.fixedButton(panel, BattleNext_PageLayout.managementFooterButtonRect(footer, width, 0),
 				strings.get("save"), "settings_save", CutStyle.ALL, true);
 
-		TooltipMakerAPI status = panel.createUIElement(footer.getWidth() - width - 10f, footer.getHeight(), false);
+		TooltipMakerAPI status = panel.createUIElement(footer.getWidth() - width - BattleNext_PageLayout.CONTROL_GAP, footer.getHeight(), false);
 		statusLabel = status.addPara("", 0f);
 		status.addTooltipTo(BattleNext_SaveErrors.tooltip(this::getSaveErrors), status.getPrev(), TooltipMakerAPI.TooltipLocation.ABOVE, true);
 
-		panel.addUIElement(status).inTL(footer.getX() + width + 10f, footer.getY());
+		panel.addUIElement(status).inTL(footer.getX() + width + BattleNext_PageLayout.CONTROL_GAP, footer.getY());
 	}
 
 	@Override

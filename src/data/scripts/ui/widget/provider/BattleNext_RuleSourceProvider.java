@@ -19,9 +19,9 @@ import java.util.List;
 
 public class BattleNext_RuleSourceProvider extends BattleNext_BaseSourceProvider {
 
-	private static final float BODY_GAP = 8f;
-	private static final float ROW_GAP = 5f;
-	private static final float BOTTOM_INSET = 8f;
+	private static final float BODY_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float BOTTOM_INSET = BattleNext_PageLayout.SECTION_GAP;
 
 	private final BattleNext_RuleStore ruleStore;
 

@@ -32,13 +32,12 @@ import java.util.List;
 
 public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 
-	private static final float ENTRY_LEFT_INSET = 5f;
+	private static final float ENTRY_LEFT_INSET = BattleNext_PageLayout.SECTION_GAP;
 	static final float ENTRY_BORDER_WIDTH = 8f;
 	static final float ENTRY_WIDTH = 96f;
 	static final float ENTRY_HEIGHT = 24f;
 	private static final float ENTRY_BOTTOM_OFFSET = 133f;
 	private static final float MANAGEMENT_PANEL_SCREEN_SHARE = 0.8f;
-	private static final float MANAGEMENT_PANEL_EDGE_SHARE = 0.1f;
 	private static final float ENTRY_CLICK_COOLDOWN = 0.1f;
 	private static final float ENTRY_COOLDOWN_CAP = 0.5f;
 
@@ -290,8 +289,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		configurationPlugin = new BattleNext_ConfigurationPanelPlugin(this::closePanel);
 		configurationPlugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
 		configurationPanel = Global.getSettings().createCustom(width, height, configurationPlugin);
-		configurationPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
-				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
+		configurationPanel.getPosition().inBL((ShaderCore.getScreenWidth() - width) * 0.5f,
+				(ShaderCore.getScreenHeight() - height) * 0.5f);
 		configurationPlugin.init(configurationPanel, width, height);
 	}
 
@@ -362,8 +361,8 @@ public class BattleNext_TitleEntry extends BaseEveryFrameCombatPlugin {
 		BattleNext_RefitPanelPlugin plugin = new BattleNext_RefitPanelPlugin(this::closePanel);
 		plugin.setBackdrop(backdropTexture, ShaderCore.getScreenFixU(), ShaderCore.getScreenFixV());
 		refitPanel = Global.getSettings().createCustom(width, height, plugin);
-		refitPanel.getPosition().inBL(ShaderCore.getScreenWidth() * MANAGEMENT_PANEL_EDGE_SHARE,
-				ShaderCore.getScreenHeight() * MANAGEMENT_PANEL_EDGE_SHARE);
+		refitPanel.getPosition().inBL((ShaderCore.getScreenWidth() - width) * 0.5f,
+				(ShaderCore.getScreenHeight() - height) * 0.5f);
 		plugin.init(refitPanel, width, height);
 	}
 

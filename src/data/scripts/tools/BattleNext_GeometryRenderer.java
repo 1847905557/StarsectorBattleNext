@@ -14,7 +14,6 @@ import java.nio.IntBuffer;
 public class BattleNext_GeometryRenderer {
 
 	private static final int INITIAL_CAPACITY = 128;
-	private static final int FLOAT_BYTES = 4;
 	private static final FloatBuffer TEXTURE_UV = BufferUtils.createFloatBuffer(8);
 	private static final FloatBuffer GEOMETRY_DATA = BufferUtils.createFloatBuffer(INITIAL_CAPACITY);
 	private static final IntBuffer CLIP_BOX = BufferUtils.createIntBuffer(16);
@@ -228,9 +227,9 @@ public class BattleNext_GeometryRenderer {
 		positionVbo = GL15.glGenBuffers();
 		uvVbo = GL15.glGenBuffers();
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, positionVbo);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, INITIAL_CAPACITY * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, GEOMETRY_DATA.capacity() * Float.BYTES, GL15.GL_DYNAMIC_DRAW);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, uvVbo);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, 8 * FLOAT_BYTES, GL15.GL_DYNAMIC_DRAW);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, TEXTURE_UV.capacity() * Float.BYTES, GL15.GL_DYNAMIC_DRAW);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
 		initialized = true;
 	}

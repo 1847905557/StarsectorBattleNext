@@ -77,7 +77,7 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 				@Override
 				public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 					tooltip.addTitle(entry.name());
-					BattleNext_PageLayout.addMutedIdLine(tooltip, entry.pinId(), 5f);
+					BattleNext_PageLayout.addMutedIdLine(tooltip, entry.pinId(), BattleNext_PageLayout.CONTROL_GAP);
 					String hull = entry.hullId();
 					try {
 						ShipHullSpecAPI spec = Global.getSettings().getHullSpec(hull);
@@ -85,9 +85,9 @@ public class BattleNext_PinnedVariantPage extends BattleNext_ManagementPage {
 					} catch (RuntimeException exception) {
 						hull += " / " + exception;
 					}
-					tooltip.addPara(hull, 5f);
-					tooltip.addPara(entry.path(), 5f);
-					if (!entry.error().isEmpty()) tooltip.addPara(entry.error(), 5f);
+					tooltip.addPara(hull, BattleNext_PageLayout.CONTROL_GAP);
+					tooltip.addPara(entry.path(), BattleNext_PageLayout.CONTROL_GAP);
+					if (!entry.error().isEmpty()) tooltip.addPara(entry.error(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 			});
 		}

@@ -25,7 +25,7 @@ import java.util.List;
 
 public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 
-	private static final float INSET = 10f;
+	private static final float INSET = BattleNext_PageLayout.SECTION_GAP;
 	private static final Color BACKGROUND = Color.BLACK;
 	private static final float BORDER_WIDTH = 2f;
 	private final Runnable closeAction;
@@ -155,7 +155,7 @@ public class BattleNext_LunaPinnedVariantPanel extends BaseCustomUIPanelPlugin {
 			}
 		}
 		if (contents.getExternalScroller() != null) {
-			contents.getExternalScroller().setYOffset(Math.min(Math.max(0f, contents.getHeightSoFar() - metadataHeight), offset));
+			BattleNext_PageLayout.restoreScrollOffset(contents, metadataHeight, offset);
 		}
 		saveButton.setEnabled(!closed && snapshot != null && !saved);
 	}

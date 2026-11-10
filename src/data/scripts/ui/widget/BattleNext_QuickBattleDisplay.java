@@ -242,7 +242,7 @@ public class BattleNext_QuickBattleDisplay extends BattleNext_PanelBasedWidget {
 							tooltip.addPara(strings.get("available"), 0f);
 						}
 						for (String reason : reasons) {
-							tooltip.addPara(reason, 4f);
+							tooltip.addPara(reason, BattleNext_PageLayout.CONTROL_GAP);
 						}
 					}
 				}, TooltipMakerAPI.TooltipLocation.LEFT, presentation.editable());

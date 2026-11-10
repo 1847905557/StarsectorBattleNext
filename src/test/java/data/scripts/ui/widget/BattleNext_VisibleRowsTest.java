@@ -39,6 +39,25 @@ class BattleNext_VisibleRowsTest {
 	}
 
 	@Test
+	void explicitMountMeasuresDistantRowsOnceBeforeVisibleSelection() {
+		Set<Integer> mounted = new LinkedHashSet<>();
+		VisibleRows[] holder = new VisibleRows[1];
+		try (VisibleRows rows = new VisibleRows(30, index -> 44f, index -> {
+			assertTrue(mounted.add(index));
+			holder[0].setHeight(index, 500f);
+		}, mounted::remove, ignored -> false)) {
+			holder[0] = rows;
+			rows.mount(29);
+			rows.mount(29);
+			assertEquals(Set.of(29), mounted);
+			assertEquals(1776f, rows.height());
+			rows.update(0f, 100f);
+			assertFalse(mounted.contains(29));
+		}
+		assertTrue(mounted.isEmpty());
+	}
+
+	@Test
 	void jumpingMountsTheWholeNewViewportBeforeReleasingPreviousRows() {
 		Set<Integer> mounted = new LinkedHashSet<>();
 		AtomicBoolean jumped = new AtomicBoolean();

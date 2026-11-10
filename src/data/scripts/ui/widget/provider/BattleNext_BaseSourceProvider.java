@@ -13,8 +13,8 @@ public abstract class BattleNext_BaseSourceProvider implements BattleNext_Option
 		return true;
 	}
 
-	private static final float KEY_GAP = 5f;
-	private static final float BODY_GAP = 8f;
+	private static final float KEY_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float BODY_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	protected void addHeader(TooltipMakerAPI tooltip, String title, String key) {
 		tooltip.addTitle(title);

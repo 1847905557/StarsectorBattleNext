@@ -8,9 +8,10 @@ import com.fs.starfarer.api.campaign.CoreUITabId;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.BattleNextModPlugin;
 import data.test.fixture.BattleNext_TestTextCatalog;
 import data.test.fixture.BattleNext_TestVariantFixture;
@@ -24,7 +25,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariantFixture {
 
@@ -90,7 +90,7 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"callback", "reload", "leave", "detached", "left", "right"})
+	@ValueSource(strings = {"callback", "reload", "leave", "detached", "left", "right", "context_unavailable"})
 	void buttonOwnerReleasesItsPanelAcrossLifecyclePaths(String path) throws Exception {
 
 		ArrayList<BaseRefitButton> registry = LunaRefitManager.INSTANCE.getButtons();
@@ -99,40 +99,66 @@ class BattleNext_LunaPinnedVariantRefitButtonTest extends BattleNext_TestVariant
 		BattleNext_LunaPinnedVariantRefitButton.register();
 		BattleNext_LunaPinnedVariantRefitButton button = (BattleNext_LunaPinnedVariantRefitButton)
 				LunaRefitManager.getFirstButtonOfClass(BattleNext_LunaPinnedVariantRefitButton.class);
-		BattleNext_LunaPinnedVariantPanel display = open(source(), new BattleNext_PinnedVariantStore(), 640);
+		CustomPanelAPI root = panel(800f, 600f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI background = root.createCustomPanel(640f, 560f, new BaseCustomUIPanelPlugin());
+		root.addComponent(background).inTL(0f, 0f);
+		CustomPanelAPI sibling = root.createCustomPanel(20f, 20f, new BaseCustomUIPanelPlugin());
+		root.addComponent(sibling).inTL(0f, 0f);
+		BattleNext_LunaPinnedVariantPanel display = new BattleNext_LunaPinnedVariantPanel(() -> {});
+		display.open(source().getApi(), "");
+		CustomPanelAPI content = background.createCustomPanel(640f, 560f, display);
+		background.addComponent(content).inTL(0f, 0f);
+		display.attach(content, 640f, 560f);
 		TextFieldAPI field = name(display);
 		field.grabFocus(false);
-		AtomicBoolean removed = new AtomicBoolean();
 		UIPanelAPI host = proxy(ChildrenHost.class, (method, args) -> {
-			if ("removeComponent".equals(method)) {
-				removed.set(true);
-			}
-			if ("getChildrenCopy".equals(method)) return List.of();
+			if ("removeComponent".equals(method)) root.removeComponent((UIComponentAPI) args[0]);
+			if ("getChildrenCopy".equals(method)) return children.get(root);
 			return null;
 		});
 		setField(button, "display", display);
-		setField(button, "background", panel(640f, 560f, display));
+		setField(button, "background", background);
+		setField(button, "content", content);
 		setField(button, "host", host);
+		if ("context_unavailable".equals(path)) {
+			setField(button, "openedContext", new BattleNext_CampaignRefitContext(root, new Object(), null, null));
+		}
 		Global.setSector(proxy(SectorAPI.class, (method, args) -> "getCampaignUI".equals(method)
-				? proxy(CampaignUIAPI.class, (name, values) ->
-						"getCurrentCoreTab".equals(name) && "detached".equals(path)
-								? CoreUITabId.REFIT : null) : null));
+				? proxy(CampaignUIAPI.class, (name, values) -> "getCurrentCoreTab".equals(name)
+						? "leave".equals(path) ? CoreUITabId.FLEET : CoreUITabId.REFIT : null) : null));
 		try {
 			if ("callback".equals(path)) {
 				button.onPanelClose(null, null, null);
+				assertEquals(List.of(background, sibling), children.get(root));
+				root.removeComponent(background);
 			} else if ("reload".equals(path)) {
 				BattleNext_LunaPinnedVariantRefitButton.onGameLoad();
 			} else if ("left".equals(path) || "right".equals(path)) {
 				button.onClick(null, null, proxy(InputEventAPI.class,
 						(method, args) -> "isLMBEvent".equals(method) && "left".equals(path)), null);
 			} else {
+				if ("detached".equals(path)) root.removeComponent(background);
 				button.advance(0f);
 			}
-			assertEquals(!"right".equals(path), removed.get());
+			if (!"right".equals(path)) {
+				assertEquals(List.of(sibling), children.get(root));
+				assertTrue(children.get(background).isEmpty());
+				assertEquals(1L, removedComponents.stream().filter(component -> component == content).count());
+				assertNull(getField(button, "background"));
+				assertNull(getField(button, "content"));
+				assertNull(getField(button, "host"));
+				assertNull(getField(button, "openedContext"));
+				assertNull(getField(button, "display"));
+				int removals = removedComponents.size();
+				button.onPanelClose(null, null, null);
+				button.advance(0f);
+				assertEquals(removals, removedComponents.size());
+			}
 			assertEquals("right".equals(path), field.hasFocus());
 			assertFalse(Files.exists(directory.resolve("tournament/_pinnedVariants")));
 		} finally {
 			button.onPanelClose(null, null, null);
+			if ("right".equals(path)) root.removeComponent(background);
 			registry.remove(button);
 			registry.addAll(previous);
 		}

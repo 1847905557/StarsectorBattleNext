@@ -37,10 +37,11 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	private final BattleNext_I18nSection managementStrings = BattleNext_I18nSection.getInstance("Management", "BattleNext_management_");
 	private final BattleNext_I18nSection tournamentStrings = BattleNext_I18nSection.getInstance("Tournament", "BattleNext_tournament_");
 
-	private static final float SOURCE_HEADER_HEIGHT = 130f;
-	private static final float SOURCE_CONTROL_TOP = 44f;
-	private static final float SOURCE_CONTROL_HEIGHT = 30f;
-	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = 8f;
+	private static final float SOURCE_CONTROL_TOP = BattleNext_PageLayout.HEADER_HEIGHT + BattleNext_PageLayout.SECTION_GAP;
+	private static final float SOURCE_CONTROL_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float SOURCE_CONTENT_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SOURCE_CONTROL_HEIGHT = BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT;
+	private static final float TOURNAMENT_MISSING_MESSAGE_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	public static class BattleSourceSelectionRequest {
 		private final String id;
@@ -108,13 +109,15 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 	@Override
 	protected void buildPage() {
 		UIRect root = new UIRect(0f, 0f, panel.getPosition().getWidth(), panel.getPosition().getHeight());
-		UIRect[] sections = root.splitVertically(SOURCE_HEADER_HEIGHT);
-		contentRect = sections[1];
 		BattleNext_PageLayout.heading(new UIRect(0f, 0f, root.getWidth(), BattleNext_PageLayout.HEADER_HEIGHT), panel,
 				managementStrings.get("page_battle_selector"));
 
 		sourceRect = new UIRect(0f, SOURCE_CONTROL_TOP, root.getWidth(), SOURCE_CONTROL_HEIGHT);
-		instanceRect = new UIRect(0f, 82f, root.getWidth(), SOURCE_CONTROL_HEIGHT);
+		instanceRect = new UIRect(0f, sourceRect.getY() + sourceRect.getHeight() + SOURCE_CONTROL_GAP,
+				root.getWidth(), sourceRect.getHeight());
+		UIRect last = selectedId.isEmpty() ? sourceRect : instanceRect;
+		float contentTop = last.getY() + last.getHeight() + SOURCE_CONTENT_GAP;
+		contentRect = new UIRect(0f, contentTop, root.getWidth(), root.getHeight() - contentTop);
 	}
 
 	@Override
@@ -144,6 +147,9 @@ public class BattleNext_BattleSelectorPage extends BattleNext_PageView {
 		}
 
 		contentRect.removeLatestSubPanel();
+		UIRect last = selectedId.isEmpty() ? sourceRect : instanceRect;
+		float top = last.getY() + last.getHeight() + SOURCE_CONTENT_GAP;
+		contentRect = new UIRect(0f, top, panel.getPosition().getWidth(), panel.getPosition().getHeight() - top);
 		CustomPanelAPI contentPanel = contentRect.createSubPanel(panel, inputOwner).getPanel();
 		if (selectedId.isEmpty()) {
 			if (quickBattleEditor == null) {

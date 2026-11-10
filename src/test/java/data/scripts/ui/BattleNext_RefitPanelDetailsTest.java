@@ -53,11 +53,11 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertNotSame(plugins.get(root), plugins.get(left));
 		assertNotSame(plugins.get(left), plugins.get(right));
 		assertEquals(width * 0.60f, left.getPosition().getWidth());
-		assertEquals(width * 0.18f, right.getPosition().getWidth());
+		assertEquals(width - width * 0.10f * 2f - left.getPosition().getWidth() - BattleNext_PageLayout.SECTION_GAP, right.getPosition().getWidth());
 		assertEquals(560f, left.getPosition().getHeight());
 		assertEquals(560f, right.getPosition().getHeight());
 		assertEquals(width * 0.10f, left.getPosition().getX());
-		assertEquals(width * 0.02f, right.getPosition().getX() - left.getPosition().getX()
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, right.getPosition().getX() - left.getPosition().getX()
 				- left.getPosition().getWidth(), 0.0001f);
 		assertEquals(width * 0.10f, width - right.getPosition().getX() - right.getPosition().getWidth(), 0.0001f);
 		assertEquals(70f, root.getPosition().getY() + 700f - left.getPosition().getY() - 560f);
@@ -68,17 +68,17 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 			BattleNext_OptionPicker picker = (BattleNext_OptionPicker) getField(plugin, key);
 			PositionAPI button = ((CustomPanelAPI) getField(picker, "row")).getPosition();
 			assertSame(root, getField(picker, "overlayHost"));
-			assertEquals(width * 0.18f, button.getWidth());
+			assertEquals(width - width * 0.10f * 2f - left.getPosition().getWidth() - BattleNext_PageLayout.SECTION_GAP, button.getWidth());
 			assertEquals(30f, button.getHeight());
 			assertEquals(right.getPosition().getX(), button.getX());
-			assertEquals(key.equals("sModPicker") ? 0f : 36f,
+			assertEquals(key.equals("sModPicker") ? 0f : 30f + BattleNext_PageLayout.CONTROL_GAP,
 					right.getPosition().getY() + 560f - button.getY() - 30f);
 			assertEquals(key.equals("sModPicker") ? BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_s_mods") : BattleNext_TestTextCatalog.text("Refit", "BattleNext_refit_d_mods"),
 					getField(picker, "title"));
 		}
 
 		assertEquals(width - 8f - 160f, buttonPositions.get("close").getX());
-		assertEquals(width - 8f - 330f, buttonPositions.get("save").getX());
+		assertEquals(width - BattleNext_PageLayout.SECTION_GAP - 160f * 2f - BattleNext_PageLayout.CONTROL_GAP, buttonPositions.get("save").getX());
 		assertEquals(root.getPosition().getY() + 8f, buttonPositions.get("save").getY());
 		assertEquals(160f, buttonPositions.get("save").getWidth());
 		assertEquals(BattleNext_PageLayout.FOOTER_HEIGHT, buttonPositions.get("save").getHeight());
@@ -91,7 +91,7 @@ class BattleNext_RefitPanelDetailsTest extends BattleNext_TestVariantFixture {
 		assertEquals(pin.getX(), pinName.getX());
 		assertEquals(pin.getWidth(), pinName.getWidth());
 		assertEquals(28f, pinName.getHeight());
-		assertEquals(6f, pinName.getY() - pin.getY() - pin.getHeight());
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, pinName.getY() - pin.getY() - pin.getHeight());
 		TooltipMakerAPI nameHost = (TooltipMakerAPI) getField(plugin, "pinNameHost");
 		LabelAPI caption = (LabelAPI) tooltips.get(nameHost).getComponents().get(0);
 		assertEquals(BattleNext_TestTextCatalog.text("Variant", "BattleNext_variant_pin_name"), caption.getText());

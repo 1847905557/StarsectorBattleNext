@@ -20,8 +20,10 @@ public class BattleNext_ExpandablePanel {
 
 	public static final float HEADER_HEIGHT = 40f;
 	public static final float ICON_SIZE = 32f;
-	public static final float ROW_GAP = 4f;
-	public static final float HEADER_SIDE_INSET = 8f;
+	public static final float ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	public static final float HEADER_SIDE_INSET = BattleNext_PageLayout.SECTION_GAP;
+	private static final float ICON_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float TEXT_GAP = BattleNext_PageLayout.SECTION_GAP;
 	private static final float MISSING_ICON_SIZE = 24f;
 
 	private static final Color BODY_BACKGROUND = new Color(0, 0, 0, 150);
@@ -80,11 +82,11 @@ public class BattleNext_ExpandablePanel {
 	}
 
 	public static HeaderLayout headerLayout(float width, boolean secondarySlot, boolean rightSummary) {
-		float textX = HEADER_SIDE_INSET + (secondarySlot ? ICON_SIZE * 2f + 12f : ICON_SIZE + 8f);
+		float textX = HEADER_SIDE_INSET + (secondarySlot ? ICON_SIZE * 2f + ICON_GAP + TEXT_GAP : ICON_SIZE + TEXT_GAP);
 		float metricsWidth = rightSummary
 				? Math.min(METRICS_MAX_WIDTH, Math.max(METRICS_MIN_WIDTH, width * 0.28f)) : 0f;
 		float metricsX = width - HEADER_SIDE_INSET - metricsWidth;
-		float textRight = rightSummary ? metricsX - 8f : metricsX;
+		float textRight = rightSummary ? metricsX - TEXT_GAP : metricsX;
 		return new HeaderLayout(textX, Math.max(1f, textRight - textX), metricsX, metricsWidth);
 	}
 
@@ -105,25 +107,34 @@ public class BattleNext_ExpandablePanel {
 		HeaderLayout layout = headerLayout(width, plugin.secondarySprite != null, rightSummary);
 		plugin.primarySlot = header.primarySprite() != null;
 		if (!plugin.primarySlot) {
-			layout = new HeaderLayout(HEADER_SIDE_INSET, layout.textWidth() + ICON_SIZE + 8f, layout.metricsX(), layout.metricsWidth());
+			layout = new HeaderLayout(HEADER_SIDE_INSET, layout.textWidth() + ICON_SIZE + TEXT_GAP, layout.metricsX(), layout.metricsWidth());
 		}
 
 		TooltipMakerAPI names = top.createUIElement(layout.textWidth(), HEADER_HEIGHT, false);
-		LabelAPI firstLine = names.addPara(names.shortenString(header.firstLine(), Math.max(1f, layout.textWidth() - 6f)), 3f);
-		firstLine.getPosition().inTL(0f, 3f);
+		LabelAPI firstLine = names.addPara(names.shortenString(header.firstLine(), layout.textWidth()), 0f);
+		float firstHeight = firstLine.getPosition().getHeight();
+		float textTop = (HEADER_HEIGHT - firstHeight) * 0.5f;
 		if (!header.secondLine().isEmpty()) {
-			LabelAPI secondLine = names.addPara(names.shortenString(header.secondLine(), Math.max(1f, layout.textWidth() - 6f)), 1f);
-			secondLine.getPosition().inTL(0f, firstLine.getPosition().getHeight() + 4f);
+			LabelAPI secondLine = names.addPara(names.shortenString(header.secondLine(), layout.textWidth()), 0f);
+			float secondHeight = secondLine.getPosition().getHeight();
+			float gap = Math.min(BattleNext_PageLayout.CONTROL_GAP, Math.max(0f, HEADER_HEIGHT - firstHeight - secondHeight));
+			textTop = (HEADER_HEIGHT - firstHeight - gap - secondHeight) * 0.5f;
+			secondLine.getPosition().inTL(0f, textTop + firstHeight + gap);
 		}
+		firstLine.getPosition().inTL(0f, textTop);
 
 		top.addUIElement(names).inTL(layout.textX(), 0f);
 
 		if (rightSummary) {
 			TooltipMakerAPI metrics = top.createUIElement(layout.metricsWidth(), HEADER_HEIGHT, false);
-			LabelAPI firstMetric = metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth() - 6f), 3f);
-			firstMetric.getPosition().inTL(0f, 3f);
-			LabelAPI secondMetric = metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth() - 6f), 1f);
-			secondMetric.getPosition().inTL(0f, firstMetric.getPosition().getHeight() + 4f);
+			LabelAPI firstMetric = metrics.addPara(metrics.shortenString(header.rightFirstLine(), layout.metricsWidth()), 0f);
+			LabelAPI secondMetric = metrics.addPara(metrics.shortenString(header.rightSecondLine(), layout.metricsWidth()), 0f);
+			float firstMetricHeight = firstMetric.getPosition().getHeight();
+			float secondMetricHeight = secondMetric.getPosition().getHeight();
+			float gap = Math.min(BattleNext_PageLayout.CONTROL_GAP, Math.max(0f, HEADER_HEIGHT - firstMetricHeight - secondMetricHeight));
+			float metricTop = (HEADER_HEIGHT - firstMetricHeight - gap - secondMetricHeight) * 0.5f;
+			firstMetric.getPosition().inTL(0f, metricTop);
+			secondMetric.getPosition().inTL(0f, metricTop + firstMetricHeight + gap);
 
 			top.addUIElement(metrics).inTL(layout.metricsX(), 0f);
 		}
@@ -220,7 +231,7 @@ public class BattleNext_ExpandablePanel {
 			}
 
 			if (secondarySprite != null) {
-				float secondaryCenterX = position.getX() + HEADER_SIDE_INSET + ICON_SIZE * 1.5f + 4f;
+				float secondaryCenterX = position.getX() + HEADER_SIDE_INSET + ICON_SIZE * 1.5f + ICON_GAP;
 				BattleNext_PageLayout.renderFittedSprite(secondarySprite,
 						secondaryCenterX, centerY, ICON_SIZE, ICON_SIZE, alphaMult);
 			}

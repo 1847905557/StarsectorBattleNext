@@ -12,46 +12,37 @@ import java.awt.Color;
 
 public class BattleNext_PageLayout {
 
-	public static final float BUTTON_VERTICAL_GAP = 5f;
+	public static final float SECTION_GAP = 8f;
+	public static final float CONTROL_GAP = 4f;
+	public static final float BUTTON_VERTICAL_GAP = CONTROL_GAP;
 	public static final float HEADER_HEIGHT = 30f;
-	public static final float CONTENT_TOP = 40f;
 	public static final float FOOTER_HEIGHT = 30f;
-	public static final float CONTENT_BOTTOM = 48f;
-	public static final float FOOTER_MARGIN = 8f;
-	public static final float PAGE_CONTENT_INSET = 8f;
+	public static final float FOOTER_MARGIN = SECTION_GAP;
+	public static final float PAGE_CONTENT_INSET = SECTION_GAP;
 
 	public static final float MANAGEMENT_CONTENT_INSET = PAGE_CONTENT_INSET;
 	public static final float MANAGEMENT_REGION_BORDER_THICKNESS = 2f;
-	public static final float MANAGEMENT_LIST_ERROR_TOP_GAP = 8f;
-	public static final float MANAGEMENT_LIST_EMPTY_TOP_GAP = 10f;
-	public static final float MANAGEMENT_EDITOR_FOOTER_RESERVE = 42f;
+	public static final float MANAGEMENT_LIST_ERROR_TOP_GAP = SECTION_GAP;
+	public static final float MANAGEMENT_LIST_EMPTY_TOP_GAP = SECTION_GAP;
 	public static final float MANAGEMENT_DELETE_BUTTON_WIDTH = 145f;
 	public static final float MANAGEMENT_DELETE_BUTTON_HEIGHT = 28f;
-	public static final float MANAGEMENT_DELETE_BUTTON_BOTTOM_INSET = 8f;
-	public static final float MANAGEMENT_SOURCE_NOTE_LEFT = 165f;
-	public static final float MANAGEMENT_SOURCE_NOTE_WIDTH_RESERVE = 170f;
-	public static final float MANAGEMENT_SOURCE_NOTE_TEXT_RESERVE = 180f;
-	public static final float MANAGEMENT_SOURCE_NOTE_BOTTOM_INSET = 6f;
 	public static final float MANAGEMENT_FOOTER_BUTTON_MAX_WIDTH = 160f;
-	public static final float MANAGEMENT_FOOTER_BUTTON_GAP = 10f;
-	public static final float MANAGEMENT_FOOTER_BUTTON_WIDTH_RESERVE = 20f;
-	public static final float MANAGEMENT_FOOTER_STATUS_OFFSET = 30f;
+	public static final float MANAGEMENT_FOOTER_BUTTON_GAP = CONTROL_GAP;
 	public static final float MANAGEMENT_FOOTER_STATUS_MIN_WIDTH = 60f;
-	public static final float MANAGEMENT_FOOTER_STATUS_TOP_INSET = 5f;
 
 	public static final float FORM_FIELD_HEIGHT = 28f;
-	public static final float EDITOR_FIELD_INSET = 6f;
-	public static final float EDITOR_COLUMN_GAP = 10f;
+	public static final float EDITOR_FIELD_INSET = SECTION_GAP;
+	public static final float EDITOR_COLUMN_GAP = SECTION_GAP;
 	public static final float EDITOR_LEFT_COLUMN_SHARE = 0.45f;
-	public static final float EDITOR_LABEL_GAP = 5f;
-	public static final float EDITOR_READ_ONLY_VALUE_GAP = 2f;
-	public static final float EDITOR_TABLE_TITLE_HEIGHT = 24f;
-	public static final float TABLE_ACTION_SIDE_INSET = 4f;
+	public static final float EDITOR_LABEL_GAP = CONTROL_GAP;
+	public static final float EDITOR_TABLE_TITLE_GAP = CONTROL_GAP;
+	public static final float EDITOR_READ_ONLY_VALUE_GAP = CONTROL_GAP;
+	public static final float TABLE_ACTION_SIDE_INSET = CONTROL_GAP;
 
 	public static final float TABLE_HEADER_HEIGHT = 18f;
 	public static final float TABLE_ROW_HEIGHT = 38f;
-	public static final float TABLE_COLUMN_GAP = 8f;
-	public static final float TABLE_ROW_BOTTOM_PADDING = 10f;
+	public static final float TABLE_COLUMN_GAP = SECTION_GAP;
+	public static final float TABLE_ROW_BOTTOM_PADDING = SECTION_GAP;
 	public static final float TABLE_ROW_BORDER_THICKNESS = 2f;
 	public static final float SECTION_HEADING_EXTRA_WIDTH = 10f;
 	public static final float SCROLLBAR_RESERVED_WIDTH = 5f;
@@ -60,25 +51,23 @@ public class BattleNext_PageLayout {
 	public static final float TABLE_ACTION_BUTTON_HEIGHT = 30f;
 	public static final float EDITOR_BUTTON_WIDTH = 190f;
 	public static final float EDITOR_BUTTON_HEIGHT = 30f;
-	public static final float EDITOR_BUTTON_GAP = 4f;
+	public static final float EDITOR_BUTTON_GAP = CONTROL_GAP;
 
-	public static final float CELL_LABEL_SIDE_INSET = 2f;
-	public static final float CELL_LABEL_TRUNCATION_PADDING = 10f;
+	public static final float CELL_LABEL_SIDE_INSET = CONTROL_GAP;
 
 	private static final float MIN_UI_WIDTH = 1f;
 	static final String MISSING_ICON_CATEGORY = "ui";
 	static final String MISSING_ICON_KEY = "checkmark_x";
-	private static final float PAGE_TITLE_TRUNCATION_PADDING = 10f;
+	private static final float PAGE_TITLE_TRUNCATION_PADDING = SECTION_GAP * 2f;
 
-	private static final float BUTTON_TEXT_TRUNCATION_PADDING = 16f;
+	private static final float BUTTON_TEXT_TRUNCATION_PADDING = SECTION_GAP * 2f;
 	private static final float BUTTON_EXTRA_DRAW_WIDTH = 10f;
 
 	private static final float TOOLTIP_MIN_WIDTH = 220f;
 	private static final float TOOLTIP_MAX_WIDTH = 500f;
-	private static final float TOOLTIP_WIDTH_PER_CHAR = 10f;
 
 	private static final float MANAGEMENT_OUTER_MARGIN = PAGE_CONTENT_INSET;
-	private static final float MANAGEMENT_COLUMN_GAP = 20f;
+	private static final float MANAGEMENT_COLUMN_GAP = SECTION_GAP;
 	private static final float MANAGEMENT_LIST_MIN_WIDTH = 260f;
 	private static final float MANAGEMENT_LIST_MAX_WIDTH = 400f;
 	private static final float MANAGEMENT_LIST_WIDTH_SHARE = 0.22f;
@@ -94,6 +83,11 @@ public class BattleNext_PageLayout {
 
 	public static void renderMissingIcon(SpriteAPI sprite, float x, float y, float size, float alpha) {
 		renderIcon(sprite, x, y, size, BattleNext_UiTheme.ACCENT, alpha);
+	}
+
+	public static void restoreScrollOffset(TooltipMakerAPI content, float viewportHeight, float previousOffset) {
+		float limit = Math.max(0f, content.getHeightSoFar() - viewportHeight);
+		content.getExternalScroller().setYOffset(Math.min(previousOffset, limit));
 	}
 
 	public static float spriteScaleToFit(float width, float height, float availableWidth, float availableHeight) {
@@ -265,7 +259,7 @@ public class BattleNext_PageLayout {
 			content.setParaSmallInsignia();
 		}
 		LabelAPI label = content.addPara(content.shortenString(text,
-				Math.max(1f, cell.getWidth() - CELL_LABEL_TRUNCATION_PADDING)), 0f);
+				Math.max(1f, cellWidth)), 0f);
 		label.setAlignment(Alignment.MID);
 		label.getPosition().setSize(cellWidth, label.getPosition().getHeight());
 		label.getPosition().inTL(0f, Math.max(0f, (cell.getHeight() - label.getPosition().getHeight()) * 0.5f));
@@ -330,10 +324,11 @@ public class BattleNext_PageLayout {
 		ButtonAPI button = button(maker, title, id, width);
 		button.getPosition().inTL(0f, maker.getHeightSoFar() - FOOTER_HEIGHT);
 		maker.addTooltipToPrevious(tooltip == null ? new BaseTooltipCreator() {
+			private final float tooltipWidth = listTooltipWidth(maker, title);
+
 			@Override
 			public float getTooltipWidth(Object tooltipParam) {
-				return Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH,
-						title.length() * TOOLTIP_WIDTH_PER_CHAR));
+				return tooltipWidth;
 			}
 
 			@Override
@@ -342,6 +337,16 @@ public class BattleNext_PageLayout {
 			}
 		} : tooltip, TooltipLocation.RIGHT);
 		return button;
+	}
+
+	private static float listTooltipWidth(TooltipMakerAPI maker, String title) {
+		TooltipMakerAPI measure = maker.beginSubTooltip(TOOLTIP_MAX_WIDTH);
+		measure.setParaFontDefault();
+		LabelAPI label = measure.createLabel("", BattleNext_UiTheme.TEXT, TOOLTIP_MAX_WIDTH);
+		float width = Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH,
+				label.computeTextWidth(title) + PAGE_TITLE_TRUNCATION_PADDING));
+		maker.endSubTooltip();
+		return width;
 	}
 
 	public static void addIdTooltip(TooltipMakerAPI host, String title, String id) {
@@ -359,7 +364,7 @@ public class BattleNext_PageLayout {
 			public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
 				tooltip.addTitle(title);
 				for (String line : lines) {
-					addMutedIdLine(tooltip, line, 5f);
+					addMutedIdLine(tooltip, line, CONTROL_GAP);
 				}
 			}
 		}, TooltipLocation.RIGHT);
@@ -412,12 +417,13 @@ public class BattleNext_PageLayout {
 		float listWidth = Math.min(MANAGEMENT_LIST_MAX_WIDTH,
 				Math.max(MANAGEMENT_LIST_MIN_WIDTH, width * MANAGEMENT_LIST_WIDTH_SHARE));
 		listWidth = (float) Math.floor(Math.min(listWidth, width * MANAGEMENT_LIST_MAX_SHARE));
-		float contentHeight = height - CONTENT_TOP - CONTENT_BOTTOM - FOOTER_MARGIN;
-		UIRect list = new UIRect(MANAGEMENT_OUTER_MARGIN, CONTENT_TOP, listWidth, contentHeight);
-		UIRect detail = new UIRect(MANAGEMENT_OUTER_MARGIN + MANAGEMENT_COLUMN_GAP + listWidth,
-				CONTENT_TOP, width - listWidth - MANAGEMENT_COLUMN_GAP - MANAGEMENT_OUTER_MARGIN * 2f, contentHeight);
-		UIRect footer = new UIRect(MANAGEMENT_OUTER_MARGIN, height - CONTENT_BOTTOM + FOOTER_MARGIN,
+		UIRect footer = new UIRect(MANAGEMENT_OUTER_MARGIN, height - MANAGEMENT_OUTER_MARGIN - FOOTER_HEIGHT,
 				width - MANAGEMENT_OUTER_MARGIN * 2f, FOOTER_HEIGHT);
+		float top = HEADER_HEIGHT + SECTION_GAP;
+		float contentHeight = footer.getY() - SECTION_GAP - top;
+		UIRect list = new UIRect(MANAGEMENT_OUTER_MARGIN, top, listWidth, contentHeight);
+		UIRect detail = new UIRect(list.getX() + list.getWidth() + MANAGEMENT_COLUMN_GAP,
+				top, width - listWidth - MANAGEMENT_COLUMN_GAP - MANAGEMENT_OUTER_MARGIN * 2f, contentHeight);
 		return new UIRect[]{list, detail, footer};
 	}
 
@@ -426,27 +432,30 @@ public class BattleNext_PageLayout {
 				MANAGEMENT_CONTENT_INSET, MANAGEMENT_CONTENT_INSET);
 	}
 
-	public static UIRect managementEditorRect(UIRect rect) {
-		return rect.shrink(MANAGEMENT_CONTENT_INSET,
-				MANAGEMENT_CONTENT_INSET + MANAGEMENT_EDITOR_FOOTER_RESERVE,
-				MANAGEMENT_CONTENT_INSET, MANAGEMENT_CONTENT_INSET);
+	public static UIRect managementActionsRect(UIRect rect, float height) {
+		return new UIRect(MANAGEMENT_CONTENT_INSET, rect.getHeight() - MANAGEMENT_CONTENT_INSET - height,
+				rect.getWidth() - MANAGEMENT_CONTENT_INSET * 2f, height);
 	}
 
-	public static UIRect managementDeleteButtonLocalRect(UIRect rect) {
-		return new UIRect(MANAGEMENT_CONTENT_INSET,
-				rect.getHeight() - MANAGEMENT_DELETE_BUTTON_BOTTOM_INSET - MANAGEMENT_DELETE_BUTTON_HEIGHT,
-				MANAGEMENT_DELETE_BUTTON_WIDTH, MANAGEMENT_DELETE_BUTTON_HEIGHT);
+	public static UIRect managementEditorRect(UIRect rect, UIRect actions) {
+		return new UIRect(rect.getX() + MANAGEMENT_CONTENT_INSET, rect.getY() + MANAGEMENT_CONTENT_INSET,
+				rect.getWidth() - MANAGEMENT_CONTENT_INSET * 2f,
+				actions.getY() - SECTION_GAP - MANAGEMENT_CONTENT_INSET);
 	}
 
-	public static UIRect managementSourceNoteLocalRect(UIRect rect) {
-		return new UIRect(MANAGEMENT_SOURCE_NOTE_LEFT,
-				rect.getHeight() - MANAGEMENT_DELETE_BUTTON_HEIGHT - MANAGEMENT_SOURCE_NOTE_BOTTOM_INSET,
-				rect.getWidth() - MANAGEMENT_SOURCE_NOTE_WIDTH_RESERVE, MANAGEMENT_DELETE_BUTTON_HEIGHT);
+	public static UIRect managementDeleteButtonLocalRect(UIRect actions, float width, float height) {
+		return new UIRect(actions.getX(), actions.getY() + (actions.getHeight() - height) * 0.5f, width, height);
+	}
+
+	public static UIRect managementSourceNoteLocalRect(UIRect actions, UIRect delete) {
+		float left = delete.getX() + delete.getWidth() + SECTION_GAP;
+		return new UIRect(left, actions.getY(),
+				actions.getX() + actions.getWidth() - left, actions.getHeight());
 	}
 
 	public static float managementFooterButtonWidth(UIRect footer, int buttonCount) {
 		return Math.min(MANAGEMENT_FOOTER_BUTTON_MAX_WIDTH,
-				(footer.getWidth() - MANAGEMENT_FOOTER_BUTTON_WIDTH_RESERVE) / buttonCount);
+				(footer.getWidth() - MANAGEMENT_FOOTER_BUTTON_GAP * (buttonCount - 1)) / buttonCount);
 	}
 
 	public static UIRect managementFooterButtonRect(UIRect footer, float buttonWidth, int index) {
@@ -455,7 +464,7 @@ public class BattleNext_PageLayout {
 	}
 
 	public static UIRect managementFooterStatusRect(UIRect footer, float buttonWidth, int buttonCount) {
-		float statusOffset = buttonCount * buttonWidth + MANAGEMENT_FOOTER_STATUS_OFFSET;
+		float statusOffset = buttonCount * (buttonWidth + MANAGEMENT_FOOTER_BUTTON_GAP);
 		return new UIRect(footer.getX() + statusOffset, footer.getY(),
 				footer.getWidth() - statusOffset, FOOTER_HEIGHT);
 	}

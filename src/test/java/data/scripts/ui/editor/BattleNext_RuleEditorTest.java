@@ -4,6 +4,7 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.rule.BattleNext_RuleModel;
@@ -12,6 +13,7 @@ import data.model.rule.BattleNext_RuleStore;
 import data.restriction.BattleNext_RestrictionRegistry;
 import data.restriction.BattleNext_RestrictionScript;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
 import data.scripts.ui.widget.BattleNext_TableWidget;
@@ -64,6 +66,21 @@ class BattleNext_RuleEditorTest extends BattleNext_TestPageFixture {
 		Field loadErrors = registry.getClass().getDeclaredField("loadErrors");
 		loadErrors.setAccessible(true);
 		loadErrors.set(registry, previousLoadErrors);
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {12, 20, 28})
+	void measuredTitleLeavesAConstantGapBeforeTheTable(int height) throws Exception {
+		paragraphLineHeight = height;
+		BattleNext_RuleEditor editor = new BattleNext_RuleEditor(new BattleNext_RuleStore());
+		editor.open(null);
+		attachEditor(editor, panel(1000f, 400f, new BaseCustomUIPanelPlugin()));
+		BattleNext_TableWidget table = (BattleNext_TableWidget) getField(editor, "tableWidget");
+		PositionAPI bounds = table.getPanel().getPosition();
+		PositionAPI parent = geometry.get(bounds).getParent();
+		assertEquals(height + BattleNext_PageLayout.EDITOR_TABLE_TITLE_GAP,
+				parent.getY() + parent.getHeight() - bounds.getY() - bounds.getHeight());
+		editor.close();
 	}
 
 	@Test

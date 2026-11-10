@@ -1,5 +1,6 @@
 package data.scripts.ui.widget;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -257,7 +258,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 			if (index == 0) continue;
 			PositionAPI previous = components.get(index - 1).getPosition();
 			boolean sectionRow = index > 4 && !heading;
-			assertEquals(index == 1 ? 5f : index == 4 || sectionRow ? 2f : 8f,
+			assertEquals(index == 1 ? BattleNext_PageLayout.CONTROL_GAP : index == 4 || sectionRow ? BattleNext_PageLayout.CONTROL_GAP : 8f,
 					previous.getY() - position.getY() - position.getHeight());
 		}
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
@@ -309,7 +310,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 					? BattleNext_UiTheme.MUTED : BattleNext_UiTheme.TEXT, labelColors.get(position));
 			if (index > 0) {
 				PositionAPI previous = components.get(index - 1).getPosition();
-				assertEquals(index == 1 ? 5f : 8f, previous.getY() - position.getY() - position.getHeight());
+				assertEquals(index == 1 ? BattleNext_PageLayout.CONTROL_GAP : 8f, previous.getY() - position.getY() - position.getHeight());
 			}
 		}
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
@@ -356,7 +357,7 @@ class BattleNext_EquipmentTooltipIntegrationTest extends BattleNext_TestVariantF
 				(instance, method, arguments) -> switch (method.getName()) {
 					case "getDescriptionId" -> original.getHullId() + "_text";
 					case "getHullSize" -> ShipAPI.HullSize.FRIGATE;
-					case "getSuppliesToRecover" -> 5f;
+					case "getSuppliesToRecover" -> BattleNext_PageLayout.CONTROL_GAP;
 					case "getHints" -> EnumSet.noneOf(ShipHullSpecAPI.ShipTypeHints.class);
 					case "getDefenseType" -> ShieldAPI.ShieldType.OMNI;
 					case "getNoCRLossTime" -> 1000f;

@@ -22,7 +22,7 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 		int levels = Integer.numberOfTrailingZeros(width);
 		int loserRounds = Math.max(1, levels * 2 - 2);
 		buildWinners(width, BattleNext_Match.MatchStage.WINNERS);
-		float loserTop = 140f + width * 55f;
+		float loserTop = (float) nodes.stream().mapToDouble(node -> node.y() + node.height()).max().orElseThrow() + ROW_GAP;
 		int openingCount = Math.max(1, width / 4);
 
 		for (int index = 0; index < openingCount; index++) {
@@ -30,7 +30,7 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 			Participant enemy = width == 2 ? new Participant("", "", false, true)
 					: source("W1-" + (index * 2 + 2), true);
 			addMatchNode("L1-" + (index + 1), BattleNext_Match.MatchStage.LOSERS, player, enemy,
-					40f, loserTop + index * 110f, NODE_WIDTH, NODE_HEIGHT, false);
+					LAYOUT_LEFT, loserTop + index * ROW_STEP, NODE_WIDTH, NODE_HEIGHT, false);
 		}
 		for (int winnerRound = 2; winnerRound <= levels; winnerRound++) {
 			int loserRound = winnerRound * 2 - 2;
@@ -40,7 +40,7 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 				addMatchNode("L" + loserRound + "-" + (index + 1), BattleNext_Match.MatchStage.LOSERS,
 						source("L" + (loserRound - 1) + "-" + (index + 1), false),
 						source("W" + winnerRound + "-" + (index + 1), true),
-						40f + (loserRound - 1) * 300f, loserTop + index * 110f * (1 << (winnerRound - 2)),
+						LAYOUT_LEFT + (loserRound - 1) * COLUMN_STEP, loserTop + index * ROW_STEP * (1 << (winnerRound - 2)),
 						NODE_WIDTH, NODE_HEIGHT, false);
 			}
 			if (winnerRound == levels) continue;
@@ -49,19 +49,21 @@ public class BattleNext_DoubleEliminationView extends BattleNext_TournamentView 
 				addMatchNode("L" + (loserRound + 1) + "-" + (index + 1), BattleNext_Match.MatchStage.LOSERS,
 						source("L" + loserRound + "-" + (index * 2 + 1), false),
 						source("L" + loserRound + "-" + (index * 2 + 2), false),
-						40f + loserRound * 300f,
-						loserTop + (index * 2 + 0.5f) * 110f * (1 << (winnerRound - 2)),
+						LAYOUT_LEFT + loserRound * COLUMN_STEP,
+						loserTop + (index * 2 + 0.5f) * ROW_STEP * (1 << (winnerRound - 2)),
 						NODE_WIDTH, NODE_HEIGHT, false);
 			}
 		}
-		float finalX = 40f + Math.max(levels, loserRounds) * 300f;
-		float finalY = (19f + width * 27.5f + loserTop) * 0.5f;
+		float finalX = (float) nodes.stream().mapToDouble(node -> node.x() + node.width()).max().orElseThrow() + COLUMN_GAP;
+		Node winner = findNode("W" + levels + "-1");
+		Node loser = findNode("L" + loserRounds + "-1");
+		float finalY = (winner.y() + loser.y()) * 0.5f;
 
 		addMatchNode("GF", BattleNext_Match.MatchStage.GRAND_FINAL,
 				source("W" + levels + "-1", false), source("L" + loserRounds + "-1", false),
 				finalX, finalY, NODE_WIDTH, NODE_HEIGHT, false);
 		addMatchNode("GF_RESET", BattleNext_Match.MatchStage.GRAND_FINAL_RESET,
 				source("GF", true), source("GF", false),
-				finalX + 300f, finalY, NODE_WIDTH, NODE_HEIGHT, false);
+				finalX + COLUMN_STEP, finalY, NODE_WIDTH, NODE_HEIGHT, false);
 	}
 }

@@ -12,6 +12,7 @@ import data.restriction.BattleNext_RestrictionRegistry.BattleNext_RestrictionSpe
 import data.scripts.BattleNextModPlugin;
 import data.scripts.tools.BattleNext_Settings;
 import data.scripts.ui.BattleNext_UiInputRouter;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.widget.BattleNext_TextField;
 import data.simulator.BattleNext_SimulatorWidget;
 import data.test.fixture.BattleNext_TestPageFixture;
@@ -65,9 +66,9 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 			assertFalse(logging.isChecked());
 			assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_full_graphic_effect"), buttonLabels.get("fullGraphicEffect"));
 			assertEquals(BattleNext_TestTextCatalog.text("Settings", "BattleNext_settings_info_log"), buttonLabels.get("infoLog"));
-			assertEquals(33f, buttonPositions.get("cnText").getY() - buttonPositions.get("fullGraphicEffect").getY());
-			assertEquals(33f, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
-			assertEquals(33f, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
+			assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT + BattleNext_PageLayout.EDITOR_LABEL_GAP, buttonPositions.get("cnText").getY() - buttonPositions.get("fullGraphicEffect").getY());
+			assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT + BattleNext_PageLayout.EDITOR_LABEL_GAP, buttonPositions.get("fullGraphicEffect").getY() - buttonPositions.get("infoLog").getY());
+			assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT + BattleNext_PageLayout.EDITOR_LABEL_GAP, buttonPositions.get("infoLog").getY() - buttonPositions.get("rttInBattle").getY());
 			logging.setChecked(true);
 			assertTrue(page.hasUnsavedChanges());
 			assertFalse(BattleNext_Settings.isInfoLogEnabled());
@@ -100,7 +101,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"180,43", "1400,384"})
+	@CsvSource({"180,43", "1400,385"})
 	void settingsAndSimulatorFillTheirOwnRegionsAndPreserveDraftOnRefresh(int width, int columnWidth) throws Exception {
 
 		deferTooltipWidth = true;
@@ -119,7 +120,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		float expectedWidth = owner.getPosition().getWidth();
 		BattleNext_SimulatorWidget simulator = (BattleNext_SimulatorWidget) getField(page, "simulatorWidget");
 		PositionAPI simulatorBounds = simulator.getPanel().getPosition();
-		assertEquals(owner.getPosition().getX() + columnWidth + 10f, simulatorBounds.getX());
+		assertEquals(owner.getPosition().getX() + columnWidth + BattleNext_PageLayout.EDITOR_COLUMN_GAP, simulatorBounds.getX());
 		assertEquals(root.getPosition().getX() + width - 8f, simulatorBounds.getX() + simulatorBounds.getWidth());
 		assertEquals(owner.getPosition().getY() + owner.getPosition().getHeight(),
 				simulatorBounds.getY() + simulatorBounds.getHeight());
@@ -139,8 +140,8 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertEquals(Misc.getNegativeHighlightColor(), labelColors.get(emphasized));
 		assertEquals(simulatorBounds.getCenterX(), description.getCenterX(), 0.5f);
 		assertEquals(simulatorBounds.getCenterX(), emphasized.getCenterX(), 0.5f);
-		assertEquals(description.getY() - 12f, emphasized.getY() + emphasized.getHeight(), 0.5f);
-		assertEquals(emphasized.getY() - 12f, enable.getY() + enable.getHeight(), 0.5f);
+		assertEquals(description.getY() - BattleNext_PageLayout.SECTION_GAP, emphasized.getY() + emphasized.getHeight(), 0.5f);
+		assertEquals(emphasized.getY() - BattleNext_PageLayout.SECTION_GAP, enable.getY() + enable.getHeight(), 0.5f);
 		assertEquals(simulatorBounds.getCenterY(), (description.getY() + description.getHeight() + enable.getY()) * 0.5f, 0.5f);
 		TooltipMakerAPI border = (TooltipMakerAPI) children.get(simulatorContent).get(0);
 		PositionAPI rectangle = tooltips.get(border).getComponents().get(0).getPosition();
@@ -197,7 +198,7 @@ class BattleNext_SettingsPageTest extends BattleNext_TestPageFixture {
 		assertLanguageLabel(checkbox, initial);
 		assertEquals(buttonPositions.get("fullGraphicEffect").getX(), checkbox.getPosition().getX());
 		assertEquals(buttonPositions.get("fullGraphicEffect").getWidth(), checkbox.getPosition().getWidth());
-		assertEquals(33f, checkbox.getPosition().getY() - buttonPositions.get("fullGraphicEffect").getY());
+		assertEquals(BattleNext_PageLayout.FORM_FIELD_HEIGHT + BattleNext_PageLayout.EDITOR_LABEL_GAP, checkbox.getPosition().getY() - buttonPositions.get("fullGraphicEffect").getY());
 		checkbox.setChecked(!initial);
 		assertTrue(page.hasUnsavedChanges());
 		assertEquals(initial, BattleNext_Settings.isCnTextEnabled());

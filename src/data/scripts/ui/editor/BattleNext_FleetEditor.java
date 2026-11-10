@@ -5,6 +5,7 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.model.BattleNext_LoadSource;
@@ -35,7 +36,7 @@ import java.util.*;
 
 public class BattleNext_FleetEditor extends BattleNext_EditorView {
 
-	private static final float MEMBER_DETAIL_INSET = 8f;
+	private static final float MEMBER_DETAIL_INSET = BattleNext_PageLayout.SECTION_GAP;
 
 	private final BattleNext_FleetStore store;
 	private VisibleRows visibleMembers;
@@ -44,7 +45,6 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	private boolean releasingRows;
 	private final Map<Integer, CustomPanelAPI> memberPanels = new LinkedHashMap<>();
 	private final Map<Integer, RowContent> memberContent = new LinkedHashMap<>();
-	private final Map<Object, Float> memberHeights = new IdentityHashMap<>();
 	private final BattleNext_VariantSourceProvider variantSource;
 	private final BattleNext_FleetMemberProvider memberSource;
 
@@ -129,20 +129,24 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		memberViewport = rowsContent;
 		memberTop = rowsContent.getHeightSoFar();
 		visibleMembers = new VisibleRows(draft.getMembersReadonly().size(),
-				index -> expandedMembers.contains(index) ? memberHeights.getOrDefault(memberKeys.get(index), 680f) : 44f,
+				index -> BattleNext_ExpandablePanel.HEADER_HEIGHT + BattleNext_ExpandablePanel.ROW_GAP,
 				index -> mountMember(index, columnWidth), this::releaseMember,
 				index -> memberContent.get(index).hasFocus());
 		visibleMembers.attach(panel, rowsContent, columnWidth, 0f);
+		for (int index = 0; index < draft.getMembersReadonly().size(); index++) {
+			if (expandedMembers.contains(index)) visibleMembers.mount(index);
+		}
 		visibleMembers.update(-memberTop, rowsContent.getPosition().getHeight());
 		rowsContent.setHeightSoFar(memberTop + visibleMembers.height());
 
 		addMemberButton = createButton(rowsContent, columnWidth, fleetStrings.get("add_member"), "add_member");
 		memberPicker = createPicker(memberSource, BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE, List::of, this::addMembers);
+		positionMembers();
 	}
 
 	private void mountMember(int index, float width) {
 		CustomPanelAPI canvas = visibleMembers.getPanel();
-		CustomPanelAPI row = canvas.createCustomPanel(width, 44f, new BaseCustomUIPanelPlugin());
+		CustomPanelAPI row = canvas.createCustomPanel(width, BattleNext_ExpandablePanel.HEADER_HEIGHT + BattleNext_ExpandablePanel.ROW_GAP, new BaseCustomUIPanelPlugin());
 		TooltipMakerAPI content = row.createUIElement(width, 0f, false);
 		RowContent owned = mountRow(() -> addMember(index, draft.getMembersReadonly().get(index), content, width));
 		memberPanels.put(index, row);
@@ -151,7 +155,6 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		row.getPosition().setSize(width, height);
 		row.addUIElement(content).inTL(0f, 0f);
 		canvas.addComponent(row).inTL(0f, visibleMembers.top(index));
-		memberHeights.put(memberKeys.get(index), height);
 		visibleMembers.setHeight(index, height);
 		positionMembers();
 	}
@@ -162,8 +165,13 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 		}
 		CustomPanelAPI canvas = visibleMembers.getPanel();
 		canvas.getPosition().setSize(canvas.getPosition().getWidth(), visibleMembers.height());
-		memberViewport.setHeightSoFar(memberTop + visibleMembers.height() + BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT + 16f);
-		if (addMemberButton != null) addMemberButton.getPosition().inTL(0f, memberTop + visibleMembers.height() + 8f);
+		float top = memberTop + visibleMembers.height();
+		if (addMemberButton != null) {
+			PositionAPI button = addMemberButton.getPosition();
+			button.inTL(0f, top + MEMBER_DETAIL_INSET);
+			top += MEMBER_DETAIL_INSET + button.getHeight() + MEMBER_DETAIL_INSET;
+		}
+		memberViewport.setHeightSoFar(top);
 	}
 
 	private void releaseMember(int index) {
@@ -179,6 +187,14 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 			visibleMembers.update();
 			positionMembers();
 		}
+	}
+
+	@Override
+	protected void afterRefresh() {
+		ScrollPanelAPI scroller = memberViewport.getExternalScroller();
+		BattleNext_PageLayout.restoreScrollOffset(memberViewport, scroller.getPosition().getHeight(), scroller.getYOffset());
+		visibleMembers.update();
+		positionMembers();
 	}
 
 	@Override
@@ -601,7 +617,6 @@ public class BattleNext_FleetEditor extends BattleNext_EditorView {
 	@Override
 	protected void closeEditorState() {
 		variantPrefixField = null;
-		memberHeights.clear();
 		memberFields.clear();
 		memberViewport = null;
 		addMemberButton = null;

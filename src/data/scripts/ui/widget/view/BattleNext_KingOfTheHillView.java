@@ -24,7 +24,7 @@ public class BattleNext_KingOfTheHillView extends BattleNext_TournamentView {
 					: source("K-" + index, false);
 			Participant enemy = seededFleet(index + 2);
 			addMatchNode("K-" + (index + 1), BattleNext_Match.MatchStage.KING_OF_THE_HILL,
-					player, enemy, 40f + index * 300f, 240f, NODE_WIDTH, NODE_HEIGHT, false);
+					player, enemy, LAYOUT_LEFT + index * COLUMN_STEP, (CANVAS_HEIGHT - NODE_HEIGHT) * 0.5f, NODE_WIDTH, NODE_HEIGHT, false);
 		}
 	}
 }

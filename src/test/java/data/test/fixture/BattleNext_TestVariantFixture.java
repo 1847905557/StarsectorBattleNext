@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -109,7 +110,11 @@ public class BattleNext_TestVariantFixture extends BattleNext_TestPageFixture {
 	}
 
 	protected void setField(Object target, String name, Object value) throws Exception {
-		Field field = target.getClass().getDeclaredField(name);
+		Class<?> owner = target.getClass();
+		while (Arrays.stream(owner.getDeclaredFields()).noneMatch(field -> field.getName().equals(name))) {
+			owner = owner.getSuperclass();
+		}
+		Field field = owner.getDeclaredField(name);
 		field.setAccessible(true);
 		field.set(target, value);
 	}

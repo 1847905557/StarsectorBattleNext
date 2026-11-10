@@ -15,7 +15,6 @@ import data.model.pinnedvariant.BattleNext_PinnedVariantStore;
 import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.battlesnext.util.ui.UIRect;
 import data.scripts.fleet.BattleNext_VariantBuilder;
-import data.scripts.tools.BattleNext_GeometryRenderer;
 import data.scripts.tools.BattleNext_Logger;
 import data.scripts.ui.widget.BattleNext_ConfirmationDialog;
 import data.scripts.ui.widget.BattleNext_OptionPicker;
@@ -24,8 +23,6 @@ import data.scripts.ui.widget.BattleNext_VariantDetails;
 import data.scripts.ui.widget.BattleNext_SaveErrors;
 import data.scripts.ui.widget.provider.BattleNext_RefitDModSourceProvider;
 import data.scripts.ui.widget.provider.BattleNext_RefitSModSourceProvider;
-import org.boxutil.manager.ShaderCore;
-import org.boxutil.units.standard.misc.UIBorderObject;
 import org.json.JSONException;
 import org.lwjgl.input.Keyboard;
 
@@ -36,21 +33,19 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
+public class BattleNext_RefitPanelPlugin extends BattleNext_BasePanelPlugin
 		implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
 
-	private static final float BORDER_INSET = 8f;
 	private static final float SIDE_SHARE = 0.1f;
 	private static final float LEFT_SHARE = 0.6f;
-	private static final float RIGHT_SHARE = 0.18f;
-	private static final float GAP_SHARE = 0.02f;
 	private static final float CONTENT_TOP_SHARE = 0.1f;
 	private static final float CONTENT_HEIGHT_SHARE = 0.80f;
-	private static final float PICKER_GAP = 36f;
+	private static final float PICKER_HEIGHT = BattleNext_PageLayout.EDITOR_BUTTON_HEIGHT;
+	private static final float PICKER_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float FOOTER_BUTTON_WIDTH = 160f;
-	private static final float FOOTER_BUTTON_GAP = 10f;
+	private static final float FOOTER_BUTTON_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float PIN_BUTTON_HEIGHT = 30f;
-	private static final float PIN_NAME_GAP = 6f;
+	private static final float PIN_NAME_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	private final Runnable closeAction;
 	private final BattleNext_UiInputRouter inputRouter = new BattleNext_UiInputRouter();
@@ -62,8 +57,6 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private final BattleNext_PinnedVariantStore pinnedStore = new BattleNext_PinnedVariantStore();
 	private final BattleNext_ConfirmationDialog confirmation = new BattleNext_ConfirmationDialog(this, inputRouter);
 
-	private UIBorderObject border;
-	private CustomPanelAPI panel;
 	private CustomPanelAPI leftPanel;
 	private CustomPanelAPI rightPanel;
 	private BattleNext_VariantDetails details;
@@ -84,33 +77,25 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	private String saveError = "";
 	private final BattleNext_SaveErrors saveErrors = new BattleNext_SaveErrors();
 	private boolean confirmationWasActive;
-	private float borderX;
-	private float borderY;
-	private int backdropTexture;
-	private float backdropU;
-	private float backdropV;
 
 	public BattleNext_RefitPanelPlugin(Runnable closeAction) {
 		this.closeAction = closeAction;
 	}
 
 	public void init(CustomPanelAPI panel, float width, float height) {
-		this.panel = panel;
+		initFrame(panel, width, height);
 		BattleNext_UiInputRouter.activate(inputRouter);
 		details = new BattleNext_VariantDetails(this::refreshDetails, inputRouter::isEmpty);
-		border = new UIBorderObject(false, true);
-		borderX = (ShaderCore.getScreenWidth() - width) * 0.5f - BORDER_INSET;
-		borderY = (ShaderCore.getScreenHeight() - height) * 0.5f - BORDER_INSET;
-		border.setSize(width + BORDER_INSET * 2f, height + BORDER_INSET * 2f);
+
 		confirmation.attach(panel);
 
 		float top = height * CONTENT_TOP_SHARE;
 		float contentHeight = height * CONTENT_HEIGHT_SHARE;
-		float gap = width * GAP_SHARE;
+		float gap = BattleNext_PageLayout.SECTION_GAP;
 		float leftWidth = width * LEFT_SHARE;
-		float rightWidth = width * RIGHT_SHARE;
 		float leftX = width * SIDE_SHARE;
 		float rightX = leftX + leftWidth + gap;
+		float rightWidth = width - rightX - leftX;
 		leftPanel = panel.createCustomPanel(leftWidth, contentHeight, new BaseCustomUIPanelPlugin());
 		rightPanel = panel.createCustomPanel(rightWidth, contentHeight, new ActionsPanelPlugin());
 		panel.addComponent(leftPanel).inTL(leftX, top);
@@ -140,20 +125,20 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	private void buildPickers(float width) {
-		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, refitStrings.get("s_mods"), 0f,
+		sModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, PICKER_HEIGHT, refitStrings.get("s_mods"), 0f,
 				new BattleNext_RefitSModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(sModsOf(draft)), this::selectSMods);
-		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, 30f, refitStrings.get("d_mods"), 0f,
+		dModPicker = new BattleNext_OptionPicker(inputRouter, panel, width, PICKER_HEIGHT, refitStrings.get("d_mods"), 0f,
 				new BattleNext_RefitDModSourceProvider(() -> draft),
 				BattleNext_OptionPicker.OptionSelectionMode.MULTIPLE,
 				() -> draft == null ? List.of() : new ArrayList<>(dModsOf(draft)), this::selectDMods);
-		TooltipMakerAPI sModHost = rightPanel.createUIElement(width, 30f, false);
+		TooltipMakerAPI sModHost = rightPanel.createUIElement(width, PICKER_HEIGHT, false);
 		sModPicker.attach(sModHost, rightPanel);
 		rightPanel.addUIElement(sModHost).inTL(0f, 0f);
-		TooltipMakerAPI dModHost = rightPanel.createUIElement(width, 30f, false);
+		TooltipMakerAPI dModHost = rightPanel.createUIElement(width, PICKER_HEIGHT, false);
 		dModPicker.attach(dModHost, rightPanel);
-		rightPanel.addUIElement(dModHost).inTL(0f, PICKER_GAP);
+		rightPanel.addUIElement(dModHost).inTL(0f, sModHost.getPosition().getHeight() + PICKER_GAP);
 	}
 
 	private void buildPinName() {
@@ -425,29 +410,11 @@ public class BattleNext_RefitPanelPlugin extends BaseCustomUIPanelPlugin
 	}
 
 	@Override
-	public void renderBelow(float alphaMult) {
-		if (panel == null) return;
-		if (backdropTexture != 0) {
-			BattleNext_GeometryRenderer.texturedFullscreen(backdropTexture, backdropU, backdropV,
-					ShaderCore.getScreenScaleWidth(), ShaderCore.getScreenScaleHeight());
-		}
-
-		border.setAlpha(alphaMult);
-		border.render(borderX, borderY);
-	}
-
-	@Override
 	public void processInput(List<InputEventAPI> events) {
 		for (InputEventAPI event : events) {
 			if (event.isConsumed()) continue;
 			event.consume();
 		}
-	}
-
-	public void setBackdrop(int texture, float u, float v) {
-		backdropTexture = texture;
-		backdropU = u;
-		backdropV = v;
 	}
 
 	private ShipVariantAPI currentVariant() throws Throwable {

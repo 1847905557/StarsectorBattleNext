@@ -17,15 +17,15 @@ import java.util.List;
 
 public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements BattleNext_ConfirmationDialog.ConfirmationDialogHost {
 
-	private static final float SHELL_OUTER_INSET = 8f;
-	private static final float SHELL_TABS_TOP = 46f;
+	private static final float SHELL_OUTER_INSET = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SHELL_HEADING_TABS_GAP = BattleNext_PageLayout.SECTION_GAP;
 	private static final float SHELL_TAB_HEIGHT = 30f;
-	private static final float SHELL_BODY_TOP = 86f;
-	private static final float SHELL_BODY_BOTTOM_RESERVE = 48f;
-	private static final float SHELL_TAB_GAP = 5f;
+	private static final float SHELL_TABS_BODY_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SHELL_BODY_FOOTER_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SHELL_TAB_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float SHELL_CLOSE_MAX_WIDTH = 180f;
 	private static final float SHELL_CLOSE_WIDTH_SHARE = 0.3f;
-	private static final float SHELL_STATUS_CLOSE_GAP = 10f;
+	private static final float SHELL_STATUS_CLOSE_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	private enum BattleManagementPage {
 		BATTLE_SELECTOR("page_battle_selector"),
@@ -136,7 +136,7 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		TooltipMakerAPI content = body.createUIElement(bodyRect.getWidth(), bodyRect.getHeight(), false);
 		loadingLabel = content.addPara(strings.format("loading", loadingText(catalogs == null ? "" : catalogs.loading())), 0f);
 
-		body.addUIElement(content).inTL(8f, 8f);
+		body.addUIElement(content).inTL(SHELL_OUTER_INSET, SHELL_OUTER_INSET);
 	}
 
 	@Override
@@ -291,13 +291,14 @@ public class BattleNext_UiManager extends BaseCustomUIPanelPlugin implements Bat
 		float shellWidth = width - SHELL_OUTER_INSET * 2f;
 		UIRect headingRect = new UIRect(SHELL_OUTER_INSET, SHELL_OUTER_INSET,
 				shellWidth, BattleNext_PageLayout.HEADER_HEIGHT);
-		UIRect tabsRect = new UIRect(SHELL_OUTER_INSET, SHELL_TABS_TOP,
+		UIRect tabsRect = new UIRect(SHELL_OUTER_INSET, headingRect.getY() + headingRect.getHeight() + SHELL_HEADING_TABS_GAP,
 				shellWidth, SHELL_TAB_HEIGHT);
-		bodyRect = new UIRect(SHELL_OUTER_INSET, SHELL_BODY_TOP,
-				shellWidth, height - SHELL_BODY_TOP - SHELL_BODY_BOTTOM_RESERVE);
 		UIRect footerRect = new UIRect(SHELL_OUTER_INSET,
 				height - SHELL_OUTER_INSET - BattleNext_PageLayout.FOOTER_HEIGHT,
 				shellWidth, BattleNext_PageLayout.FOOTER_HEIGHT);
+		float bodyTop = tabsRect.getY() + tabsRect.getHeight() + SHELL_TABS_BODY_GAP;
+		bodyRect = new UIRect(SHELL_OUTER_INSET, bodyTop,
+				shellWidth, footerRect.getY() - SHELL_BODY_FOOTER_GAP - bodyTop);
 
 		headingContent = panel.createUIElement(headingRect.getWidth(), headingRect.getHeight(), false);
 		headingLabel = BattleNext_PageLayout.heading(headingRect, panel, headingContent, managementStrings.get("heading"));

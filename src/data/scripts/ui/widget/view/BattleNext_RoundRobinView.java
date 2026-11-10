@@ -23,16 +23,16 @@ public class BattleNext_RoundRobinView extends BattleNext_TournamentView {
 
 		for (int row = 0; row < count; row++) {
 			Participant player = seededFleet(row + 1);
-			addDecoration(shorten(participantText(player), 22), 20f, 60f + (row + 1) * cellHeight,
+			addDecoration(participantText(player), LAYOUT_LEFT, LAYOUT_TOP + (row + 1) * (cellHeight + ROW_GAP),
 					cellWidth, cellHeight);
-			addDecoration(shorten(participantText(player), 22), 20f + (row + 1) * cellWidth, 60f,
+			addDecoration(participantText(player), LAYOUT_LEFT + (row + 1) * (cellWidth + COLUMN_GAP), LAYOUT_TOP,
 					cellWidth, cellHeight);
 			for (int column = 0; column < count; column++) {
-				float x = 20f + (column + 1) * cellWidth;
-				float y = 60f + (row + 1) * cellHeight;
+				float x = LAYOUT_LEFT + (column + 1) * (cellWidth + COLUMN_GAP);
+				float y = LAYOUT_TOP + (row + 1) * (cellHeight + ROW_GAP);
 
 				if (row == column) {
-					addDecoration(shorten(participantText(player), 22), x, y, cellWidth, cellHeight);
+					addDecoration(participantText(player), x, y, cellWidth, cellHeight);
 					continue;
 				}
 				Participant enemy = seededFleet(column + 1);

@@ -75,21 +75,24 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 	private static final float SEARCH_HEIGHT = 32f;
 	private static final float TILE_SIZE = 64f;
-	private static final float TILE_GAP = 8f;
-	private static final float POPUP_INSET = 8f;
+	private static final float TILE_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float POPUP_INSET = BattleNext_PageLayout.SECTION_GAP;
 	private static final float POPUP_MAX_WIDTH = 540f;
 	private static final float POPUP_MAX_HEIGHT = 420f;
-	private static final float POPUP_ROW_GAP = 2f;
+	private static final float POPUP_ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
 	private static final float POPUP_BORDER_THICKNESS = 2f;
 	private static final float POPUP_ACTION_MAX_WIDTH = 120f;
 	private static final float POPUP_ACTION_BUTTON_HEIGHT = 30f;
-	private static final float POPUP_ACTION_BOTTOM_RESERVE = 38f;
-	private static final float POPUP_GRID_TOP = 44f;
-	private static final float POPUP_GRID_HEIGHT_RESERVE = 90f;
-	private static final float SEARCH_LABEL_TOP_INSET = 6f;
+	private static final float GROUP_BUTTON_HEIGHT = BattleNext_PageLayout.FORM_FIELD_HEIGHT;
+	private static final float GROUP_BUTTON_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float GROUP_GRID_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float SELECTED_BUTTON_SIZE = 32f;
+	private static final float SELECTED_BUTTON_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float SELECTED_CARD_HEIGHT = SELECTED_BUTTON_SIZE + SELECTED_BUTTON_GAP;
+	private static final float SELECTED_ROW_HEIGHT = SELECTED_CARD_HEIGHT + SELECTED_BUTTON_GAP;
 	private static final float SEARCH_LABEL_WIDTH = 80f;
-	private static final float TILE_CONTENT_INSET = 2f;
-	private static final float TILE_ICON_SIZE = 60f;
+	private static final float TILE_CONTENT_INSET = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float TILE_ICON_SIZE = TILE_SIZE - TILE_CONTENT_INSET * 2f;
 	private static final float TILE_LABEL_WIDTH = TILE_SIZE - TILE_CONTENT_INSET * 2f;
 	private static final int TILE_LABEL_MAX_LINES = 3;
 	private static final float TILE_SELECTION_OUTLINE_INSET = 1f;
@@ -99,8 +102,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private static final float TILE_CHECK_MIDDLE_Y = 46f;
 	private static final float TILE_CHECK_END_X = 60f;
 	private static final float TILE_CHECK_END_Y = 59f;
-	private static final float TILE_COUNT_RIGHT_INSET = 5f;
-	private static final float TILE_COUNT_BOTTOM_INSET = 4f;
+	private static final float TILE_COUNT_RIGHT_INSET = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float TILE_COUNT_BOTTOM_INSET = BattleNext_PageLayout.CONTROL_GAP;
 	private static final Color POPUP_BACKGROUND = new Color(8, 14, 17, 248);
 	private static final Color BORDER_COLOR = BattleNext_UiTheme.PANEL;
 	private static final Color TILE_SELECTED = new Color(32, 77, 91, 235);
@@ -130,6 +133,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 	private CustomPanelAPI popup;
 	private PopupOverlay popupOverlay;
 	private CustomPanelAPI gridPanel;
+	private UIRect gridArea;
 	private BattleNext_TextField search;
 	private String lastSearch = "";
 	private String category = "";
@@ -272,17 +276,26 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		popup = ownPanel(overlayHost, panelOwner.createCustomPanel(width, height, new OptionPickerPopupPlugin()));
 		new UIRect(0f, 0f, width, height).addBorder(popup, BORDER_COLOR, POPUP_BORDER_THICKNESS);
-		popup.addUIElement(searchElement(width)).inTL(2f * POPUP_INSET, POPUP_INSET);
+		TooltipMakerAPI searchBar = searchElement(width);
+		popup.addUIElement(searchBar).inTL(2f * POPUP_INSET, POPUP_INSET);
+		float gridTop = POPUP_INSET + searchBar.getPosition().getHeight();
 		if (source.groupsChoices()) {
 			String[] captions = {strings.get("picker_hulls"), strings.get("picker_pinned"), strings.get("back"), strings.get("picker_selected")};
 			String[] actions = {"browse:hulls", "browse:pinned", "browse:back", "browse:selected"};
+			float step = (width - POPUP_INSET * 4f) / captions.length;
+			float groupTop = gridTop + GROUP_BUTTON_GAP;
 			for (int index = 0; index < captions.length; index++) {
-				BattleNext_PageLayout.fixedButton(popup, new UIRect(16f + index * (width - 32f) / 4f, 42f, (width - 40f) / 4f, 28f),
+				BattleNext_PageLayout.fixedButton(popup, new UIRect(POPUP_INSET * 2f + index * step, groupTop, step - GROUP_BUTTON_GAP, GROUP_BUTTON_HEIGHT),
 						captions[index], actions[index], CutStyle.ALL, false);
 			}
+			gridTop = groupTop + GROUP_BUTTON_HEIGHT + GROUP_GRID_GAP;
+		} else {
+			gridTop += SELECTED_BUTTON_GAP;
 		}
 		float buttonWidth = Math.min(POPUP_ACTION_MAX_WIDTH, (width - 3f * POPUP_INSET) * 0.5f);
-		float buttonY = height - POPUP_ACTION_BOTTOM_RESERVE;
+		float buttonY = height - POPUP_INSET - POPUP_ACTION_BUTTON_HEIGHT;
+		gridArea = new UIRect(POPUP_INSET, gridTop, width - POPUP_INSET * 2f,
+				buttonY - POPUP_INSET - gridTop);
 		BattleNext_PageLayout.fixedButton(popup,
 				new UIRect(width - 2f * buttonWidth - 2f * POPUP_INSET, buttonY,
 						buttonWidth, POPUP_ACTION_BUTTON_HEIGHT),
@@ -330,8 +343,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		float labelWidth = Math.min(SEARCH_LABEL_WIDTH, contentWidth * 0.5f);
 		float fieldWidth = contentWidth - labelWidth;
 		TooltipMakerAPI searchBar = popup.createUIElement(contentWidth, SEARCH_HEIGHT, false);
-		searchBar.addPara(strings.get("picker_search"), 0f)
-				.getPosition().inTL(0f, SEARCH_LABEL_TOP_INSET);
+		LabelAPI searchLabel = searchBar.addPara(strings.get("picker_search"), 0f);
+		searchLabel.getPosition().inTL(0f, (SEARCH_HEIGHT - searchLabel.getPosition().getHeight()) * 0.5f);
 		TooltipMakerAPI fieldHost = popup.createUIElement(fieldWidth, SEARCH_HEIGHT, false);
 		BattleNext_TextField field = new BattleNext_TextField(inputRouter, popup,
 				fieldWidth, BattleNext_PageLayout.FORM_FIELD_HEIGHT, fieldHost);
@@ -354,9 +367,8 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		if (visibleRows != null) visibleRows.close();
 		if (gridPanel != null) releasePanel(gridPanel);
 
-		float width = popup.getPosition().getWidth() - 2f * POPUP_INSET;
-		float top = source.groupsChoices() ? 80f : POPUP_GRID_TOP;
-		float height = popup.getPosition().getHeight() - top - 46f;
+		float width = gridArea.getWidth();
+		float height = gridArea.getHeight();
 		gridPanel = ownPanel(popup, popup.createCustomPanel(width, height, new BaseCustomUIPanelPlugin()));
 		grid = gridPanel.createUIElement(width, height, true);
 
@@ -369,7 +381,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 
 		int columns = selectedOnly ? 1 : gridColumns(popup.getPosition().getWidth());
 		int count = (visible.size() + columns - 1) / columns;
-		float rowHeight = selectedOnly ? 40f : TILE_SIZE + TILE_GAP;
+		float rowHeight = selectedOnly ? SELECTED_ROW_HEIGHT : TILE_SIZE + TILE_GAP;
 		visibleRows = new VisibleRows(count, row -> rowHeight,
 				row -> mountGridRow(row, columns, rowHeight, visible), this::releaseGridRow, row -> false);
 		visibleRows.attach(gridPanel, grid, width, POPUP_INSET);
@@ -378,7 +390,7 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 		grid.setHeightSoFar(POPUP_INSET * 2f + count * rowHeight);
 
 		gridPanel.addUIElement(grid).inTL(0f, 0f);
-		popup.addComponent(gridPanel).inTL(POPUP_INSET, top);
+		popup.addComponent(gridPanel).inTL(gridArea.getX(), gridArea.getY());
 	}
 
 	private void mountGridRow(int row, int columns, float rowHeight, List<OptionChoice> visible) {
@@ -390,21 +402,23 @@ public class BattleNext_OptionPicker extends BattleNext_TooltipBasedWidget {
 			OptionChoice option = visible.get(index);
 			boolean group = source.groupsChoices() && category.isEmpty() && !selectedOnly;
 			OptionPickerTilePlugin tilePlugin = new OptionPickerTilePlugin(option, group);
-			CustomPanelAPI tile = rowPanel.createCustomPanel(selectedOnly ? rowPanel.getPosition().getWidth() - 16f : TILE_SIZE,
-					selectedOnly ? 36f : TILE_SIZE, selectedOnly ? new BaseCustomUIPanelPlugin() {
+			CustomPanelAPI tile = rowPanel.createCustomPanel(selectedOnly ? rowPanel.getPosition().getWidth() - POPUP_INSET * 2f : TILE_SIZE,
+					selectedOnly ? SELECTED_CARD_HEIGHT : TILE_SIZE, selectedOnly ? new BaseCustomUIPanelPlugin() {
 				@Override
 				public void buttonPressed(Object id) {
 					new OptionPickerPopupPlugin().buttonPressed(id);
 				}
 			} : tilePlugin);
 			if (selectedOnly) {
-				TooltipMakerAPI label = tile.createUIElement(tile.getPosition().getWidth() - 112f, 36f, false);
-				label.addPara(label.shortenString(option.label + " x" + selection.get(option.id), label.getWidthSoFar()), 0f);
-				tile.addUIElement(label).inTL(0f, 8f);
 				String[] captions = {"-", "+", "x"};
 				int[] changes = {-1, 1, 0};
+				float actionWidth = captions.length * (SELECTED_BUTTON_SIZE + SELECTED_BUTTON_GAP);
+				TooltipMakerAPI label = tile.createUIElement(tile.getPosition().getWidth() - actionWidth - SELECTED_BUTTON_GAP, SELECTED_CARD_HEIGHT, false);
+				LabelAPI selectedLabel = label.addPara(label.shortenString(option.label + " x" + selection.get(option.id), label.getWidthSoFar()), 0f);
+				selectedLabel.getPosition().inTL(0f, (SELECTED_CARD_HEIGHT - selectedLabel.getPosition().getHeight()) * 0.5f);
+				tile.addUIElement(label).inTL(0f, 0f);
 				for (int button = 0; button < captions.length; button++) {
-					BattleNext_PageLayout.fixedButton(tile, new UIRect(tile.getPosition().getWidth() - 108f + button * 36f, 0f, 32f, 32f),
+					BattleNext_PageLayout.fixedButton(tile, new UIRect(tile.getPosition().getWidth() - actionWidth + button * (SELECTED_BUTTON_SIZE + SELECTED_BUTTON_GAP), 0f, SELECTED_BUTTON_SIZE, SELECTED_BUTTON_SIZE),
 							captions[button], new SelectionChange(option.id, changes[button]), CutStyle.ALL, false);
 				}
 			} else {

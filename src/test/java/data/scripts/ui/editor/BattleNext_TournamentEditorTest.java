@@ -83,11 +83,11 @@ class BattleNext_TournamentEditorTest extends BattleNext_TestPageFixture {
 		float leftWidth = BattleNext_PageLayout.editorColumns(1000f, 300f)[0].getWidth();
 		for (String name : List.of("idField", "nameField", "bestOfField", "maxFleetsField", "mapField")) {
 			TextFieldAPI field = (TextFieldAPI) getField(editor, name);
-			assertEquals(leftWidth - 12f, field.getPosition().getWidth());
+			assertEquals(BattleNext_PageLayout.editorFieldWidth(leftWidth), field.getPosition().getWidth());
 			assertEquals(List.of(left), ((Map<?, ?>) getField(router(editor).getSession(), "registrations")).get(field));
 		}
 		CustomPanelAPI ruleRow = (CustomPanelAPI) getField(optionFields(editor).get(0), "row");
-		assertEquals(leftWidth - 12f, ruleRow.getPosition().getWidth());
+		assertEquals(BattleNext_PageLayout.editorFieldWidth(leftWidth), ruleRow.getPosition().getWidth());
 		assertEquals(ruleRow.getPosition().getWidth() - 32f, ((TextFieldAPI) getField(editor, "ruleField")).getPosition().getWidth());
 
 		((TextFieldAPI) getField(editor, "bestOfField")).setText("pending");

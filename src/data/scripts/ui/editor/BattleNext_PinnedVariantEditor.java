@@ -57,10 +57,10 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 			UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(area.getWidth());
 			nameField = createTextField("name", metadataPanel, fieldContent, fieldArea, variantStrings.get("pin_name"), edited, true, fieldContent);
 		}
-		fieldContent.addPara(variantStrings.get("pin_id") + ": " + selected.pinId(), 8f);
-		fieldContent.addPara(variantStrings.get("source_file") + ": " + selected.path(), 8f);
+		fieldContent.addPara(variantStrings.get("pin_id") + ": " + selected.pinId(), BattleNext_PageLayout.SECTION_GAP);
+		fieldContent.addPara(variantStrings.get("source_file") + ": " + selected.path(), BattleNext_PageLayout.SECTION_GAP);
 		if (!selected.error().isEmpty()) {
-			fieldContent.addPara(selected.error(), 8f);
+			fieldContent.addPara(selected.error(), BattleNext_PageLayout.SECTION_GAP);
 		}
 
 		float metadataHeight = Math.min(metadataLimit, fieldContent.getHeightSoFar());
@@ -72,22 +72,22 @@ public class BattleNext_PinnedVariantEditor extends BattleNext_EditorView {
 		metadataContent = fieldContent;
 		bindViewport("metadata", fieldContent);
 		if (fieldContent.getExternalScroller() != null) {
-			fieldContent.getExternalScroller().setYOffset(Math.min(Math.max(0f, fieldContent.getHeightSoFar() - metadataHeight), offset));
+			BattleNext_PageLayout.restoreScrollOffset(fieldContent, metadataHeight, offset);
 		}
 
 		if (selected.error().isEmpty() && selected.model() != null && store.isLoaded()) {
-			float detailsHeight = Math.max(1f, area.getHeight() - metadataHeight - 8f);
+			float detailsHeight = Math.max(1f, area.getHeight() - metadataHeight - BattleNext_PageLayout.SECTION_GAP);
 			CustomPanelAPI visual = panel.createCustomPanel(area.getWidth(), detailsHeight,
 					new BaseCustomUIPanelPlugin());
 			panel.addComponent(visual).inTL(0f,
-					metadataHeight + 8f);
+					metadataHeight + BattleNext_PageLayout.SECTION_GAP);
 			try {
 				details.setVariantJson(selected.model().getVariantJsonCopy());
 				own(details);
 				details.attach(visual);
 			} catch (Exception exception) {
 				TooltipMakerAPI error = visual.createUIElement(area.getWidth(), detailsHeight, true);
-				error.addPara(selected.path() + ": " + exception, 8f);
+				error.addPara(selected.path() + ": " + exception, BattleNext_PageLayout.SECTION_GAP);
 				visual.addUIElement(error).inTL(0f, 0f);
 			}
 		}

@@ -544,7 +544,9 @@ class BattleNext_PageLifecycleIntegrationTest extends BattleNext_TestPageFixture
 		assertTrue(page.hasUnsavedChanges());
 		CustomPanelAPI detail = (CustomPanelAPI) getField(page, "detailPanel");
 		UIRect detailRect = (UIRect) getField(page, "detailRect");
-		UIRect delete = BattleNext_PageLayout.managementDeleteButtonLocalRect(detailRect);
+		UIRect actions = BattleNext_PageLayout.managementActionsRect(detailRect, BattleNext_PageLayout.MANAGEMENT_DELETE_BUTTON_HEIGHT);
+		UIRect delete = BattleNext_PageLayout.managementDeleteButtonLocalRect(actions,
+				BattleNext_PageLayout.MANAGEMENT_DELETE_BUTTON_WIDTH, BattleNext_PageLayout.MANAGEMENT_DELETE_BUTTON_HEIGHT);
 		assertEquals(delete.getX(), buttonPositions.get("delete").getX() - detail.getPosition().getX());
 		assertEquals(delete.getY(), detail.getPosition().getY() + detail.getPosition().getHeight()
 				- buttonPositions.get("delete").getY() - buttonPositions.get("delete").getHeight());

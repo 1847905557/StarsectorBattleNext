@@ -18,6 +18,7 @@ import data.scripts.tournament.BattleNext_StartedTournament.ExecutionKind;
 import data.scripts.tournament.BattleNext_TournamentEngine;
 import data.scripts.ui.BattleNext_UiInputRouter;
 import data.scripts.ui.BattleNext_UiTheme;
+import data.scripts.ui.BattleNext_PageLayout;
 import data.scripts.ui.page.BattleNext_BattleSelectorPage;
 import data.scripts.ui.widget.BattleNext_TournamentDisplay;
 import data.scripts.ui.widget.provider.BattleNext_FleetSourceProvider;
@@ -137,6 +138,38 @@ class BattleNext_TournamentViewTest {
 		}
 		assertTrue(chart.errors().isEmpty(), chart.errors().toString());
 		assertEquals(json, tournament.toJson().toString());
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {2, 4, 8, 16})
+	void doubleFinalFollowsItsSourcesAndSeparateBracketsKeepTheirGap(int count) {
+		BattleNext_TournamentView chart = view(tournament(count,
+				BattleNext_TournamentModel.TournamentBracketType.DOUBLE_ELIMINATION, 1));
+		BattleNext_TournamentView.Node finalNode = node(chart, "GF");
+		BattleNext_TournamentView.Node winner = node(chart, finalNode.player().sourceId());
+		BattleNext_TournamentView.Node loser = node(chart, finalNode.enemy().sourceId());
+		assertEquals((winner.y() + loser.y()) * 0.5f, finalNode.y());
+		float winnerBottom = (float) chart.nodes.stream().filter(value -> value.id().startsWith("W"))
+				.mapToDouble(value -> value.y() + value.height()).max().orElseThrow();
+		float loserTop = (float) chart.nodes.stream().filter(value -> value.id().startsWith("L"))
+				.mapToDouble(BattleNext_TournamentView.Node::y).min().orElseThrow();
+		assertEquals(BattleNext_TournamentView.ROW_GAP, loserTop - winnerBottom);
+		float bracketRight = (float) chart.nodes.stream().filter(value -> !value.id().startsWith("GF"))
+				.mapToDouble(value -> value.x() + value.width()).max().orElseThrow();
+		assertEquals(BattleNext_TournamentView.COLUMN_GAP, finalNode.x() - bracketRight);
+		assertEquals(finalNode.x() + finalNode.width() + BattleNext_TournamentView.COLUMN_GAP,
+				node(chart, "GF_RESET").x());
+	}
+
+	@Test
+	void roundRobinKeepsFullNamesUntilTheLabelMeasuresItsAvailableWidth() {
+		String name = "i".repeat(40);
+		BattleNext_TournamentModel model = tournament(2, BattleNext_TournamentModel.TournamentBracketType.ROUND_ROBIN, 1);
+		BattleNext_TournamentView chart = BattleNext_TournamentView.createView(model, null,
+				participants.get(model), Map.of("F1", name, "F2", name));
+		for (BattleNext_TournamentView.Node decoration : chart.nodes) {
+			if (decoration.id().isEmpty()) assertEquals(name, decoration.title());
+		}
 	}
 
 	@Test
@@ -395,7 +428,7 @@ class BattleNext_TournamentViewTest {
 		harness.getButtons().get(1).getApi().setChecked(true);
 		chart.advance(0f);
 		assertFalse(harness.getButtons().get(1).isChecked());
-		assertEquals(124f * 700f / BattleNext_TournamentView.CANVAS_WIDTH,
+		assertEquals((100f + BattleNext_PageLayout.SECTION_GAP) * 700f / BattleNext_TournamentView.CANVAS_WIDTH,
 				chart.project(100f, 100f)[0], 0.001f);
 		router.push(new BattleNext_UiInputRouter.Overlay() {
 			@Override
@@ -466,7 +499,7 @@ class BattleNext_TournamentViewTest {
 					harness.getChartBounds().getHeight(), 0.001f);
 			assertEquals(left, right, 0.001f);
 			assertEquals(80f, harness.getChartBounds().getY());
-			assertEquals(harness.getChartBounds().getHeight() + 10f, harness.getReservedChartHeight());
+			assertEquals(harness.getChartBounds().getHeight() + BattleNext_PageLayout.SECTION_GAP, harness.getReservedChartHeight());
 			BattleNext_TournamentView.Node node = chart.nodes.get(0);
 			float logicalX = node.x() + node.width() * 0.5f;
 			float logicalY = node.y() + node.height() * 0.5f;
@@ -560,11 +593,11 @@ class BattleNext_TournamentViewTest {
 			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_summary")), title.getTitles());
 			assertEquals(List.of(BattleNext_TestTextCatalog.text("Tournament", "BattleNext_tournament_participant_fleets")), fleetTitle.getTitles());
 			assertEquals(details.getBounds().getWidth(), participants.getBounds().getWidth());
-			assertEquals(10f, participants.getBounds().getLeftPad() - details.getBounds().getWidth());
+			assertEquals(BattleNext_PageLayout.EDITOR_COLUMN_GAP, participants.getBounds().getLeftPad() - details.getBounds().getWidth());
 			assertEquals(details.getBounds().getTopPad(), participants.getBounds().getTopPad());
-			assertEquals(Math.max(title.getHeight(), fleetTitle.getHeight()) + 10f, details.getBounds().getTopPad());
+			assertEquals(Math.max(title.getHeight(), fleetTitle.getHeight()) + BattleNext_PageLayout.SECTION_GAP, details.getBounds().getTopPad());
 			assertEquals(details.getBounds().getTopPad() + Math.max(details.getHeight(), participants.getHeight()), harness.getSummaryBounds().getHeight());
-			assertEquals(harness.getSummaryBounds().getHeight() + 10f, harness.getContentHeight());
+			assertEquals(harness.getSummaryBounds().getHeight() + BattleNext_PageLayout.SECTION_GAP, harness.getContentHeight());
 			assertEquals(count, participants.getText().size());
 			assertTrue(participants.getText().contains(longName));
 			assertTrue(details.getText().stream().anyMatch(value -> value.startsWith(BattleNext_TestTextCatalog.text("Common", "BattleNext_common_status") + ":")));
@@ -729,8 +762,8 @@ class BattleNext_TournamentViewTest {
 		float height = 700f * BattleNext_TournamentView.CANVAS_HEIGHT / BattleNext_TournamentView.CANVAS_WIDTH;
 
 		assertEquals(height, harness.getChartBounds().getHeight());
-		assertTrue(harness.getContentHeight() >= height + 10f);
-		assertEquals(height + 10f, harness.getReservedChartHeight());
+		assertTrue(harness.getContentHeight() >= height + BattleNext_PageLayout.SECTION_GAP);
+		assertEquals(height + BattleNext_PageLayout.SECTION_GAP, harness.getReservedChartHeight());
 		BattleNext_TournamentView.Node node = chart.nodes.get(0);
 		float[] center = chart.project(node.x() + node.width() * 0.5f, node.y() + node.height() * 0.5f);
 		assertTrue(center[0] > 100f && center[0] < 600f);
@@ -751,7 +784,7 @@ class BattleNext_TournamentViewTest {
 		BattleNext_TournamentView.Node node = node(chart, "W1-1");
 		List<TestLabel> labels = List.copyOf(harness.getNodeLabels());
 		assertEquals(220f, node.width());
-		assertEquals(66f, node.height());
+		assertEquals(18f * 3f + BattleNext_PageLayout.SECTION_GAP * 2f, node.height());
 		assertEquals("W1-1", labels.get(0).getText());
 		assertEquals(BattleNext_UiTheme.MUTED, labels.get(0).getColor());
 		assertEquals("-", labels.get(1).getText());
@@ -761,13 +794,13 @@ class BattleNext_TournamentViewTest {
 		assertTrue(chart.tooltipText(node).contains(longName));
 		assertEquals(Alignment.RMID, labels.get(1).getAlignment());
 		assertEquals(Alignment.RMID, labels.get(3).getAlignment());
-		assertEquals(6f, labels.get(0).getBounds().getX());
-		assertEquals(-24f, labels.get(0).getBounds().getY());
-		assertEquals(-42f, labels.get(1).getBounds().getY());
-		assertEquals(-60f, labels.get(3).getBounds().getY());
+		assertEquals(BattleNext_PageLayout.SECTION_GAP, labels.get(0).getBounds().getX());
+		assertEquals(-BattleNext_PageLayout.SECTION_GAP - 18f, labels.get(0).getBounds().getY());
+		assertEquals(-BattleNext_PageLayout.SECTION_GAP - 18f * 2f, labels.get(1).getBounds().getY());
+		assertEquals(-BattleNext_PageLayout.SECTION_GAP - 18f * 3f, labels.get(3).getBounds().getY());
 		for (TestLabel label : labels) {
 			assertEquals(18f, label.getBounds().getHeight());
-			assertTrue(label.getBounds().getX() + label.getBounds().getWidth() <= node.width() - 6f);
+			assertTrue(label.getBounds().getX() + label.getBounds().getWidth() <= node.width() - BattleNext_PageLayout.SECTION_GAP);
 			assertFalse(label.getText().contains("\n"));
 		}
 
@@ -929,7 +962,7 @@ class BattleNext_TournamentViewTest {
 				if (node.id().isEmpty()) continue;
 				for (int row : new int[]{1, 2}) {
 					BattleNext_TournamentView.Participant participant = row == 1 ? node.player() : node.enemy();
-					float[] point = chart.project(node.x() + 110f, node.y() + 6f + row * 18f + 9f);
+					float[] point = chart.project(node.x() + 110f, node.y() + BattleNext_PageLayout.SECTION_GAP + row * 18f + 9f);
 					BattleNext_TournamentView.SlotHit hit = chart.hitTestSlot(point[0], point[1]);
 					if (participant.seedIndex() >= 0) {
 						assertNotNull(hit, type + " " + node.id() + " row " + row);

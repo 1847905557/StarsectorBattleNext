@@ -14,12 +14,10 @@ import java.util.List;
 
 public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 
-	private static final float POPUP_ROW_GAP = 2f;
-	private static final float POPUP_SCREEN_MARGIN = 8f;
+	private static final float POPUP_ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float POPUP_SCREEN_MARGIN = BattleNext_PageLayout.SECTION_GAP;
 	private static final float POPUP_MAX_HEIGHT = 240f;
-	private static final float POPUP_OPTION_HEIGHT = 35f;
-	private static final float POPUP_SCROLLBAR_RESERVE = 5f;
-	private static final float POPUP_BUTTON_WIDTH_RESERVE = 15f;
+	private static final float POPUP_OPTION_HEIGHT = BattleNext_PageLayout.FOOTER_HEIGHT + BattleNext_PageLayout.BUTTON_VERTICAL_GAP;
 
 	public record DropdownChoice(String id, String label, boolean enabled, String disabledReason) {
 
@@ -66,7 +64,7 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 				for (DropdownChoice choice : options) {
 					if (!choice.id.equals(value)) continue;
 					tooltip.addPara(choice.label, 0f);
-					BattleNext_PageLayout.addMutedIdLine(tooltip, choice.id, 5f);
+					BattleNext_PageLayout.addMutedIdLine(tooltip, choice.id, BattleNext_PageLayout.CONTROL_GAP);
 					return;
 				}
 			}
@@ -199,14 +197,14 @@ public class BattleNext_DropdownField extends BattleNext_PanelBasedWidget {
 		float y = above ? rowTop - height - POPUP_ROW_GAP : dropdownY;
 
 		popup = ownPanel(overlayHost, panel.createCustomPanel(width, height, new DropdownPopupPlugin()));
-		TooltipMakerAPI list = popup.createUIElement(width - POPUP_SCROLLBAR_RESERVE, height, true);
+		TooltipMakerAPI list = popup.createUIElement(width - BattleNext_PageLayout.SCROLLBAR_RESERVED_WIDTH, height, true);
 		list.setButtonFontOrbitron20();
 		if (options.isEmpty()) {
 			list.addPara("", 0f);
 		} else {
 			for (DropdownChoice option : options) {
 				ButtonAPI item = BattleNext_PageLayout.button(list, option.label, option,
-						width - POPUP_BUTTON_WIDTH_RESERVE);
+						list.getWidthSoFar() - BattleNext_PageLayout.SECTION_GAP * 2f);
 				item.setEnabled(option.enabled);
 				BattleNext_PageLayout.addMetadataTooltip(list, option.label, option.id);
 			}

@@ -1,5 +1,6 @@
 package data.scripts.ui.widget.provider;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -163,7 +164,7 @@ class BattleNext_HullModSourceProviderIntegrationTest extends BattleNext_TestVar
 			assertEquals("default", labelFonts.get(components.get(index).getPosition()));
 			assertEquals(BattleNext_UiTheme.TEXT, labelColors.get(components.get(index).getPosition()));
 		}
-		assertEquals(5f, gap(components.get(0).getPosition(), components.get(1).getPosition()));
+		assertEquals(BattleNext_PageLayout.CONTROL_GAP, gap(components.get(0).getPosition(), components.get(1).getPosition()));
 		assertEquals(8f, gap(components.get(1).getPosition(), components.get(2).getPosition()));
 		assertEquals(8f, components.get(components.size() - 1).getPosition().getHeight());
 		assertEquals(installed.mainText, labelPatterns.get(components.get(2).getPosition()));

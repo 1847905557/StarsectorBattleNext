@@ -44,7 +44,7 @@ public class BattleNext_ReportEditor extends BattleNext_EditorView {
 		metadataContent.addTitle(target.report().getName());
 		UIRect fieldArea = BattleNext_PageLayout.editorFieldArea(areaWidth);
 		nameField = createTextField("name", panel, metadataContent, fieldArea, reportStrings.get("name"), edited, true, metadataContent);
-		float top = metadataContent.getHeightSoFar() + 8f;
+		float top = metadataContent.getHeightSoFar() + BattleNext_PageLayout.SECTION_GAP;
 		panel.addUIElement(metadataContent).inTL(0f, 0f);
 		CustomPanelAPI contentPanel = panel.createCustomPanel(areaWidth, Math.max(1f, areaHeight - top), new BaseCustomUIPanelPlugin());
 		panel.addComponent(contentPanel).inTL(0f, top);

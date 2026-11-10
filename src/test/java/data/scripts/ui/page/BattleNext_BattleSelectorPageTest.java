@@ -1,5 +1,6 @@
 package data.scripts.ui.page;
 
+import data.scripts.ui.BattleNext_PageLayout;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
@@ -21,8 +22,8 @@ class BattleNext_BattleSelectorPageTest extends BattleNext_TestPageFixture {
 		CustomPanelAPI row = (CustomPanelAPI) getField(dropdown, "panel");
 		CustomPanelAPI sourceContent = (CustomPanelAPI) children.get(source.getPanel()).get(0);
 		assertSame(sourceContent.getPosition(), geometry.get(row.getPosition()).getParent());
-		assertEquals(583f, row.getPosition().getX() - owner.getPosition().getX(), 0.01f);
-		assertEquals(44f, owner.getPosition().getY() + owner.getPosition().getHeight()
+		assertEquals((int) ((1400f - 175f - BattleNext_PageLayout.SECTION_GAP - 420f) * 0.5f + 175f + BattleNext_PageLayout.SECTION_GAP), row.getPosition().getX() - owner.getPosition().getX(), 0.01f);
+		assertEquals(BattleNext_PageLayout.HEADER_HEIGHT + BattleNext_PageLayout.SECTION_GAP, owner.getPosition().getY() + owner.getPosition().getHeight()
 				- row.getPosition().getY() - row.getPosition().getHeight(), 0.01f);
 		assertEquals(420f, row.getPosition().getWidth());
 		assertEquals(30f, row.getPosition().getHeight());

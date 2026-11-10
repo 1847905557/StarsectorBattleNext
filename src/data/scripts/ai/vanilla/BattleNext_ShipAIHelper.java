@@ -363,26 +363,26 @@ public class BattleNext_ShipAIHelper {
 	public static final float degreesToRadians = (float) (Math.PI / 180.0);
 	public static final float radiansToDegrees = 57.295784F;
 
-	private static final int atanTableLastIndex = 1048575;
-	private static final int atanTableEntries = 1048576;
-	private static final int atanTableWidth = (int) Math.sqrt(1048576.0);
-	private static final float atanTableScale = 1.0F / (atanTableWidth - 1);
+	private static final int ATAN_TABLE_ENTRIES = 1048576;
+	private static final int ATAN_TABLE_LAST_INDEX = ATAN_TABLE_ENTRIES - 1;
+	private static final int ATAN_TABLE_WIDTH = (int) Math.sqrt(ATAN_TABLE_ENTRIES);
+	private static final float ATAN_TABLE_SCALE = 1.0F / (ATAN_TABLE_WIDTH - 1);
 	// intentionally kept dead: degreesPerRadian is written but never read in
 	// the vanilla sources as well
 	private static final float degreesPerRadian = 180.0F / (float) Math.PI;
-	private static final float[] atan2Table = new float[1048576];
+	private static final float[] ATAN2_TABLE = new float[ATAN_TABLE_ENTRIES];
 
 	static {
-		for (int x = 0; x < atanTableWidth; x++) {
-			for (int y = 0; y < atanTableWidth; y++) {
-				float fx = (float) x / atanTableWidth;
-				float fy = (float) y / atanTableWidth;
-				atan2Table[y * atanTableWidth + x] = (float) Math.atan2(fy, fx);
+		for (int x = 0; x < ATAN_TABLE_WIDTH; x++) {
+			for (int y = 0; y < ATAN_TABLE_WIDTH; y++) {
+				float fx = (float) x / ATAN_TABLE_WIDTH;
+				float fy = (float) y / ATAN_TABLE_WIDTH;
+				ATAN2_TABLE[y * ATAN_TABLE_WIDTH + x] = (float) Math.atan2(fy, fx);
 			}
 		}
 	}
 
-	// intentionally kept dead: atanTableLastIndex, atanTableEntries and
+	// intentionally kept dead: ATAN_TABLE_LAST_INDEX, ATAN_TABLE_ENTRIES and
 	// degreesPerRadian are unused in the vanilla sources as well
 	public static Vector2f rotate(Vector2f vector, float degrees) {
 		float cos = (float) Math.cos(degrees * degreesToRadians);
@@ -717,11 +717,11 @@ public class BattleNext_ShipAIHelper {
 			offset = 0.0F;
 		}
 
-		float scale = 1.0F / ((Math.max(x, y)) * atanTableScale);
+		float scale = 1.0F / ((Math.max(x, y)) * ATAN_TABLE_SCALE);
 		int xi = (int) (x * scale);
 		int yi = (int) (y * scale);
-		int index = yi * atanTableWidth + xi;
-		return index >= 0 && index < atan2Table.length ? (atan2Table[index] + offset) * sign : 0.0F;
+		int index = yi * ATAN_TABLE_WIDTH + xi;
+		return index >= 0 && index < ATAN2_TABLE.length ? (ATAN2_TABLE[index] + offset) * sign : 0.0F;
 	}
 
 	/**

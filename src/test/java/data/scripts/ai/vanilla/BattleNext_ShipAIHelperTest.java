@@ -21,6 +21,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 class BattleNext_ShipAIHelperTest {
 	@Test
+	void angularTableTracksAllQuadrantsAndAxisLimits() {
+		for (int degrees = -180; degrees <= 180; degrees++) {
+			float x = (float) Math.cos(Math.toRadians(degrees));
+			float y = (float) Math.sin(Math.toRadians(degrees));
+			assertEquals(Math.atan2(y, x), BattleNext_ShipAIHelper.atan2Fast(y, x), 0.002);
+		}
+	}
+
+	@Test
 	void carrierTargetKeepsVanillaFlagPriority() {
 		ShipAPI carrierFlagTarget = targetShip(1, false, false);
 		ShipAPI maneuverTarget = targetShip(1, false, false);

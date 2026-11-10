@@ -18,7 +18,7 @@ class BattleNext_StatusBarTest extends BattleNext_TestPageFixture {
 		BattleNext_StatusBar bar = new BattleNext_StatusBar(260f, 30f);
 		bar.attach(host, owner);
 		assertEquals(0f, host.getPosition().getWidth());
-		assertEquals(250f, getField(bar, "textWidth"));
+		assertEquals(260f, getField(bar, "textWidth"));
 		assertEquals(30f, tooltips.get(host).getUsedHeight());
 		bar.showError("error");
 		assertEquals("error", ((LabelAPI) getField(bar, "statusLabel")).getText());

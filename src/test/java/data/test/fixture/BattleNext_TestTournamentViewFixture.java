@@ -172,6 +172,7 @@ public class BattleNext_TestTournamentViewFixture {
 				yield null;
 			}
 			case "computeTextWidth" -> textWidth((String) args[0]);
+			case "computeTextHeight" -> 18f;
 			default -> null;
 		});
 

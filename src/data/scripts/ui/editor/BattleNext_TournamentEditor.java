@@ -36,6 +36,8 @@ import java.util.function.Consumer;
 
 public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 
+	private static final float DETAIL_INSET = BattleNext_PageLayout.SECTION_GAP;
+
 	private final BattleNext_TournamentStore store;
 	private final BattleNext_RuleStore ruleStore;
 
@@ -165,18 +167,18 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 		try {
 			startedStore.ensureLoaded();
 		} catch (Exception exception) {
-			rowsContent.addPara(exception.toString(), 5f);
+			rowsContent.addPara(exception.toString(), BattleNext_PageLayout.CONTROL_GAP);
 			return;
 		}
 
 		try {
 			reports.ensureLoaded();
 		} catch (Exception exception) {
-			rowsContent.addPara(exception.toString(), 5f);
+			rowsContent.addPara(exception.toString(), BattleNext_PageLayout.CONTROL_GAP);
 		}
 		if (startedStore.getCatalog().isEmpty()) {
 			for (String error : startedStore.getLoadErrorsCopy()) {
-				rowsContent.addPara(error, 5f);
+				rowsContent.addPara(error, BattleNext_PageLayout.CONTROL_GAP);
 			}
 		}
 
@@ -200,17 +202,17 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 					strings.get("load_failed"), "", null);
 			BattleNext_ExpandablePanel.add(rowsContent, rowsContent, panel, columnWidth, expandedInstances.contains(key), 0f, header,
 					() -> buttonPressed("instance:toggle:" + key), this::buttonPressed, body -> {
-				float areaWidth = columnWidth - 16f;
+				float areaWidth = columnWidth - DETAIL_INSET * 2f;
 				TooltipMakerAPI details = body.createUIElement(areaWidth, 0f, false);
 				details.setTextWidthOverride(areaWidth);
 				details.addPara(BattleNext_StartedTournamentStore.PATH + " / " + entry.index(), 0f);
-				details.addPara(entry.error(), 5f);
-				details.addPara(entry.raw(), 5f);
+				details.addPara(entry.error(), BattleNext_PageLayout.CONTROL_GAP);
+				details.addPara(entry.raw(), BattleNext_PageLayout.CONTROL_GAP);
 
 				createButton(details, areaWidth, tournamentStrings.get("delete_instance"), "instance:delete_error:" + entry.index());
-				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + 16f);
+				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + DETAIL_INSET * 2f);
 
-				body.addUIElement(details).inTL(8f, 8f);
+				body.addUIElement(details).inTL(DETAIL_INSET, DETAIL_INSET);
 			});
 		}
 
@@ -229,24 +231,24 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 			BattleNext_ExpandablePanel.add(rowsContent, rowsContent, panel, columnWidth, expandedInstances.contains(instance.getId()), 0f, header,
 					() -> buttonPressed("instance:toggle:" + instance.getId()), this::buttonPressed, body -> {
 
-				float areaWidth = columnWidth - 16f;
+				float areaWidth = columnWidth - DETAIL_INSET * 2f;
 				TooltipMakerAPI details = body.createUIElement(areaWidth, 0f, false);
 				details.addPara(instance.getId(), 0f);
-				details.addPara(String.join(", ", instance.getFleetIdsReadonly().stream().filter(id -> !id.isEmpty()).toList()), 5f);
+				details.addPara(String.join(", ", instance.getFleetIdsReadonly().stream().filter(id -> !id.isEmpty()).toList()), BattleNext_PageLayout.CONTROL_GAP);
 
 				BattleNext_Match next = instance.getNextPendingMatch();
 				if (next != null) {
-					details.addPara(battleStrings.get("next_match") + ": " + next.getId() + " / " + next.getPlayer() + " vs " + next.getEnemy(), 5f);
+					details.addPara(battleStrings.get("next_match") + ": " + next.getId() + " / " + next.getPlayer() + " vs " + next.getEnemy(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 				if (instance.isCompleted()) {
-					details.addPara(strings.get("winner") + ": " + instance.getChampionFleetId(), 5f);
+					details.addPara(strings.get("winner") + ": " + instance.getChampionFleetId(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 
 				List<String> reportIds = instance.getMatchesReadonly().stream().flatMap(match -> match.getRoundsReadonly().stream()).map(round -> round.getReportId()).filter(id -> !id.isEmpty()).toList();
 				details.addPara(reports.isLoaded() ? tournamentStrings.format("instance_reports", reportIds.stream().filter(id -> reports.get(id) != null).count(), reportIds.size())
 						: reports.getLoadError(), 5f);
 				if (task != null && !task.getImportError().isEmpty()) {
-					details.addPara(task.getImportError(), 5f);
+					details.addPara(task.getImportError(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 				if (task != null) {
 					Metrics metrics = task.getMetrics();
@@ -254,7 +256,7 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 							metrics.steps(), metrics.peakHeapBytes() / 1048576d), 5f);
 					for (BattleNext_SimulationResult result : task.getRoundResultsCopy()) {
 						if (result.diagnostic().isEmpty()) continue;
-						details.addPara(result.id() + ": " + result.diagnostic(), 5f);
+						details.addPara(result.id() + ": " + result.diagnostic(), BattleNext_PageLayout.CONTROL_GAP);
 					}
 				}
 
@@ -264,13 +266,13 @@ public class BattleNext_TournamentEditor extends BattleNext_EditorView {
 						createButton(details, areaWidth, tournamentStrings.get("retry_round_report"), "instance:retry_round:" + instance.getId());
 					}
 				} catch (Exception exception) {
-					details.addPara(exception.toString(), 5f);
+					details.addPara(exception.toString(), BattleNext_PageLayout.CONTROL_GAP);
 				}
 
 				createButton(details, areaWidth, tournamentStrings.get(task != null && task.isDeletionRequested() ? "retry_delete_instance" : "delete_instance"), "instance:delete:" + instance.getId());
-				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + 16f);
+				body.getPosition().setSize(columnWidth, details.getHeightSoFar() + DETAIL_INSET * 2f);
 
-				body.addUIElement(details).inTL(8f, 8f);
+				body.addUIElement(details).inTL(DETAIL_INSET, DETAIL_INSET);
 			});
 		}
 	}

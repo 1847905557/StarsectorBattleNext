@@ -25,16 +25,16 @@ import java.util.function.Function;
 
 public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 
-	private static final float REPORT_SUMMARY_TOP_GAP = 8f;
-	private static final float REPORT_CONTEXT_TOP_GAP = 6f;
-	private static final float REPORT_SECTION_TOP_GAP = 10f;
-	private static final float DETAIL_CONTROL_SIDE_RESERVE = 12f;
+	private static final float REPORT_SUMMARY_TOP_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float REPORT_CONTEXT_TOP_GAP = BattleNext_PageLayout.SECTION_GAP;
+	private static final float REPORT_SECTION_TOP_GAP = BattleNext_PageLayout.SECTION_GAP;
 	private static final float MEMBER_THUMB_SIZE = 32f;
-	private static final float MEMBER_BODY_INSET = 8f;
+	private static final float MEMBER_BODY_INSET = BattleNext_PageLayout.SECTION_GAP;
 	private static final float MEMBER_BODY_LINE_HEIGHT = 24f;
 	private static final float SOURCE_ROW_HEIGHT = 40f;
-	private static final float SOURCE_ROW_GAP = 4f;
-	private static final float SOURCE_TEXT_GAP = 2f;
+	private static final float SOURCE_ROW_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float SOURCE_TEXT_GAP = BattleNext_PageLayout.CONTROL_GAP;
+	private static final float SOURCE_ICON_TEXT_GAP = BattleNext_PageLayout.SECTION_GAP;
 
 	private final BattleNext_I18nSection strings = BattleNext_I18nSection.getInstance("Common", "BattleNext_common_");
 	private final BattleNext_I18nSection reportStrings = BattleNext_I18nSection.getInstance("Report", "BattleNext_report_");
@@ -143,8 +143,8 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 			CustomPanelAPI empty = body.createCustomPanel(contentWidth, SOURCE_ROW_HEIGHT,
 					new BaseCustomUIPanelPlugin());
 			TooltipMakerAPI emptyHost = empty.createUIElement(contentWidth, SOURCE_ROW_HEIGHT, false);
-			emptyHost.addPara(reportStrings.get("no_damage_sources"), 0f)
-					.getPosition().inTL(0f, 10f);
+			LabelAPI emptyLabel = emptyHost.addPara(reportStrings.get("no_damage_sources"), 0f);
+			emptyLabel.getPosition().inTL(0f, (SOURCE_ROW_HEIGHT - emptyLabel.getPosition().getHeight()) * 0.5f);
 			emptyHost.setHeightSoFar(SOURCE_ROW_HEIGHT);
 			empty.addUIElement(emptyHost).inTL(0f, 0f);
 			content.addCustom(empty, SOURCE_ROW_GAP);
@@ -192,11 +192,11 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 			sourcePanel.addUIElement(icon).inTL(0f, iconY);
 		}
 
-		float textX = MEMBER_THUMB_SIZE + 8f;
+		float textX = MEMBER_THUMB_SIZE + SOURCE_ICON_TEXT_GAP;
 		float textWidth = sourceTextWidth(width);
 		TooltipMakerAPI labels = sourcePanel.createUIElement(textWidth, SOURCE_ROW_HEIGHT, false);
 		String name = visual.resolved() ? visual.name() : sourceKindLabel(source.getKind()) + ": " + visual.name();
-		LabelAPI nameLabel = labels.addPara(labels.shortenString(name, Math.max(1f, textWidth - 4f)), 0f);
+		LabelAPI nameLabel = labels.addPara(labels.shortenString(name, Math.max(1f, textWidth)), 0f);
 		LabelAPI[] damageLabels = addDamageColumns(labels, 0f, textWidth,
 				new double[]{source.getHull(), source.getArmor(), source.getShields(), source.getEmp()});
 
@@ -240,7 +240,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 					}
 					default -> {
 						tooltip.addTitle(visual.name());
-						BattleNext_PageLayout.addMutedIdLine(tooltip, sourceKindLabel(source.getKind()) + ": " + source.getId(), 4f);
+						BattleNext_PageLayout.addMutedIdLine(tooltip, sourceKindLabel(source.getKind()) + ": " + source.getId(), BattleNext_PageLayout.CONTROL_GAP);
 					}
 				}
 			}
@@ -253,7 +253,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 		float columnWidth = width / values.length;
 		for (int index = 0; index < values.length; index++) {
 			String value = labels[index] + ": " + formatDamage(values[index]);
-			LabelAPI label = host.addPara(host.shortenString(value, Math.max(1f, columnWidth - 4f)), 0f);
+			LabelAPI label = host.addPara(host.shortenString(value, Math.max(1f, columnWidth)), 0f);
 			label.getPosition().inTL(index * columnWidth, y);
 			result[index] = label;
 		}
@@ -261,7 +261,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	static float detailControlWidth(float contentWidth) {
-		return Math.max(1f, contentWidth - DETAIL_CONTROL_SIDE_RESERVE);
+		return Math.max(1f, contentWidth - BattleNext_PageLayout.SECTION_GAP * 2f);
 	}
 
 	static String nameForRefresh(BattleNext_BattleReportModel report, String editedName) {
@@ -274,7 +274,7 @@ public class BattleNext_ReportDetails extends BattleNext_PanelBasedWidget {
 	}
 
 	static float sourceTextWidth(float rowWidth) {
-		return Math.max(1f, rowWidth - MEMBER_THUMB_SIZE - 8f - MEMBER_BODY_INSET);
+		return Math.max(1f, rowWidth - MEMBER_THUMB_SIZE - SOURCE_ICON_TEXT_GAP - MEMBER_BODY_INSET);
 	}
 
 	static String formatDamage(double value) {

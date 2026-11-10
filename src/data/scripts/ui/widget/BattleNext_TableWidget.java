@@ -110,8 +110,7 @@ public class BattleNext_TableWidget extends BattleNext_PanelBasedWidget {
 		rowsPanel.addUIElement(content).inTL(0f, 0f);
 
 		if (content.getExternalScroller() != null) {
-			float limit = Math.max(0f, content.getHeightSoFar() - availableHeight);
-			content.getExternalScroller().setYOffset(Math.min(limit, scrollOffset));
+			BattleNext_PageLayout.restoreScrollOffset(content, availableHeight, scrollOffset);
 		}
 	}
 
