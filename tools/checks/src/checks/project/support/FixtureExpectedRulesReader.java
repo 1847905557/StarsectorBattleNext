@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 public final class FixtureExpectedRulesReader {
 	private FixtureExpectedRulesReader() {
-
 	}
 
 	public static Set<String> read(Path file) throws IOException {

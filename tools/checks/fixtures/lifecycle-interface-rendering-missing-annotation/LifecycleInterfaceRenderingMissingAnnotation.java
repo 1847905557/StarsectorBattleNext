@@ -1,6 +1,5 @@
 public class LifecycleInterfaceRenderingMissingAnnotation extends BaseCombatLayeredRenderingPlugin {
 	private LifecycleInterfaceRenderingMissingAnnotation() {
-
 	}
 
 	public static LifecycleInterfaceRenderingMissingAnnotation attach(CombatEngineAPI engine) {

@@ -2,8 +2,8 @@ package checks.integrity.rules;
 
 import checks.integrity.IntegrityCheckInput;
 import checks.integrity.IntegrityRule;
-import checks.integrity.support.FixtureMetadataReader.Metadata;
-import checks.integrity.support.ProjectRuleRegistryReader.Registry;
+import checks.integrity.model.FixtureMetadata;
+import checks.integrity.model.RuleRegistry;
 import checks.integrity.support.FixtureMetadataReader;
 import checks.integrity.support.ProjectRuleRegistryReader;
 
@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 public class FixtureIntegrityRule implements IntegrityRule {
@@ -20,7 +19,7 @@ public class FixtureIntegrityRule implements IntegrityRule {
 
 	@Override
 	public List<String> check(IntegrityCheckInput input) throws IOException {
-		Registry ruleRegistry = ProjectRuleRegistryReader.read(input.projectRulesDir());
+		RuleRegistry ruleRegistry = ProjectRuleRegistryReader.read(input.projectRulesDir());
 		List<String> failures = new ArrayList<>();
 		failures.addAll(checkFixtureShape(input.fixturesRoot()));
 		failures.addAll(checkFixtureCoverage(input.fixturesRoot(), ruleRegistry));
@@ -57,7 +56,7 @@ public class FixtureIntegrityRule implements IntegrityRule {
 		}
 	}
 
-	private static List<String> checkFixtureCoverage(Path fixturesRoot, Registry ruleRegistry) throws IOException {
+	private static List<String> checkFixtureCoverage(Path fixturesRoot, RuleRegistry ruleRegistry) throws IOException {
 		Set<String> ruleNames = new LinkedHashSet<>(ruleRegistry.classRuleNames().values());
 		Set<String> violationCovered = new HashSet<>();
 		Set<String> okCovered = new HashSet<>();
@@ -65,10 +64,14 @@ public class FixtureIntegrityRule implements IntegrityRule {
 
 		try (Stream<Path> paths = Files.list(fixturesRoot)) {
 			for (Path fixture : paths.filter(Files::isDirectory).sorted().toList()) {
-				if (fixture.getFileName().toString().equals(SUPPORT_FIXTURE_DIR)) continue;
+				if (fixture.getFileName().toString().equals(SUPPORT_FIXTURE_DIR)) {
+					continue;
+				}
 				Path expectedRulesFile = fixture.resolve(EXPECTED_RULES_FILE);
-				if (!Files.exists(expectedRulesFile)) continue;
-				Metadata metadata = FixtureMetadataReader.read(expectedRulesFile);
+				if (!Files.exists(expectedRulesFile)) {
+					continue;
+				}
+				FixtureMetadata metadata = FixtureMetadataReader.read(expectedRulesFile);
 				if (metadata.expectedRules().isEmpty() && metadata.covers().isEmpty()) {
 					failures.add(expectedRulesFile + ": ok fixture must declare # covers: RuleName.");
 				}
@@ -89,7 +92,7 @@ public class FixtureIntegrityRule implements IntegrityRule {
 			}
 		}
 
-		for (Entry<String, String> rule : ruleRegistry.classRuleNames().entrySet()) {
+		for (Map.Entry<String, String> rule : ruleRegistry.classRuleNames().entrySet()) {
 			if (!violationCovered.contains(rule.getValue())) {
 				failures.add(rule.getKey() + " has no violation fixture covering " + rule.getValue() + ".");
 			}

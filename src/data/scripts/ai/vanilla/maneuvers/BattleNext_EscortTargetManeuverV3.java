@@ -15,7 +15,6 @@ import data.scripts.ai.vanilla.collisions.BattleNext_CollisionCheckSegment;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionDangerEntry;
 import data.scripts.ai.vanilla.collisions.BattleNext_CollisionTimeRange;
 import data.scripts.ai.vanilla.movement.BattleNext_FlockingAI;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.util.ArrayList;
@@ -67,11 +66,12 @@ public class BattleNext_EscortTargetManeuverV3 implements BattleNext_Maneuver {
 	// port of engine class com.fs.starfarer.EscortAssignment reduced to the
 	// members this maneuver reads; the engine class is not ported wholesale and
 	// this field is never assigned, matching vanilla where it stays null
-	@PublicData
-	private static class EscortAssignment {
-		public Vector2f position = new Vector2f();
-		// f_d435ae80_2: the stand-off distance the assignment wants to keep
-		public float standOffDistance;
+	private record EscortAssignment(Vector2f position,
+			// f_d435ae80_2: the stand-off distance the assignment wants to keep
+			float standOffDistance) {
+		private EscortAssignment() {
+			this(new Vector2f(), 0.0F);
+		}
 	}
 	private EscortAssignment escortAssignment = null;
 	private List<BattleNext_EscortSpot> escortSpots = new ArrayList<>();

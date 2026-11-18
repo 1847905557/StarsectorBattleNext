@@ -10,7 +10,6 @@ import data.scripts.battlesnext.util.BattleNext_I18nSection;
 import data.scripts.fleet.BattleNext_VariantBuilder;
 import data.scripts.member.BattleNext_MemberModel;
 import data.scripts.tools.BattleNext_Logger;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip;
 import data.scripts.ui.widget.BattleNext_EquipmentTooltip.FleetMemberLine;
 import data.scripts.ui.widget.BattleNext_OptionPicker.OptionChoice;
@@ -175,16 +174,7 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 	private void reportFailure(Preview preview, BattleNext_FleetModel fleet, int index, String path,
 			String phase, RuntimeException exception) {
 
-		boolean unresolved = phase.equals("variant") || phase.equals("hull");
-		if (unresolved || phase.equals("base_dp")) {
-			preview.partialDp = true;
-		}
-		if (unresolved || phase.equals("base_fp")) {
-			preview.partialFp = true;
-		}
-		if (phase.equals("variant") || phase.equals("wings") || phase.equals("modules")) {
-			preview.partialWings = true;
-		}
+		preview.markPartial(phase);
 		String variantId = index < 0 ? "" : fleet.getMembersReadonly().get(index).getVariantId();
 		BattleNext_Logger.warn(BattleNext_FleetSourceProvider.class, "fleet.tooltip.preview.degraded",
 				BattleNext_Logger.fields().put("fleet_id", fleet.getId()).put("member_index", index)
@@ -193,15 +183,21 @@ public class BattleNext_FleetSourceProvider extends BattleNext_BaseSourceProvide
 				+ (index < 0 ? fleet.getId() : variantId) + (path.isEmpty() ? "" : "/" + path) + " - " + exception.getMessage());
 	}
 
-	@PublicData
 	private static class Preview {
-		public float dp;
-		public int fp;
-		public int wings;
-		public boolean partialDp;
-		public boolean partialFp;
-		public boolean partialWings;
-		public final List<FleetMemberLine> members = new ArrayList<>();
-		public final List<String> errors = new ArrayList<>();
+		private float dp;
+		private int fp;
+		private int wings;
+		private boolean partialDp;
+		private boolean partialFp;
+		private boolean partialWings;
+		private final List<FleetMemberLine> members = new ArrayList<>();
+		private final List<String> errors = new ArrayList<>();
+
+		private void markPartial(String phase) {
+			boolean unresolved = phase.equals("variant") || phase.equals("hull");
+			if (unresolved || phase.equals("base_dp")) partialDp = true;
+			if (unresolved || phase.equals("base_fp")) partialFp = true;
+			if (phase.equals("variant") || phase.equals("wings") || phase.equals("modules")) partialWings = true;
+		}
 	}
 }

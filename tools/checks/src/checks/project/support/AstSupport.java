@@ -8,7 +8,6 @@ import java.util.Optional;
 
 public final class AstSupport {
 	private AstSupport() {
-
 	}
 
 	public static int lineOf(Node node) {
@@ -24,7 +23,9 @@ public final class AstSupport {
 	}
 
 	public static boolean isTypeNamed(Type type, String simpleName) {
-		if (!type.isClassOrInterfaceType()) return false;
+		if (!type.isClassOrInterfaceType()) {
+			return false;
+		}
 		return simpleName.equals(type.asClassOrInterfaceType().getNameAsString());
 	}
 }

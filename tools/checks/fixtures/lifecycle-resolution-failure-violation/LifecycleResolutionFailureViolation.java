@@ -2,7 +2,6 @@ public class LifecycleResolutionFailureViolation implements MissingLifecycleInte
 	private static final String KEY = "key";
 
 	private LifecycleResolutionFailureViolation() {
-
 	}
 
 	public static LifecycleResolutionFailureViolation getInstance(CombatEntityAPI entity) {

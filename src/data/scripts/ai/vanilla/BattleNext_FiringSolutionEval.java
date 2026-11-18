@@ -1061,14 +1061,14 @@ public class BattleNext_FiringSolutionEval {
 	 */
 	@PublicData
 	public static class SolutionResult {
-		private float maxDamagePerShot;
-		private float kineticDamage;
-		private float fragmentationDamage;
-		private float highExplosiveDamage;
-		private float energyDamage;
-		private float beamDamage;
-		private float empDamage;
-		private float burstFireTimeRemaining;
-		private float minTimeToImpact = 1000.0F;
+		public float maxDamagePerShot;
+		public float kineticDamage;
+		public float fragmentationDamage;
+		public float highExplosiveDamage;
+		public float energyDamage;
+		public float beamDamage;
+		public float empDamage;
+		public float burstFireTimeRemaining;
+		public float minTimeToImpact = 1000.0F;
 	}
 }

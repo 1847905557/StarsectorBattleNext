@@ -1,6 +1,5 @@
 public class LifecyclePublicViolation {
 	public LifecyclePublicViolation() {
-
 	}
 
 	@LifecycleEntry

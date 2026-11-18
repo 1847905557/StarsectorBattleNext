@@ -8,7 +8,6 @@ import java.util.stream.Stream;
 
 public final class JavaSourceFiles {
 	private JavaSourceFiles() {
-
 	}
 
 	public static List<Path> list(Path sourceRoot) throws IOException {

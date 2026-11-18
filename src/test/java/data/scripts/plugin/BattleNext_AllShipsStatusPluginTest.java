@@ -6,7 +6,6 @@ import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.CombatUIAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
-import data.scripts.battlesnext.util.annotation.PublicData;
 import data.scripts.tools.BattleNext_Logger;
 import data.test.fixture.BattleNext_TestGameFixture;
 import org.apache.log4j.AppenderSkeleton;
@@ -213,7 +212,9 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 		Manager replacement = new Manager();
 		access.manager = replacement;
 		plugin.renderInUICoords(null);
-		assertEquals(List.of(readyManager, replacement), access.refreshedManagers);
+		assertEquals(2, access.refreshedManagers.size());
+		assertSame(readyManager, access.refreshedManagers.get(0));
+		assertSame(replacement, access.refreshedManagers.get(1));
 		assertEquals(1, access.binds);
 		assertEquals(3, access.lookups);
 		assertTrue(removed.isEmpty());
@@ -336,10 +337,10 @@ class BattleNext_AllShipsStatusPluginTest extends BattleNext_TestGameFixture {
 
 	}
 
-	@PublicData
-	private static class Manager {
-		public final List<Reticle> reticles = new ArrayList<>();
-		public final Set<ShipAPI> hidden = new HashSet<>();
+	private record Manager(List<Reticle> reticles, Set<ShipAPI> hidden) {
+		private Manager() {
+			this(new ArrayList<>(), new HashSet<>());
+		}
 	}
 
 	private static class FakeAccess implements BattleNext_AllShipsStatusPlugin.Access {

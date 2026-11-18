@@ -2,7 +2,6 @@ package data.scripts.order;
 
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.CombatFleetManagerAPI.AssignmentInfo;
-import data.scripts.battlesnext.util.annotation.PublicData;
 
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
@@ -38,8 +37,7 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 		}
 
 		TargetCounts selected = counts.targets.get(target);
-		if (selected == null) return 0;
-		return type == null ? selected.total : selected.types.getOrDefault(type, 0);
+		return selected == null ? 0 : selected.count(type);
 	}
 
 	public static void changed(CombatTaskManagerAPI tasks, ShipAPI ship) {
@@ -114,8 +112,7 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 
 		private void add(Assigned assignment, int amount) {
 			TargetCounts counts = targets.computeIfAbsent(assignment.target(), ignored -> new TargetCounts());
-			counts.total += amount;
-			counts.types.merge(assignment.type(), amount, Integer::sum);
+			counts.add(assignment.type(), amount);
 		}
 	}
 
@@ -123,9 +120,17 @@ public final class BattleNext_AssignmentIndex implements AutoCloseable {
 
 	}
 
-	@PublicData
 	private static final class TargetCounts {
-		public final Map<CombatAssignmentType, Integer> types = new EnumMap<>(CombatAssignmentType.class);
-		public int total;
+		private final Map<CombatAssignmentType, Integer> types = new EnumMap<>(CombatAssignmentType.class);
+		private int total;
+
+		private void add(CombatAssignmentType type, int amount) {
+			total += amount;
+			types.merge(type, amount, Integer::sum);
+		}
+
+		private int count(CombatAssignmentType type) {
+			return type == null ? total : types.getOrDefault(type, 0);
+		}
 	}
 }

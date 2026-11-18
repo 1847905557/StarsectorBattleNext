@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 
 public final class ProjectParser {
 	private ProjectParser() {
-
 	}
 
 	public static void configure(CombinedTypeSolver typeSolver) {
